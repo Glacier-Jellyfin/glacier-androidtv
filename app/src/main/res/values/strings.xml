@@ -181,5 +181,30 @@
     <string name="track_audio_set">Audio track: %1$s</string>
     <string name="track_subtitles_set">Subtitles: %1$s</string>
 
+    <!-- Collections and people -->
+    <string name="collection_chip">Collection</string>
+    <string name="collection_average">%1$s avg</string>
+    <plurals name="collection_seen">
+        <item quantity="one">%1$d of %2$d watched</item>
+        <item quantity="other">%1$d of %2$d watched</item>
+    </plurals>
+    <string name="collection_play">Play · %1$s</string>
+    <string name="collection_resume">Resume · %1$s</string>
+    <string name="collection_mark_all">Mark all watched</string>
+    <string name="collection_unmark_all">Mark all unwatched</string>
+    <string name="collection_movies">Movies in this collection</string>
+    <string name="collection_chronological">chronological</string>
+    <string name="favorite_tag">Favorite</string>
+    <string name="person_born">b. %1$s</string>
+    <plurals name="person_titles">
+        <item quantity="one">%1$d title in this library</item>
+        <item quantity="other">%1$d titles in this library</item>
+    </plurals>
+    <string name="person_filmography">Filmography</string>
+    <string name="person_by_year">by release year</string>
+    <string name="person_search">Search library</string>
+    <string name="kind_movie">Movie</string>
+    <string name="kind_show">Show</string>
+
     <string name="toast_notice">Note</string>
 </resources>

@@ -176,5 +176,30 @@
     <string name="track_audio_set">Tonspur: %1$s</string>
     <string name="track_subtitles_set">Untertitel: %1$s</string>
 
+    <!-- Sammlungen und Personen -->
+    <string name="collection_chip">Sammlung</string>
+    <string name="collection_average">%1$s Ø</string>
+    <plurals name="collection_seen">
+        <item quantity="one">%1$d von %2$d gesehen</item>
+        <item quantity="other">%1$d von %2$d gesehen</item>
+    </plurals>
+    <string name="collection_play">Abspielen · %1$s</string>
+    <string name="collection_resume">Fortsetzen · %1$s</string>
+    <string name="collection_mark_all">Alle als gesehen</string>
+    <string name="collection_unmark_all">Alle als ungesehen</string>
+    <string name="collection_movies">Filme in dieser Sammlung</string>
+    <string name="collection_chronological">chronologisch</string>
+    <string name="favorite_tag">Favorit</string>
+    <string name="person_born">geb. %1$s</string>
+    <plurals name="person_titles">
+        <item quantity="one">%1$d Titel in dieser Bibliothek</item>
+        <item quantity="other">%1$d Titel in dieser Bibliothek</item>
+    </plurals>
+    <string name="person_filmography">Filmografie</string>
+    <string name="person_by_year">nach Erscheinungsjahr</string>
+    <string name="person_search">In Bibliothek suchen</string>
+    <string name="kind_movie">Film</string>
+    <string name="kind_show">Serie</string>
+
     <string name="toast_notice">Hinweis</string>
 </resources>

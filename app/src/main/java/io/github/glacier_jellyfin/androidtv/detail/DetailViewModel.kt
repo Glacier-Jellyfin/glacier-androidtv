@@ -45,6 +45,8 @@ data class DetailState(
     /** Episode to focus in the episode row: the first unwatched one. */
     val focusEpisode: Int = 0,
     val similar: List<MediaItem> = emptyList(),
+    /** Movies of a collection, in release order. */
+    val collectionItems: List<MediaItem> = emptyList(),
     /** Next episode to play for a show. */
     val nextEpisode: MediaItem? = null,
     val selection: TrackSelection? = null,
@@ -87,9 +89,11 @@ class DetailViewModel @Inject constructor(
                 when (details.item.kind) {
                     ItemKind.Series -> loadSeries(details)
                     ItemKind.Episode -> loadSeasonOf(details)
+                    ItemKind.Collection -> loadCollection(details)
                     else -> Unit
                 }
-                _state.update { it.copy(loading = false, similar = if (details.item.kind == ItemKind.Episode) emptyList() else similarAsync.await()) }
+                val withSimilar = details.item.kind == ItemKind.Movie || details.item.kind == ItemKind.Series
+                _state.update { it.copy(loading = false, similar = if (withSimilar) similarAsync.await() else emptyList()) }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -121,6 +125,17 @@ class DetailViewModel @Inject constructor(
         }
     }
 
+    private suspend fun loadCollection(details: ItemDetails) {
+        val items = repository.collectionItems(details.item.id)
+        _state.update { it.copy(collectionItems = items) }
+    }
+
+    /** Design: a collection plays the movie in progress, else the first one not yet watched. */
+    fun collectionNext(): MediaItem? {
+        val items = _state.value.collectionItems
+        return items.firstOrNull { it.progress != null } ?: items.firstOrNull { !it.played } ?: items.firstOrNull()
+    }
+
     fun selectSeason(season: Season) {
         val seriesId = _state.value.item?.id ?: return
         viewModelScope.launch { selectSeason(season, seriesId) }
@@ -145,7 +160,11 @@ class DetailViewModel @Inject constructor(
     fun play(fromStart: Boolean = false) {
         val current = _state.value
         val item = current.item ?: return
-        val target = if (item.kind == ItemKind.Series) current.nextEpisode ?: current.episodes.firstOrNull() ?: return else item
+        val target = when (item.kind) {
+            ItemKind.Series -> current.nextEpisode ?: current.episodes.firstOrNull() ?: return
+            ItemKind.Collection -> collectionNext() ?: return
+            else -> item
+        }
         navigate(PlayerRoute(target.id.toString(), fromStart))
     }
 
@@ -173,8 +192,9 @@ class DetailViewModel @Inject constructor(
             runCatching { repository.setPlayed(item.id, played) }
                 .onSuccess {
                     toast(if (played) R.string.marked_watched else R.string.marked_unwatched)
-                    // A whole show or season changes its episodes too.
+                    // A whole show or collection changes its episodes or movies too.
                     if (item.kind == ItemKind.Series) _state.value.season?.let { selectSeason(it, item.id) }
+                    if (item.kind == ItemKind.Collection) loadCollection(_state.value.details ?: return@onSuccess)
                 }
                 .onFailure { updateItem { current -> current.copy(played = !played) } }
         }
@@ -198,7 +218,8 @@ class DetailViewModel @Inject constructor(
 
     fun openItem(item: MediaItem) = navigate(DetailRoute(item.id.toString()))
 
-    fun openPerson(person: CastMember) = navigate(PersonRoute(person.id.toString()))
+    fun openPerson(person: CastMember) =
+        navigate(PersonRoute(person.id.toString(), fromTitle = _state.value.item?.title, role = person.role))
 
     private fun updateItem(change: (MediaItem) -> MediaItem) = _state.update { state ->
         state.copy(details = state.details?.let { it.copy(item = change(it.item)) })

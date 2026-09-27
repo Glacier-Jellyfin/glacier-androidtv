@@ -138,7 +138,7 @@ class LibraryViewModel @Inject constructor(
                 viewModelScope.launch { _events.send(UiEvent.Navigate(HomeRoute, clearBackStack = true)) }
                 return
             }
-            NavTarget.Search -> SearchRoute
+            NavTarget.Search -> SearchRoute()
             NavTarget.Settings -> SettingsRoute
             is NavTarget.Library -> if (target.kind == _state.value.query.kind && route.libraryId == null && route.genreId == null) return else LibraryRoute(target.kind.name)
             NavTarget.Profile -> {

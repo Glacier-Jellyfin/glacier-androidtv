@@ -108,7 +108,8 @@ fun DetailScreen(
             details == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
             details.item.kind == ItemKind.Movie || details.item.kind == ItemKind.Series -> MediaDetail(state, details, viewModel)
             details.item.kind == ItemKind.Episode -> EpisodeDetail(state, details, viewModel)
-            // Collections come with the next step, albums with the music section.
+            details.item.kind == ItemKind.Collection -> CollectionDetail(state, details, viewModel)
+            // Albums, artists and playlists come with the music section.
             else -> ComingSoonScreen(details.item.title, onBack = onBack)
         }
         val panel = state.trackPanel

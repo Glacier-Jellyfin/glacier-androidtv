@@ -127,7 +127,7 @@ class HomeViewModel @Inject constructor(
     fun onNav(target: NavTarget) {
         when (target) {
             NavTarget.Home -> Unit
-            NavTarget.Search -> navigate(SearchRoute)
+            NavTarget.Search -> navigate(SearchRoute())
             NavTarget.Settings -> navigate(SettingsRoute)
             is NavTarget.Library -> navigate(LibraryRoute(target.kind.name))
             NavTarget.Profile -> {

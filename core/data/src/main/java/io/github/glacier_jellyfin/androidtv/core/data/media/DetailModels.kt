@@ -39,3 +39,18 @@ data class ItemDetails(
     val seasonCount: Int?,
     val episodeCount: Int?,
 )
+
+/** A title in a person's filmography, with the part they played. */
+data class Credit(val item: MediaItem, val role: String?)
+
+data class PersonDetails(
+    val id: UUID,
+    val name: String,
+    val biography: String?,
+    val born: LocalDate?,
+    val birthplace: String?,
+    val imageUrl: String?,
+    val isFavorite: Boolean,
+    /** Titles in this server's libraries, newest first. */
+    val credits: List<Credit>,
+)

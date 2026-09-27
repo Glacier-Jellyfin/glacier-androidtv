@@ -12,9 +12,11 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemFields
+import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaStreamType
 import org.jellyfin.sdk.model.api.PersonKind
+import org.jellyfin.sdk.model.api.SortOrder
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -80,6 +82,50 @@ class DetailRepository @Inject constructor(
         val mapper = MediaMapper(session.api)
         session.api.libraryApi.getSimilarItems(itemId = id, userId = session.userId, limit = SIMILAR_LIMIT)
             .content.items.map(mapper::item)
+    }
+
+    /** Movies of a Jellyfin collection in release order (design: "chronological"). */
+    suspend fun collectionItems(id: UUID): List<MediaItem> = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        val mapper = MediaMapper(session.api)
+        session.api.libraryApi.getItems(
+            userId = session.userId,
+            parentId = id,
+            fields = listOf(ItemFields.GENRES, ItemFields.OVERVIEW),
+            enableUserData = true,
+            sortBy = listOf(ItemSortBy.PRODUCTION_YEAR, ItemSortBy.PREMIERE_DATE, ItemSortBy.SORT_NAME),
+            sortOrder = listOf(SortOrder.ASCENDING),
+        ).content.items.map(mapper::item)
+    }
+
+    suspend fun person(id: UUID): PersonDetails = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        val mapper = MediaMapper(session.api)
+        val dto = session.api.libraryApi.getItem(itemId = id, userId = session.userId).content
+        val credits = session.api.libraryApi.getItems(
+            userId = session.userId,
+            personIds = listOf(id),
+            recursive = true,
+            includeItemTypes = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
+            fields = listOf(ItemFields.PEOPLE, ItemFields.GENRES),
+            enableUserData = true,
+            sortBy = listOf(ItemSortBy.PRODUCTION_YEAR, ItemSortBy.SORT_NAME),
+            sortOrder = listOf(SortOrder.DESCENDING),
+        ).content.items.map { item ->
+            Credit(mapper.item(item), item.people?.firstOrNull { it.id == id }?.role?.takeIf { it.isNotBlank() })
+        }
+        PersonDetails(
+            id = dto.id,
+            name = dto.name.orEmpty(),
+            biography = dto.overview?.takeIf { it.isNotBlank() },
+            born = dto.premiereDate?.toLocalDate(),
+            birthplace = dto.productionLocations?.firstOrNull(),
+            imageUrl = dto.imageTags?.get(ImageType.PRIMARY)?.let { tag ->
+                session.api.imageApi.getItemImageUrl(itemId = dto.id, imageType = ImageType.PRIMARY, tag = tag, maxWidth = 600)
+            },
+            isFavorite = dto.userData?.isFavorite ?: false,
+            credits = credits,
+        )
     }
 
     suspend fun setPlayed(id: UUID, played: Boolean) {

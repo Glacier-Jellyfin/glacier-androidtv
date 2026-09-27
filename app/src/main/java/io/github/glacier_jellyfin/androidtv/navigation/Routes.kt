@@ -40,11 +40,12 @@ data class PlayerRoute(val itemId: String, val fromStart: Boolean = false)
 @Serializable
 data class TrailerRoute(val itemId: String)
 
+/** A cast member; [fromTitle] and [role] feed the breadcrumb ("Dracula · Count Dracula"). */
 @Serializable
-data class PersonRoute(val personId: String)
+data class PersonRoute(val personId: String, val fromTitle: String? = null, val role: String? = null)
 
 @Serializable
-data object SearchRoute
+data class SearchRoute(val query: String? = null)
 
 @Serializable
 data object SettingsRoute

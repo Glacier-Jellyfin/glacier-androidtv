@@ -10,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.detail.DetailScreen
+import io.github.glacier_jellyfin.androidtv.detail.PersonScreen
 import io.github.glacier_jellyfin.androidtv.home.HomeScreen
 import io.github.glacier_jellyfin.androidtv.library.LibraryScreen
 import io.github.glacier_jellyfin.androidtv.profiles.ProfilesScreen
@@ -21,7 +22,7 @@ import io.github.glacier_jellyfin.androidtv.ui.ComingSoonScreen
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 
 /** Screens without arguments; navigating to one that is already on top does nothing. */
-private val SingleScreens = setOf(ServerListRoute, ServerAddressRoute, HomeRoute, SearchRoute, SettingsRoute)
+private val SingleScreens = setOf(ServerListRoute, ServerAddressRoute, HomeRoute, SettingsRoute)
 
 @Composable
 fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
@@ -56,9 +57,9 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
         composable<HomeRoute> { HomeScreen(onNavigate = navigate) }
         composable<LibraryRoute> { LibraryScreen(onNavigate = navigate) }
         composable<DetailRoute> { DetailScreen(onNavigate = navigate, onBack = back) }
+        composable<PersonRoute> { PersonScreen(onNavigate = navigate) }
 
         // Later development steps; placeholders keep the navigation testable.
-        composable<PersonRoute> { ComingSoonScreen(stringResource(R.string.detail_cast), onBack = back) }
         composable<TrailerRoute> { ComingSoonScreen(stringResource(R.string.detail_trailer), onBack = back) }
         composable<PlayerRoute> { ComingSoonScreen(stringResource(R.string.hero_play), onBack = back) }
         composable<SearchRoute> { ComingSoonScreen(stringResource(R.string.nav_search), onBack = back) }
