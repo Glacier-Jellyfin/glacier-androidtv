@@ -72,6 +72,11 @@ class ProfilesViewModel @Inject constructor(
             _state.update { it.copy(server = server) }
             val users = runCatching { authenticator.publicUsers(server.address) }
             publicUsers.value = users.getOrNull()
+            // Nobody to pick (no public users, nobody signed in here before): go straight to sign-in.
+            if (users.getOrNull()?.isEmpty() == true && accounts.current().users.none { it.serverId == serverId }) {
+                _events.send(UiEvent.Navigate(SignInRoute(serverId), replace = true))
+                return@launch
+            }
             _state.update { it.copy(loading = false, offline = users.isFailure) }
         }
         viewModelScope.launch {

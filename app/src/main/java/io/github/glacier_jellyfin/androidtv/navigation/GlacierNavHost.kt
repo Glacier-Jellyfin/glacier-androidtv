@@ -17,8 +17,12 @@ import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 @Composable
 fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
     val navigate: (UiEvent.Navigate) -> Unit = { event ->
+        val current = navController.currentDestination?.id
         navController.navigate(event.route) {
-            if (event.clearBackStack) popUpTo(0) { inclusive = true }
+            when {
+                event.clearBackStack -> popUpTo(0) { inclusive = true }
+                event.replace && current != null -> popUpTo(current) { inclusive = true }
+            }
             launchSingleTop = true
         }
     }

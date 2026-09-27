@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.setup
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -108,8 +109,13 @@ class SignInViewModel @Inject constructor(
             authenticator.quickConnect(server).collect { qc ->
                 when (qc) {
                     is QuickConnectState.WaitingForApproval -> _state.update { it.copy(quickConnectCode = qc.code) }
-                    is QuickConnectState.Authorized -> finish(qc.user)
-                    QuickConnectState.Unavailable, is QuickConnectState.Failed -> _state.update { it.copy(quickConnectCode = null) }
+                    // Finish outside this job: finish() cancels it, which would abort the sign-in itself.
+                    is QuickConnectState.Authorized -> viewModelScope.launch { finish(qc.user) }
+                    QuickConnectState.Unavailable -> _state.update { it.copy(quickConnectCode = null) }
+                    is QuickConnectState.Failed -> {
+                        Log.w(TAG, "Quick Connect failed", qc.cause)
+                        _state.update { it.copy(quickConnectCode = null) }
+                    }
                 }
             }
         }
@@ -120,5 +126,9 @@ class SignInViewModel @Inject constructor(
         accounts.rememberSignIn(user)
         sessions.open(user.serverId, user.userId.toString())
         _events.send(UiEvent.Navigate(HomeRoute, clearBackStack = true))
+    }
+
+    private companion object {
+        const val TAG = "SignIn"
     }
 }

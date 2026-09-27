@@ -30,6 +30,8 @@ data class ServerEntry(
 data class ServerListState(
     val saved: List<ServerEntry> = emptyList(),
     val discovered: List<ServerEntry> = emptyList(),
+    /** Saved servers have been read; the screen can place its initial focus. */
+    val savedLoaded: Boolean = false,
     val searching: Boolean = true,
     /** Name of the server being connected to, shown in the busy overlay. */
     val connecting: String? = null,
@@ -62,7 +64,10 @@ class ServerListViewModel @Inject constructor(
     private suspend fun loadSaved() {
         val saved = accounts.current().servers.sortedByDescending { it.lastUsedAt }
         _state.update { state ->
-            state.copy(saved = saved.map { ServerEntry(ServerInfo(it.id, it.name, it.address, it.version)) })
+            state.copy(
+                saved = saved.map { ServerEntry(ServerInfo(it.id, it.name, it.address, it.version)) },
+                savedLoaded = true,
+            )
         }
         saved.forEach { stored ->
             viewModelScope.launch {

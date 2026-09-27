@@ -25,9 +25,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -68,14 +66,10 @@ fun ServerListScreen(
     CollectEvents(viewModel.events, onNavigate)
 
     val firstFocus = remember { FocusRequester() }
-    var initialFocusDone by remember { mutableStateOf(false) }
-    val hasEntries = state.saved.isNotEmpty() || state.discovered.isNotEmpty()
-    LaunchedEffect(hasEntries, state.searching) {
-        // Focus the first server once one exists, or the manual entry once searching gave up.
-        if (!initialFocusDone && (hasEntries || !state.searching)) {
-            runCatching { firstFocus.requestFocus() }
-            initialFocusDone = true
-        }
+    // Focus the first saved server, or the manual entry, right away. Servers
+    // found later never take focus away from where the user already is.
+    LaunchedEffect(state.savedLoaded) {
+        if (state.savedLoaded) runCatching { firstFocus.requestFocus() }
     }
 
     Row(
