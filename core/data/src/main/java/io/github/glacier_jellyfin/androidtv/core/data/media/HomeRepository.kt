@@ -2,9 +2,11 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.showApi
 import org.jellyfin.sdk.api.client.extensions.userApi
@@ -24,7 +26,7 @@ class HomeRepository @Inject constructor(
 ) {
 
     /** Loads all home rows in parallel for the signed-in profile. */
-    suspend fun load(): HomeContent = coroutineScope {
+    suspend fun load(): HomeContent = withContext(Dispatchers.IO) {
         val session = requireSession()
         val mapper = MediaMapper(session.api)
         val userId = session.userId
@@ -53,7 +55,9 @@ class HomeRepository @Inject constructor(
 
     suspend fun setFavorite(itemId: UUID, favorite: Boolean) {
         val api = requireSession().api.userDataApi
-        if (favorite) api.markFavoriteItem(itemId) else api.unmarkFavoriteItem(itemId)
+        withContext(Dispatchers.IO) {
+            if (favorite) api.markFavoriteItem(itemId) else api.unmarkFavoriteItem(itemId)
+        }
     }
 
     private suspend fun libraries(session: Session, mapper: MediaMapper): List<Library> = coroutineScope {

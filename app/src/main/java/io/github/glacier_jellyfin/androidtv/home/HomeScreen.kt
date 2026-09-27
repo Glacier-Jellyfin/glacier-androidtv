@@ -25,7 +25,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -83,9 +85,8 @@ fun HomeScreen(
         delay(seconds * 1000L)
         spotIndex = (spotIndex + 1) % spotlight.size
     }
-    LaunchedEffect(state.loading, state.failed) {
-        if (!state.loading && !state.failed) runCatching { playFocus.requestFocus() }
-    }
+    // Focus "Play" once, when the spotlight first appears (not when returning later).
+    var initialFocusDone by rememberSaveable { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize()) {
         val content = state.content
@@ -108,6 +109,13 @@ fun HomeScreen(
                                     playFocus = playFocus,
                                     modifier = Modifier.onFocusChanged { spotlightFocused = it.hasFocus },
                                 )
+                                LaunchedEffect(Unit) {
+                                    if (!initialFocusDone) {
+                                        // Wait one frame so the button is attached before focusing it.
+                                        withFrameNanos { }
+                                        initialFocusDone = runCatching { playFocus.requestFocus() }.isSuccess
+                                    }
+                                }
                             } else {
                                 Box(Modifier.padding(top = 160.dp))
                             }

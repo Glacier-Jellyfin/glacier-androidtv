@@ -28,6 +28,10 @@ jobs:
       - name: Unit tests, lint and debug build
         run: ./gradlew testDebugUnitTest lintDebug assembleDebug
 
+      # Optimised with R8 like a release, so shrinking problems show up before tagging.
+      - name: Staging build
+        run: ./gradlew :app:assembleStaging
+
       - uses: actions/upload-artifact@v7
         if: always()
         with:

@@ -1,7 +1,9 @@
 package io.github.glacier_jellyfin.androidtv.core.jellyfin
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.Jellyfin
 import org.jellyfin.sdk.api.client.extensions.systemApi
 import org.jellyfin.sdk.api.client.extensions.userApi
@@ -33,7 +35,9 @@ class ServerFinder @Inject constructor(
      * The first candidate that answers as a Jellyfin server wins; its version
      * is checked by the caller so older servers can be offered with a warning.
      */
-    suspend fun resolve(input: String): ResolveResult {
+    suspend fun resolve(input: String): ResolveResult = withContext(Dispatchers.IO) { resolveBlocking(input) }
+
+    private suspend fun resolveBlocking(input: String): ResolveResult {
         val candidates = jellyfin.discovery.getAddressCandidates(input)
         val answers = jellyfin.discovery.getRecommendedServers(candidates)
         val byAddress = answers.associateBy { it.address }
@@ -45,7 +49,9 @@ class ServerFinder @Inject constructor(
     }
 
     /** Checks a known address; null when it does not answer as a Jellyfin server. */
-    suspend fun probe(address: String): DiscoveredServer? {
+    suspend fun probe(address: String): DiscoveredServer? = withContext(Dispatchers.IO) { probeBlocking(address) }
+
+    private suspend fun probeBlocking(address: String): DiscoveredServer? {
         val api = jellyfin.createApi(baseUrl = address)
         val (info, latency) = runCatching {
             measureTimedValue { api.systemApi.getPublicSystemInfo().content }

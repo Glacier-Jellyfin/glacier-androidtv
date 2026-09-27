@@ -14,6 +14,10 @@ import javax.inject.Singleton
 /**
  * Provides the SDK entry point. The app module supplies [ClientInfo], since
  * only it knows the app's name and version.
+ *
+ * The SDK reads response bodies on the calling thread, so every API call must
+ * run on Dispatchers.IO; large responses otherwise fail with
+ * NetworkOnMainThreadException. Repositories switch dispatchers themselves.
  */
 @Module
 @InstallIn(SingletonComponent::class)

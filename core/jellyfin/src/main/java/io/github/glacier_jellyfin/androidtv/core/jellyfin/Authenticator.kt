@@ -1,8 +1,11 @@
 package io.github.glacier_jellyfin.androidtv.core.jellyfin
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.Jellyfin
 import org.jellyfin.sdk.api.client.exception.InvalidStatusException
 import org.jellyfin.sdk.api.client.extensions.authenticateUserByName
@@ -56,10 +59,13 @@ class Authenticator @Inject constructor(
     private val jellyfin: Jellyfin,
 ) {
 
-    suspend fun publicUsers(address: String): List<PublicUser> =
+    suspend fun publicUsers(address: String): List<PublicUser> = withContext(Dispatchers.IO) {
         jellyfin.createApi(baseUrl = address).userApi.getPublicUsers().content.map { it.toPublicUser() }
+    }
 
-    suspend fun signIn(server: ServerInfo, username: String, password: String): SignInResult = try {
+    suspend fun signIn(server: ServerInfo, username: String, password: String): SignInResult = withContext(Dispatchers.IO) { signInBlocking(server, username, password) }
+
+    private suspend fun signInBlocking(server: ServerInfo, username: String, password: String): SignInResult = try {
         val api = jellyfin.createApi(baseUrl = server.address)
         val result = api.authenticationApi.authenticateUserByName(username, password).content
         result.toSignedInUser(server)?.let(SignInResult::Success)
@@ -109,19 +115,23 @@ class Authenticator @Inject constructor(
         } catch (e: Exception) {
             emit(QuickConnectState.Failed(e))
         }
-    }
+    }.flowOn(Dispatchers.IO)
 
     /** Ends the session on the server, which invalidates the access token. */
     suspend fun signOut(address: String, accessToken: String) {
-        jellyfin.createApi(baseUrl = address, accessToken = accessToken).sessionApi.reportSessionEnded()
+        withContext(Dispatchers.IO) {
+            jellyfin.createApi(baseUrl = address, accessToken = accessToken).sessionApi.reportSessionEnded()
+        }
     }
 
     /** Checks whether a stored token is still accepted. */
-    suspend fun isTokenValid(address: String, accessToken: String): Boolean = try {
-        jellyfin.createApi(baseUrl = address, accessToken = accessToken).userApi.getCurrentUser()
-        true
-    } catch (e: InvalidStatusException) {
-        if (e.status == HTTP_UNAUTHORIZED) false else throw e
+    suspend fun isTokenValid(address: String, accessToken: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            jellyfin.createApi(baseUrl = address, accessToken = accessToken).userApi.getCurrentUser()
+            true
+        } catch (e: InvalidStatusException) {
+            if (e.status == HTTP_UNAUTHORIZED) false else throw e
+        }
     }
 
     fun userImageUrl(address: String, userId: UUID, imageTag: String?): String? =
