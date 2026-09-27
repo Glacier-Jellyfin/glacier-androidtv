@@ -1,4 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="placeholder_tagline">Ein Jellyfin-Client für Android TV</string>
+    <!-- Einrichtung: Server -->
+    <string name="setup_welcome">Willkommen</string>
+    <string name="setup_intro">Verbinde dieses Gerät mit deinem Jellyfin-Server. Server im gleichen Netzwerk werden automatisch gefunden.</string>
+    <string name="setup_step">Schritt %1$d von %2$d</string>
+    <string name="setup_step_server">Server</string>
+    <string name="setup_found_on_network">Im Netzwerk gefunden</string>
+    <string name="setup_saved_servers">Gespeicherte Server</string>
+    <string name="setup_searching">Suche im Netzwerk …</string>
+    <string name="setup_nothing_found">Kein Server in diesem Netzwerk gefunden.</string>
+    <string name="setup_manual_address">Serveradresse manuell eingeben</string>
+    <plurals name="setup_users">
+        <item quantity="one">%1$d Benutzer</item>
+        <item quantity="other">%1$d Benutzer</item>
+    </plurals>
+    <string name="setup_latency">%1$d ms</string>
+    <string name="setup_unsupported">Jellyfin %1$s · nicht unterstützt</string>
+    <string name="setup_connecting">Verbinde mit %1$s …</string>
+    <string name="setup_unsupported_title">Älterer Server</string>
+    <string name="setup_unsupported_body">Auf %1$s läuft Jellyfin %2$s. Glacier unterstützt Jellyfin 12.0 und neuer; manche Funktionen arbeiten eventuell nicht.</string>
+    <string name="setup_unknown_version">eine unbekannte Version</string>
+    <string name="setup_connect_anyway">Trotzdem verbinden</string>
+    <string name="action_cancel">Abbrechen</string>
+    <string name="setup_unreachable">%1$s ist gerade nicht erreichbar.</string>
+    <string name="setup_offline">Nicht erreichbar</string>
+
+    <!-- Einrichtung: Adresse -->
+    <string name="address_title">Serveradresse</string>
+    <string name="address_connect">Verbinden</string>
+    <string name="address_clear">Leeren</string>
+    <string name="address_examples">Beispiele</string>
+    <string name="address_note">Hinweis</string>
+    <string name="address_note_body">Ohne Protokoll versucht Glacier zuerst HTTPS und dann HTTP auf Port 8096. Ein abweichender Port kann mit :Port angehängt werden.</string>
+    <string name="address_invalid">Bitte eine gültige Adresse eingeben</string>
+    <string name="address_not_found">Unter %1$s wurde kein Jellyfin-Server gefunden</string>
+    <string name="keyboard_space">Leer</string>
+
+    <!-- Einrichtung: Anmeldung -->
+    <string name="signin_title">Anmelden</string>
+    <string name="signin_username">Benutzername</string>
+    <string name="signin_username_hint">z. B. anna</string>
+    <string name="signin_password">Kennwort</string>
+    <string name="signin_password_hint">optional</string>
+    <string name="signin_connected_to">Verbunden mit</string>
+    <string name="signin_stays_signed_in">Dieses Gerät bleibt angemeldet. Benutzer lassen sich später über das Profil in der oberen Navigation wechseln.</string>
+    <string name="signin_username_required">Benutzername erforderlich</string>
+    <string name="signin_invalid">Benutzername oder Kennwort falsch</string>
+    <string name="signin_failed">Anmeldung fehlgeschlagen: %1$s</string>
+    <string name="quick_connect">Quick Connect</string>
+    <string name="quick_connect_hint">Gib diesen Code in einer anderen Jellyfin-App, in der du angemeldet bist, unter Quick Connect ein.</string>
+
+    <!-- Profile -->
+    <string name="profiles_title">Wer schaut?</string>
+    <string name="profiles_other_user">Anderer Benutzer</string>
+    <string name="profiles_server_line">%1$s · Jellyfin %2$s · Glacier %3$s</string>
+    <string name="profiles_offline">Server nicht erreichbar · Profile dieses Geräts werden angezeigt</string>
+    <string name="pin_title">PIN für %1$s</string>
+    <string name="pin_hint">Vier Ziffern eingeben</string>
+    <string name="pin_wrong">Falsche PIN · bitte erneut versuchen</string>
+    <string name="pin_required">Vier Ziffern erforderlich</string>
+
+    <!-- Vorläufige Startseite -->
+    <string name="home_placeholder">Angemeldet als %1$s auf %2$s</string>
+    <string name="home_switch_profile">Profil wechseln</string>
+    <string name="home_sign_out">Abmelden</string>
+
+    <string name="toast_notice">Hinweis</string>
 </resources>

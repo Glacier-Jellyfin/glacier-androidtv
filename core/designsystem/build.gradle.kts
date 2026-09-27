@@ -24,5 +24,8 @@ android {
 dependencies {
     api(platform(libs.compose.bom))
     api(libs.compose.ui)
+    api(libs.compose.foundation)
     api(libs.tv.material)
+
+    testImplementation(libs.junit)
 }

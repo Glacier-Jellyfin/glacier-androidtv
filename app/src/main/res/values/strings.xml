@@ -1,5 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">Glacier</string>
-    <string name="placeholder_tagline">A Jellyfin client for Android TV</string>
+    <string name="brand_jellyfin" translatable="false">Jellyfin</string>
+
+    <!-- Setup: server -->
+    <string name="setup_welcome">Welcome</string>
+    <string name="setup_intro">Connect this device to your Jellyfin server. Servers on the same network are found automatically.</string>
+    <string name="setup_step">Step %1$d of %2$d</string>
+    <string name="setup_step_server">Server</string>
+    <string name="setup_found_on_network">Found on network</string>
+    <string name="setup_saved_servers">Saved servers</string>
+    <string name="setup_searching">Searching the network …</string>
+    <string name="setup_nothing_found">No server found on this network.</string>
+    <string name="setup_manual_address">Enter server address manually</string>
+    <plurals name="setup_users">
+        <item quantity="one">%1$d user</item>
+        <item quantity="other">%1$d users</item>
+    </plurals>
+    <string name="setup_latency">%1$d ms</string>
+    <string name="setup_unsupported">Jellyfin %1$s · not supported</string>
+    <string name="setup_connecting">Connecting to %1$s …</string>
+    <string name="setup_unsupported_title">Older server</string>
+    <string name="setup_unsupported_body">%1$s runs Jellyfin %2$s. Glacier supports Jellyfin 12.0 and newer; some features may not work.</string>
+    <string name="setup_unknown_version">an unknown version</string>
+    <string name="setup_connect_anyway">Connect anyway</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="setup_unreachable">%1$s cannot be reached right now.</string>
+    <string name="setup_offline">Not reachable</string>
+
+    <!-- Setup: address -->
+    <string name="address_title">Server address</string>
+    <string name="address_connect">Connect</string>
+    <string name="address_clear">Clear</string>
+    <string name="address_examples">Examples</string>
+    <string name="address_note">Note</string>
+    <string name="address_note_body">Without a protocol, Glacier tries HTTPS first and then HTTP on port 8096. A different port can be appended with :port.</string>
+    <string name="address_invalid">Please enter a valid address</string>
+    <string name="address_not_found">No Jellyfin server found at %1$s</string>
+    <string name="keyboard_space">Space</string>
+
+    <!-- Setup: sign in -->
+    <string name="signin_title">Sign in</string>
+    <string name="signin_username">Username</string>
+    <string name="signin_username_hint">e.g. anna</string>
+    <string name="signin_password">Password</string>
+    <string name="signin_password_hint">optional</string>
+    <string name="signin_connected_to">Connected to</string>
+    <string name="signin_stays_signed_in">This device stays signed in. You can switch users later from the profile in the top navigation.</string>
+    <string name="signin_username_required">Username required</string>
+    <string name="signin_invalid">Wrong username or password</string>
+    <string name="signin_failed">Sign-in failed: %1$s</string>
+    <string name="quick_connect">Quick Connect</string>
+    <string name="quick_connect_hint">Enter this code in another Jellyfin app you are signed in to, under Quick Connect.</string>
+
+    <!-- Profiles -->
+    <string name="profiles_title">Who’s watching?</string>
+    <string name="profiles_subtitle" translatable="false">Glacier · Android TV</string>
+    <string name="profiles_other_user">Other user</string>
+    <string name="profiles_server_line">%1$s · Jellyfin %2$s · Glacier %3$s</string>
+    <string name="profiles_offline">Server not reachable · showing profiles known on this device</string>
+    <string name="pin_title">PIN for %1$s</string>
+    <string name="pin_hint">Enter four digits</string>
+    <string name="pin_wrong">Wrong PIN · please try again</string>
+    <string name="pin_required">Four digits required</string>
+
+    <!-- Temporary home -->
+    <string name="home_placeholder">Signed in as %1$s on %2$s</string>
+    <string name="home_switch_profile">Switch profile</string>
+    <string name="home_sign_out">Sign out</string>
+
+    <string name="toast_notice">Note</string>
 </resources>
