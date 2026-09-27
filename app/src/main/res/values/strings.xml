@@ -207,4 +207,15 @@
     <string name="kind_show">Show</string>
 
     <string name="toast_notice">Note</string>
+    <!-- Search -->
+    <string name="search_placeholder">Title, genre, person …</string>
+    <string name="search_suggestions">Suggestions</string>
+    <plurals name="search_results">
+        <item quantity="one">%1$d result for “%2$s”</item>
+        <item quantity="other">%1$d results for “%2$s”</item>
+    </plurals>
+    <string name="search_none">No results for “%1$s”.</string>
+    <string name="search_error">Search failed.</string>
+    <string name="keyboard_system">System keyboard</string>
+    <string name="keyboard_delete">Delete</string>
 </resources>

@@ -11,6 +11,7 @@ import androidx.navigation.compose.composable
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.detail.DetailScreen
 import io.github.glacier_jellyfin.androidtv.detail.PersonScreen
+import io.github.glacier_jellyfin.androidtv.search.SearchScreen
 import io.github.glacier_jellyfin.androidtv.home.HomeScreen
 import io.github.glacier_jellyfin.androidtv.library.LibraryScreen
 import io.github.glacier_jellyfin.androidtv.profiles.ProfilesScreen
@@ -62,7 +63,7 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
         // Later development steps; placeholders keep the navigation testable.
         composable<TrailerRoute> { ComingSoonScreen(stringResource(R.string.detail_trailer), onBack = back) }
         composable<PlayerRoute> { ComingSoonScreen(stringResource(R.string.hero_play), onBack = back) }
-        composable<SearchRoute> { ComingSoonScreen(stringResource(R.string.nav_search), onBack = back) }
+        composable<SearchRoute> { SearchScreen(onNavigate = navigate) }
         composable<SettingsRoute> {
             SettingsPlaceholderScreen(
                 onBack = back,

@@ -202,4 +202,15 @@
     <string name="kind_show">Serie</string>
 
     <string name="toast_notice">Hinweis</string>
+    <!-- Search -->
+    <string name="search_placeholder">Titel, Genre, Person …</string>
+    <string name="search_suggestions">Vorschläge</string>
+    <plurals name="search_results">
+        <item quantity="one">%1$d Treffer für „%2$s“</item>
+        <item quantity="other">%1$d Treffer für „%2$s“</item>
+    </plurals>
+    <string name="search_none">Keine Treffer für „%1$s“.</string>
+    <string name="search_error">Suche fehlgeschlagen.</string>
+    <string name="keyboard_system">Systemtastatur</string>
+    <string name="keyboard_delete">Löschen</string>
 </resources>
