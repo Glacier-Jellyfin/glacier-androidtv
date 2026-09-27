@@ -1,0 +1,79 @@
+name: Release
+
+# Pushing a tag like v1.4.0 or v1.4.0-beta.2 builds a signed APK and publishes
+# it as a GitHub release. Beta tags become pre-releases, which only the app's
+# Beta update channel picks up. See docs/RELEASING.md.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate tag
+        id: tag
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if [[ ! "$tag" =~ ^v([0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?)$ ]]; then
+            echo "::error::Tag '$tag' must look like v1.4.0 or v1.4.0-beta.2"
+            exit 1
+          fi
+          version="${BASH_REMATCH[1]}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$version" == *-beta.* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Extract release notes
+        run: scripts/release-notes.sh "${{ steps.tag.outputs.version }}" > "$RUNNER_TEMP/notes.md"
+
+      - name: Build signed APK
+        env:
+          GLACIER_KEYSTORE_BASE64: ${{ secrets.GLACIER_KEYSTORE_BASE64 }}
+          GLACIER_KEYSTORE_PASSWORD: ${{ secrets.GLACIER_KEYSTORE_PASSWORD }}
+          GLACIER_KEY_ALIAS: ${{ secrets.GLACIER_KEY_ALIAS }}
+          GLACIER_KEY_PASSWORD: ${{ secrets.GLACIER_KEY_PASSWORD }}
+        run: |
+          if [ -z "$GLACIER_KEYSTORE_BASE64" ]; then
+            echo "::error::Signing secrets are missing, see docs/RELEASING.md"
+            exit 1
+          fi
+          export GLACIER_KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
+          echo "$GLACIER_KEYSTORE_BASE64" | base64 --decode > "$GLACIER_KEYSTORE_PATH"
+          ./gradlew testReleaseUnitTest :app:assembleRelease -Pglacier.version="${{ steps.tag.outputs.version }}"
+          rm "$GLACIER_KEYSTORE_PATH"
+
+      - name: Verify signature
+        run: |
+          apk="app/build/outputs/apk/release/app-release.apk"
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
+          "$apksigner" verify --print-certs "$apk"
+          mv "$apk" "glacier-androidtv-${{ steps.tag.outputs.version }}.apk"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=()
+          if [ "${{ steps.tag.outputs.prerelease }}" = "true" ]; then flags+=(--prerelease); else flags+=(--latest); fi
+          gh release create "$GITHUB_REF_NAME" \
+            "glacier-androidtv-${{ steps.tag.outputs.version }}.apk" \
+            --verify-tag \
+            --title "Glacier ${{ steps.tag.outputs.version }}" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            "${flags[@]}"

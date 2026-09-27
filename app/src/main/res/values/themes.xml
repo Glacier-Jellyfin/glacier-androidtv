@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Window background only; everything else is drawn by GlacierTheme. -->
+    <style name="Theme.Glacier" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/glacier_void</item>
+    </style>
+
+    <color name="glacier_void">#0A1420</color>
+    <color name="glacier_accent">#7DC7D9</color>
+</resources>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- Pinned on purpose; see the comment in gradle/libs.versions.toml. -->
+    <issue id="NewerVersionAvailable">
+        <ignore regexp="org.jellyfin.sdk:jellyfin-core" />
+    </issue>
+</lint>

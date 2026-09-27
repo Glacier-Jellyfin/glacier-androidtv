@@ -1,0 +1,33 @@
+[versions]
+agp = "9.4.1"
+# AGP 9 compiles Kotlin itself (built-in Kotlin). Declaring the Kotlin Gradle
+# plugin in the root build lifts the compiler above AGP's bundled default.
+kotlin = "2.4.20"
+compose-bom = "2026.09.00"
+tv-material = "1.1.0"
+activity-compose = "1.13.0"
+core-ktx = "1.19.1"
+media3 = "1.11.1"
+# 1.9.1 declares 12.1 as its minimum API; stay on 1.9.0 (12.0) until the
+# 12.0 and 12.1 OpenAPI specs have been compared.
+jellyfin-sdk = "1.9.0"
+junit = "4.13.2"
+
+[libraries]
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "core-ktx" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity-compose" }
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+tv-material = { module = "androidx.tv:tv-material", version.ref = "tv-material" }
+media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
+media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls", version.ref = "media3" }
+jellyfin-core = { module = "org.jellyfin.sdk:jellyfin-core", version.ref = "jellyfin-sdk" }
+junit = { module = "junit:junit", version.ref = "junit" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

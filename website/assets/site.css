@@ -1,0 +1,63 @@
+/* Glacier tokens, mirrored from the app's design system. */
+:root {
+  --void: #0a1420;
+  --deep: #12202e;
+  --glass-fill: rgba(173, 214, 224, 0.09);
+  --glass-border: rgba(196, 226, 234, 0.18);
+  --ice: #e8f4f7;
+  --mist: #8fa6b3;
+  --accent: #7dc7d9;
+  --glow-near: rgba(125, 199, 217, 0.10);
+  --glow-far: rgba(78, 147, 168, 0.08);
+  --radius-pill: 999px;
+  --font: "Google Sans", "Segoe UI", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; min-height: 100%; }
+
+body {
+  font-family: var(--font);
+  color: var(--ice);
+  background-color: var(--void);
+  background-image:
+    radial-gradient(ellipse 900px 520px at 12% -8%, var(--glow-near), transparent 60%),
+    radial-gradient(ellipse 800px 620px at 108% 26%, var(--glow-far), transparent 55%);
+  background-attachment: fixed;
+  line-height: 1.5;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--ice); }
+
+.page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 48px 16px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.top { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.lang { font-size: 15px; color: var(--mist); }
+
+.hero { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; }
+.hero h1 { margin: 0; font-size: clamp(44px, 9vw, 76px); font-weight: 600; line-height: 1.02; }
+.hero p { margin: 0; font-size: 20px; color: var(--mist); max-width: 36em; }
+
+.pill {
+  display: inline-flex; align-items: center; height: 36px; padding: 0 16px;
+  border-radius: var(--radius-pill); background: var(--glass-fill);
+  border: 1px solid var(--glass-border); color: var(--mist); font-size: 15px;
+}
+
+.button {
+  display: inline-flex; align-items: center; height: 52px; padding: 0 26px;
+  border-radius: var(--radius-pill); background: var(--accent); color: var(--void);
+  font-weight: 600; font-size: 17px;
+}
+.button:hover { color: var(--void); filter: brightness(1.08); }
+
+footer { color: var(--mist); font-size: 14px; border-top: 1px solid var(--glass-border); padding-top: 24px; }

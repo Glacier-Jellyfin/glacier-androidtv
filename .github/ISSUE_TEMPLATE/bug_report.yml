@@ -1,0 +1,43 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: app-version
+    attributes:
+      label: Glacier version
+      description: Settings › System shows the installed version.
+      placeholder: 1.4.0-beta.2
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: Chromecast with Google TV (4K), Android 14
+    validations:
+      required: true
+  - type: input
+    id: server
+    attributes:
+      label: Jellyfin server version
+      placeholder: '12.1'
+    validations:
+      required: true
+  - type: textarea
+    id: media
+    attributes:
+      label: Media details (playback issues only)
+      description: Container, video/audio codecs and subtitle format, for example from the Jellyfin web client's media info.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      render: text

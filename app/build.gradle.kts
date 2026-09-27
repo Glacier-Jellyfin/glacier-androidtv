@@ -1,0 +1,85 @@
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.compose)
+}
+
+/**
+ * Release version, e.g. "1.4.0" or "1.4.0-beta.2". Must match
+ * core/updater's SemVer, which applies the same versionCode scheme on device.
+ */
+val glacierVersion: String = providers.gradleProperty("glacier.version").get()
+
+/**
+ * major * 1_000_000 + minor * 10_000 + patch * 100 + (beta number | 99).
+ * A stable release always outranks its own betas, so beta users receive it
+ * as a regular update.
+ */
+fun versionCodeOf(version: String): Int {
+    val match = Regex("""^(\d+)\.(\d+)\.(\d+)(?:-beta\.(\d+))?$""").matchEntire(version)
+        ?: error("glacier.version must look like 1.4.0 or 1.4.0-beta.2, was '$version'")
+    val (major, minor, patch, beta) = match.destructured
+    require(minor.toInt() <= 99 && patch.toInt() <= 99) { "minor and patch must be <= 99" }
+    val suffix = if (beta.isEmpty()) 99 else beta.toInt().also { require(it in 1..98) { "beta must be 1..98" } }
+    return major.toInt() * 1_000_000 + minor.toInt() * 10_000 + patch.toInt() * 100 + suffix
+}
+
+android {
+    namespace = "io.github.glacier_jellyfin.androidtv"
+    compileSdk = 37
+
+    defaultConfig {
+        applicationId = "io.github.glacier_jellyfin.androidtv"
+        minSdk = 28
+        targetSdk = 37
+        versionName = glacierVersion
+        versionCode = versionCodeOf(glacierVersion)
+    }
+
+    signingConfigs {
+        // Populated by the release workflow from repository secrets; see docs/RELEASING.md.
+        val keystore = System.getenv("GLACIER_KEYSTORE_PATH")
+        if (keystore != null) {
+            create("release") {
+                storeFile = file(keystore)
+                storePassword = System.getenv("GLACIER_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("GLACIER_KEY_ALIAS")
+                keyPassword = System.getenv("GLACIER_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+        }
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("release")
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+}
+
+dependencies {
+    implementation(project(":core:designsystem"))
+    implementation(project(":core:updater"))
+
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.tv.material)
+    debugImplementation(libs.compose.ui.tooling)
+}

@@ -1,0 +1,24 @@
+# Gradle
+.gradle/
+build/
+.kotlin/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Signing material never enters the repository
+*.jks
+*.keystore
+keystore.properties
+
+# Design export from Claude Design, kept locally as reference only
+/design/
+
+# OS
+.DS_Store
+Thumbs.db
