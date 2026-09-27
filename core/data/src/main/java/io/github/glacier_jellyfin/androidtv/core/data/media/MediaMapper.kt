@@ -36,6 +36,10 @@ internal class MediaMapper(private val api: ApiClient) {
             BaseItemKind.SERIES -> ItemKind.Series
             BaseItemKind.EPISODE -> ItemKind.Episode
             BaseItemKind.MUSIC_ALBUM -> ItemKind.Album
+            BaseItemKind.BOX_SET -> ItemKind.Collection
+            BaseItemKind.GENRE -> ItemKind.Genre
+            BaseItemKind.MUSIC_ARTIST -> ItemKind.Artist
+            BaseItemKind.PLAYLIST -> ItemKind.Playlist
             else -> ItemKind.Other
         }
         val runtimeTicks = dto.runTimeTicks
@@ -45,6 +49,7 @@ internal class MediaMapper(private val api: ApiClient) {
             id = dto.id,
             kind = kind,
             title = dto.name.orEmpty(),
+            sortName = dto.sortName,
             year = dto.productionYear,
             communityRating = dto.communityRating,
             officialRating = dto.officialRating,
@@ -58,6 +63,12 @@ internal class MediaMapper(private val api: ApiClient) {
             remainingMinutes = remaining,
             unwatchedCount = dto.userData?.unplayedItemCount?.takeIf { kind == ItemKind.Series && it > 0 },
             isFavorite = dto.userData?.isFavorite ?: false,
+            played = dto.userData?.played ?: false,
+            childCount = when (kind) {
+                ItemKind.Genre -> listOfNotNull(dto.movieCount, dto.seriesCount).sum().takeIf { it > 0 }
+                ItemKind.Artist -> dto.albumCount
+                else -> dto.childCount
+            },
             quality = quality(dto),
             posterUrl = poster(dto),
             thumbUrl = thumb(dto),

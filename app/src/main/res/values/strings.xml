@@ -106,5 +106,46 @@
     <string name="coming_soon">This screen follows in a later step.</string>
     <string name="action_back">Back</string>
 
+    <!-- Library -->
+    <string name="library_movies">Movies</string>
+    <string name="library_shows">Shows</string>
+    <string name="library_music">Music</string>
+    <string name="scope_all">All</string>
+    <string name="scope_collections">Collections</string>
+    <string name="scope_genres">Genres</string>
+    <string name="scope_unwatched">Unwatched</string>
+    <string name="scope_favorites">Favorites</string>
+    <string name="scope_albums">Albums</string>
+    <string name="scope_artists">Artists</string>
+    <string name="scope_playlists">Playlists</string>
+    <string name="sort_date_added">Recently added</string>
+    <string name="sort_title">Title</string>
+    <string name="sort_year">Release year</string>
+    <string name="sort_rating">Rating</string>
+    <string name="sort_runtime">Runtime</string>
+    <string name="sort_ascending">ascending</string>
+    <string name="sort_descending">descending</string>
+    <string name="library_summary">%1$s · sorted by %2$s · %3$s</string>
+    <plurals name="count_collections">
+        <item quantity="one">%1$d collection</item>
+        <item quantity="other">%1$d collections</item>
+    </plurals>
+    <plurals name="count_genres">
+        <item quantity="one">%1$d genre</item>
+        <item quantity="other">%1$d genres</item>
+    </plurals>
+    <plurals name="count_artists">
+        <item quantity="one">%1$d artist</item>
+        <item quantity="other">%1$d artists</item>
+    </plurals>
+    <plurals name="count_playlists">
+        <item quantity="one">%1$d playlist</item>
+        <item quantity="other">%1$d playlists</item>
+    </plurals>
+    <string name="library_empty_favorites">No favorites in this library yet. Mark a title as favorite on its detail page.</string>
+    <string name="library_empty_unwatched">All caught up — no unwatched titles left in this library.</string>
+    <string name="library_empty">Nothing in this view.</string>
+    <string name="library_error">This view could not be loaded.</string>
+
     <string name="toast_notice">Note</string>
 </resources>

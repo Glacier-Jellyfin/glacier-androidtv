@@ -219,3 +219,89 @@ fun ProgressBar(progress: Float, modifier: Modifier = Modifier, track: Color = G
         )
     }
 }
+
+enum class CardShape { Poster, Square, Round }
+
+/**
+ * Library grid tile (design: `libGrid`): artwork, title and one caption line,
+ * plus a watched check or a count badge (titles in a collection).
+ */
+@Composable
+fun GridCard(
+    imageUrl: String?,
+    title: String,
+    caption: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    shape: CardShape = CardShape.Poster,
+    watched: Boolean = false,
+    count: Int? = null,
+) {
+    val accent = LocalAccent.current.main
+    val outline: Shape = when (shape) {
+        CardShape.Poster -> RoundedCornerShape(GlacierShapes.RadiusLg)
+        CardShape.Square -> RoundedCornerShape(GlacierShapes.RadiusMd)
+        CardShape.Round -> PillShape
+    }
+    val width = CardSize.POSTER_WIDTH
+    val height = if (shape == CardShape.Poster) CardSize.POSTER_HEIGHT else CardSize.POSTER_WIDTH
+    GlacierCard(onClick = onClick, modifier = modifier.width(width.dp)) { focused ->
+        Box(
+            Modifier
+                .size(width.dp, height.dp)
+                .focusFrame(focused, outline)
+                .clip(outline),
+        ) {
+            Artwork(imageUrl, Modifier.fillMaxSize())
+            if (imageUrl == null) {
+                // No artwork (genres, some collections): the title stands in for it.
+                Text(
+                    title,
+                    style = GlacierText.display(26),
+                    color = GlacierColors.Ice,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.align(Alignment.Center).padding(20.dp),
+                )
+            }
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Brush.linearGradient(0f to Color(0x1AE8F4F7), 0.42f to Color.Transparent, start = Offset(Float.POSITIVE_INFINITY, 0f), end = Offset(0f, Float.POSITIVE_INFINITY))),
+            )
+            when {
+                count != null -> Badge(count.toString(), accent, Modifier.align(Alignment.TopEnd))
+                watched -> Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(14.dp)
+                        .size(34.dp)
+                        .clip(PillShape)
+                        .background(accent),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(GlacierIcons.Check, contentDescription = null, tint = GlacierColors.Void, modifier = Modifier.size(18.dp))
+                }
+            }
+        }
+        Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(title, style = GlacierText.display(20), color = if (focused) accent else GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (caption != null) Text(caption, style = GlacierText.body(16), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+@Composable
+private fun Badge(text: String, color: Color, modifier: Modifier) {
+    Box(
+        modifier
+            .padding(14.dp)
+            .height(34.dp)
+            .clip(PillShape)
+            .background(color)
+            .padding(horizontal = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, style = GlacierText.body(16, FontWeight.Bold), color = GlacierColors.Void)
+    }
+}

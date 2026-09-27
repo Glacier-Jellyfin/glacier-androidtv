@@ -122,7 +122,7 @@ class HomeViewModel @Inject constructor(
     fun openContinueWatching(item: MediaItem) =
         if (item.kind == ItemKind.Episode) openDetails(item) else play(item)
 
-    fun openLibrary(library: Library) = navigate(LibraryRoute(library.kind.name, library.id.toString()))
+    fun openLibrary(library: Library) = navigate(LibraryRoute(library.kind.name, library.id.toString(), title = library.name))
 
     fun onNav(target: NavTarget) {
         when (target) {

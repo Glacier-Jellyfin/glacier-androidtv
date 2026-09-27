@@ -47,6 +47,11 @@ object GlacierIcons {
     val Heart = icon(HEART, strokeWidth = 1.8f)
     val HeartFilled = filled(HEART, strokeWidth = 1.8f)
     val Play = filled("M6 3 20 12 6 21z")
+    val Check = icon("M20 6 9 17l-5-5", strokeWidth = 3.4f)
+    val SortLines = icon("M4 7h16", "M7 12h10", "M10 17h4", strokeWidth = 2.2f)
+    val ArrowDown = icon("M12 5v14", "m6 13 6 6 6-6", strokeWidth = 2.4f)
+    val ChevronDown = icon("m6 9 6 6 6-6", strokeWidth = 2.4f)
+    val ChevronLeft = icon("m15 18-6-6 6-6", strokeWidth = 2.4f)
     val Star = filled("M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z")
 
     private fun icon(vararg paths: String, strokeWidth: Float = 2f): ImageVector =

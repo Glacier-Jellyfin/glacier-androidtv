@@ -23,7 +23,13 @@ data object HomeRoute
 
 /** Movies, shows or music across all libraries of that kind, or one library when [libraryId] is set. */
 @Serializable
-data class LibraryRoute(val kind: String, val libraryId: String? = null)
+data class LibraryRoute(
+    val kind: String,
+    val libraryId: String? = null,
+    /** Library or genre name shown as the title; the kind name when null. */
+    val title: String? = null,
+    val genreId: String? = null,
+)
 
 @Serializable
 data class DetailRoute(val itemId: String)

@@ -102,5 +102,46 @@
     <string name="coming_soon">Dieser Bildschirm folgt in einem späteren Schritt.</string>
     <string name="action_back">Zurück</string>
 
+    <!-- Bibliothek -->
+    <string name="library_movies">Filme</string>
+    <string name="library_shows">Serien</string>
+    <string name="library_music">Musik</string>
+    <string name="scope_all">Alle</string>
+    <string name="scope_collections">Sammlungen</string>
+    <string name="scope_genres">Genres</string>
+    <string name="scope_unwatched">Ungesehen</string>
+    <string name="scope_favorites">Favoriten</string>
+    <string name="scope_albums">Alben</string>
+    <string name="scope_artists">Künstler</string>
+    <string name="scope_playlists">Wiedergabelisten</string>
+    <string name="sort_date_added">Zuletzt hinzugefügt</string>
+    <string name="sort_title">Titel</string>
+    <string name="sort_year">Erscheinungsjahr</string>
+    <string name="sort_rating">Bewertung</string>
+    <string name="sort_runtime">Laufzeit</string>
+    <string name="sort_ascending">aufsteigend</string>
+    <string name="sort_descending">absteigend</string>
+    <string name="library_summary">%1$s · sortiert nach %2$s · %3$s</string>
+    <plurals name="count_collections">
+        <item quantity="one">%1$d Sammlung</item>
+        <item quantity="other">%1$d Sammlungen</item>
+    </plurals>
+    <plurals name="count_genres">
+        <item quantity="one">%1$d Genre</item>
+        <item quantity="other">%1$d Genres</item>
+    </plurals>
+    <plurals name="count_artists">
+        <item quantity="one">%1$d Künstler</item>
+        <item quantity="other">%1$d Künstler</item>
+    </plurals>
+    <plurals name="count_playlists">
+        <item quantity="one">%1$d Wiedergabeliste</item>
+        <item quantity="other">%1$d Wiedergabelisten</item>
+    </plurals>
+    <string name="library_empty_favorites">Noch keine Favoriten in dieser Bibliothek. Markiere einen Titel auf seiner Detailseite als Favorit.</string>
+    <string name="library_empty_unwatched">Alles gesehen — in dieser Bibliothek ist kein ungesehener Titel übrig.</string>
+    <string name="library_empty">Keine Einträge in dieser Ansicht.</string>
+    <string name="library_error">Diese Ansicht konnte nicht geladen werden.</string>
+
     <string name="toast_notice">Hinweis</string>
 </resources>

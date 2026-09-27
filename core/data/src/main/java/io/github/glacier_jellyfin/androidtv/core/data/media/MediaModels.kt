@@ -13,7 +13,7 @@ data class Library(
     val imageUrl: String?,
 )
 
-enum class ItemKind { Movie, Series, Episode, Album, Other }
+enum class ItemKind { Movie, Series, Episode, Album, Collection, Genre, Artist, Playlist, Other }
 
 /** Resolution and dynamic range, as far as the server reports them. */
 data class VideoQuality(val uhd: Boolean, val hdr: HdrFormat?)
@@ -25,6 +25,8 @@ data class MediaItem(
     val id: UUID,
     val kind: ItemKind,
     val title: String,
+    /** The server's sort name: lower case, leading articles removed. */
+    val sortName: String?,
     val year: Int?,
     val communityRating: Float?,
     val officialRating: String?,
@@ -39,6 +41,9 @@ data class MediaItem(
     val remainingMinutes: Int?,
     val unwatchedCount: Int?,
     val isFavorite: Boolean,
+    val played: Boolean,
+    /** Titles in a collection, genre or playlist; albums of an artist. */
+    val childCount: Int?,
     val quality: VideoQuality?,
     /** 2:3 poster (or square album cover). */
     val posterUrl: String?,

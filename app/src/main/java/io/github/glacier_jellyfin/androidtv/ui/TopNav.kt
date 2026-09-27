@@ -3,6 +3,7 @@ package io.github.glacier_jellyfin.androidtv.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.shadow.Shadow
@@ -61,11 +63,14 @@ fun TopNav(
     userName: String,
     onSelect: (NavTarget) -> Unit,
     modifier: Modifier = Modifier,
-    activeFocus: FocusRequester? = null,
 ) {
+    val activeFocus = remember { FocusRequester() }
     val targets = listOf(NavTarget.Search, NavTarget.Home) + kinds.map(NavTarget::Library) + listOf(NavTarget.Settings, NavTarget.Profile)
     Row(
         modifier = modifier
+            // Entering from below lands on the active entry, not the geometrically nearest one.
+            .focusProperties { onEnter = { activeFocus.requestFocus() } }
+            .focusGroup()
             .dropShadow(PillShape, Shadow(radius = 40.dp, spread = (-14).dp, color = Color.Black.copy(alpha = 0.55f), offset = DpOffset(0.dp, 18.dp)))
             .clip(PillShape)
             .background(GlacierColors.Deep.copy(alpha = 0.72f))
@@ -81,7 +86,7 @@ fun TopNav(
                 active = target == active,
                 userName = userName,
                 onClick = { onSelect(target) },
-                modifier = if (target == active && activeFocus != null) Modifier.focusRequester(activeFocus) else Modifier,
+                modifier = if (target == active) Modifier.focusRequester(activeFocus) else Modifier,
             )
         }
     }
