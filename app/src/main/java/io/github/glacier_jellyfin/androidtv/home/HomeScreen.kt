@@ -1,7 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.home
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -33,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -53,18 +50,15 @@ import io.github.glacier_jellyfin.androidtv.ui.CardSize
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.ContinueCard
 import io.github.glacier_jellyfin.androidtv.ui.LibraryCard
+import io.github.glacier_jellyfin.androidtv.ui.MediaRow
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PosterCard
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.ui.rememberCardPivotSpec
+import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import kotlinx.coroutines.delay
-import kotlin.math.abs
 
-/** Where a focused row settles vertically, and a focused card horizontally (design `sync()`). */
-private const val ROW_PIVOT = 330
-private const val CARD_PIVOT = 120
-private const val ROW_TOLERANCE = 48
-private const val EDGE = 80
 
 @OptIn(ExperimentalFoundationApi::class) // LocalBringIntoViewSpec
 @Composable
@@ -97,7 +91,7 @@ fun HomeScreen(
             state.failed && content == null -> ErrorState(onRetry = viewModel::load)
             content != null -> {
                 val listState = rememberLazyListState()
-                CompositionLocalProvider(LocalBringIntoViewSpec provides rememberRowPivotSpec(listState)) {
+                CompositionLocalProvider(LocalBringIntoViewSpec provides rememberRowPivotSpec(listState, SpotlightHeight)) {
                     LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                         item(key = "spotlight") {
                             if (spotlight.isNotEmpty()) {
@@ -178,79 +172,6 @@ fun HomeScreen(
                 .align(Alignment.TopCenter)
                 .padding(top = 34.dp),
         )
-    }
-}
-
-/**
- * Vertical scrolling of the home list: anything in the spotlight scrolls the
- * page back to the top; a focused row settles with its cards [ROW_PIVOT] from the top.
- *
- * Moving sideways within a row also asks the list to bring the new card into
- * view. Its target is then a few pixels off and keeps being corrected while
- * the row scrolls, which made the whole page tremble. Rows are far apart, so
- * anything within [ROW_TOLERANCE] of the pivot is treated as "already there".
- */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun rememberRowPivotSpec(listState: LazyListState): BringIntoViewSpec {
-    val density = LocalDensity.current
-    return remember(listState, density) {
-        val pivot = with(density) { ROW_PIVOT.dp.toPx() }
-        val tolerance = with(density) { ROW_TOLERANCE.dp.toPx() }
-        val spotlight = with(density) { SpotlightHeight.dp.toPx() }
-        object : BringIntoViewSpec {
-            override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
-                if (listState.firstVisibleItemIndex == 0) {
-                    val scrolled = listState.firstVisibleItemScrollOffset.toFloat()
-                    if (offset + scrolled < spotlight) return -scrolled
-                }
-                val distance = offset - pivot
-                return if (abs(distance) < tolerance) 0f else distance
-            }
-        }
-    }
-}
-
-/** Horizontal counterpart: the focused card settles [CARD_PIVOT] from the left edge. */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun rememberCardPivotSpec(): BringIntoViewSpec {
-    val density = LocalDensity.current
-    return remember(density) {
-        val pivot = with(density) { CARD_PIVOT.dp.toPx() }
-        object : BringIntoViewSpec {
-            override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = offset - pivot
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun MediaRow(
-    title: String,
-    subtitle: String? = null,
-    bottomPadding: Int = 46,
-    content: LazyListScope.() -> Unit,
-) {
-    // The row's 26px vertical content padding leaves room for focus scale and ring;
-    // pulling it up by 8px keeps the design's 18px between title and cards.
-    Column(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = (bottomPadding - 26).dp)) {
-        Row(
-            Modifier.padding(start = EDGE.dp, end = EDGE.dp),
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Text(title, style = GlacierText.display(28), color = GlacierColors.Ice)
-            if (subtitle != null) Text(subtitle, style = GlacierText.body(17), color = GlacierColors.Mist)
-        }
-        CompositionLocalProvider(LocalBringIntoViewSpec provides rememberCardPivotSpec()) {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = EDGE.dp, vertical = 26.dp),
-                horizontalArrangement = Arrangement.spacedBy(CardSize.ROW_GAP.dp),
-                modifier = Modifier.offset(y = (-8).dp),
-                content = content,
-            )
-        }
     }
 }
 

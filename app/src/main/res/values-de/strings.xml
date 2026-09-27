@@ -143,5 +143,38 @@
     <string name="library_empty">Keine Einträge in dieser Ansicht.</string>
     <string name="library_error">Diese Ansicht konnte nicht geladen werden.</string>
 
+    <!-- Details -->
+    <string name="detail_error">Dieser Titel konnte nicht geladen werden.</string>
+    <string name="detail_resume_left">Fortsetzen · noch %1$d Min.</string>
+    <string name="detail_from_start">Von Anfang</string>
+    <string name="detail_trailer">Trailer</string>
+    <string name="detail_cast">Besetzung</string>
+    <string name="detail_similar">Ähnliche Titel</string>
+    <string name="action_mark_watched">Als gesehen</string>
+    <string name="action_mark_unwatched">Als ungesehen</string>
+    <string name="marked_watched">Als gesehen markiert</string>
+    <string name="marked_unwatched">Als ungesehen markiert</string>
+    <string name="season_number">Staffel %1$d</string>
+    <plurals name="count_seasons">
+        <item quantity="one">%1$d Staffel</item>
+        <item quantity="other">%1$d Staffeln</item>
+    </plurals>
+    <plurals name="count_episodes">
+        <item quantity="one">%1$d Folge</item>
+        <item quantity="other">%1$d Folgen</item>
+    </plurals>
+    <string name="episode_badge">F%1$d</string>
+    <string name="episode_play">Folge abspielen</string>
+    <string name="episode_more">Weitere Folgen · Staffel %1$d</string>
+    <string name="episode_crumb">%1$s · Staffel %2$d · Folge %3$d</string>
+    <string name="episode_progress">%1$d %% gesehen · noch %2$d Min.</string>
+    <string name="track_audio">Tonspur</string>
+    <string name="track_subtitles">Untertitel</string>
+    <string name="track_off">Aus</string>
+    <string name="track_forced">erzwungen</string>
+    <string name="track_next_playback">Gilt für die nächste Wiedergabe</string>
+    <string name="track_audio_set">Tonspur: %1$s</string>
+    <string name="track_subtitles_set">Untertitel: %1$s</string>
+
     <string name="toast_notice">Hinweis</string>
 </resources>

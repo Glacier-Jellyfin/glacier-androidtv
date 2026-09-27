@@ -81,6 +81,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
 import io.github.glacier_jellyfin.androidtv.ui.CardShape
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
+import io.github.glacier_jellyfin.androidtv.ui.FilterChip
 import io.github.glacier_jellyfin.androidtv.ui.GridCard
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
@@ -282,7 +283,7 @@ private fun Toolbar(
     ) {
         state.scopes.forEach { scope ->
             val active = scope == state.query.scope
-            Chip(
+            FilterChip(
                 label = stringResource(scope.label),
                 active = active,
                 onClick = { onScope(scope) },
@@ -298,41 +299,6 @@ private fun Toolbar(
                 modifier = Modifier.onGloballyPositioned { onSortAnchor(it.boundsInRoot()) },
             )
         }
-    }
-}
-
-/** Filter chip (`pill()` with the active state). */
-@Composable
-private fun Chip(label: String, active: Boolean, onClick: () -> Unit, modifier: Modifier) {
-    val accent = LocalAccent.current.main
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    Box(
-        modifier
-            .focusScale(focused)
-            .height(52.dp)
-            .clip(PillShape)
-            .background(
-                when {
-                    focused -> accent
-                    active -> accent.copy(alpha = 0.18f)
-                    else -> GlacierColors.GlassFill
-                },
-            )
-            .border(2.dp, if (focused) accent else if (active) accent.copy(alpha = 0.45f) else Color.Transparent, PillShape)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-            .padding(horizontal = 26.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            label,
-            style = GlacierText.body(19, FontWeight.SemiBold),
-            color = when {
-                focused -> GlacierColors.Void
-                active -> GlacierColors.Ice
-                else -> GlacierColors.Mist
-            },
-        )
     }
 }
 

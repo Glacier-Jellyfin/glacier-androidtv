@@ -9,6 +9,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.detail.DetailScreen
 import io.github.glacier_jellyfin.androidtv.home.HomeScreen
 import io.github.glacier_jellyfin.androidtv.library.LibraryScreen
 import io.github.glacier_jellyfin.androidtv.profiles.ProfilesScreen
@@ -54,9 +55,11 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
         composable<ProfilesRoute> { ProfilesScreen(onNavigate = navigate) }
         composable<HomeRoute> { HomeScreen(onNavigate = navigate) }
         composable<LibraryRoute> { LibraryScreen(onNavigate = navigate) }
+        composable<DetailRoute> { DetailScreen(onNavigate = navigate, onBack = back) }
 
         // Later development steps; placeholders keep the navigation testable.
-        composable<DetailRoute> { ComingSoonScreen(stringResource(R.string.hero_more_info), onBack = back) }
+        composable<PersonRoute> { ComingSoonScreen(stringResource(R.string.detail_cast), onBack = back) }
+        composable<TrailerRoute> { ComingSoonScreen(stringResource(R.string.detail_trailer), onBack = back) }
         composable<PlayerRoute> { ComingSoonScreen(stringResource(R.string.hero_play), onBack = back) }
         composable<SearchRoute> { ComingSoonScreen(stringResource(R.string.nav_search), onBack = back) }
         composable<SettingsRoute> {

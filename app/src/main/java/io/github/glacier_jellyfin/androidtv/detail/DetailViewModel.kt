@@ -1,0 +1,218 @@
+package io.github.glacier_jellyfin.androidtv.detail
+
+import android.util.Log
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
+import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.core.data.media.CastMember
+import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
+import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
+import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
+import io.github.glacier_jellyfin.androidtv.core.data.media.Season
+import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelection
+import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelections
+import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
+import io.github.glacier_jellyfin.androidtv.navigation.PersonRoute
+import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
+import io.github.glacier_jellyfin.androidtv.navigation.TrailerRoute
+import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import java.util.UUID
+import javax.inject.Inject
+
+enum class TrackKind { Audio, Subtitles }
+
+data class DetailState(
+    val loading: Boolean = true,
+    val failed: Boolean = false,
+    val details: ItemDetails? = null,
+    /** Shows: all seasons and the one whose episodes are listed. */
+    val seasons: List<Season> = emptyList(),
+    val season: Season? = null,
+    /** Episodes of [season] for shows; of the same season for an episode page. */
+    val episodes: List<MediaItem> = emptyList(),
+    /** Episode to focus in the episode row: the first unwatched one. */
+    val focusEpisode: Int = 0,
+    val similar: List<MediaItem> = emptyList(),
+    /** Next episode to play for a show. */
+    val nextEpisode: MediaItem? = null,
+    val selection: TrackSelection? = null,
+    val trackPanel: TrackKind? = null,
+) {
+    val item: MediaItem? get() = details?.item
+}
+
+@HiltViewModel
+class DetailViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    private val repository: DetailRepository,
+    private val trackSelections: TrackSelections,
+) : ViewModel() {
+
+    private var itemId: UUID = UUID.fromString(savedStateHandle.toRoute<DetailRoute>().itemId)
+
+    private val _state = MutableStateFlow(DetailState())
+    val state: StateFlow<DetailState> = _state.asStateFlow()
+
+    private val _events = Channel<UiEvent>(Channel.BUFFERED)
+    val events = _events.receiveAsFlow()
+
+    init {
+        load()
+    }
+
+    fun load() {
+        viewModelScope.launch {
+            _state.update { it.copy(loading = true, failed = false) }
+            try {
+                val details = repository.details(itemId)
+                val similarAsync = async { runCatching { repository.similar(itemId) }.getOrDefault(emptyList()) }
+                _state.update {
+                    it.copy(
+                        details = details,
+                        selection = trackSelections.get(itemId) ?: details.tracks?.let { t -> TrackSelection(t.defaultAudio, t.defaultSubtitle) },
+                    )
+                }
+                when (details.item.kind) {
+                    ItemKind.Series -> loadSeries(details)
+                    ItemKind.Episode -> loadSeasonOf(details)
+                    else -> Unit
+                }
+                _state.update { it.copy(loading = false, similar = if (details.item.kind == ItemKind.Episode) emptyList() else similarAsync.await()) }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Loading details failed", e)
+                _state.update { it.copy(loading = false, failed = true) }
+            }
+        }
+    }
+
+    /** Design: open a show on the first season with something unwatched. */
+    private suspend fun loadSeries(details: ItemDetails) {
+        val seasons = repository.seasons(details.item.id)
+        val season = seasons.firstOrNull { (it.unwatchedCount ?: 0) > 0 } ?: seasons.lastOrNull()
+        val next = runCatching { repository.nextEpisode(details.item.id) }.getOrNull()
+        _state.update { it.copy(seasons = seasons, nextEpisode = next) }
+        season?.let { selectSeason(it, details.item.id) }
+    }
+
+    private suspend fun loadSeasonOf(details: ItemDetails) {
+        val seriesId = details.seriesId ?: return
+        val seasonId = details.seasonId ?: return
+        val episodes = repository.episodes(seriesId, seasonId)
+        _state.update { state ->
+            state.copy(
+                episodes = episodes,
+                season = Season(seasonId, details.item.seasonNumber, "", null),
+                focusEpisode = episodes.indexOfFirst { it.id == details.item.id }.coerceAtLeast(0),
+            )
+        }
+    }
+
+    fun selectSeason(season: Season) {
+        val seriesId = _state.value.item?.id ?: return
+        viewModelScope.launch { selectSeason(season, seriesId) }
+    }
+
+    private suspend fun selectSeason(season: Season, seriesId: UUID) {
+        _state.update { it.copy(season = season) }
+        val episodes = runCatching { repository.episodes(seriesId, season.id) }
+            .onFailure { Log.w(TAG, "Loading episodes failed", it) }
+            .getOrDefault(emptyList())
+        val firstUnwatched = episodes.indexOfFirst { !it.played }.takeIf { it >= 0 } ?: 0
+        _state.update { if (it.season?.id == season.id) it.copy(episodes = episodes, focusEpisode = firstUnwatched) else it }
+    }
+
+    /** Episode pages switch in place when another episode of the season is picked (design). */
+    fun showEpisode(episode: MediaItem) {
+        if (episode.id == itemId) return
+        itemId = episode.id
+        load()
+    }
+
+    fun play(fromStart: Boolean = false) {
+        val current = _state.value
+        val item = current.item ?: return
+        val target = if (item.kind == ItemKind.Series) current.nextEpisode ?: current.episodes.firstOrNull() ?: return else item
+        navigate(PlayerRoute(target.id.toString(), fromStart))
+    }
+
+    fun playTrailer() {
+        val item = _state.value.item ?: return
+        navigate(TrailerRoute(item.id.toString()))
+    }
+
+    fun toggleFavorite() {
+        val item = _state.value.item ?: return
+        val favorite = !item.isFavorite
+        updateItem { it.copy(isFavorite = favorite) }
+        viewModelScope.launch {
+            runCatching { repository.setFavorite(item.id, favorite) }
+                .onSuccess { toast(if (favorite) R.string.favorite_added else R.string.favorite_removed) }
+                .onFailure { updateItem { current -> current.copy(isFavorite = !favorite) } }
+        }
+    }
+
+    fun togglePlayed() {
+        val item = _state.value.item ?: return
+        val played = !item.played
+        updateItem { it.copy(played = played) }
+        viewModelScope.launch {
+            runCatching { repository.setPlayed(item.id, played) }
+                .onSuccess {
+                    toast(if (played) R.string.marked_watched else R.string.marked_unwatched)
+                    // A whole show or season changes its episodes too.
+                    if (item.kind == ItemKind.Series) _state.value.season?.let { selectSeason(it, item.id) }
+                }
+                .onFailure { updateItem { current -> current.copy(played = !played) } }
+        }
+    }
+
+    fun openTracks(kind: TrackKind) = _state.update { it.copy(trackPanel = kind) }
+
+    fun closeTracks() = _state.update { it.copy(trackPanel = null) }
+
+    fun pickTrack(kind: TrackKind, index: Int?, label: String) {
+        val current = _state.value.selection ?: TrackSelection(null, null)
+        val selection = if (kind == TrackKind.Audio) current.copy(audio = index) else current.copy(subtitle = index)
+        trackSelections.set(itemId, selection)
+        _state.update { it.copy(selection = selection, trackPanel = null) }
+        viewModelScope.launch {
+            _events.send(UiEvent.Toast(if (kind == TrackKind.Audio) R.string.track_audio_set else R.string.track_subtitles_set, listOf(label)))
+        }
+    }
+
+    fun openEpisode(episode: MediaItem) = navigate(DetailRoute(episode.id.toString()))
+
+    fun openItem(item: MediaItem) = navigate(DetailRoute(item.id.toString()))
+
+    fun openPerson(person: CastMember) = navigate(PersonRoute(person.id.toString()))
+
+    private fun updateItem(change: (MediaItem) -> MediaItem) = _state.update { state ->
+        state.copy(details = state.details?.let { it.copy(item = change(it.item)) })
+    }
+
+    private fun toast(message: Int) {
+        viewModelScope.launch { _events.send(UiEvent.Toast(message)) }
+    }
+
+    private fun navigate(route: Any) {
+        viewModelScope.launch { _events.send(UiEvent.Navigate(route)) }
+    }
+
+    private companion object {
+        const val TAG = "Detail"
+    }
+}

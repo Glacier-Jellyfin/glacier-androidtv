@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.height
@@ -43,6 +44,8 @@ fun ActionButton(
     primary: Boolean = false,
     on: Boolean = false,
     contentDescription: String? = label,
+    /** Second icon drawn over [icon] in the button's background colour, e.g. a check in a filled circle. */
+    iconMark: ImageVector? = null,
 ) {
     val accent = LocalAccent.current
     val interaction = remember { MutableInteractionSource() }
@@ -74,7 +77,13 @@ fun ActionButton(
         horizontalArrangement = Arrangement.spacedBy(11.dp, Alignment.CenterHorizontally),
     ) {
         if (icon != null) {
-            Icon(icon, contentDescription = if (label == null) contentDescription else null, tint = foreground, modifier = Modifier.size(if (label != null) 20.dp else 26.dp))
+            val iconSize = if (label != null) 20.dp else 26.dp
+            Box(contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = if (label == null) contentDescription else null, tint = foreground, modifier = Modifier.size(iconSize))
+                if (iconMark != null) {
+                    Icon(iconMark, contentDescription = null, tint = if (focused) accent.main else GlacierColors.Void, modifier = Modifier.size(iconSize))
+                }
+            }
         }
         if (label != null) Text(label, style = GlacierText.body(21, FontWeight.SemiBold), color = foreground)
     }

@@ -52,6 +52,21 @@ object GlacierIcons {
     val ArrowDown = icon("M12 5v14", "m6 13 6 6 6-6", strokeWidth = 2.4f)
     val ChevronDown = icon("m6 9 6 6 6-6", strokeWidth = 2.4f)
     val ChevronLeft = icon("m15 18-6-6 6-6", strokeWidth = 2.4f)
+    val Speaker = icon(
+        "M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z",
+        "M16 9a5 5 0 0 1 0 6",
+        "M19.4 18.4a9 9 0 0 0 0-12.8",
+    )
+    val Subtitles = icon(
+        "M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z",
+        "M7 13h4", "M15 13h2", "M7 9h2", "M13 9h4",
+    )
+    private const val CIRCLE = "M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"
+    private const val SEEN_CHECK = "M8.2 12.3l2.5 2.6 5.1-5.4"
+    val Seen = icon(CIRCLE, SEEN_CHECK, strokeWidth = 1.9f)
+    val SeenFilled = filled(CIRCLE, strokeWidth = 1.8f)
+    /** Drawn over [SeenFilled] in the button's background colour. */
+    val SeenMark = icon(SEEN_CHECK, strokeWidth = 2.1f)
     val Star = filled("M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z")
 
     private fun icon(vararg paths: String, strokeWidth: Float = 2f): ImageVector =

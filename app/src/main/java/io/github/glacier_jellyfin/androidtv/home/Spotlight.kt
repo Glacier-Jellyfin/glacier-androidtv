@@ -1,11 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.home
 
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -36,7 +31,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.shadow.Shadow as DropShadow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -51,20 +45,16 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
-import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
+import io.github.glacier_jellyfin.androidtv.ui.FactsRow
+import io.github.glacier_jellyfin.androidtv.ui.KenBurns
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
-import io.github.glacier_jellyfin.androidtv.ui.ageRatingText
 import io.github.glacier_jellyfin.androidtv.ui.episodeText
-import io.github.glacier_jellyfin.androidtv.ui.qualityText
-import io.github.glacier_jellyfin.androidtv.ui.ratingText
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
-
 const val SpotlightHeight = 680
 
 /** The home screen's hero ("Spotlight"): backdrop, title, facts, actions and position dots. */
@@ -145,7 +135,7 @@ private fun SpotlightInfo(
             val episode = episodeText(item)
             Text(listOfNotNull(episode, item.title).joinToString(" · "), style = GlacierText.body(24, FontWeight.SemiBold), color = GlacierColors.Ice)
         }
-        Facts(item)
+        FactsRow(item, listOfNotNull(item.year?.toString(), item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }, item.genres.firstOrNull()))
         item.overview?.let {
             Text(
                 it,
@@ -206,35 +196,6 @@ private fun ResumeChip() {
     }
 }
 
-/** Rating, age rating, year · runtime · genre, quality badge. */
-@Composable
-private fun Facts(item: MediaItem) {
-    val accent = LocalAccent.current.main
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-        item.communityRating?.let {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(GlacierIcons.Star, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
-                Text(ratingText(it), style = GlacierText.body(20, FontWeight.Bold), color = accent)
-            }
-        }
-        ageRatingText(item.officialRating)?.let { Badge(it, GlacierColors.GlassBorder2, 17, GlacierColors.Ice) }
-        val runtime = item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }
-        val facts = listOfNotNull(item.year?.toString(), runtime, item.genres.firstOrNull())
-        if (facts.isNotEmpty()) {
-            Text(facts.joinToString("  ·  "), style = GlacierText.body(20), color = GlacierColors.Mist)
-        }
-        qualityText(item.quality)?.let { Badge(it, GlacierColors.GlassBorder, 15, GlacierColors.Mist) }
-    }
-}
-
-@Composable
-private fun Badge(text: String, border: Color, size: Int, color: Color) {
-    val shape = RoundedCornerShape(GlacierShapes.RadiusSm)
-    Box(Modifier.border(1.dp, border, shape).padding(horizontal = 10.dp, vertical = 3.dp)) {
-        Text(text, style = GlacierText.body(size).copy(letterSpacing = 0.06.em), color = color)
-    }
-}
-
 /** Position dot; the active one is a wide accent pill. Focusable to jump to that title. */
 @Composable
 private fun Dot(active: Boolean, onClick: () -> Unit) {
@@ -257,26 +218,4 @@ private fun Dot(active: Boolean, onClick: () -> Unit) {
                 .background(if (active) accent else Color(0x4DE8F4F7)),
         )
     }
-}
-
-/** The design's `gKen`: a slow 22 s zoom and drift, alternating. Off with "reduce motion". */
-@Composable
-private fun KenBurns(content: @Composable () -> Unit) {
-    if (LocalReduceMotion.current) {
-        content()
-        return
-    }
-    val transition = rememberInfiniteTransition(label = "ken")
-    val t by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(22_000), RepeatMode.Reverse), label = "kenT")
-    Box(
-        Modifier
-            .fillMaxSize()
-            .graphicsLayer {
-                val scale = 1.02f + 0.07f * t
-                scaleX = scale
-                scaleY = scale
-                translationX = -0.012f * size.width * t
-                translationY = -0.01f * size.height * t
-            },
-    ) { content() }
 }

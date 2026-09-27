@@ -35,7 +35,13 @@ data class LibraryRoute(
 data class DetailRoute(val itemId: String)
 
 @Serializable
-data class PlayerRoute(val itemId: String)
+data class PlayerRoute(val itemId: String, val fromStart: Boolean = false)
+
+@Serializable
+data class TrailerRoute(val itemId: String)
+
+@Serializable
+data class PersonRoute(val personId: String)
 
 @Serializable
 data object SearchRoute

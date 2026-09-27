@@ -108,14 +108,16 @@ internal class MediaMapper(private val api: ApiClient) {
     }
 
     private fun thumb(dto: BaseItemDto): String? {
+        // An episode's primary image is its own 16:9 still: more specific than any series art.
+        if (dto.type == BaseItemKind.EPISODE) {
+            dto.imageTags?.get(ImageType.PRIMARY)?.let { return image(dto.id, ImageType.PRIMARY, it, ImageWidth.THUMB) }
+        }
         dto.imageTags?.get(ImageType.THUMB)?.let { return image(dto.id, ImageType.THUMB, it, ImageWidth.THUMB) }
         dto.backdropImageTags?.firstOrNull()?.let { return image(dto.id, ImageType.BACKDROP, it, ImageWidth.THUMB) }
         val parentThumb = dto.parentThumbItemId
         val parentThumbTag = dto.parentThumbImageTag
         if (parentThumb != null && parentThumbTag != null) return image(parentThumb, ImageType.THUMB, parentThumbTag, ImageWidth.THUMB)
-        parentBackdrop(dto, ImageWidth.THUMB)?.let { return it }
-        // An episode's primary image is a 16:9 still.
-        return if (dto.type == BaseItemKind.EPISODE) dto.imageTags?.get(ImageType.PRIMARY)?.let { image(dto.id, ImageType.PRIMARY, it, ImageWidth.THUMB) } else null
+        return parentBackdrop(dto, ImageWidth.THUMB)
     }
 
     private fun backdrop(dto: BaseItemDto): String? {
