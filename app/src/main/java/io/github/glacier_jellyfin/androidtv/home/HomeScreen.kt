@@ -58,10 +58,12 @@ import io.github.glacier_jellyfin.androidtv.ui.PosterCard
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.delay
+import kotlin.math.abs
 
 /** Where a focused row settles vertically, and a focused card horizontally (design `sync()`). */
 private const val ROW_PIVOT = 330
 private const val CARD_PIVOT = 120
+private const val ROW_TOLERANCE = 48
 private const val EDGE = 80
 
 @OptIn(ExperimentalFoundationApi::class) // LocalBringIntoViewSpec
@@ -182,6 +184,11 @@ fun HomeScreen(
 /**
  * Vertical scrolling of the home list: anything in the spotlight scrolls the
  * page back to the top; a focused row settles with its cards [ROW_PIVOT] from the top.
+ *
+ * Moving sideways within a row also asks the list to bring the new card into
+ * view. Its target is then a few pixels off and keeps being corrected while
+ * the row scrolls, which made the whole page tremble. Rows are far apart, so
+ * anything within [ROW_TOLERANCE] of the pivot is treated as "already there".
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -189,6 +196,7 @@ private fun rememberRowPivotSpec(listState: LazyListState): BringIntoViewSpec {
     val density = LocalDensity.current
     return remember(listState, density) {
         val pivot = with(density) { ROW_PIVOT.dp.toPx() }
+        val tolerance = with(density) { ROW_TOLERANCE.dp.toPx() }
         val spotlight = with(density) { SpotlightHeight.dp.toPx() }
         object : BringIntoViewSpec {
             override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
@@ -196,7 +204,8 @@ private fun rememberRowPivotSpec(listState: LazyListState): BringIntoViewSpec {
                     val scrolled = listState.firstVisibleItemScrollOffset.toFloat()
                     if (offset + scrolled < spotlight) return -scrolled
                 }
-                return offset - pivot
+                val distance = offset - pivot
+                return if (abs(distance) < tolerance) 0f else distance
             }
         }
     }
