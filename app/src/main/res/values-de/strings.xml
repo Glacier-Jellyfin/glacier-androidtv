@@ -60,10 +60,47 @@
     <string name="pin_wrong">Falsche PIN · bitte erneut versuchen</string>
     <string name="pin_required">Vier Ziffern erforderlich</string>
 
-    <!-- Vorläufige Startseite -->
-    <string name="home_placeholder">Angemeldet als %1$s auf %2$s</string>
-    <string name="home_switch_profile">Profil wechseln</string>
+    <!-- Sitzung -->
     <string name="home_sign_out">Abmelden</string>
+
+    <!-- Navigation -->
+    <string name="nav_search">Suche</string>
+    <string name="nav_home">Startseite</string>
+    <string name="nav_movies">Film</string>
+    <string name="nav_shows">Serie</string>
+    <string name="nav_music">Musik</string>
+    <string name="nav_settings">Einstellungen</string>
+    <string name="nav_profile">Profil wechseln</string>
+
+    <!-- Startseite -->
+    <string name="home_continue_watching">Weiter schauen</string>
+    <string name="home_new_in">Neu in %1$s</string>
+    <string name="home_my_media">Meine Medien</string>
+    <plurals name="count_titles">
+        <item quantity="one">%1$d Titel</item>
+        <item quantity="other">%1$d Titel</item>
+    </plurals>
+    <plurals name="count_albums">
+        <item quantity="one">%1$d Album</item>
+        <item quantity="other">%1$d Alben</item>
+    </plurals>
+    <string name="home_error">Die Startseite konnte nicht geladen werden.</string>
+    <string name="action_retry">Erneut versuchen</string>
+    <string name="hero_play">Abspielen</string>
+    <string name="hero_resume">Fortsetzen</string>
+    <string name="hero_resume_episode">Fortsetzen · S%1$d F%2$d</string>
+    <string name="hero_more_info">Mehr Info</string>
+    <string name="action_favorite">Favorit</string>
+    <string name="action_unfavorite">Aus Favoriten</string>
+    <string name="favorite_added">Zu Favoriten hinzugefügt</string>
+    <string name="favorite_removed">Aus Favoriten entfernt</string>
+    <string name="minutes_left">Noch %1$d Min.</string>
+    <string name="episode_short">S%1$d · F%2$d</string>
+    <string name="episode_minutes_left">S%1$d F%2$d · noch %3$d Min.</string>
+    <string name="runtime_hours">%1$d Std. %2$d Min.</string>
+    <string name="runtime_minutes">%1$d Min.</string>
+    <string name="coming_soon">Dieser Bildschirm folgt in einem späteren Schritt.</string>
+    <string name="action_back">Zurück</string>
 
     <string name="toast_notice">Hinweis</string>
 </resources>

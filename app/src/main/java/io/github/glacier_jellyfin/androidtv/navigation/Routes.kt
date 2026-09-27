@@ -20,3 +20,19 @@ data class ProfilesRoute(val serverId: String)
 
 @Serializable
 data object HomeRoute
+
+/** Movies, shows or music across all libraries of that kind, or one library when [libraryId] is set. */
+@Serializable
+data class LibraryRoute(val kind: String, val libraryId: String? = null)
+
+@Serializable
+data class DetailRoute(val itemId: String)
+
+@Serializable
+data class PlayerRoute(val itemId: String)
+
+@Serializable
+data object SearchRoute
+
+@Serializable
+data object SettingsRoute

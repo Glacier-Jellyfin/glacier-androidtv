@@ -8,6 +8,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -49,22 +51,61 @@ fun GlacierClickable(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val accent = LocalAccent.current.main
-    val scale by animateFloatAsState(
-        targetValue = if (focused && !LocalReduceMotion.current) FocusScale else 1f,
-        animationSpec = tween(200),
-        label = "focusScale",
-    )
     Box(
         modifier = modifier
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .then(if (focused) Modifier.focusRing(shape, accent) else Modifier)
-            .border(borderWidth.dp, if (focused) accent else unfocusedBorder, shape)
+            .focusScale(focused)
+            .focusFrame(focused, shape, unfocusedBorder, borderWidth)
             .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick),
         contentAlignment = contentAlignment,
     ) {
         content(focused)
     }
+}
+
+/**
+ * A media card: the whole card (image and captions) scales on focus, while
+ * [focusFrame] is applied by the content to the image only, as in the design.
+ */
+@Composable
+fun GlacierCard(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.(focused: Boolean) -> Unit,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    Column(
+        modifier = modifier
+            .focusScale(focused)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
+    ) {
+        content(focused)
+    }
+}
+
+/** Scales up while focused, unless "reduce motion" is on. */
+@Composable
+fun Modifier.focusScale(focused: Boolean): Modifier {
+    val scale by animateFloatAsState(
+        targetValue = if (focused && !LocalReduceMotion.current) FocusScale else 1f,
+        animationSpec = tween(200),
+        label = "focusScale",
+    )
+    return graphicsLayer { scaleX = scale; scaleY = scale }
+}
+
+/** Accent border, 4px ring and drop shadow while focused; [unfocusedBorder] otherwise. */
+@Composable
+fun Modifier.focusFrame(
+    focused: Boolean,
+    shape: Shape,
+    unfocusedBorder: Color = Color.Transparent,
+    borderWidth: Int = 2,
+): Modifier {
+    val accent = LocalAccent.current.main
+    return this
+        .then(if (focused) Modifier.focusRing(shape, accent) else Modifier)
+        .border(borderWidth.dp, if (focused) accent else unfocusedBorder, shape)
 }
 
 /** `box-shadow: 0 0 0 4px accent/0.3, 0 22px 48px -16px rgba(0,0,0,.7)`. */

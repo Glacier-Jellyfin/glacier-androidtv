@@ -97,4 +97,6 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.tv.material)
     debugImplementation(libs.compose.ui.tooling)
+
+    testImplementation(libs.junit)
 }
