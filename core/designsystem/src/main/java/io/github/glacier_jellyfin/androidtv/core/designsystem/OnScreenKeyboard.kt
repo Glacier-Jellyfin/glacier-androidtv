@@ -14,10 +14,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key as RemoteKey
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -90,7 +96,8 @@ fun OnScreenKeyboard(
 /**
  * Invisible text field that brings up Android's own keyboard (voice input,
  * paste, other layouts). Set [open] to true to show it; [onClose] fires when
- * the user confirms.
+ * the user confirms, or presses a remote key after dismissing the keyboard
+ * with Back, so the caller can move focus back to the on-screen keyboard.
  */
 @Composable
 fun SystemTextInput(
@@ -120,12 +127,30 @@ fun SystemTextInput(
         modifier = Modifier
             .size(1.dp)
             .alpha(0f)
-            .focusRequester(focus),
+            .focusRequester(focus)
+            // While Android's keyboard is up it consumes remote keys itself. A
+            // D-pad, OK or Back key arriving here means it was dismissed (on
+            // TV its window reports no IME insets), so hand focus back.
+            .onPreviewKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown && event.key in ReturnKeys) {
+                    onClose()
+                    true
+                } else {
+                    false
+                }
+            },
     )
     LaunchedEffect(open) {
         if (open) {
             focus.requestFocus()
+            // The keyboard only attaches to a focused field; wait until focus has landed.
+            withFrameNanos { }
             keyboard?.show()
         }
     }
 }
+
+private val ReturnKeys = setOf(
+    RemoteKey.DirectionUp, RemoteKey.DirectionDown, RemoteKey.DirectionLeft, RemoteKey.DirectionRight,
+    RemoteKey.DirectionCenter, RemoteKey.Enter, RemoteKey.Back,
+)

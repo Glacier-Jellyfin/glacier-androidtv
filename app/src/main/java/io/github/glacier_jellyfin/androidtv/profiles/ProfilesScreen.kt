@@ -171,16 +171,21 @@ private fun ProfileTile(card: ProfileCard, onClick: () -> Unit, focusRequester: 
                     .background(Brush.linearGradient(listOf(accent.deep, GlacierColors.Void))),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    card.profile.name.take(1).uppercase(),
-                    style = GlacierText.display(64).copy(shadow = Shadow(Color.Black.copy(alpha = 0.5f), blurRadius = 18f)),
-                    color = GlacierColors.Ice,
-                )
+                // The initial stands in until the profile picture has loaded, or when there is none.
+                var imageLoaded by remember(card.imageUrl) { mutableStateOf(false) }
+                if (!imageLoaded) {
+                    Text(
+                        card.profile.name.take(1).uppercase(),
+                        style = GlacierText.display(64).copy(shadow = Shadow(Color.Black.copy(alpha = 0.5f), blurRadius = 18f)),
+                        color = GlacierColors.Ice,
+                    )
+                }
                 if (card.imageUrl != null) {
                     AsyncImage(
                         model = card.imageUrl,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
+                        onSuccess = { imageLoaded = true },
                         modifier = Modifier.size(168.dp),
                     )
                 }

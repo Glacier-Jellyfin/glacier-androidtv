@@ -143,6 +143,7 @@ fun ServerListScreen(
                 onClick = onManualAddress,
                 icon = GlacierIcons.Plus,
                 height = 72,
+                fillWidth = true,
                 modifier = Modifier.padding(top = 6.dp).then(nextFocus()),
             )
         }

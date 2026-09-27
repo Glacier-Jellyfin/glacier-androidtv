@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -51,12 +52,16 @@ fun PillButton(
     height: Int = 70,
     icon: ImageVector? = null,
     enabled: Boolean = true,
+    /** Stretch to the available width with the label at the start, like the design's list actions. */
+    fillWidth: Boolean = false,
 ) {
     val accent = LocalAccent.current
     GlacierClickable(
         onClick = onClick,
         shape = PillShape,
-        modifier = modifier.alpha(if (enabled) 1f else 0.5f),
+        modifier = modifier
+            .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
+            .alpha(if (enabled) 1f else 0.5f),
         enabled = enabled,
     ) { focused ->
         val background = when {
@@ -67,11 +72,12 @@ fun PillButton(
         val foreground = if (focused || primary) GlacierColors.Void else GlacierColors.Ice
         Row(
             modifier = Modifier
+                .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
                 .height(height.dp)
                 .clip(PillShape)
                 .background(background)
                 .then(if (!focused && !primary) Modifier.border(2.dp, GlacierColors.GlassBorder, PillShape) else Modifier)
-                .padding(horizontal = if (primary) 40.dp else 34.dp),
+                .padding(horizontal = if (fillWidth) 30.dp else if (primary) 40.dp else 34.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
