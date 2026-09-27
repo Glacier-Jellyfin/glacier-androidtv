@@ -8,9 +8,8 @@ tv-material = "1.1.0"
 activity-compose = "1.13.0"
 core-ktx = "1.19.1"
 media3 = "1.11.1"
-# 1.9.1 declares 12.1 as its minimum API; stay on 1.9.0 (12.0) until the
-# 12.0 and 12.1 OpenAPI specs have been compared.
-jellyfin-sdk = "1.9.0"
+# Generated from the 12.1 API; its minimum supported server is still 12.0.
+jellyfin-sdk = "1.9.1"
 junit = "4.13.2"
 
 [libraries]

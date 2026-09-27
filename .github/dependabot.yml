@@ -9,9 +9,6 @@ updates:
         patterns: ['androidx.*']
       kotlin:
         patterns: ['org.jetbrains.kotlin*', 'com.google.devtools.ksp*']
-    ignore:
-      # Pinned until the 12.0 and 12.1 API specs have been compared; see gradle/libs.versions.toml.
-      - dependency-name: 'org.jellyfin.sdk:*'
 
   - package-ecosystem: github-actions
     directory: /
