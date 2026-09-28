@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.core.player
 
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
@@ -24,7 +25,14 @@ object FfmpegAudio {
 
     @OptIn(UnstableApi::class)
     fun jellyfinCodecs(): Set<String> {
-        if (!FfmpegLibrary.isAvailable()) return emptySet()
-        return FORMATS.filter { (mime, _) -> FfmpegLibrary.supportsFormat(mime) }.flatMapTo(HashSet()) { it.second }
+        if (!FfmpegLibrary.isAvailable()) {
+            Log.i(TAG, "FFmpeg decoder not included in this build")
+            return emptySet()
+        }
+        val codecs = FORMATS.filter { (mime, _) -> FfmpegLibrary.supportsFormat(mime) }.flatMapTo(HashSet()) { it.second }
+        Log.i(TAG, "FFmpeg ${FfmpegLibrary.getVersion()} decodes ${codecs.sorted()}")
+        return codecs
     }
+
+    private const val TAG = "FfmpegAudio"
 }
