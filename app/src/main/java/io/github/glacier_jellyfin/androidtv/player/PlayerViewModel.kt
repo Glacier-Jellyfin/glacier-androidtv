@@ -129,6 +129,7 @@ class PlayerViewModel @Inject constructor(
 
     private var source: PlaybackSource? = null
     private var started = false
+    private var closing = false
     private var ticker: Job? = null
     private var opening: Job? = null
     /** Segments already skipped automatically; seeking back into one plays it. */
@@ -411,7 +412,10 @@ class PlayerViewModel @Inject constructor(
     /** "Stop" and Back: report where playback ended, then close. */
     fun stop() = finish()
 
+    /** Once: Back can arrive twice, as a key and as the system's back callback; each would close a screen. */
     private fun finish() {
+        if (closing) return
+        closing = true
         source?.let { playback.reportStopped(it, currentPositionMs()) }
         source = null
         _finished.trySend(Unit)

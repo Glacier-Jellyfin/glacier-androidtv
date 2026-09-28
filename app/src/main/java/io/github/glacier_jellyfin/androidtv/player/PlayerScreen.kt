@@ -174,8 +174,9 @@ fun PlayerScreen(
                 if (overlayOpen) return@onPreviewKeyEvent false
                 // Compose turns an unhandled Back into "exit focus": with focus on an OSD control it would
                 // first move focus to the root and only the second Back would stop. Stop on the first one.
+                // Key up, like the system's back; newer Android also sends Back to the BackHandler.
                 if (event.key == Key.Back) {
-                    if (event.type == KeyEventType.KeyDown) viewModel.stop()
+                    if (event.type == KeyEventType.KeyUp) viewModel.stop()
                     return@onPreviewKeyEvent true
                 }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
