@@ -284,14 +284,23 @@ private fun Timeline(
                 }
             }
             val knob = if (focused) 26.dp else 18.dp
+            // Focused, a glow ring of 8 around the knob shows where the keys go (design).
+            val ring = if (focused) 8.dp else 0.dp
             if (progress.durationMs > 0) Box(
                 Modifier
-                    .offset(x = maxWidth * fraction(shown, duration) - knob / 2)
-                    .size(knob)
-                    .shadow(8.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(accent),
-            )
+                    .offset(x = maxWidth * fraction(shown, duration) - knob / 2 - ring)
+                    .size(knob + ring * 2)
+                    .background(if (focused) accent.copy(alpha = 0.3f) else Color.Transparent, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    Modifier
+                        .size(knob)
+                        .shadow(if (focused) 0.dp else 8.dp, CircleShape)
+                        .clip(CircleShape)
+                        .background(accent),
+                )
+            }
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(formatTime(shown), style = GlacierText.mono(20), color = GlacierColors.Ice)

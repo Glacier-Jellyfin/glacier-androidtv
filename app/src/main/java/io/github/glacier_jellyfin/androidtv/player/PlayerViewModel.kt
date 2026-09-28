@@ -157,6 +157,12 @@ class PlayerViewModel @Inject constructor(
             if (started) source?.let { playback.reportProgress(it, position()) }
         }
 
+        // Report a seek at once: if the app is killed before the next periodic report,
+        // the server would otherwise keep the position from before the jump.
+        override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+            if (reason == Player.DISCONTINUITY_REASON_SEEK && started) source?.let { playback.reportProgress(it, position()) }
+        }
+
         override fun onTracksChanged(tracks: Tracks) {
             if (tracksPending) tracksPending = !applyTracks()
         }

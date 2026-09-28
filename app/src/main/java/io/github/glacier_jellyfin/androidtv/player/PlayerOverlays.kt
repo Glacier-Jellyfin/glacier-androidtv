@@ -1,7 +1,9 @@
 package io.github.glacier_jellyfin.androidtv.player
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.util.LruCache
+import android.view.accessibility.CaptioningManager
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.foundation.Canvas
@@ -9,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,6 +42,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,6 +51,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
+import androidx.media3.common.text.Cue
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.SubtitleView
@@ -182,17 +187,18 @@ private fun ChapterCard(chapter: Chapter, fallbackImage: String?, onClick: () ->
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun PlayerSubtitles(player: Player, liftForOsd: Boolean, modifier: Modifier = Modifier) {
+fun PlayerSubtitles(player: Player, lift: SubtitleLift, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val view = remember {
         SubtitleView(context).apply {
             setUserDefaultStyle()
-            setUserDefaultTextSize()
+            // The user's caption size, measured against the full height so lifting does not shrink the text.
+            setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * captionFontScale(context), true)
         }
     }
     DisposableEffect(player) {
         val listener = object : Player.Listener {
-            override fun onCues(cueGroup: CueGroup) = view.setCues(cueGroup.cues)
+            override fun onCues(cueGroup: CueGroup) = view.setCues(cueGroup.cues.map { it.ignoringPadding() })
         }
         player.addListener(listener)
         onDispose {
@@ -200,15 +206,43 @@ fun PlayerSubtitles(player: Player, liftForOsd: Boolean, modifier: Modifier = Mo
             view.setCues(emptyList())
         }
     }
-    AndroidView(
-        factory = { view },
-        update = { it.setBottomPaddingFraction(if (liftForOsd) OSD_SUBTITLE_LIFT else SubtitleView.DEFAULT_BOTTOM_PADDING_FRACTION) },
-        modifier = modifier,
-    )
+    // View padding, not the bottom padding fraction: Media3 applies the latter only to cues without a
+    // position, so positioned ones (SSA signs and lyrics) would stay under the OSD.
+    BoxWithConstraints(modifier) {
+        val liftPx = with(LocalDensity.current) { (maxHeight * lift.fraction).roundToPx() }
+        AndroidView(
+            factory = { view },
+            update = { it.setPadding(0, 0, 0, liftPx) },
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
 }
 
-/** Share of the height subtitles move up while the OSD covers the bottom. */
-private const val OSD_SUBTITLE_LIFT = 0.3f
+/** How far subtitles move up, as a share of the height, so nothing at the bottom covers them. */
+enum class SubtitleLift(val fraction: Float) {
+    None(0f),
+
+    /** Timeline and controls (design: up to about 270 of 1080). */
+    Osd(0.27f),
+
+    /** The chapter sheet (about 440 of 1080). */
+    Chapters(0.42f),
+}
+
+/** Text sizes relative to the whole view, so the padding that lifts subtitles does not scale them down. */
+@OptIn(UnstableApi::class)
+private fun Cue.ignoringPadding(): Cue =
+    if (textSizeType == Cue.TEXT_SIZE_TYPE_FRACTIONAL) {
+        buildUpon().setTextSize(textSize, Cue.TEXT_SIZE_TYPE_FRACTIONAL_IGNORE_PADDING).build()
+    } else {
+        this
+    }
+
+/** The caption size from the system accessibility settings, as SubtitleView.setUserDefaultTextSize reads it. */
+private fun captionFontScale(context: Context): Float {
+    val captioning = context.getSystemService(CaptioningManager::class.java)
+    return if (captioning?.isEnabled == true) captioning.fontScale else 1f
+}
 
 /** One seek preview picture, cut from its trickplay tile. */
 @Composable

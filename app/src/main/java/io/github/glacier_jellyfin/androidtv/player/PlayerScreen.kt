@@ -171,7 +171,14 @@ fun PlayerScreen(
             .background(Color.Black)
             .focusRequester(rootFocus)
             .onPreviewKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown || overlayOpen) return@onPreviewKeyEvent false
+                if (overlayOpen) return@onPreviewKeyEvent false
+                // Compose turns an unhandled Back into "exit focus": with focus on an OSD control it would
+                // first move focus to the root and only the second Back would stop. Stop on the first one.
+                if (event.key == Key.Back) {
+                    if (event.type == KeyEventType.KeyDown) viewModel.stop()
+                    return@onPreviewKeyEvent true
+                }
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 interaction++
                 when (event.key) {
                     Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause -> {
@@ -209,7 +216,12 @@ fun PlayerScreen(
     ) {
         state.player?.let { player ->
             ContentFrame(player = player, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-            PlayerSubtitles(player, liftForOsd = osdVisible, modifier = Modifier.fillMaxSize())
+            val lift = when {
+                state.chaptersOpen -> SubtitleLift.Chapters
+                osdVisible -> SubtitleLift.Osd
+                else -> SubtitleLift.None
+            }
+            PlayerSubtitles(player, lift, modifier = Modifier.fillMaxSize())
         }
 
         if (state.loading || state.failed) {
@@ -221,7 +233,8 @@ fun PlayerScreen(
             )
         }
 
-        AnimatedVisibility(visible = osdVisible && !state.failed, enter = fadeIn(), exit = fadeOut()) {
+        // The chapter sheet takes the OSD's place at the bottom (design); it would show through otherwise.
+        AnimatedVisibility(visible = osdVisible && !state.failed && !state.chaptersOpen, enter = fadeIn(), exit = fadeOut()) {
             PlayerOsd(
                 state = state,
                 progress = progress,
