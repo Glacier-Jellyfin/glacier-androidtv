@@ -11,7 +11,11 @@ runs:
       shell: bash
       run: |
         # Keep in sync with ndkVersion and the CMake version in core/ffmpeg/build.gradle.kts.
-        yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;28.2.13676358" "cmake;3.31.6" > /dev/null
+        # Newer SDK tools spell packages with "/", older ones with ";". Licenses are accepted on GitHub's runners.
+        sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+        "$sdkmanager" --install "ndk/28.2.13676358" "cmake/3.31.6" \
+          || "$sdkmanager" --install "ndk;28.2.13676358" "cmake;3.31.6"
+        test -d "$ANDROID_HOME/ndk/28.2.13676358" && test -d "$ANDROID_HOME/cmake/3.31.6"
 
     - name: Cache FFmpeg
       id: cache
