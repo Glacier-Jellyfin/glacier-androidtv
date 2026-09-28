@@ -269,4 +269,22 @@
     <string name="up_next_play">Play now</string>
     <string name="up_next_credits">Watch credits</string>
     <string name="track_applies_now">Applies now</string>
+    <string name="trailer_index">Trailer %1$d of %2$d</string>
+    <string name="trailer_fallback_name">Trailer %1$d</string>
+    <string name="trailer_strip">Trailers &amp; teasers</string>
+    <string name="trailer_now">Playing</string>
+    <string name="trailer_ended">Trailer ended · %1$s</string>
+    <string name="trailer_play_movie">Play movie</string>
+    <string name="trailer_resume_movie">Resume movie</string>
+    <string name="trailer_watch_show">Watch show</string>
+    <string name="trailer_next">Next trailer</string>
+    <string name="trailer_again">Watch again</string>
+    <string name="trailer_to_details">Back to details</string>
+    <string name="trailer_up_next">Up next</string>
+    <string name="trailer_forward">Forward 15 seconds</string>
+    <string name="trailer_add_favorite">Add to favorites</string>
+    <string name="trailer_error">This trailer can’t be played here.</string>
+    <string name="trailer_none">This title has no playable trailers.</string>
+    <string name="trailer_open_youtube">Open in YouTube</string>
+    <string name="trailer_no_youtube_app">No app for YouTube links is installed.</string>
 </resources>

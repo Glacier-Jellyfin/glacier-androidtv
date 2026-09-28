@@ -67,6 +67,11 @@ object GlacierIcons {
     val SkipBack = filled("M19 20 9 12 19 4z", "M5 19V5", strokeWidth = 2f)
     val SkipForward = filled("M5 4 15 12 5 20z", "M19 5v14", strokeWidth = 2f)
     val Close = icon("M18 6 6 18", "m6 6 12 12")
+    val Film = icon(
+        "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z",
+        "M7 3v18", "M3 7.5h4", "M3 12h18", "M3 16.5h4", "M17 3v18", "M17 7.5h4", "M17 16.5h4",
+        strokeWidth = 2.2f,
+    )
     val Chapters = icon("M3 5h.01", "M3 12h.01", "M3 19h.01", "M8 5h13", "M8 12h13", "M8 19h13")
     val Check = icon("M20 6 9 17l-5-5", strokeWidth = 3.4f)
     val SortLines = icon("M4 7h16", "M7 12h10", "M10 17h4", strokeWidth = 2.2f)

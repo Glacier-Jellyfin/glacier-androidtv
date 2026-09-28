@@ -4,11 +4,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.detail.DetailScreen
 import io.github.glacier_jellyfin.androidtv.detail.PersonScreen
 import io.github.glacier_jellyfin.androidtv.player.PlayerScreen
@@ -21,7 +19,7 @@ import io.github.glacier_jellyfin.androidtv.setup.ServerAddressScreen
 import io.github.glacier_jellyfin.androidtv.setup.QuickConnectScreen
 import io.github.glacier_jellyfin.androidtv.setup.ServerListScreen
 import io.github.glacier_jellyfin.androidtv.setup.SignInScreen
-import io.github.glacier_jellyfin.androidtv.ui.ComingSoonScreen
+import io.github.glacier_jellyfin.androidtv.trailer.TrailerScreen
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 
 /** Screens without arguments; navigating to one that is already on top does nothing. */
@@ -64,7 +62,7 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
         composable<PersonRoute> { PersonScreen(onNavigate = navigate) }
 
         // Later development steps; placeholders keep the navigation testable.
-        composable<TrailerRoute> { ComingSoonScreen(stringResource(R.string.detail_trailer), onBack = back) }
+        composable<TrailerRoute> { TrailerScreen(onNavigate = navigate, onBack = back) }
         composable<PlayerRoute> { PlayerScreen(onBack = back) }
         composable<SearchRoute> { SearchScreen(onNavigate = navigate) }
         composable<SettingsRoute> {

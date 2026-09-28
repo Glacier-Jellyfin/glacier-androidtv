@@ -36,7 +36,10 @@ class DetailRepository @Inject constructor(
             tracks = tracks(dto),
             trailers = Trailers(
                 localCount = dto.localTrailerCount ?: 0,
-                remote = dto.remoteTrailers.orEmpty().mapNotNull { it.url },
+                youTube = dto.remoteTrailers.orEmpty()
+                    .mapNotNull { link -> link.url?.let(::youTubeId)?.let { YouTubeTrailer(it, link.name?.takeIf(String::isNotBlank)) } }
+                    // Metadata providers often list the same video twice.
+                    .distinctBy { it.videoId },
             ),
             seriesId = dto.seriesId,
             seasonId = dto.seasonId,
@@ -78,6 +81,21 @@ class DetailRepository @Inject constructor(
                 session.api.trickPlayApi.getTrickplayTileImageUrl(itemId = dto.id, width = info.width, index = index, mediaSourceId = sourceId)
             },
         )
+    }
+
+    /** Trailer files of [id], in the server's order. */
+    suspend fun localTrailers(id: UUID): List<LocalTrailer> = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        session.api.libraryApi.getLocalTrailers(itemId = id, userId = session.userId).content.map { dto ->
+            LocalTrailer(
+                id = dto.id,
+                name = dto.name?.takeIf { it.isNotBlank() },
+                durationMs = dto.runTimeTicks?.let { it / TICKS_PER_MS },
+                imageUrl = dto.imageTags?.get(ImageType.PRIMARY)?.let { tag ->
+                    session.api.imageApi.getItemImageUrl(itemId = dto.id, imageType = ImageType.PRIMARY, tag = tag, maxWidth = 600)
+                },
+            )
+        }
     }
 
     suspend fun seasons(seriesId: UUID): List<Season> = withContext(Dispatchers.IO) {

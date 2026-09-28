@@ -11,14 +11,6 @@ data class CastMember(
     val imageUrl: String?,
 )
 
-data class Trailers(
-    val localCount: Int,
-    /** YouTube and other remote trailer links. */
-    val remote: List<String>,
-) {
-    val any: Boolean get() = localCount > 0 || remote.isNotEmpty()
-}
-
 data class Season(
     val id: UUID,
     val number: Int?,

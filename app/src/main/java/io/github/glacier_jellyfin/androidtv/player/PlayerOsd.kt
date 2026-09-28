@@ -384,22 +384,22 @@ private fun ScrubPreview(
     }
 }
 
-/** Pill with icon and label, 62 high (design: Audio, Subtitles, Chapters). */
+/** Pill with icon and label, 62 high (design: Audio, Subtitles, Chapters; the trailer's "Play movie" is [primary]). */
 @Composable
-private fun LabelButton(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val accent = LocalAccent.current.main
+internal fun LabelButton(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = false) {
+    val accent = LocalAccent.current
     GlacierClickable(onClick = onClick, shape = PillShape, modifier = modifier, contentAlignment = Alignment.Center) { focused ->
         Row(
             Modifier
                 .height(62.dp)
                 .clip(PillShape)
-                .background(if (focused) accent else GlacierColors.GlassFill)
-                .border(2.dp, if (focused) accent else GlacierColors.GlassBorder, PillShape)
+                .background(if (focused) accent.main else if (primary) accent.deep else GlacierColors.GlassFill)
+                .border(2.dp, if (focused) accent.main else if (primary) accent.deep else GlacierColors.GlassBorder, PillShape)
                 .padding(horizontal = 22.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            val color = if (focused) GlacierColors.Void else GlacierColors.Ice
+            val color = if (focused || primary) GlacierColors.Void else GlacierColors.Ice
             Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(23.dp))
             Text(label, style = GlacierText.body(19, FontWeight.SemiBold), color = color)
         }
@@ -408,7 +408,7 @@ private fun LabelButton(icon: ImageVector, label: String, onClick: () -> Unit, m
 
 /** Round OSD button: 62 across, the play button 78 (design). */
 @Composable
-private fun ControlButton(
+internal fun ControlButton(
     icon: ImageVector,
     description: String,
     onClick: () -> Unit,

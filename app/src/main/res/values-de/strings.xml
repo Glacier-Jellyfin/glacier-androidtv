@@ -265,4 +265,22 @@
     <string name="up_next_play">Jetzt abspielen</string>
     <string name="up_next_credits">Abspann ansehen</string>
     <string name="track_applies_now">Gilt ab sofort</string>
+    <string name="trailer_index">Trailer %1$d von %2$d</string>
+    <string name="trailer_fallback_name">Trailer %1$d</string>
+    <string name="trailer_strip">Trailer &amp; Teaser</string>
+    <string name="trailer_now">Läuft</string>
+    <string name="trailer_ended">Trailer beendet · %1$s</string>
+    <string name="trailer_play_movie">Film abspielen</string>
+    <string name="trailer_resume_movie">Film fortsetzen</string>
+    <string name="trailer_watch_show">Serie ansehen</string>
+    <string name="trailer_next">Nächster Trailer</string>
+    <string name="trailer_again">Nochmal ansehen</string>
+    <string name="trailer_to_details">Zu den Details</string>
+    <string name="trailer_up_next">Als Nächstes</string>
+    <string name="trailer_forward">15 Sekunden vor</string>
+    <string name="trailer_add_favorite">Zu Favoriten</string>
+    <string name="trailer_error">Dieser Trailer lässt sich hier nicht abspielen.</string>
+    <string name="trailer_none">Für diesen Titel gibt es keine abspielbaren Trailer.</string>
+    <string name="trailer_open_youtube">In YouTube öffnen</string>
+    <string name="trailer_no_youtube_app">Keine App für YouTube-Links installiert.</string>
 </resources>
