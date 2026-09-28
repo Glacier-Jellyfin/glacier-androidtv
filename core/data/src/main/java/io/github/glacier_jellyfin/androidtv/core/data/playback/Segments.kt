@@ -7,6 +7,25 @@ data class MediaSegment(val kind: SegmentKind, val startMs: Long, val endMs: Lon
     operator fun contains(positionMs: Long): Boolean = positionMs in startMs until endMs
 }
 
+/**
+ * One segment per stretch: servers with several segment providers report the
+ * same intro twice with slightly different bounds (21–112 s and 23–113 s),
+ * which would bring the skip button back for a second after skipping.
+ * Overlapping or touching segments of the same kind become one; sorted by start.
+ */
+fun mergeOverlapping(segments: List<MediaSegment>): List<MediaSegment> =
+    segments.groupBy { it.kind }.values.flatMap { sameKind ->
+        sameKind.sortedBy { it.startMs }.fold(mutableListOf<MediaSegment>()) { merged, next ->
+            val last = merged.lastOrNull()
+            if (last != null && next.startMs <= last.endMs) {
+                merged[merged.lastIndex] = last.copy(endMs = maxOf(last.endMs, next.endMs))
+            } else {
+                merged += next
+            }
+            merged
+        }
+    }.sortedBy { it.startMs }
+
 /** What the player does when playback enters a segment. */
 enum class SegmentAction { None, Ask, Skip }
 

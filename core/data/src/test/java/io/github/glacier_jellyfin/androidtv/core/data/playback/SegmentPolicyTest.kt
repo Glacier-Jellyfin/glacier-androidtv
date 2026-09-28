@@ -37,6 +37,27 @@ class SegmentPolicyTest {
     }
 
     @Test
+    fun `duplicate segments from two providers become one`() {
+        val merged = mergeOverlapping(
+            listOf(
+                MediaSegment(SegmentKind.Outro, 1_371_000, 1_472_000),
+                MediaSegment(SegmentKind.Intro, 23_000, 113_000),
+                MediaSegment(SegmentKind.Intro, 21_000, 112_000),
+                MediaSegment(SegmentKind.Outro, 1_370_000, 1_449_000),
+                MediaSegment(SegmentKind.Preview, 1_459_000, 1_470_000),
+            ),
+        )
+        assertEquals(
+            listOf(
+                MediaSegment(SegmentKind.Intro, 21_000, 113_000),
+                MediaSegment(SegmentKind.Outro, 1_370_000, 1_472_000),
+                MediaSegment(SegmentKind.Preview, 1_459_000, 1_470_000),
+            ),
+            merged,
+        )
+    }
+
+    @Test
     fun `up next honours a fixed lead time and off`() {
         assertEquals(2_822_000L, policy.copy(upNext = UpNextMode.Before(10_000)).upNextAtMs(segments, 2_832_000))
         assertNull(policy.copy(upNext = UpNextMode.Off).upNextAtMs(segments, 2_832_000))

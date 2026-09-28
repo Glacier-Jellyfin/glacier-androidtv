@@ -174,7 +174,7 @@ class PlaybackRepository @Inject constructor(
                 }
                 MediaSegment(kind, dto.startTicks / TICKS_PER_MS, dto.endTicks / TICKS_PER_MS).takeIf { it.endMs > it.startMs }
             }
-            .sortedBy { it.startMs }
+            .let(::mergeOverlapping)
     }
 
     fun reportStart(source: PlaybackSource, position: PlaybackPosition) = report("start") {
