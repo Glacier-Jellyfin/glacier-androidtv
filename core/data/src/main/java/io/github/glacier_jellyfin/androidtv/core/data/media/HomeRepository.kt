@@ -97,14 +97,36 @@ class HomeRepository @Inject constructor(
             enableResumable = false,
         ).content.items
 
-    private suspend fun latest(session: Session, userId: UUID, library: Library): List<BaseItemDto> =
-        session.api.libraryApi.getLatestMedia(
+    private suspend fun latest(session: Session, userId: UUID, library: Library): List<BaseItemDto> {
+        val items = session.api.libraryApi.getLatestMedia(
             userId = userId,
             parentId = library.id,
             fields = FIELDS,
             enableUserData = true,
             limit = ROW_LIMIT,
         ).content
+        return if (library.kind == LibraryKind.Shows) asShows(session, userId, items) else items
+    }
+
+    /**
+     * "New in shows" lists shows: the server hands out a season or an episode
+     * when only that part is new, which would put a season poster in the row
+     * and open the season. Those become their show, once each, in the same order.
+     */
+    private suspend fun asShows(session: Session, userId: UUID, items: List<BaseItemDto>): List<BaseItemDto> {
+        val showIds = items.map { if (it.type == BaseItemKind.SERIES) it.id else it.seriesId }
+        val missing = showIds.filterNotNull().filter { id -> items.none { it.id == id } }.distinct()
+        val shows = if (missing.isEmpty()) emptyMap() else session.api.libraryApi.getItems(
+            userId = userId,
+            ids = missing,
+            fields = FIELDS,
+            enableUserData = true,
+        ).content.items.associateBy { it.id }
+        return items.mapIndexedNotNull { index, item ->
+            val id = showIds[index] ?: return@mapIndexedNotNull item
+            if (item.id == id) item else shows[id]
+        }.distinctBy { it.id }
+    }
 
     private fun requireSession(): Session = checkNotNull(sessions.session.value) { "No profile is signed in" }
 
