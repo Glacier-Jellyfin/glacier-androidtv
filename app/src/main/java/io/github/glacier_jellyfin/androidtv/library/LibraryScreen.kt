@@ -44,6 +44,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
@@ -106,6 +107,7 @@ fun LibraryScreen(
     val gridState = rememberLazyGridState()
     val firstCardFocus = remember { FocusRequester() }
     val jumpFocus = remember { FocusRequester() }
+    val gridFocus = remember { FocusRequester() }
     var initialFocusDone by rememberSaveable { mutableStateOf(false) }
     var focusedIndex by remember { mutableIntStateOf(-1) }
     var jumpTarget by remember { mutableStateOf<Int?>(null) }
@@ -140,7 +142,7 @@ fun LibraryScreen(
                     contentPadding = PaddingValues(start = 80.dp, end = 22.dp, top = 150.dp, bottom = 120.dp),
                     horizontalArrangement = Arrangement.spacedBy(26.dp),
                     verticalArrangement = Arrangement.spacedBy(38.dp),
-                    modifier = Modifier.weight(1f).fillMaxSize(),
+                    modifier = Modifier.weight(1f).fillMaxSize().focusRequester(gridFocus).focusRestorer(),
                 ) {
                     item(span = { GridItemSpan(maxLineSpan) }, key = "title") { Header(state) }
                     item(span = { GridItemSpan(maxLineSpan) }, key = "chips") {
@@ -229,6 +231,7 @@ fun LibraryScreen(
             kinds = LibraryKind.entries,
             userName = state.userName,
             onSelect = viewModel::onNav,
+            down = gridFocus,
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp),
         )
     }

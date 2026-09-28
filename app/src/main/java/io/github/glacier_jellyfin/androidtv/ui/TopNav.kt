@@ -63,6 +63,11 @@ fun TopNav(
     userName: String,
     onSelect: (NavTarget) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Where Down goes. The page scrolls underneath the pill, so its list starts
+     * above it and focus search never finds it below; the page names its list.
+     */
+    down: FocusRequester? = null,
 ) {
     val activeFocus = remember { FocusRequester() }
     val targets = listOf(NavTarget.Search, NavTarget.Home) + kinds.map(NavTarget::Library) + listOf(NavTarget.Settings, NavTarget.Profile)
@@ -86,6 +91,7 @@ fun TopNav(
                 active = target == active,
                 userName = userName,
                 onClick = { onSelect(target) },
+                down = down,
                 modifier = if (target == active) Modifier.focusRequester(activeFocus) else Modifier,
             )
         }
@@ -93,7 +99,7 @@ fun TopNav(
 }
 
 @Composable
-private fun NavItem(target: NavTarget, active: Boolean, userName: String, onClick: () -> Unit, modifier: Modifier) {
+private fun NavItem(target: NavTarget, active: Boolean, userName: String, onClick: () -> Unit, down: FocusRequester?, modifier: Modifier) {
     val accent = LocalAccent.current
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -122,6 +128,7 @@ private fun NavItem(target: NavTarget, active: Boolean, userName: String, onClic
             .clip(PillShape)
             .background(background)
             .border(2.dp, border, PillShape)
+            .focusProperties { if (down != null) this.down = down }
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .padding(horizontal = if (iconOnly) 15.dp else 26.dp),
         contentAlignment = Alignment.Center,

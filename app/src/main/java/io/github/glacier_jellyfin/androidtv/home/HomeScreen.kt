@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -70,7 +71,9 @@ fun HomeScreen(
     CollectEvents(viewModel.events, onNavigate)
 
     val playFocus = remember { FocusRequester() }
-    var spotIndex by remember { mutableIntStateOf(0) }
+    // Saved: coming back from a detail page shows the same title again.
+    var spotIndex by rememberSaveable { mutableIntStateOf(0) }
+    val listFocus = remember { FocusRequester() }
     var spotlightFocused by remember { mutableStateOf(false) }
     val spotlight = state.spotlight
 
@@ -83,6 +86,20 @@ fun HomeScreen(
     }
     // Focus "Play" once, when the spotlight first appears (not when returning later).
     var initialFocusDone by rememberSaveable { mutableStateOf(false) }
+    // Back from another page the screen is composed anew; focus goes back to the element the
+    // user left from (the lists keep their scroll), not to the nav on top.
+    var lastFocus by rememberSaveable { mutableStateOf<String?>(null) }
+    val requesters = remember { mutableMapOf<String, FocusRequester>() }
+    fun Modifier.remembered(key: String): Modifier = this
+        .focusRequester(requesters.getOrPut(key) { FocusRequester() })
+        .onFocusChanged { if (it.isFocused) lastFocus = key }
+    val hasContent = state.content != null
+    LaunchedEffect(hasContent) {
+        if (!hasContent || !initialFocusDone) return@LaunchedEffect
+        withFrameNanos { }
+        val restored = lastFocus?.let { requesters[it] }?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true
+        if (!restored) runCatching { listFocus.requestFocus() }
+    }
 
     Box(Modifier.fillMaxSize()) {
         val content = state.content
@@ -92,7 +109,11 @@ fun HomeScreen(
             content != null -> {
                 val listState = rememberLazyListState()
                 CompositionLocalProvider(LocalBringIntoViewSpec provides rememberRowPivotSpec(listState, SpotlightHeight)) {
-                    LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                    LazyColumn(
+                        state = listState,
+                        // Down from the nav returns to the last focused card.
+                        modifier = Modifier.fillMaxSize().focusRequester(listFocus).focusRestorer(),
+                    ) {
                         item(key = "spotlight") {
                             if (spotlight.isNotEmpty()) {
                                 Spotlight(
@@ -104,6 +125,7 @@ fun HomeScreen(
                                     onFavorite = viewModel::toggleFavorite,
                                     playFocus = playFocus,
                                     modifier = Modifier.onFocusChanged { spotlightFocused = it.hasFocus },
+                                    buttonModifier = { Modifier.remembered("spotlight-$it") },
                                 )
                                 LaunchedEffect(Unit) {
                                     if (!initialFocusDone) {
@@ -127,6 +149,7 @@ fun HomeScreen(
                                             imageUrl = item.showThumbUrl ?: item.posterUrl,
                                             progress = item.progress,
                                             onClick = { viewModel.openContinueWatching(item) },
+                                            modifier = Modifier.remembered("continue-${item.id}"),
                                         )
                                     }
                                 }
@@ -138,7 +161,9 @@ fun HomeScreen(
                                     title = stringResource(R.string.home_new_in, library.name),
                                     subtitle = libraryCount(library),
                                 ) {
-                                    items(items, key = { it.id }) { item -> PosterFor(item, onClick = { viewModel.openDetails(item) }) }
+                                    items(items, key = { it.id }) { item ->
+                                        PosterFor(item, onClick = { viewModel.openDetails(item) }, modifier = Modifier.remembered("latest-${library.id}-${item.id}"))
+                                    }
                                 }
                             }
                         }
@@ -154,6 +179,7 @@ fun HomeScreen(
                                             count = libraryCount(library),
                                             imageUrl = newest?.backdropUrl ?: newest?.posterUrl ?: library.imageUrl,
                                             onClick = { viewModel.openLibrary(library) },
+                                            modifier = Modifier.remembered("library-${library.id}"),
                                         )
                                     }
                                 }
@@ -169,6 +195,7 @@ fun HomeScreen(
             kinds = state.kinds,
             userName = state.userName,
             onSelect = viewModel::onNav,
+            down = listFocus,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 34.dp),
@@ -177,7 +204,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun PosterFor(item: MediaItem, onClick: () -> Unit) {
+private fun PosterFor(item: MediaItem, onClick: () -> Unit, modifier: Modifier) {
     if (item.kind == ItemKind.Album) {
         PosterCard(
             imageUrl = item.posterUrl,
@@ -185,6 +212,7 @@ private fun PosterFor(item: MediaItem, onClick: () -> Unit) {
             title = item.title,
             square = true,
             onClick = onClick,
+            modifier = modifier,
         )
     } else {
         PosterCard(
@@ -194,6 +222,7 @@ private fun PosterFor(item: MediaItem, onClick: () -> Unit) {
             title = item.title,
             badge = item.unwatchedCount,
             onClick = onClick,
+            modifier = modifier,
         )
     }
 }

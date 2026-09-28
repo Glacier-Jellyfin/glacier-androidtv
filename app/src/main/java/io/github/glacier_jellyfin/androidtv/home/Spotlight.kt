@@ -68,6 +68,8 @@ fun Spotlight(
     onFavorite: (MediaItem) -> Unit,
     playFocus: FocusRequester,
     modifier: Modifier = Modifier,
+    /** Lets the screen find a button again (keys "play", "info", "favorite"). */
+    buttonModifier: (String) -> Modifier = { Modifier },
 ) {
     val item = items.getOrNull(index) ?: return
     // Clipped: the Ken Burns zoom would otherwise spill over the first row.
@@ -93,6 +95,7 @@ fun Spotlight(
             onInfo = { onInfo(item) },
             onFavorite = { onFavorite(item) },
             playFocus = playFocus,
+            buttonModifier = buttonModifier,
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(start = 80.dp, bottom = 74.dp)
@@ -118,6 +121,7 @@ private fun SpotlightInfo(
     onInfo: () -> Unit,
     onFavorite: () -> Unit,
     playFocus: FocusRequester,
+    buttonModifier: (String) -> Modifier,
     modifier: Modifier,
 ) {
     val resuming = item.progress != null
@@ -162,13 +166,14 @@ private fun SpotlightInfo(
                 isEpisode && season != null && episode != null -> stringResource(R.string.hero_resume_episode, season, episode)
                 else -> stringResource(R.string.hero_resume)
             }
-            ActionButton(onClick = onPlay, label = playLabel, icon = GlacierIcons.Play, primary = true, modifier = Modifier.focusRequester(playFocus))
-            ActionButton(onClick = onInfo, label = stringResource(R.string.hero_more_info))
+            ActionButton(onClick = onPlay, label = playLabel, icon = GlacierIcons.Play, primary = true, modifier = Modifier.focusRequester(playFocus).then(buttonModifier("play")))
+            ActionButton(onClick = onInfo, label = stringResource(R.string.hero_more_info), modifier = buttonModifier("info"))
             ActionButton(
                 onClick = onFavorite,
                 icon = if (item.isFavorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
                 on = item.isFavorite,
                 contentDescription = stringResource(if (item.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
+                modifier = buttonModifier("favorite"),
             )
         }
     }

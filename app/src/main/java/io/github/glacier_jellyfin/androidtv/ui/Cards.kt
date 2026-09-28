@@ -64,10 +64,10 @@ fun Artwork(url: String?, modifier: Modifier = Modifier) {
 
 /** "Continue watching": 16:9 still, progress bar, play button on focus, title and time left. */
 @Composable
-fun ContinueCard(title: String, subtitle: String, imageUrl: String?, progress: Float?, onClick: () -> Unit) {
+fun ContinueCard(title: String, subtitle: String, imageUrl: String?, progress: Float?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
-    GlacierCard(onClick = onClick, modifier = Modifier.width(CardSize.CONTINUE_WIDTH.dp)) { focused ->
+    GlacierCard(onClick = onClick, modifier = modifier.width(CardSize.CONTINUE_WIDTH.dp)) { focused ->
         Box(
             Modifier
                 .size(CardSize.CONTINUE_WIDTH.dp, CardSize.CONTINUE_HEIGHT.dp)
@@ -128,6 +128,7 @@ fun PosterCard(
     imageUrl: String?,
     caption: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     square: Boolean = false,
     title: String? = null,
     badge: Int? = null,
@@ -136,7 +137,7 @@ fun PosterCard(
     val shape: Shape = RoundedCornerShape(if (square) GlacierShapes.RadiusMd else GlacierShapes.RadiusLg)
     val width = CardSize.POSTER_WIDTH
     val height = if (square) CardSize.POSTER_WIDTH else CardSize.POSTER_HEIGHT
-    GlacierCard(onClick = onClick, modifier = Modifier.width(width.dp)) { focused ->
+    GlacierCard(onClick = onClick, modifier = modifier.width(width.dp)) { focused ->
         Box(
             Modifier
                 .size(width.dp, height.dp)
@@ -178,9 +179,9 @@ fun PosterCard(
 
 /** "My media": wide library tile with name and title count. */
 @Composable
-fun LibraryCard(name: String, count: String?, imageUrl: String?, onClick: () -> Unit) {
+fun LibraryCard(name: String, count: String?, imageUrl: String?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
-    GlacierCard(onClick = onClick) { focused ->
+    GlacierCard(onClick = onClick, modifier = modifier) { focused ->
         Box(
             Modifier
                 .size(CardSize.LIBRARY_WIDTH.dp, CardSize.LIBRARY_HEIGHT.dp)
