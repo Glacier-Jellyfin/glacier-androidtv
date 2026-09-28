@@ -54,6 +54,7 @@ import androidx.media3.common.text.Cue
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.SubtitleView
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyle
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
 import androidx.tv.material3.Text
 import coil3.SingletonImageLoader
@@ -183,21 +184,18 @@ private fun ChapterCard(chapter: Chapter, fallbackImage: String?, onClick: () ->
 
 /**
  * Subtitles over the video. Media3 has no Compose renderer yet, so this is
- * its SubtitleView, styled from the Android caption settings.
+ * its SubtitleView, styled as set in Settings › Subtitles.
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun PlayerSubtitles(playback: GlacierPlayback, lift: SubtitleLift, modifier: Modifier = Modifier) {
+fun PlayerSubtitles(playback: GlacierPlayback, lift: SubtitleLift, style: SubtitleStyle, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val player = playback.player
     // A new player (track change, next episode) brings a new ASS renderer, so a new view.
     val view = remember(playback) {
-        SubtitleView(context).apply {
-            setUserDefaultStyle()
-            setUserDefaultTextSize()
-            playback.attachAss(this)
-        }
+        SubtitleView(context).apply { playback.attachAss(this) }
     }
+    LaunchedEffect(view, style) { view.applyStyle(style) }
     var cues by remember { mutableStateOf(emptyList<Cue>()) }
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -216,7 +214,7 @@ fun PlayerSubtitles(playback: GlacierPlayback, lift: SubtitleLift, modifier: Mod
             factory = { view },
             update = {
                 it.setBottomPaddingFraction(liftedPadding(lift.fraction))
-                it.setCues(cues.map { cue -> cue.lifted(lift) })
+                it.setCues(cues.map { cue -> cue.placed(style.position).lifted(lift) })
             },
             modifier = modifier,
         )

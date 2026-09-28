@@ -63,7 +63,6 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
-import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.ui.qualityText
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -107,6 +106,8 @@ fun PlayerOsd(
                 imageHeaders = state.imageHeaders,
                 focusRequester = seekFocus,
                 downFocus = playFocus,
+                seekBackMs = state.seekBackMs,
+                seekForwardMs = state.seekForwardMs,
                 onScrub = onScrub,
                 onCommit = { if (scrubMs != null) onCommitScrub() else onTogglePlay() },
             )
@@ -115,7 +116,7 @@ fun PlayerOsd(
                     if (state.previous != null) {
                         ControlButton(GlacierIcons.SkipBack, stringResource(R.string.player_previous), onClick = onPrevious)
                     }
-                    ControlButton(GlacierIcons.Replay, stringResource(R.string.player_rewind), onClick = { onSeekBy(-GlacierPlayer.SEEK_BACK_MS) })
+                    ControlButton(GlacierIcons.Replay, stringResource(R.string.player_rewind), onClick = { onSeekBy(-state.seekBackMs) })
                     ControlButton(
                         if (state.playWhenReady) GlacierIcons.Pause else GlacierIcons.Play,
                         stringResource(if (state.playWhenReady) R.string.player_pause else R.string.player_play),
@@ -123,7 +124,7 @@ fun PlayerOsd(
                         big = true,
                         modifier = Modifier.focusRequester(playFocus),
                     )
-                    ControlButton(GlacierIcons.Forward, stringResource(R.string.player_forward), onClick = { onSeekBy(GlacierPlayer.SEEK_FORWARD_MS) })
+                    ControlButton(GlacierIcons.Forward, stringResource(R.string.player_forward), onClick = { onSeekBy(state.seekForwardMs) })
                     if (state.next != null) {
                         ControlButton(GlacierIcons.SkipForward, stringResource(R.string.player_next), onClick = onNext)
                     }
@@ -210,6 +211,8 @@ private fun Timeline(
     focusRequester: FocusRequester,
     /** Down always lands on play; the nearest button under the knob could be Stop. */
     downFocus: FocusRequester,
+    seekBackMs: Long,
+    seekForwardMs: Long,
     onScrub: (Long) -> Unit,
     onCommit: () -> Unit,
 ) {
@@ -238,8 +241,8 @@ private fun Timeline(
                 .onKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                     when (event.key) {
-                        Key.DirectionLeft -> { onScrub(-GlacierPlayer.SEEK_BACK_MS); true }
-                        Key.DirectionRight -> { onScrub(GlacierPlayer.SEEK_FORWARD_MS); true }
+                        Key.DirectionLeft -> { onScrub(-seekBackMs); true }
+                        Key.DirectionRight -> { onScrub(seekForwardMs); true }
                         Key.DirectionCenter, Key.Enter -> { onCommit(); true }
                         else -> false
                     }

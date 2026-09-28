@@ -25,6 +25,13 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentAction
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentPolicy
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SubtitleDelivery
+import io.github.glacier_jellyfin.androidtv.core.data.settings.LastTracks
+import io.github.glacier_jellyfin.androidtv.core.data.settings.RememberedTracks
+import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyle
+import io.github.glacier_jellyfin.androidtv.core.data.settings.rememberedTracks
+import io.github.glacier_jellyfin.androidtv.core.data.settings.toKey
 import io.github.glacier_jellyfin.androidtv.core.player.SideloadedSubtitle
 import io.github.glacier_jellyfin.androidtv.core.player.TrackControl
 import io.github.glacier_jellyfin.androidtv.detail.TrackKind
@@ -80,6 +87,10 @@ data class PlayerUiState(
     val next: MediaItem? = null,
     /** "Watch credits" hides the "Up next" card for the rest of this episode. */
     val upNextDismissed: Boolean = false,
+    /** Remote Left/Right and the skip buttons (Settings › Playback). */
+    val seekBackMs: Long = 10_000,
+    val seekForwardMs: Long = 30_000,
+    val subtitleStyle: SubtitleStyle = SubtitleStyle(),
 ) {
     val chapters: List<Chapter> get() = details?.chapters.orEmpty()
     val isEpisode: Boolean get() = details?.item?.kind == ItemKind.Episode
@@ -105,14 +116,15 @@ class PlayerViewModel @Inject constructor(
     private val details: DetailRepository,
     private val playback: PlaybackRepository,
     private val trackSelections: TrackSelections,
+    private val settings: SettingsRepository,
+    private val serverPreferences: ServerPreferencesRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<PlayerRoute>()
     /** Changes when playback moves on to another episode. */
     private var itemId = UUID.fromString(route.itemId)
     private var fromStart = route.fromStart
-    /** Design defaults until the settings screen exists. */
-    private val policy = SegmentPolicy()
+    private var policy = SegmentPolicy()
 
     private val _state = MutableStateFlow(PlayerUiState())
     val state: StateFlow<PlayerUiState> = _state.asStateFlow()
@@ -179,17 +191,32 @@ class PlayerViewModel @Inject constructor(
     }
 
     init {
+        viewModelScope.launch {
+            settings.settings.collect { profile ->
+                policy = profile.playback.segmentPolicy
+                _state.update {
+                    it.copy(
+                        seekBackMs = profile.playback.seekBack.ms,
+                        seekForwardMs = profile.playback.seekForward.ms,
+                        subtitleStyle = profile.subtitleStyle,
+                    )
+                }
+            }
+        }
         load()
     }
 
     fun load() {
         val selection = trackSelections.get(itemId)
         // A choice made on the detail page wins; "off" there is sent as -1 so the server does not pick one.
-        open(startMs = null, audio = selection?.audio, subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE })
+        open(startMs = null, audio = selection?.audio, subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE }, fromLastTitle = selection == null)
     }
 
-    /** [startMs] null: the saved resume point (or 0 for "from start"). */
-    private fun open(startMs: Long?, audio: Int?, subtitle: Int?) {
+    /**
+     * [startMs] null: the saved resume point (or 0 for "from start").
+     * [fromLastTitle]: no tracks were chosen for this title, so the last title's may be taken over.
+     */
+    private fun open(startMs: Long?, audio: Int?, subtitle: Int?, fromLastTitle: Boolean = false) {
         opening?.cancel()
         opening = viewModelScope.launch {
             releasePlayer()
@@ -200,8 +227,15 @@ class PlayerViewModel @Inject constructor(
                     loadExtras(d)
                 }
                 val start = startMs ?: if (fromStart) 0 else item.item.resumePositionMs
-                val opened = playback.open(itemId, start, audio, subtitle)
+                val remembered = if (fromLastTitle) {
+                    val preferences = serverPreferences.preferences.value ?: serverPreferences.refresh()
+                    preferences?.let { rememberedTracks(settings.current().lastTracks, it, item.tracks) }
+                } else {
+                    null
+                }
+                val opened = playback.open(itemId, start, remembered?.audio ?: audio, remembered?.subtitle ?: subtitle)
                 source = opened
+                recordTracks(opened.audioIndex, opened.subtitleIndex)
                 val request = StreamRequest(
                     url = opened.url,
                     isHls = opened.isHls,
@@ -312,7 +346,7 @@ class PlayerViewModel @Inject constructor(
         }
         _progress.value = PlayerProgress()
         val selection = trackSelections.get(item.id)
-        open(startMs = item.resumePositionMs, audio = selection?.audio, subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE })
+        open(startMs = item.resumePositionMs, audio = selection?.audio, subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE }, fromLastTitle = selection == null)
     }
 
     fun openTracks(kind: TrackKind) = _state.update { it.copy(trackPanel = kind, chaptersOpen = false) }
@@ -386,7 +420,21 @@ class PlayerViewModel @Inject constructor(
         return true
     }
 
-    private fun remember(audio: Int?, subtitle: Int?) = trackSelections.set(itemId, TrackSelection(audio, subtitle))
+    private fun remember(audio: Int?, subtitle: Int?) {
+        trackSelections.set(itemId, TrackSelection(audio, subtitle))
+        recordTracks(audio, subtitle)
+    }
+
+    /** What plays now, for the next title's "use the tracks of the last title". */
+    private fun recordTracks(audio: Int?, subtitle: Int?) {
+        val current = source ?: return
+        val last = LastTracks(
+            audio = current.audioTracks.firstOrNull { it.index == audio }?.toKey(),
+            subtitle = current.subtitles.firstOrNull { it.track.index == subtitle }?.track?.toKey(),
+            subtitlesOff = subtitle == null,
+        )
+        viewModelScope.launch { settings.update { it.copy(lastTracks = last) } }
+    }
 
     private fun toast(message: Int, arg: String) {
         viewModelScope.launch { _events.send(UiEvent.Toast(message, listOf(arg))) }

@@ -80,8 +80,6 @@ object GlacierPlayer {
                     .build(),
                 /* handleAudioFocus = */ true,
             )
-            .setSeekBackIncrementMs(SEEK_BACK_MS)
-            .setSeekForwardIncrementMs(SEEK_FORWARD_MS)
             .build()
         player.apply {
                 setMediaItem(
@@ -141,8 +139,4 @@ object GlacierPlayer {
         "ttml" -> MimeTypes.APPLICATION_TTML
         else -> MimeTypes.APPLICATION_SUBRIP
     }
-
-    /** Remote Left/Right and the OSD skip buttons (agreed default; later a setting). */
-    const val SEEK_BACK_MS = 10_000L
-    const val SEEK_FORWARD_MS = 30_000L
 }

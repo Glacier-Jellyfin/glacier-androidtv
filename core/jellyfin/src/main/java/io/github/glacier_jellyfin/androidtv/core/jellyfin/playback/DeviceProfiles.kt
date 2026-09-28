@@ -27,7 +27,11 @@ object DeviceProfiles {
     /** Picture subtitles Media3 renders only from inside the container. */
     private val PictureSubtitles = listOf("pgs", "pgssub", "dvdsub", "vobsub", "dvbsub")
 
-    fun build(capabilities: DeviceCapabilities, maxBitrate: Int): DeviceProfile = buildDeviceProfile {
+    fun build(
+        capabilities: DeviceCapabilities,
+        maxBitrate: Int,
+        burnIn: SubtitleBurnIn = SubtitleBurnIn.Auto,
+    ): DeviceProfile = buildDeviceProfile {
         name = "Glacier"
         maxStreamingBitrate = maxBitrate
         maxStaticBitrate = maxBitrate
@@ -93,13 +97,18 @@ object DeviceProfiles {
             conditions { ProfileConditionValue.AUDIO_CHANNELS lowerThanOrEquals capabilities.maxAudioChannels }
         }
 
-        // Text subtitles stay separate files; anything else is burned in only when the device cannot show it.
+        // Auto: text subtitles stay separate files, anything else is burned in only when
+        // the device cannot show it. The other modes burn in more, as the user chose.
         TextSubtitles.forEach {
-            subtitleProfile(it, SubtitleDeliveryMethod.EMBED)
-            subtitleProfile(it, SubtitleDeliveryMethod.EXTERNAL)
+            if (burnIn.burnsText(it)) {
+                subtitleProfile(it, SubtitleDeliveryMethod.ENCODE)
+            } else {
+                subtitleProfile(it, SubtitleDeliveryMethod.EMBED)
+                subtitleProfile(it, SubtitleDeliveryMethod.EXTERNAL)
+            }
         }
         PictureSubtitles.forEach {
-            subtitleProfile(it, SubtitleDeliveryMethod.EMBED)
+            if (burnIn == SubtitleBurnIn.Auto) subtitleProfile(it, SubtitleDeliveryMethod.EMBED)
             subtitleProfile(it, SubtitleDeliveryMethod.ENCODE)
         }
     }
@@ -135,4 +144,25 @@ object DeviceProfiles {
     }
 
     private const val MUSIC_BITRATE = 320_000
+}
+
+/** Which subtitles the server burns into the picture instead of sending them to the device. */
+enum class SubtitleBurnIn {
+    /** Only what Media3 cannot render: picture subtitles outside the container. */
+    Auto,
+
+    /** Every picture subtitle (PGS, VobSub, DVB). */
+    PictureFormats,
+
+    /** Picture subtitles and styled ASS/SSA. */
+    ComplexFormats,
+
+    /** Every subtitle. */
+    Always;
+
+    internal fun burnsText(codec: String): Boolean = when (this) {
+        Auto, PictureFormats -> false
+        ComplexFormats -> codec == "ass" || codec == "ssa"
+        Always -> true
+    }
 }

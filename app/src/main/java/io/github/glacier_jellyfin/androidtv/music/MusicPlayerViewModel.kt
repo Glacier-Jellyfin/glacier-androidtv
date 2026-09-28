@@ -17,6 +17,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.Lyrics
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicShuffle
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackMethod
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackPosition
@@ -66,6 +67,9 @@ data class MusicUiState(
     val lyricsOn: Boolean = false,
     val lyrics: LyricsState = LyricsState.Loading,
     val method: PlaybackMethod? = null,
+    /** Left/Right on the timeline and the remote's rewind/fast-forward (Settings › Playback). */
+    val seekBackMs: Long = 10_000,
+    val seekForwardMs: Long = 30_000,
 ) {
     val current: MusicTrack? get() = queue.getOrNull(index)?.track
 }
@@ -81,6 +85,7 @@ class MusicPlayerViewModel @Inject constructor(
     private val music: MusicRepository,
     private val playback: PlaybackRepository,
     private val shuffleSwitch: MusicShuffle,
+    private val settings: SettingsRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<MusicRoute>()
@@ -168,6 +173,11 @@ class MusicPlayerViewModel @Inject constructor(
     }
 
     init {
+        viewModelScope.launch {
+            settings.settings.collect { profile ->
+                _state.update { it.copy(seekBackMs = profile.playback.seekBack.ms, seekForwardMs = profile.playback.seekForward.ms) }
+            }
+        }
         load()
     }
 

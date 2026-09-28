@@ -20,6 +20,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.Trailer
 import io.github.glacier_jellyfin.androidtv.core.data.media.YouTubeTrailer
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
@@ -86,6 +87,7 @@ class TrailerViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val repository: DetailRepository,
     private val playback: PlaybackRepository,
+    private val settings: SettingsRepository,
 ) : ViewModel(), YouTubeListener {
 
     private val itemId = UUID.fromString(savedStateHandle.toRoute<TrailerRoute>().itemId)
@@ -243,7 +245,8 @@ class TrailerViewModel @Inject constructor(
         releasePlayer()
         _progress.update { it.copy(positionMs = it.durationMs) }
         _state.update { it.copy(ended = true, loading = false, playWhenReady = false) }
-        if (_state.value.next != null) startCountdown()
+        // Without "play trailers one after another" the end screen waits for a choice.
+        if (_state.value.next != null && settings.settings.value.playback.trailerAutoNext) startCountdown()
     }
 
     /** The end screen starts the next trailer after [COUNTDOWN_SECONDS] (design default). */

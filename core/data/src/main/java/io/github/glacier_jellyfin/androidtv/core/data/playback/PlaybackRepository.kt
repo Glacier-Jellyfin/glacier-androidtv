@@ -6,6 +6,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.data.media.Track
 import io.github.glacier_jellyfin.androidtv.core.data.media.toTrack
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.DeviceProfiles
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.MediaCapabilityDetector
 import kotlinx.coroutines.CoroutineScope
@@ -94,6 +95,7 @@ data class PlaybackPosition(val positionMs: Long, val paused: Boolean)
 class PlaybackRepository @Inject constructor(
     private val sessions: SessionManager,
     private val capabilities: MediaCapabilityDetector,
+    private val settings: SettingsRepository,
 ) {
 
     /** Reports must outlive the player screen: "stopped" is sent while it closes. */
@@ -108,15 +110,20 @@ class PlaybackRepository @Inject constructor(
     suspend fun open(itemId: UUID, startMs: Long, audioIndex: Int?, subtitleIndex: Int?): PlaybackSource = withContext(Dispatchers.IO) {
         val session = requireSession()
         val api = session.api
-        val info = api.mediaInfoApi.getPostedPlaybackInfo(
+        val playback = settings.current().playback
+        val device = capabilities.capabilities.let { detected ->
+            playback.audioChannels.max?.let { detected.copy(maxAudioChannels = minOf(detected.maxAudioChannels, it)) } ?: detected
+        }
+        suspend fun playbackInfo(bitrate: Int) = api.mediaInfoApi.getPostedPlaybackInfo(
             itemId = itemId,
             data = PlaybackInfoDto(
                 userId = session.userId,
-                maxStreamingBitrate = MAX_BITRATE,
+                maxStreamingBitrate = bitrate,
+                maxAudioChannels = device.maxAudioChannels,
                 startTimeTicks = startMs * TICKS_PER_MS,
                 audioStreamIndex = audioIndex,
                 subtitleStreamIndex = subtitleIndex,
-                deviceProfile = DeviceProfiles.build(capabilities.capabilities, MAX_BITRATE),
+                deviceProfile = DeviceProfiles.build(device, bitrate, playback.subtitleBurnIn),
                 enableDirectPlay = true,
                 enableDirectStream = true,
                 enableTranscoding = true,
@@ -125,6 +132,14 @@ class PlaybackRepository @Inject constructor(
                 autoOpenLiveStream = true,
             ),
         ).content
+
+        // The bitrate setting only caps transcodes (design): ask without it first, so a
+        // file above the cap still plays directly, and again with it when the server transcodes.
+        var info = playbackInfo(AUTO_BITRATE)
+        val cap = playback.maxBitrate.bitsPerSecond
+        if (cap != null && info.errorCode == null && info.mediaSources.firstOrNull()?.supportsDirectPlay == false) {
+            info = playbackInfo(cap)
+        }
         info.errorCode?.let { error("Server refused playback: $it") }
         val source = info.mediaSources.firstOrNull() ?: error("Server returned no media source")
 
@@ -185,7 +200,7 @@ class PlaybackRepository @Inject constructor(
                 container = listOf("mp4|aac"),
                 userId = session.userId,
                 deviceId = api.deviceInfo.id,
-                maxStreamingBitrate = MAX_BITRATE,
+                maxStreamingBitrate = settings.settings.value.playback.maxBitrate.bitsPerSecond ?: AUTO_BITRATE,
                 audioCodec = "aac",
                 transcodingContainer = "mp4",
                 transcodingProtocol = MediaStreamProtocol.HLS,
@@ -312,7 +327,7 @@ class PlaybackRepository @Inject constructor(
         const val TAG = "Playback"
         const val TICKS_PER_MS = 10_000L
 
-        /** "Auto" until the settings screen exists: the highest step the design offers (120 Mbit/s). */
-        const val MAX_BITRATE = 120_000_000
+        /** Bitrate "Auto": the highest step the design offers (120 Mbit/s). */
+        const val AUTO_BITRATE = 120_000_000
     }
 }

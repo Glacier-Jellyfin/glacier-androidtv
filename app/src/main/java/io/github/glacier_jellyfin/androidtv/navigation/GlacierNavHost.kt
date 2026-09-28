@@ -15,7 +15,7 @@ import io.github.glacier_jellyfin.androidtv.home.HomeScreen
 import io.github.glacier_jellyfin.androidtv.library.LibraryScreen
 import io.github.glacier_jellyfin.androidtv.music.MusicPlayerScreen
 import io.github.glacier_jellyfin.androidtv.profiles.ProfilesScreen
-import io.github.glacier_jellyfin.androidtv.settings.SettingsPlaceholderScreen
+import io.github.glacier_jellyfin.androidtv.settings.SettingsScreen
 import io.github.glacier_jellyfin.androidtv.setup.ServerAddressScreen
 import io.github.glacier_jellyfin.androidtv.setup.QuickConnectScreen
 import io.github.glacier_jellyfin.androidtv.setup.ServerListScreen
@@ -67,11 +67,6 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
         composable<PlayerRoute> { PlayerScreen(onBack = back) }
         composable<MusicRoute> { MusicPlayerScreen(onBack = back) }
         composable<SearchRoute> { SearchScreen(onNavigate = navigate) }
-        composable<SettingsRoute> {
-            SettingsPlaceholderScreen(
-                onBack = back,
-                onSignedOut = { serverId -> navigate(UiEvent.Navigate(ProfilesRoute(serverId), clearBackStack = true)) },
-            )
-        }
+        composable<SettingsRoute> { SettingsScreen(onNavigate = navigate) }
     }
 }

@@ -53,7 +53,6 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
-import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.detail.TrackKind
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
@@ -187,12 +186,12 @@ fun PlayerScreen(
                         showOsd(playFocus)
                         true
                     }
-                    Key.MediaRewind -> { viewModel.seekBy(-GlacierPlayer.SEEK_BACK_MS); true }
-                    Key.MediaFastForward -> { viewModel.seekBy(GlacierPlayer.SEEK_FORWARD_MS); true }
-                    // With the OSD hidden, Left/Right scrub straight away (-10 s / +30 s), except between the card's buttons.
+                    Key.MediaRewind -> { viewModel.seekBy(-state.seekBackMs); true }
+                    Key.MediaFastForward -> { viewModel.seekBy(state.seekForwardMs); true }
+                    // With the OSD hidden, Left/Right scrub straight away by the seek steps, except between the card's buttons.
                     Key.DirectionLeft, Key.DirectionRight -> if (!osdVisible && !state.loading && prompt != upNextFocus) {
                         showOsd(seekFocus)
-                        scrub(if (event.key == Key.DirectionLeft) -GlacierPlayer.SEEK_BACK_MS else GlacierPlayer.SEEK_FORWARD_MS)
+                        scrub(if (event.key == Key.DirectionLeft) -state.seekBackMs else state.seekForwardMs)
                         true
                     } else {
                         false
@@ -223,7 +222,7 @@ fun PlayerScreen(
                 osdVisible -> SubtitleLift.Osd
                 else -> SubtitleLift.None
             }
-            PlayerSubtitles(playback, lift, modifier = Modifier.fillMaxSize())
+            PlayerSubtitles(playback, lift, state.subtitleStyle, modifier = Modifier.fillMaxSize())
         }
 
         if (state.loading || state.failed) {

@@ -110,9 +110,6 @@ import kotlinx.coroutines.delay
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
-/** Left/Right on the timeline and the remote's rewind/fast-forward (design: 10 s). */
-private const val SEEK_STEP_MS = 10_000L
-
 /** Where the current lyric line sits in the lyrics box (design `lyrFollow`: 40 % from the top). */
 private const val LYRIC_ANCHOR = 0.4f
 
@@ -158,8 +155,8 @@ fun MusicPlayerScreen(
                     Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause -> viewModel.togglePlay()
                     Key.MediaNext -> viewModel.next()
                     Key.MediaPrevious -> viewModel.previous()
-                    Key.MediaRewind -> viewModel.seekBy(-SEEK_STEP_MS)
-                    Key.MediaFastForward -> viewModel.seekBy(SEEK_STEP_MS)
+                    Key.MediaRewind -> viewModel.seekBy(-state.seekBackMs)
+                    Key.MediaFastForward -> viewModel.seekBy(state.seekForwardMs)
                     else -> return@onPreviewKeyEvent false
                 }
                 true
@@ -528,7 +525,7 @@ private fun Controls(
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(28.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            SeekBar(progress, down = playFocus, onSeekBy = viewModel::seekBy, onClick = viewModel::togglePlay)
+            SeekBar(progress, state.seekBackMs, state.seekForwardMs, down = playFocus, onSeekBy = viewModel::seekBy, onClick = viewModel::togglePlay)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(formatTime(progress.positionMs), style = GlacierText.mono(20), color = GlacierColors.Ice)
                 Text(
@@ -567,7 +564,7 @@ private fun Controls(
 
 /** Focused, Left/Right jump 10 s; the track and knob grow (design `mseek`). Down goes to [down], the play button. */
 @Composable
-private fun SeekBar(progress: MusicProgress, down: FocusRequester, onSeekBy: (Long) -> Unit, onClick: () -> Unit) {
+private fun SeekBar(progress: MusicProgress, seekBackMs: Long, seekForwardMs: Long, down: FocusRequester, onSeekBy: (Long) -> Unit, onClick: () -> Unit) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -582,8 +579,8 @@ private fun SeekBar(progress: MusicProgress, down: FocusRequester, onSeekBy: (Lo
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 when (event.key) {
-                    Key.DirectionLeft -> { onSeekBy(-SEEK_STEP_MS); true }
-                    Key.DirectionRight -> { onSeekBy(SEEK_STEP_MS); true }
+                    Key.DirectionLeft -> { onSeekBy(-seekBackMs); true }
+                    Key.DirectionRight -> { onSeekBy(seekForwardMs); true }
                     else -> false
                 }
             }

@@ -68,6 +68,18 @@ class DeviceProfilesTest {
     }
 
     @Test
+    fun `burn-in modes only offer burning for the chosen formats`() {
+        fun methods(mode: SubtitleBurnIn, format: String) =
+            DeviceProfiles.build(fullHdTv, MAX, mode).subtitleProfiles.filter { it.format == format }.map { it.method }.toSet()
+
+        assertEquals(setOf(SubtitleDeliveryMethod.ENCODE), methods(SubtitleBurnIn.PictureFormats, "pgssub"))
+        assertEquals(setOf(SubtitleDeliveryMethod.EMBED, SubtitleDeliveryMethod.EXTERNAL), methods(SubtitleBurnIn.PictureFormats, "ass"))
+        assertEquals(setOf(SubtitleDeliveryMethod.ENCODE), methods(SubtitleBurnIn.ComplexFormats, "ass"))
+        assertEquals(setOf(SubtitleDeliveryMethod.EMBED, SubtitleDeliveryMethod.EXTERNAL), methods(SubtitleBurnIn.ComplexFormats, "srt"))
+        assertEquals(setOf(SubtitleDeliveryMethod.ENCODE), methods(SubtitleBurnIn.Always, "srt"))
+    }
+
+    @Test
     fun `audio channels are capped for video`() {
         val channels = DeviceProfiles.build(fullHdTv, MAX).codecProfiles.single { it.type == CodecType.VIDEO_AUDIO }
         assertEquals("6", channels.conditions.single().value)

@@ -1,6 +1,9 @@
 package io.github.glacier_jellyfin.androidtv.core.data.playback
 
+import kotlinx.serialization.Serializable
+
 /** Parts of a video the server knows about (Jellyfin media segments). */
+@Serializable
 enum class SegmentKind { Intro, Recap, Preview, Commercial, Outro }
 
 data class MediaSegment(val kind: SegmentKind, val startMs: Long, val endMs: Long) {
@@ -27,6 +30,7 @@ fun mergeOverlapping(segments: List<MediaSegment>): List<MediaSegment> =
     }.sortedBy { it.startMs }
 
 /** What the player does when playback enters a segment. */
+@Serializable
 enum class SegmentAction { None, Ask, Skip }
 
 /** When the "Up next" card appears. */
@@ -42,20 +46,24 @@ sealed interface UpNextMode {
 }
 
 /**
- * Segment and "Up next" behaviour. The defaults are the design's until the
- * settings screen exists: ask for intro and outro, skip recaps, ignore
- * previews and ads, "Up next" with the credits.
+ * Segment and "Up next" behaviour, set in Settings › Playback. The defaults
+ * are the design's: ask for intro and outro, skip recaps, ignore previews
+ * and ads, "Up next" with the credits.
  */
 data class SegmentPolicy(
-    val actions: Map<SegmentKind, SegmentAction> = mapOf(
-        SegmentKind.Intro to SegmentAction.Ask,
-        SegmentKind.Recap to SegmentAction.Skip,
-        SegmentKind.Preview to SegmentAction.None,
-        SegmentKind.Commercial to SegmentAction.None,
-        SegmentKind.Outro to SegmentAction.Ask,
-    ),
+    val actions: Map<SegmentKind, SegmentAction> = DefaultActions,
     val upNext: UpNextMode = UpNextMode.WithCredits,
 ) {
+    companion object {
+        val DefaultActions: Map<SegmentKind, SegmentAction> = mapOf(
+            SegmentKind.Intro to SegmentAction.Ask,
+            SegmentKind.Recap to SegmentAction.Skip,
+            SegmentKind.Preview to SegmentAction.None,
+            SegmentKind.Commercial to SegmentAction.None,
+            SegmentKind.Outro to SegmentAction.Ask,
+        )
+    }
+
     fun action(kind: SegmentKind): SegmentAction = actions[kind] ?: SegmentAction.None
 
     /** The segment playing at [positionMs], unless it is set to "no action". */
