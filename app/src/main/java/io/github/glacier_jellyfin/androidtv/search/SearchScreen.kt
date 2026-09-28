@@ -245,6 +245,7 @@ private fun ResultCard(item: MediaItem, onClick: () -> Unit) {
         // Design: albums show title and artist under a square cover.
         PosterCard(imageUrl = item.posterUrl, caption = item.parentTitle.orEmpty(), onClick = onClick, square = true, title = item.title)
     } else {
-        PosterCard(imageUrl = item.posterUrl, caption = item.year?.toString().orEmpty(), onClick = onClick)
+        // Title above the year, laid out like the album cards.
+        PosterCard(imageUrl = item.posterUrl, caption = item.year?.toString().orEmpty(), onClick = onClick, title = item.title)
     }
 }

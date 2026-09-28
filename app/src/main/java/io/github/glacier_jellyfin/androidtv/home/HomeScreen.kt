@@ -123,7 +123,8 @@ fun HomeScreen(
                                         ContinueCard(
                                             title = if (item.kind == ItemKind.Episode) item.parentTitle ?: item.title else item.title,
                                             subtitle = continueSubtitle(item),
-                                            imageUrl = item.thumbUrl ?: item.posterUrl,
+                                            // The show's art, not the episode still (user decision).
+                                            imageUrl = item.showThumbUrl ?: item.posterUrl,
                                             progress = item.progress,
                                             onClick = { viewModel.openContinueWatching(item) },
                                         )

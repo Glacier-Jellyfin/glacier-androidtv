@@ -8,6 +8,7 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeContent
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
+import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.Library
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
@@ -54,6 +55,7 @@ data class HomeState(
 class HomeViewModel @Inject constructor(
     private val repository: HomeRepository,
     private val sessions: SessionManager,
+    playback: PlaybackRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeState(userName = sessions.session.value?.user?.name.orEmpty()))
@@ -64,6 +66,17 @@ class HomeViewModel @Inject constructor(
 
     init {
         load()
+        // Back from the player: "continue watching" and progress bars follow what was just watched.
+        viewModelScope.launch { playback.stopped.collect { refresh() } }
+    }
+
+    /** Reloads in the background: no spinner, and what is on screen stays if it fails. */
+    private fun refresh() {
+        viewModelScope.launch {
+            runCatching { repository.load() }
+                .onSuccess { content -> _state.update { it.copy(content = content, spotlight = spotlightOf(content, it.settings)) } }
+                .onFailure { Log.w(TAG, "Refreshing home failed", it) }
+        }
     }
 
     fun load() {

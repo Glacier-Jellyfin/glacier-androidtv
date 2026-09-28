@@ -74,6 +74,7 @@ internal class MediaMapper(private val api: ApiClient) {
             quality = quality(dto),
             posterUrl = poster(dto),
             thumbUrl = thumb(dto),
+            showThumbUrl = showThumb(dto) ?: thumb(dto),
             backdropUrl = backdrop(dto),
         )
     }
@@ -116,6 +117,18 @@ internal class MediaMapper(private val api: ApiClient) {
         }
         dto.imageTags?.get(ImageType.THUMB)?.let { return image(dto.id, ImageType.THUMB, it, ImageWidth.THUMB) }
         dto.backdropImageTags?.firstOrNull()?.let { return image(dto.id, ImageType.BACKDROP, it, ImageWidth.THUMB) }
+        val parentThumb = dto.parentThumbItemId
+        val parentThumbTag = dto.parentThumbImageTag
+        if (parentThumb != null && parentThumbTag != null) return image(parentThumb, ImageType.THUMB, parentThumbTag, ImageWidth.THUMB)
+        return parentBackdrop(dto, ImageWidth.THUMB)
+    }
+
+    /** For episodes, the show's own 16:9 art; null for everything else. */
+    private fun showThumb(dto: BaseItemDto): String? {
+        if (dto.type != BaseItemKind.EPISODE) return null
+        val seriesId = dto.seriesId
+        val seriesThumb = dto.seriesThumbImageTag
+        if (seriesId != null && seriesThumb != null) return image(seriesId, ImageType.THUMB, seriesThumb, ImageWidth.THUMB)
         val parentThumb = dto.parentThumbItemId
         val parentThumbTag = dto.parentThumbImageTag
         if (parentThumb != null && parentThumbTag != null) return image(parentThumb, ImageType.THUMB, parentThumbTag, ImageWidth.THUMB)

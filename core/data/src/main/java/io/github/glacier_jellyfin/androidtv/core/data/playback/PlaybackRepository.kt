@@ -10,6 +10,9 @@ import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.MediaCapabili
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.mediaInfoApi
@@ -93,6 +96,11 @@ class PlaybackRepository @Inject constructor(
 
     /** Reports must outlive the player screen: "stopped" is sent while it closes. */
     private val reportScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private val _stopped = MutableSharedFlow<UUID>(extraBufferCapacity = 8)
+
+    /** A title whose "stopped" report reached the server: resume points and watched state changed. */
+    val stopped: SharedFlow<UUID> = _stopped.asSharedFlow()
 
     /** Asks the server how to play [itemId] on this device and builds the stream URL. */
     suspend fun open(itemId: UUID, startMs: Long, audioIndex: Int?, subtitleIndex: Int?): PlaybackSource = withContext(Dispatchers.IO) {
@@ -216,7 +224,7 @@ class PlaybackRepository @Inject constructor(
     }
 
     /** The server stores the resume point from this, and marks the title watched near its end. */
-    fun reportStopped(source: PlaybackSource, positionMs: Long, failed: Boolean = false) = report("stopped") {
+    fun reportStopped(source: PlaybackSource, positionMs: Long, failed: Boolean = false) = report("stopped", onDone = { _stopped.tryEmit(source.itemId) }) {
         sessionApi.reportPlaybackStopped(
             PlaybackStopInfo(
                 itemId = source.itemId,
@@ -228,11 +236,13 @@ class PlaybackRepository @Inject constructor(
         )
     }
 
-    private fun report(what: String, call: suspend org.jellyfin.sdk.api.client.ApiClient.() -> Unit) {
+    private fun report(what: String, onDone: () -> Unit = {}, call: suspend org.jellyfin.sdk.api.client.ApiClient.() -> Unit) {
         val api = sessions.session.value?.api ?: return
         reportScope.launch {
             // Reporting is best effort: playback goes on if the server misses one.
-            runCatching { api.call() }.onFailure { Log.w(TAG, "Playback report '$what' failed", it) }
+            runCatching { api.call() }
+                .onSuccess { onDone() }
+                .onFailure { Log.w(TAG, "Playback report '$what' failed", it) }
         }
     }
 

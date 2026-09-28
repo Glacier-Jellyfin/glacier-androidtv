@@ -49,8 +49,10 @@ data class MediaItem(
     val quality: VideoQuality?,
     /** 2:3 poster (or square album cover). */
     val posterUrl: String?,
-    /** 16:9 still for "continue watching": thumb, backdrop or episode image. */
+    /** 16:9 still: the episode's own image, else thumb or backdrop. */
     val thumbUrl: String?,
+    /** 16:9 art of the show for an episode (series thumb, else its backdrop); the item's own [thumbUrl] otherwise. */
+    val showThumbUrl: String? = thumbUrl,
     /** Full-screen backdrop for the spotlight. */
     val backdropUrl: String?,
 )
