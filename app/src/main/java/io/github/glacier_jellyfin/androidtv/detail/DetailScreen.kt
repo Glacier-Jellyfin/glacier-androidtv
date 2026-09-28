@@ -376,13 +376,29 @@ private fun SeenButton(played: Boolean, onClick: () -> Unit) {
 @Composable
 private fun TrackChips(state: DetailState, details: ItemDetails, viewModel: DetailViewModel) {
     val tracks = details.tracks ?: return
+    val audioFocus = remember { FocusRequester() }
+    val subtitleFocus = remember { FocusRequester() }
+    // Closing the sheet hands focus back to the chip that opened it; left alone,
+    // it lands on the first button and the next OK would start playback.
+    var opened by remember { mutableStateOf<TrackKind?>(null) }
+    LaunchedEffect(state.trackPanel) {
+        val panel = state.trackPanel
+        if (panel != null) {
+            opened = panel
+            return@LaunchedEffect
+        }
+        val kind = opened ?: return@LaunchedEffect
+        opened = null
+        withFrameNanos { }
+        runCatching { (if (kind == TrackKind.Audio) audioFocus else subtitleFocus).requestFocus() }
+    }
     ActionDivider()
     if (tracks.audio.isNotEmpty()) {
         val (label, flag) = trackChipLabel(tracks.audio.firstOrNull { it.index == state.selection?.audio }, subtitle = false)
-        TrackChip(label, flag, audio = true, onClick = { viewModel.openTracks(TrackKind.Audio) })
+        TrackChip(label, flag, audio = true, onClick = { viewModel.openTracks(TrackKind.Audio) }, modifier = Modifier.focusRequester(audioFocus))
     }
     val (label, flag) = trackChipLabel(tracks.subtitles.firstOrNull { it.index == state.selection?.subtitle }, subtitle = true)
-    TrackChip(label, flag, audio = false, onClick = { viewModel.openTracks(TrackKind.Subtitles) })
+    TrackChip(label, flag, audio = false, onClick = { viewModel.openTracks(TrackKind.Subtitles) }, modifier = Modifier.focusRequester(subtitleFocus))
 }
 
 @Composable
@@ -403,7 +419,7 @@ private fun TrackSheet(kind: TrackKind, state: DetailState, details: ItemDetails
         subtitle = prefix + " · " + stringResource(R.string.track_next_playback),
         options = options,
         selected = indices.indexOf(current).coerceAtLeast(0),
-        onPick = { i -> viewModel.pickTrack(kind, indices[i], options[i].first) },
+        onPick = { i -> viewModel.pickTrack(kind, indices[i], options[i].full) },
         onDismiss = viewModel::closeTracks,
     )
 }

@@ -15,6 +15,8 @@ data class Track(
     val hearingImpaired: Boolean = false,
     /** The server's own description, used when the language is unknown. */
     val fallbackTitle: String? = null,
+    /** The stream's name in the file ("German (CR/ASS)", "Commentary"), if it has one. */
+    val title: String? = null,
 )
 
 internal fun MediaStream.toTrack() = Track(
@@ -25,6 +27,7 @@ internal fun MediaStream.toTrack() = Track(
     forced = isForced,
     hearingImpaired = isHearingImpaired,
     fallbackTitle = displayTitle ?: title,
+    title = title,
 )
 
 /** Audio and subtitle choices of a title, with the server's defaults for this user. */
@@ -76,6 +79,55 @@ fun channelLayout(channels: Int?): String? = when {
     channels == null || channels <= 0 -> null
     channels >= 5 -> "${channels - 1}.1"
     else -> "$channels.0"
+}
+
+/** Subtitle formats as people know them: "SRT", "ASS", "PGS", "VobSub". */
+fun subtitleFormat(codec: String?): String? = when (val c = codec?.lowercase()) {
+    null, "" -> null
+    "subrip", "srt" -> "SRT"
+    "ass" -> "ASS"
+    "ssa" -> "SSA"
+    "pgssub", "pgs", "hdmv_pgs_subtitle" -> "PGS"
+    "dvdsub", "dvd_subtitle", "vobsub" -> "VobSub"
+    "webvtt", "vtt" -> "WebVTT"
+    "mov_text" -> "TX3G"
+    else -> c.uppercase()
+}
+
+/**
+ * Small facts shown next to a track's language in the picker. Audio: the
+ * format ("2.0 (AC3)") and the stream name when it says something new
+ * ("Commentary"). Subtitles: the stream name without what the label already
+ * says ("German (CR/ASS)(forced)" becomes "CR/ASS"), and the format unless
+ * the name already contains it.
+ */
+fun trackBadges(track: Track, subtitle: Boolean, locales: List<Locale>): List<String> {
+    val languageNames = (locales + Locale.ENGLISH).mapNotNull { Languages.name(track.language, it) }.distinct()
+    return if (subtitle) {
+        val known = languageNames + listOf("forced", "erzwungen") + if (track.hearingImpaired) listOf("SDH", "CC") else emptyList()
+        val name = cleanTrackTitle(track.title, known)
+        val format = subtitleFormat(track.codec)
+        listOfNotNull(name, format?.takeUnless { name != null && name.contains(it, ignoreCase = true) })
+    } else {
+        val format = listOfNotNull(channelLayout(track.channels), codecName(track.codec)?.let { "($it)" })
+            .joinToString(" ")
+            .takeIf { it.isNotEmpty() }
+        // Names like "DTS 5.1 @ 768 kbps" or "Stereo" only repeat the format.
+        val name = cleanTrackTitle(track.title, languageNames + listOf("stereo", "mono", "surround"))
+            ?.takeIf { title -> title.none { it.isDigit() } && title.count { it.isLetter() } >= 3 }
+        listOfNotNull(format, name)
+    }
+}
+
+/** [title] without the [known] words, empty brackets and stray separators; null when nothing is left. */
+internal fun cleanTrackTitle(title: String?, known: List<String>): String? {
+    var text = title ?: return null
+    known.forEach { word -> text = text.replace(Regex("(?<![\\p{L}])" + Regex.escape(word) + "(?![\\p{L}])", RegexOption.IGNORE_CASE), " ") }
+    text = text.replace(Regex("[(\\[]\\s*[)\\]]"), " ")
+        .replace(Regex("[()\\[\\]]"), " ")
+        .replace(Regex("\\s+"), " ")
+        .trim(' ', '-', '_', '·', ',', '/', '|', ':', '.')
+    return text.takeIf { it.isNotEmpty() }
 }
 
 /** Short codec names as the design writes them: "DTS", "AAC", "EAC3", "TrueHD". */

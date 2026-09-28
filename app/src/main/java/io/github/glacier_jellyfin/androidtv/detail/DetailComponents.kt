@@ -48,6 +48,7 @@ import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.CastMember
 import io.github.glacier_jellyfin.androidtv.core.data.media.Languages
+import io.github.glacier_jellyfin.androidtv.core.data.media.trackBadges
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.Track
 import io.github.glacier_jellyfin.androidtv.core.data.media.channelLayout
@@ -67,13 +68,26 @@ import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 /** Languages the design draws a flag for; everything else is written out. */
 private val FlagLanguages = setOf("deu", "eng", "jpn")
 
+/**
+ * One line of [TrackPanel]: [label] with its [flag] and [badges];
+ * [full] is the complete name for the confirmation toast.
+ */
+data class TrackRow(val label: String, val flag: String?, val badges: List<String>, val full: String)
+
 /** Rows for [TrackPanel] and the stream index behind each; subtitles start with "Off" (index null). */
-data class TrackOptions(val rows: List<Pair<String, String?>>, val indices: List<Int?>)
+data class TrackOptions(val rows: List<TrackRow>, val indices: List<Int?>)
 
 @Composable
 fun trackOptions(tracks: List<Track>, subtitle: Boolean): TrackOptions {
-    val rows = (if (subtitle) listOf(stringResource(R.string.track_off) to null) else emptyList()) +
-        tracks.map { track -> trackLabel(track, subtitle) to Languages.iso3(track.language)?.takeIf { it in FlagLanguages } }
+    val locale = LocalConfiguration.current.locales[0]
+    val off = stringResource(R.string.track_off)
+    val rows = (if (subtitle) listOf(TrackRow(off, null, emptyList(), off)) else emptyList()) +
+        tracks.map { track ->
+            val full = trackLabel(track, subtitle)
+            // Audio rows show the format as a badge, so the label keeps just the language.
+            val label = if (subtitle) full else Languages.name(track.language, locale) ?: full
+            TrackRow(label, Languages.iso3(track.language)?.takeIf { it in FlagLanguages }, trackBadges(track, subtitle, listOf(locale)), full)
+        }
     val indices = (if (subtitle) listOf<Int?>(null) else emptyList()) + tracks.map { it.index }
     return TrackOptions(rows, indices)
 }
@@ -149,13 +163,13 @@ fun LanguageFlag(iso3: String, modifier: Modifier = Modifier, width: Int = 24, h
 
 /** Audio or subtitle chip after the action buttons: quiet until focused. */
 @Composable
-fun TrackChip(label: String, flag: String?, audio: Boolean, onClick: () -> Unit) {
+fun TrackChip(label: String, flag: String?, audio: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val foreground = if (focused) GlacierColors.Void else GlacierColors.Mist
     Row(
-        Modifier
+        modifier
             .focusScale(focused)
             .height(46.dp)
             .clip(PillShape)
@@ -183,7 +197,7 @@ fun ActionDivider() {
 fun TrackPanel(
     title: String,
     subtitle: String,
-    options: List<Pair<String, String?>>,
+    options: List<TrackRow>,
     selected: Int,
     onPick: (Int) -> Unit,
     onDismiss: () -> Unit,
@@ -208,10 +222,9 @@ fun TrackPanel(
                 Text(subtitle, style = GlacierText.body(17), color = GlacierColors.Mist)
             }
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                options.forEachIndexed { index, (label, flag) ->
+                options.forEachIndexed { index, row ->
                     TrackOption(
-                        label = label,
-                        flag = flag,
+                        row = row,
                         selected = index == selected,
                         onClick = { onPick(index) },
                         modifier = if (index == selected) Modifier.focusRequester(focus) else Modifier,
@@ -224,7 +237,7 @@ fun TrackPanel(
 }
 
 @Composable
-private fun TrackOption(label: String, flag: String?, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
+private fun TrackOption(row: TrackRow, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -248,9 +261,26 @@ private fun TrackOption(label: String, flag: String?, selected: Boolean, onClick
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        if (flag != null) LanguageFlag(flag, width = 27, height = 18)
-        Text(label, style = GlacierText.body(19), color = foreground, modifier = Modifier.weight(1f))
+        if (row.flag != null) LanguageFlag(row.flag, width = 27, height = 18)
+        Text(row.label, style = GlacierText.body(19), color = foreground, modifier = Modifier.weight(1f))
+        row.badges.forEach { TrackBadge(it, focused) }
         if (selected) Icon(GlacierIcons.Check, contentDescription = null, tint = foreground, modifier = Modifier.size(22.dp))
+    }
+}
+
+/** A fact about a track ("2.0 (AC3)", "CR/ASS") at the end of its row. */
+@Composable
+private fun TrackBadge(text: String, focused: Boolean) {
+    Box(
+        Modifier
+            .height(30.dp)
+            .clip(PillShape)
+            .background(if (focused) GlacierColors.Void.copy(alpha = 0.12f) else GlacierColors.GlassFill2)
+            .border(1.dp, if (focused) GlacierColors.Void.copy(alpha = 0.3f) else GlacierColors.GlassBorder, PillShape)
+            .padding(horizontal = 11.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, style = GlacierText.body(15, FontWeight.SemiBold), color = if (focused) GlacierColors.Void else GlacierColors.Mist, maxLines = 1)
     }
 }
 

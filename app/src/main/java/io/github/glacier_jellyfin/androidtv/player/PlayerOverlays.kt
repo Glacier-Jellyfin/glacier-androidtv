@@ -99,7 +99,7 @@ fun PlayerTrackPanel(state: PlayerUiState, kind: TrackKind, viewModel: PlayerVie
         selected = indices.indexOf(current).coerceAtLeast(0),
         onPick = { i ->
             val index = indices[i]
-            if (audio) index?.let { viewModel.pickAudio(it, rows[i].first) } else viewModel.pickSubtitle(index, rows[i].first)
+            if (audio) index?.let { viewModel.pickAudio(it, rows[i].full) } else viewModel.pickSubtitle(index, rows[i].full)
         },
         onDismiss = viewModel::closeTracks,
     )
