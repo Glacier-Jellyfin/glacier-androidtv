@@ -124,11 +124,13 @@ class HomeRepository @Inject constructor(
 }
 
 /**
- * Started titles first (most recent first, as the server orders them), then
- * next episodes of shows that are not already in the list.
+ * Started titles first (most recent first, as the server orders them, one
+ * per show), then next episodes of shows that are not already in the list.
  */
 internal fun mergeContinueWatching(resume: List<BaseItemDto>, nextUp: List<BaseItemDto>): List<BaseItemDto> {
-    val seriesInResume = resume.mapNotNullTo(HashSet()) { it.seriesId }
-    val ids = resume.mapTo(HashSet()) { it.id }
-    return resume + nextUp.filter { it.id !in ids && (it.seriesId == null || it.seriesId !in seriesInResume) }
+    // One entry per show: the most recently watched of its started episodes.
+    val started = resume.distinctBy { it.seriesId ?: it.id }
+    val seriesInResume = started.mapNotNullTo(HashSet()) { it.seriesId }
+    val ids = started.mapTo(HashSet()) { it.id }
+    return started + nextUp.filter { it.id !in ids && (it.seriesId == null || it.seriesId !in seriesInResume) }
 }

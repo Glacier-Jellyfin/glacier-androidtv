@@ -36,4 +36,13 @@ class ContinueWatchingTest {
         val merged = mergeContinueWatching(resume = listOf(episode(2, series = 1)), nextUp = listOf(episode(2, series = 1)))
         assertEquals(listOf("ep2"), merged.map { it.name })
     }
+
+    @Test
+    fun `several started episodes of one show keep only the most recent`() {
+        val merged = mergeContinueWatching(
+            resume = listOf(episode(4, series = 1), movie(9), episode(3, series = 1), episode(2, series = 1)),
+            nextUp = emptyList(),
+        )
+        assertEquals(listOf("ep4", "movie9"), merged.map { it.name })
+    }
 }
