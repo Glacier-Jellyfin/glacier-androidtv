@@ -38,6 +38,24 @@ data class ItemDetails(
     /** Seasons and episodes of a show. */
     val seasonCount: Int?,
     val episodeCount: Int?,
+    val chapters: List<Chapter> = emptyList(),
+    val trickplay: Trickplay? = null,
+)
+
+data class Chapter(val name: String, val startMs: Long, val imageUrl: String?)
+
+/**
+ * Seek preview thumbnails: [count] pictures of [width]×[height], one every
+ * [intervalMs], packed [columns]×[rows] per tile image.
+ */
+data class Trickplay(
+    val width: Int,
+    val height: Int,
+    val columns: Int,
+    val rows: Int,
+    val count: Int,
+    val intervalMs: Long,
+    val tileUrls: List<String>,
 )
 
 /** A title in a person's filmography, with the part they played. */

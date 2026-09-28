@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
+import org.jellyfin.sdk.model.api.MediaStream
 import java.util.Locale
 
 /** An audio or subtitle stream of a title, as offered in the track picker. */
@@ -14,6 +15,16 @@ data class Track(
     val hearingImpaired: Boolean = false,
     /** The server's own description, used when the language is unknown. */
     val fallbackTitle: String? = null,
+)
+
+internal fun MediaStream.toTrack() = Track(
+    index = index,
+    language = language,
+    codec = codec,
+    channels = channels,
+    forced = isForced,
+    hearingImpaired = isHearingImpaired,
+    fallbackTitle = displayTitle ?: title,
 )
 
 /** Audio and subtitle choices of a title, with the server's defaults for this user. */

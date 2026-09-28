@@ -7,13 +7,13 @@ import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.showApi
+import org.jellyfin.sdk.api.client.extensions.trickPlayApi
 import org.jellyfin.sdk.api.client.extensions.userDataApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
-import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaStreamType
 import org.jellyfin.sdk.model.api.PersonKind
 import org.jellyfin.sdk.model.api.SortOrder
@@ -43,6 +43,40 @@ class DetailRepository @Inject constructor(
             premiereDate = dto.premiereDate?.toLocalDate(),
             seasonCount = dto.childCount.takeIf { dto.type == BaseItemKind.SERIES },
             episodeCount = dto.recursiveItemCount.takeIf { dto.type == BaseItemKind.SERIES },
+            chapters = chapters(session, dto),
+            trickplay = trickplay(session, dto),
+        )
+    }
+
+    private fun chapters(session: Session, dto: BaseItemDto): List<Chapter> =
+        dto.chapters.orEmpty().mapIndexed { index, chapter ->
+            Chapter(
+                name = chapter.name.orEmpty(),
+                startMs = chapter.startPositionTicks / TICKS_PER_MS,
+                imageUrl = chapter.imageTag?.let { tag ->
+                    session.api.imageApi.getItemImageUrl(itemId = dto.id, imageType = ImageType.CHAPTER, imageIndex = index, tag = tag, maxWidth = 600)
+                },
+            )
+        }
+
+    /** The resolution closest to the design's 340-wide preview. */
+    private fun trickplay(session: Session, dto: BaseItemDto): Trickplay? {
+        val source = dto.mediaSources?.firstOrNull()?.id ?: dto.id.toString().replace("-", "")
+        val sizes = dto.trickplay?.get(source) ?: dto.trickplay?.values?.firstOrNull() ?: return null
+        val info = sizes.values.minByOrNull { kotlin.math.abs(it.width - TRICKPLAY_WIDTH) } ?: return null
+        val perTile = (info.tileWidth * info.tileHeight).coerceAtLeast(1)
+        val tiles = (info.thumbnailCount + perTile - 1) / perTile
+        val sourceId = runCatching { UUID.fromString(source.replaceFirst(UUID_PARTS, "$1-$2-$3-$4-$5")) }.getOrNull()
+        return Trickplay(
+            width = info.width,
+            height = info.height,
+            columns = info.tileWidth,
+            rows = info.tileHeight,
+            count = info.thumbnailCount,
+            intervalMs = info.interval.toLong(),
+            tileUrls = (0 until tiles).map { index ->
+                session.api.trickPlayApi.getTrickplayTileImageUrl(itemId = dto.id, width = info.width, index = index, mediaSourceId = sourceId)
+            },
         )
     }
 
@@ -160,15 +194,6 @@ class DetailRepository @Inject constructor(
     private fun tracks(dto: BaseItemDto): TrackChoices? {
         val source = dto.mediaSources?.firstOrNull() ?: return null
         val streams = source.mediaStreams ?: dto.mediaStreams ?: return null
-        fun MediaStream.toTrack() = Track(
-            index = index,
-            language = language,
-            codec = codec,
-            channels = channels,
-            forced = isForced,
-            hearingImpaired = isHearingImpaired,
-            fallbackTitle = displayTitle ?: title,
-        )
         val audio = streams.filter { it.type == MediaStreamType.AUDIO }.map { it.toTrack() }
         val subtitles = streams.filter { it.type == MediaStreamType.SUBTITLE }.map { it.toTrack() }
         if (audio.isEmpty() && subtitles.isEmpty()) return null
@@ -186,6 +211,9 @@ class DetailRepository @Inject constructor(
     private val Session.userId: UUID get() = UUID.fromString(user.userId)
 
     private companion object {
+        const val TICKS_PER_MS = 10_000L
+        const val TRICKPLAY_WIDTH = 320
+        val UUID_PARTS = Regex("^(.{8})(.{4})(.{4})(.{4})(.{12})$")
         const val SIMILAR_LIMIT = 12
         const val CAST_LIMIT = 20
     }

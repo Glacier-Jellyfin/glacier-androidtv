@@ -52,7 +52,9 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
+import io.github.glacier_jellyfin.androidtv.detail.TrackKind
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
+import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import kotlinx.coroutines.delay
 
 /** OSD hides after this long without input while playing (agreed: 3 s). */
@@ -71,6 +73,7 @@ fun PlayerScreen(
     val progress by viewModel.progress.collectAsStateWithLifecycle()
 
     LaunchedEffect(viewModel) { viewModel.finished.collect { onBack() } }
+    CollectEvents(viewModel.events, onNavigate = {})
     BackHandler { viewModel.stop() }
     // Leaving the app (Home button) pauses; nobody is watching.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.pause() }
@@ -83,6 +86,8 @@ fun PlayerScreen(
     val rootFocus = remember { FocusRequester() }
     val seekFocus = remember { FocusRequester() }
     val playFocus = remember { FocusRequester() }
+    val buttonFocus = remember { OsdButton.entries.associateWith { FocusRequester() } }
+    val overlayOpen = state.trackPanel != null || state.chaptersOpen
     var osdVisible by remember { mutableStateOf(true) }
     /** Which control gets focus when the OSD appears. */
     var osdTarget by remember { mutableStateOf(playFocus) }
@@ -107,11 +112,20 @@ fun PlayerScreen(
         viewModel.seekTo(target)
         scrubMs = null
     }
-    LaunchedEffect(osdVisible, interaction, state.playing, scrubMs) {
-        if (osdVisible && state.playing && scrubMs == null) {
+    LaunchedEffect(osdVisible, interaction, state.playing, scrubMs, overlayOpen) {
+        if (osdVisible && state.playing && scrubMs == null && !overlayOpen) {
             delay(OSD_TIMEOUT_MS)
             osdVisible = false
         }
+    }
+    // Closing an overlay returns focus to the button that opened it.
+    var lastOverlay by remember { mutableStateOf<OsdButton?>(null) }
+    LaunchedEffect(overlayOpen) {
+        val button = lastOverlay ?: return@LaunchedEffect
+        if (overlayOpen || !osdVisible) return@LaunchedEffect
+        withFrameNanos { }
+        runCatching { buttonFocus.getValue(button).requestFocus() }
+        lastOverlay = null
     }
     // The OSD focuses its own target once it is on screen; hidden, the root takes the keys.
     LaunchedEffect(osdVisible) {
@@ -126,7 +140,7 @@ fun PlayerScreen(
             .background(Color.Black)
             .focusRequester(rootFocus)
             .onPreviewKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                if (event.type != KeyEventType.KeyDown || overlayOpen) return@onPreviewKeyEvent false
                 interaction++
                 when (event.key) {
                     Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause -> {
@@ -157,6 +171,7 @@ fun PlayerScreen(
     ) {
         state.player?.let { player ->
             ContentFrame(player = player, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+            PlayerSubtitles(player, liftForOsd = osdVisible, modifier = Modifier.fillMaxSize())
         }
 
         if (state.loading || state.failed) {
@@ -176,6 +191,15 @@ fun PlayerScreen(
                 seekFocus = seekFocus,
                 playFocus = playFocus,
                 initialFocus = osdTarget,
+                buttonFocus = buttonFocus,
+                onOpen = { button ->
+                    lastOverlay = button
+                    when (button) {
+                        OsdButton.Audio -> viewModel.openTracks(TrackKind.Audio)
+                        OsdButton.Subtitles -> viewModel.openTracks(TrackKind.Subtitles)
+                        OsdButton.Chapters -> viewModel.openChapters()
+                    }
+                },
                 onScrub = ::scrub,
                 onCommitScrub = {
                     scrubMs?.let(viewModel::seekTo)
@@ -184,6 +208,17 @@ fun PlayerScreen(
                 onTogglePlay = viewModel::togglePlay,
                 onSeekBy = viewModel::seekBy,
                 onStop = viewModel::stop,
+            )
+        }
+
+        state.trackPanel?.let { PlayerTrackPanel(state, it, viewModel) }
+        if (state.chaptersOpen) {
+            ChapterSheet(
+                chapters = state.chapters,
+                positionMs = progress.positionMs,
+                fallbackImage = state.details?.item?.backdropUrl,
+                onPick = viewModel::playChapter,
+                onDismiss = viewModel::closeChapters,
             )
         }
 

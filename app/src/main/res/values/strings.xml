@@ -249,4 +249,8 @@
     <string name="player_direct_play">Direct Play</string>
     <string name="player_direct_stream">Direct Stream</string>
     <string name="player_transcode">Transcoding</string>
+    <string name="player_audio">Audio</string>
+    <string name="player_subtitles">Subtitles</string>
+    <string name="player_chapters">Chapters</string>
+    <string name="track_applies_now">Applies now</string>
 </resources>

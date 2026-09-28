@@ -1,6 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.core.player
 
 import android.content.Context
+import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -18,6 +19,16 @@ data class StreamRequest(
     val isHls: Boolean,
     val headers: Map<String, String>,
     val startPositionMs: Long,
+    /** Subtitle files loaded next to the stream. */
+    val subtitles: List<SideloadedSubtitle> = emptyList(),
+)
+
+data class SideloadedSubtitle(
+    /** Server stream index; becomes the Media3 track id, see [TrackControl]. */
+    val index: Int,
+    val url: String,
+    val codec: String?,
+    val language: String?,
 )
 
 /** Creates the ExoPlayer used for video, set up for TV playback. */
@@ -48,11 +59,27 @@ object GlacierPlayer {
                     MediaItem.Builder()
                         .setUri(request.url)
                         .apply { if (request.isHls) setMimeType(MimeTypes.APPLICATION_M3U8) }
+                        .setSubtitleConfigurations(request.subtitles.map { it.toConfiguration() })
                         .build(),
                     request.startPositionMs,
                 )
                 prepare()
             }
+    }
+
+    private fun SideloadedSubtitle.toConfiguration() =
+        MediaItem.SubtitleConfiguration.Builder(Uri.parse(url))
+            .setId(TrackControl.externalId(index))
+            .setMimeType(subtitleMimeType(url.substringBefore('?').substringAfterLast('.', "").ifEmpty { codec.orEmpty() }))
+            .setLanguage(language)
+            .build()
+
+    /** Media3 needs the format up front for side-loaded files: the URL's extension, else the codec. */
+    private fun subtitleMimeType(format: String): String = when (format.lowercase()) {
+        "ass", "ssa" -> MimeTypes.TEXT_SSA
+        "vtt", "webvtt" -> MimeTypes.TEXT_VTT
+        "ttml" -> MimeTypes.APPLICATION_TTML
+        else -> MimeTypes.APPLICATION_SUBRIP
     }
 
     /** Remote Left/Right and the OSD skip buttons (agreed default; later a setting). */

@@ -245,4 +245,8 @@
     <string name="player_direct_play">Direct Play</string>
     <string name="player_direct_stream">Direct Stream</string>
     <string name="player_transcode">Transkodierung</string>
+    <string name="player_audio">Ton</string>
+    <string name="player_subtitles">Untertitel</string>
+    <string name="player_chapters">Kapitel</string>
+    <string name="track_applies_now">Gilt ab sofort</string>
 </resources>

@@ -64,6 +64,7 @@ object GlacierIcons {
     val Replay = icon("M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8", "M3 3v5h5")
     val Forward = icon("M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8", "M21 3v5h-5")
     val Close = icon("M18 6 6 18", "m6 6 12 12")
+    val Chapters = icon("M3 5h.01", "M3 12h.01", "M3 19h.01", "M8 5h13", "M8 12h13", "M8 19h13")
     val Check = icon("M20 6 9 17l-5-5", strokeWidth = 3.4f)
     val SortLines = icon("M4 7h16", "M7 12h10", "M10 17h4", strokeWidth = 2.2f)
     val ArrowDown = icon("M12 5v14", "m6 13 6 6 6-6", strokeWidth = 2.4f)

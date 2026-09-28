@@ -390,12 +390,7 @@ private fun TrackSheet(kind: TrackKind, state: DetailState, details: ItemDetails
     val tracks = details.tracks ?: return
     val audio = kind == TrackKind.Audio
     val list = if (audio) tracks.audio else tracks.subtitles
-    // Subtitles start with "Off".
-    val options = (if (audio) emptyList() else listOf(stringResource(R.string.track_off) to null)) +
-        list.map { track ->
-            trackLabel(track, subtitle = !audio) to Languages.iso3(track.language)?.takeIf { it in setOf("deu", "eng", "jpn") }
-        }
-    val indices: List<Int?> = (if (audio) emptyList() else listOf(null)) + list.map { it.index }
+    val (options, indices) = trackOptions(list, subtitle = !audio)
     val current = if (audio) state.selection?.audio else state.selection?.subtitle
     val item = details.item
     val prefix = if (item.kind == ItemKind.Episode && item.episodeNumber != null) {

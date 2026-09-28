@@ -19,5 +19,7 @@ android {
 dependencies {
     api(libs.media3.exoplayer)
     api(libs.media3.ui.compose)
+    // SubtitleView: Media3 has no Compose subtitle renderer yet.
+    api(libs.media3.ui)
     implementation(libs.media3.exoplayer.hls)
 }

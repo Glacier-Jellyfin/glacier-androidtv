@@ -3,6 +3,8 @@ package io.github.glacier_jellyfin.androidtv.core.data.playback
 import android.util.Log
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.media.Track
+import io.github.glacier_jellyfin.androidtv.core.data.media.toTrack
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.DeviceProfiles
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.MediaCapabilityDetector
 import kotlinx.coroutines.CoroutineScope
@@ -15,6 +17,8 @@ import org.jellyfin.sdk.api.client.extensions.sessionApi
 import org.jellyfin.sdk.api.client.extensions.videoApi
 import org.jellyfin.sdk.api.client.util.AuthorizationHeaderBuilder
 import org.jellyfin.sdk.model.api.MediaStreamProtocol
+import org.jellyfin.sdk.model.api.MediaStreamType
+import org.jellyfin.sdk.model.api.SubtitleDeliveryMethod
 import org.jellyfin.sdk.model.api.PlayMethod
 import org.jellyfin.sdk.model.api.PlaybackInfoDto
 import org.jellyfin.sdk.model.api.PlaybackOrder
@@ -29,6 +33,25 @@ import javax.inject.Singleton
 /** How the server delivers the stream; shown as a badge in the player. */
 enum class PlaybackMethod { DirectPlay, DirectStream, Transcode }
 
+/** How a subtitle reaches the screen. */
+enum class SubtitleDelivery {
+    /** Inside the played file; Media3 renders it. */
+    Embedded,
+
+    /** A separate file from the server, loaded next to the stream. */
+    External,
+
+    /** Burned into the picture by the server; needs a new stream. */
+    BurnIn,
+}
+
+data class PlaybackSubtitle(
+    val track: Track,
+    val delivery: SubtitleDelivery,
+    /** Full URL of the file for [SubtitleDelivery.External]. */
+    val url: String?,
+)
+
 /** Everything the player needs to open a stream and report back on it. */
 data class PlaybackSource(
     val itemId: UUID,
@@ -41,7 +64,21 @@ data class PlaybackSource(
     val headers: Map<String, String>,
     val audioIndex: Int?,
     val subtitleIndex: Int?,
-)
+    val audioTracks: List<Track>,
+    val subtitles: List<PlaybackSubtitle>,
+) {
+    /** Direct play keeps every audio track in the file; a transcode carries only the chosen one. */
+    val allAudioInStream: Boolean get() = method == PlaybackMethod.DirectPlay
+
+    /** Where [index] sits among the audio tracks inside the file, which is how Media3 lists them. */
+    fun audioOrdinal(index: Int): Int? = embeddedOrdinal(index, audioTracks.map { it.index })
+
+    fun subtitleOrdinal(index: Int): Int? =
+        embeddedOrdinal(index, subtitles.filter { it.delivery == SubtitleDelivery.Embedded }.map { it.track.index })
+}
+
+/** Position of [index] in the sorted [indices], or null when it is not among them. */
+internal fun embeddedOrdinal(index: Int, indices: List<Int>): Int? = indices.sorted().indexOf(index).takeIf { it >= 0 }
 
 /** Where the player stands, for the server's "now playing" and resume point. */
 data class PlaybackPosition(val positionMs: Long, val paused: Boolean)
@@ -80,6 +117,7 @@ class PlaybackRepository @Inject constructor(
         val source = info.mediaSources.firstOrNull() ?: error("Server returned no media source")
 
         val baseUrl = checkNotNull(api.baseUrl).trimEnd('/')
+        val streams = source.mediaStreams.orEmpty()
         val (url, method) = when {
             source.supportsDirectPlay -> api.videoApi.getVideoStreamUrl(
                 itemId = itemId,
@@ -100,7 +138,20 @@ class PlaybackRepository @Inject constructor(
             method = method,
             headers = mapOf("Authorization" to authorization(session)),
             audioIndex = audioIndex ?: source.defaultAudioStreamIndex,
-            subtitleIndex = subtitleIndex,
+            // The server's default follows the user's subtitle mode; -1 means off.
+            subtitleIndex = (subtitleIndex ?: source.defaultSubtitleStreamIndex)?.takeIf { it >= 0 },
+            audioTracks = streams.filter { it.type == MediaStreamType.AUDIO && !it.isExternal }.map { it.toTrack() },
+            subtitles = streams.filter { it.type == MediaStreamType.SUBTITLE }.mapNotNull { stream ->
+                val delivery = when (stream.deliveryMethod) {
+                    SubtitleDeliveryMethod.EMBED -> SubtitleDelivery.Embedded
+                    SubtitleDeliveryMethod.EXTERNAL, SubtitleDeliveryMethod.HLS -> SubtitleDelivery.External
+                    SubtitleDeliveryMethod.ENCODE -> SubtitleDelivery.BurnIn
+                    // Drop and unknown methods cannot be shown.
+                    else -> return@mapNotNull null
+                }
+                val url = stream.deliveryUrl?.let { if (it.startsWith("http")) it else baseUrl + it }
+                if (delivery == SubtitleDelivery.External && url == null) null else PlaybackSubtitle(stream.toTrack(), delivery, url)
+            },
         )
     }
 

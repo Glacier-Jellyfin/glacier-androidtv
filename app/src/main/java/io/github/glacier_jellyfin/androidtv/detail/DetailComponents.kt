@@ -67,6 +67,17 @@ import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 /** Languages the design draws a flag for; everything else is written out. */
 private val FlagLanguages = setOf("deu", "eng", "jpn")
 
+/** Rows for [TrackPanel] and the stream index behind each; subtitles start with "Off" (index null). */
+data class TrackOptions(val rows: List<Pair<String, String?>>, val indices: List<Int?>)
+
+@Composable
+fun trackOptions(tracks: List<Track>, subtitle: Boolean): TrackOptions {
+    val rows = (if (subtitle) listOf(stringResource(R.string.track_off) to null) else emptyList()) +
+        tracks.map { track -> trackLabel(track, subtitle) to Languages.iso3(track.language)?.takeIf { it in FlagLanguages } }
+    val indices = (if (subtitle) listOf<Int?>(null) else emptyList()) + tracks.map { it.index }
+    return TrackOptions(rows, indices)
+}
+
 /** "Deutsch 5.1 (DTS)" for audio, "Englisch SDH" / "Deutsch (erzwungen)" for subtitles. */
 @Composable
 fun trackLabel(track: Track, subtitle: Boolean): String {

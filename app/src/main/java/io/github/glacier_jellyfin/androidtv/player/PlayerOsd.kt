@@ -1,5 +1,12 @@
 package io.github.glacier_jellyfin.androidtv.player
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.width
+import io.github.glacier_jellyfin.androidtv.core.data.media.Chapter
+import io.github.glacier_jellyfin.androidtv.core.data.media.Trickplay
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
@@ -66,10 +73,12 @@ fun PlayerOsd(
     playFocus: FocusRequester,
     /** Focused when the OSD appears: the timeline after Left/Right, else play. */
     initialFocus: FocusRequester,
+    buttonFocus: Map<OsdButton, FocusRequester>,
     onScrub: (Long) -> Unit,
     onCommitScrub: () -> Unit,
     onTogglePlay: () -> Unit,
     onSeekBy: (Long) -> Unit,
+    onOpen: (OsdButton) -> Unit,
     onStop: () -> Unit,
 ) {
     LaunchedEffect(Unit) {
@@ -92,6 +101,9 @@ fun PlayerOsd(
             Timeline(
                 progress = progress,
                 scrubMs = scrubMs,
+                chapters = state.chapters,
+                trickplay = state.details?.trickplay,
+                imageHeaders = state.imageHeaders,
                 focusRequester = seekFocus,
                 onScrub = onScrub,
                 onCommit = { if (scrubMs != null) onCommitScrub() else onTogglePlay() },
@@ -100,13 +112,18 @@ fun PlayerOsd(
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     ControlButton(GlacierIcons.Replay, stringResource(R.string.player_rewind), onClick = { onSeekBy(-GlacierPlayer.SEEK_BACK_MS) })
                     ControlButton(
-                        if (state.playing) GlacierIcons.Pause else GlacierIcons.Play,
-                        stringResource(if (state.playing) R.string.player_pause else R.string.player_play),
+                        if (state.playWhenReady) GlacierIcons.Pause else GlacierIcons.Play,
+                        stringResource(if (state.playWhenReady) R.string.player_pause else R.string.player_play),
                         onClick = onTogglePlay,
                         big = true,
                         modifier = Modifier.focusRequester(playFocus),
                     )
                     ControlButton(GlacierIcons.Forward, stringResource(R.string.player_forward), onClick = { onSeekBy(GlacierPlayer.SEEK_FORWARD_MS) })
+                    LabelButton(GlacierIcons.Speaker, stringResource(R.string.player_audio), { onOpen(OsdButton.Audio) }, Modifier.focusRequester(buttonFocus.getValue(OsdButton.Audio)))
+                    LabelButton(GlacierIcons.Subtitles, stringResource(R.string.player_subtitles), { onOpen(OsdButton.Subtitles) }, Modifier.focusRequester(buttonFocus.getValue(OsdButton.Subtitles)))
+                    if (state.chapters.isNotEmpty()) {
+                        LabelButton(GlacierIcons.Chapters, stringResource(R.string.player_chapters), { onOpen(OsdButton.Chapters) }, Modifier.focusRequester(buttonFocus.getValue(OsdButton.Chapters)))
+                    }
                     ControlButton(GlacierIcons.Close, stringResource(R.string.player_stop), onClick = onStop)
                 }
                 Spacer(Modifier.weight(1f))
@@ -178,6 +195,9 @@ private fun StatusPill(text: String) {
 private fun Timeline(
     progress: PlayerProgress,
     scrubMs: Long?,
+    chapters: List<Chapter>,
+    trickplay: Trickplay?,
+    imageHeaders: Map<String, String>,
     focusRequester: FocusRequester,
     onScrub: (Long) -> Unit,
     onCommit: () -> Unit,
@@ -187,6 +207,16 @@ private fun Timeline(
     val focused by interaction.collectIsFocusedAsState()
     val duration = progress.durationMs.coerceAtLeast(1)
     val shown = scrubMs ?: progress.positionMs
+    if (scrubMs != null && progress.durationMs > 0) {
+        ScrubPreview(
+            positionMs = scrubMs,
+            deltaMs = scrubMs - progress.positionMs,
+            fraction = fraction(scrubMs, duration),
+            chapter = chapterAt(chapters, scrubMs)?.name,
+            trickplay = trickplay,
+            imageHeaders = imageHeaders,
+        )
+    }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         BoxWithConstraints(
             Modifier
@@ -216,6 +246,17 @@ private fun Timeline(
                 Box(Modifier.fillMaxHeight().fillMaxWidth(fraction(progress.bufferedMs, duration)).background(GlacierColors.GlassFill2))
                 Box(Modifier.fillMaxHeight().fillMaxWidth(fraction(progress.positionMs, duration)).background(accent))
             }
+            // Chapter starts as small gaps in the track (design: ticks).
+            if (progress.durationMs > 0) {
+                chapters.drop(1).forEach { chapter ->
+                    Box(
+                        Modifier
+                            .offset(x = maxWidth * fraction(chapter.startMs, duration) - 1.dp)
+                            .size(2.dp, if (focused) 18.dp else 13.dp)
+                            .background(Color(0xD90A1420)),
+                    )
+                }
+            }
             val knob = if (focused) 26.dp else 18.dp
             if (progress.durationMs > 0) Box(
                 Modifier
@@ -226,12 +267,106 @@ private fun Timeline(
                     .background(accent),
             )
         }
-        Row(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(formatTime(shown), style = GlacierText.mono(20), color = GlacierColors.Ice)
-            Spacer(Modifier.weight(1f))
+            Text(
+                chapterAt(chapters, progress.positionMs)?.name.orEmpty(),
+                style = GlacierText.mono(20),
+                color = GlacierColors.Mist,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(horizontal = 24.dp),
+            )
             if (progress.durationMs > 0) {
                 Text("−" + formatTime(progress.durationMs - progress.positionMs), style = GlacierText.mono(20), color = GlacierColors.Mist)
             }
+        }
+    }
+}
+
+/** OSD buttons that open an overlay; the overlay hands focus back to them when it closes. */
+enum class OsdButton { Audio, Subtitles, Chapters }
+
+private fun chapterAt(chapters: List<Chapter>, positionMs: Long): Chapter? = chapters.lastOrNull { it.startMs <= positionMs }
+
+/**
+ * Trickplay preview (design: 340×191) with the chapter, the target time and
+ * the jump from the current position; above the timeline, following the knob.
+ */
+@Composable
+private fun ScrubPreview(
+    positionMs: Long,
+    deltaMs: Long,
+    fraction: Float,
+    chapter: String?,
+    trickplay: Trickplay?,
+    imageHeaders: Map<String, String>,
+) {
+    val accent = LocalAccent.current.main
+    val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
+    BoxWithConstraints(Modifier.fillMaxWidth().height(if (trickplay != null) 240.dp else 40.dp)) {
+        val half = 170.dp
+        val center = (maxWidth * fraction).coerceIn(half, maxWidth - half)
+        Column(
+            Modifier
+                .offset(x = center - half)
+                .width(340.dp)
+                .align(Alignment.BottomStart),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            if (trickplay != null) {
+                Box(
+                    Modifier
+                        .size(340.dp, 191.dp)
+                        .clip(shape)
+                        .background(GlacierColors.Deep)
+                        .border(2.dp, GlacierColors.GlassBorder2, shape),
+                ) {
+                    TrickplayThumb(trickplay, positionMs, imageHeaders, Modifier.fillMaxSize())
+                    if (chapter != null) {
+                        Box(
+                            Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(start = 12.dp, bottom = 10.dp)
+                                .height(30.dp)
+                                .clip(PillShape)
+                                .background(Color(0xB8050910))
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(chapter, style = GlacierText.body(15), color = GlacierColors.Ice, maxLines = 1)
+                        }
+                    }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(formatTime(positionMs), style = GlacierText.mono(24), color = GlacierColors.Ice)
+                Text((if (deltaMs >= 0) "+" else "−") + formatTime(kotlin.math.abs(deltaMs)), style = GlacierText.mono(18), color = accent)
+            }
+        }
+    }
+}
+
+/** Pill with icon and label, 62 high (design: Audio, Subtitles, Chapters). */
+@Composable
+private fun LabelButton(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val accent = LocalAccent.current.main
+    GlacierClickable(onClick = onClick, shape = PillShape, modifier = modifier, contentAlignment = Alignment.Center) { focused ->
+        Row(
+            Modifier
+                .height(62.dp)
+                .clip(PillShape)
+                .background(if (focused) accent else GlacierColors.GlassFill)
+                .border(2.dp, if (focused) accent else GlacierColors.GlassBorder, PillShape)
+                .padding(horizontal = 22.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            val color = if (focused) GlacierColors.Void else GlacierColors.Ice
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(23.dp))
+            Text(label, style = GlacierText.body(19, FontWeight.SemiBold), color = color)
         }
     }
 }
