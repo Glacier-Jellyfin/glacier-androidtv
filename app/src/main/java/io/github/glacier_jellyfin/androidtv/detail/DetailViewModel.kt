@@ -18,6 +18,9 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.data.media.Season
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelection
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelections
+import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
+import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PersonRoute
@@ -57,6 +60,8 @@ data class DetailState(
     val trackPanel: TrackKind? = null,
     /** Songs of an album or playlist. */
     val musicTracks: List<MusicTrack> = emptyList(),
+    /** Theme song to play behind a movie or show; cleared once it has played, so coming back stays quiet. */
+    val themeSong: PlaybackSource? = null,
     /** Albums of an artist, newest first. */
     val artistAlbums: List<MediaItem> = emptyList(),
     val shuffle: Boolean = false,
@@ -71,9 +76,12 @@ class DetailViewModel @Inject constructor(
     private val trackSelections: TrackSelections,
     private val music: MusicRepository,
     private val shuffle: MusicShuffle,
+    private val playback: PlaybackRepository,
+    private val settings: SettingsRepository,
 ) : ViewModel() {
 
     private var itemId: UUID = UUID.fromString(savedStateHandle.toRoute<DetailRoute>().itemId)
+    private var themeSongLoaded = false
 
     private val _state = MutableStateFlow(DetailState())
     val state: StateFlow<DetailState> = _state.asStateFlow()
@@ -107,6 +115,7 @@ class DetailViewModel @Inject constructor(
                     ItemKind.Artist -> _state.update { it.copy(artistAlbums = music.artistAlbums(itemId)) }
                     else -> Unit
                 }
+                if (details.item.kind == ItemKind.Movie || details.item.kind == ItemKind.Series) loadThemeSong()
                 val withSimilar = details.item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Album)
                 _state.update { it.copy(loading = false, similar = if (withSimilar) similarAsync.await() else emptyList()) }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -117,6 +126,19 @@ class DetailViewModel @Inject constructor(
             }
         }
     }
+
+    private fun loadThemeSong() {
+        if (themeSongLoaded || !settings.settings.value.playback.themeSongs) return
+        themeSongLoaded = true
+        viewModelScope.launch {
+            runCatching { music.themeSong(itemId)?.let(playback::audioSource) }
+                .onSuccess { source -> _state.update { it.copy(themeSong = source) } }
+                .onFailure { Log.w(TAG, "Loading the theme song failed", it) }
+        }
+    }
+
+    /** The page was left (or the song ended): not again on return. */
+    fun themeSongDone() = _state.update { it.copy(themeSong = null) }
 
     /** Design: open a show on the first season with something unwatched. */
     private suspend fun loadSeries(details: ItemDetails) {

@@ -76,6 +76,13 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // Settings › Account switches the interface language in the app, so every language ships in one piece.
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true

@@ -120,6 +120,7 @@ fun DetailScreen(
         }
         val panel = state.trackPanel
         if (panel != null && details != null) TrackSheet(panel, state, details, viewModel)
+        state.themeSong?.let { ThemeSong(it, onDone = viewModel::themeSongDone) }
     }
 }
 

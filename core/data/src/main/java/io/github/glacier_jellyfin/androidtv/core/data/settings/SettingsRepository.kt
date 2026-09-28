@@ -7,10 +7,12 @@ import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.Serializable
@@ -62,9 +64,13 @@ class SettingsRepository @Inject constructor(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    val settings: StateFlow<ProfileSettings> = combine(sessions.session, store.data) { session, state ->
-        session?.let { state.profiles[profileKey(it.server.id, it.user.userId)] } ?: ProfileSettings()
-    }.stateIn(scope, SharingStarted.Eagerly, ProfileSettings())
+    /** The signed-in profile's settings, null while no one is signed in; emits on every profile switch. */
+    val active: Flow<ProfileSettings?> = combine(sessions.session, store.data) { session, state ->
+        session?.let { state.profiles[profileKey(it.server.id, it.user.userId)] ?: ProfileSettings() }
+    }
+
+    val settings: StateFlow<ProfileSettings> = active.map { it ?: ProfileSettings() }
+        .stateIn(scope, SharingStarted.Eagerly, ProfileSettings())
 
     /** The current value, read from the file when [settings] has not caught up yet (right after start). */
     suspend fun current(): ProfileSettings {

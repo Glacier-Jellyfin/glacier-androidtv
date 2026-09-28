@@ -18,9 +18,20 @@ data class ProfileSettings(
     val subtitleStyle: SubtitleStyle = SubtitleStyle(),
     val appearance: AppearanceSettings = AppearanceSettings(),
     val home: HomeSettings = HomeSettings(),
+    val uiLanguage: UiLanguage = UiLanguage.System,
     /** Tracks of the last title played, for "use the tracks of the last title". */
     val lastTracks: LastTracks = LastTracks(),
 )
+
+/** Language of Glacier's own texts (Settings › Account); [System] follows Android. */
+@Serializable
+enum class UiLanguage(val tag: String?) {
+    System(null), German("de"), English("en");
+
+    companion object {
+        fun of(tag: String?): UiLanguage = entries.firstOrNull { it.tag == tag } ?: System
+    }
+}
 
 /** Settings › Appearance. */
 @Serializable
@@ -64,6 +75,8 @@ enum class SpotlightRotation(val seconds: Int) { Off(0), S6(6), S9(9), S15(15) }
 
 @Serializable
 data class PlaybackSettings(
+    /** Theme song quietly behind the detail page of movies and shows. */
+    val themeSongs: Boolean = true,
     val upNext: UpNextChoice = UpNextChoice.WithCredits,
     val trailerAutoNext: Boolean = true,
     val seekBack: SeekStep = SeekStep.S10,

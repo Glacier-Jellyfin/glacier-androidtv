@@ -25,12 +25,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.UiLocale
 import io.github.glacier_jellyfin.androidtv.core.data.media.Languages
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentAction
@@ -38,6 +40,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.UpNextMode
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AccentColor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AudioChannels
+import io.github.glacier_jellyfin.androidtv.core.data.settings.Language
 import io.github.glacier_jellyfin.androidtv.core.data.settings.MaxBitrate
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SeekStep
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightCount
@@ -51,6 +54,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleMode
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitlePosition
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleSize
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyleMode
+import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UpNextChoice
 import io.github.glacier_jellyfin.androidtv.core.designsystem.Accent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
@@ -123,6 +127,14 @@ fun SettingsScreen(
         if (state.languagePicker == null && pickerWasOpen) runCatching { languageFocus.requestFocus() }
         pickerWasOpen = state.languagePicker != null
     }
+    // A new interface language recreates the activity; once it runs in that language, focus goes back.
+    val context = LocalContext.current
+    LaunchedEffect(state.refocusLanguage) {
+        val language = state.refocusLanguage ?: return@LaunchedEffect
+        if (UiLocale.current(context) != language.tag) return@LaunchedEffect
+        withFrameNanos { }
+        if (runCatching { languageFocus.requestFocus() }.isSuccess) viewModel.languageRefocused()
+    }
 
     LaunchedEffect(Unit) {
         if (!initialFocusDone) {
@@ -184,19 +196,30 @@ fun SettingsScreen(
 
         state.languagePicker?.let { target ->
             val server = state.server
-            LanguagePicker(
-                title = stringResource(if (target == LanguageTarget.Audio) R.string.settings_audio_lang else R.string.settings_sub_lang_title),
-                top = if (target == LanguageTarget.Audio) {
-                    LanguageEntry(null, stringResource(R.string.settings_audio_original), stringResource(R.string.settings_audio_original_hint))
-                } else {
-                    LanguageEntry(null, stringResource(R.string.settings_lang_none), stringResource(R.string.settings_lang_none_hint))
-                },
-                languages = state.languages,
-                selected = if (target == LanguageTarget.Audio) server?.audioLanguage else server?.subtitleLanguage,
-                onPick = viewModel::pickLanguage,
-                onDismiss = viewModel::closeLanguages,
-            )
+            when (target) {
+                LanguageTarget.Ui -> LanguagePicker(
+                    title = stringResource(R.string.settings_ui_lang),
+                    top = LanguageEntry(null, stringResource(R.string.settings_ui_lang_system), stringResource(R.string.settings_ui_lang_system_hint)),
+                    languages = UiLanguages,
+                    selected = state.profile.uiLanguage.tag,
+                    onPick = viewModel::pickLanguage,
+                    onDismiss = viewModel::closeLanguages,
+                )
+                else -> LanguagePicker(
+                    title = stringResource(if (target == LanguageTarget.Audio) R.string.settings_audio_lang else R.string.settings_sub_lang_title),
+                    top = if (target == LanguageTarget.Audio) {
+                        LanguageEntry(null, stringResource(R.string.settings_audio_original), stringResource(R.string.settings_audio_original_hint))
+                    } else {
+                        LanguageEntry(null, stringResource(R.string.settings_lang_none), stringResource(R.string.settings_lang_none_hint))
+                    },
+                    languages = state.languages,
+                    selected = if (target == LanguageTarget.Audio) server?.audioLanguage else server?.subtitleLanguage,
+                    onPick = viewModel::pickLanguage,
+                    onDismiss = viewModel::closeLanguages,
+                )
+            }
         }
+
     }
 }
 
@@ -229,7 +252,7 @@ private fun rows(state: SettingsUiState, viewModel: SettingsViewModel, languageF
     SettingsCategory.Playback -> playbackRows(state, viewModel)
     SettingsCategory.Audio -> audioRows(state, viewModel, languageFocus)
     SettingsCategory.Subtitles -> subtitleRows(state, viewModel, languageFocus)
-    SettingsCategory.Account -> accountRows(state, viewModel)
+    SettingsCategory.Account -> accountRows(state, viewModel, languageFocus)
 }
 
 @Composable
@@ -373,6 +396,12 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
         SettingGroup(
             stringResource(R.string.settings_group_general),
             listOf(
+                SettingRow.Toggle(
+                    stringResource(R.string.settings_theme_songs),
+                    stringResource(R.string.settings_theme_songs_sub),
+                    playback.themeSongs,
+                    onToggle = { viewModel.updatePlayback { it.copy(themeSongs = !it.themeSongs) } },
+                ),
                 SettingRow.Choice(
                     stringResource(R.string.settings_up_next),
                     stringResource(R.string.settings_up_next_sub),
@@ -602,7 +631,7 @@ private fun subtitleRows(state: SettingsUiState, viewModel: SettingsViewModel, l
 }
 
 @Composable
-private fun accountRows(state: SettingsUiState, viewModel: SettingsViewModel): List<SettingGroup> = listOf(
+private fun accountRows(state: SettingsUiState, viewModel: SettingsViewModel, languageFocus: FocusRequester): List<SettingGroup> = listOf(
     SettingGroup(
         stringResource(R.string.settings_group_profile),
         listOf(
@@ -612,6 +641,13 @@ private fun accountRows(state: SettingsUiState, viewModel: SettingsViewModel): L
                 value = state.userName,
                 onClick = null,
                 chevron = false,
+            ),
+            SettingRow.Value(
+                stringResource(R.string.settings_ui_lang),
+                stringResource(if (state.profile.uiLanguage == UiLanguage.System) R.string.settings_ui_lang_system_sub else R.string.settings_ui_lang_profile_sub),
+                value = UiLanguages.firstOrNull { it.code == state.profile.uiLanguage.tag }?.name ?: stringResource(R.string.settings_ui_lang_system),
+                onClick = { viewModel.openLanguages(LanguageTarget.Ui) },
+                focus = languageFocus,
             ),
         ),
     ),
@@ -628,6 +664,9 @@ private fun accountRows(state: SettingsUiState, viewModel: SettingsViewModel): L
         ),
     ),
 )
+
+/** Languages of Glacier itself, each named in its own language. */
+private val UiLanguages = listOf(Language("de", "Deutsch"), Language("en", "English"))
 
 /** A language code as the server keeps it, named in the device language. */
 private fun languageName(state: SettingsUiState, code: String): String =

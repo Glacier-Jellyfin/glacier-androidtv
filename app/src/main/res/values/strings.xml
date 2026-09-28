@@ -390,6 +390,8 @@
     <string name="settings_server_unavailable">Unavailable · the server cannot be reached</string>
     <string name="settings_save_failed">Could not be saved on the server</string>
 
+    <string name="settings_theme_songs">Play theme songs</string>
+    <string name="settings_theme_songs_sub">Plays the theme song quietly in the background on the detail page of movies and shows</string>
     <string name="settings_up_next">Show \"Up next\"</string>
     <string name="settings_up_next_sub">How long before the end of the episode, bottom right</string>
     <string name="settings_up_next_credits">With credits</string>
@@ -499,6 +501,11 @@
     <string name="settings_preview_line1">We have to cross the pass</string>
     <string name="settings_preview_line2">before nightfall.</string>
 
+    <string name="settings_ui_lang">Interface language</string>
+    <string name="settings_ui_lang_system">System language</string>
+    <string name="settings_ui_lang_system_hint">Android setting</string>
+    <string name="settings_ui_lang_system_sub">Follows the language of Android TV</string>
+    <string name="settings_ui_lang_profile_sub">Only for this profile on this device</string>
     <string name="settings_signed_in_as">Signed in as</string>
     <string name="settings_signed_in_as_sub">Profile on this device</string>
     <string name="settings_sign_out_sub">Signs out on the server too and goes back to profile selection</string>

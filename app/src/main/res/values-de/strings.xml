@@ -386,6 +386,8 @@
     <string name="settings_server_unavailable">Nicht verfügbar · Server nicht erreichbar</string>
     <string name="settings_save_failed">Konnte nicht auf dem Server gespeichert werden</string>
 
+    <string name="settings_theme_songs">Titelsongs abspielen</string>
+    <string name="settings_theme_songs_sub">Spielt auf der Detailseite von Filmen und Serien leise den Titelsong im Hintergrund</string>
     <string name="settings_up_next">„Nächste Folge“ einblenden</string>
     <string name="settings_up_next_sub">Zeitpunkt vor Ende der Folge, unten rechts</string>
     <string name="settings_up_next_credits">Mit Abspann</string>
@@ -495,6 +497,11 @@
     <string name="settings_preview_line1">Wir müssen vor Einbruch der Nacht</string>
     <string name="settings_preview_line2">über den Pass sein.</string>
 
+    <string name="settings_ui_lang">Sprache der Oberfläche</string>
+    <string name="settings_ui_lang_system">Systemsprache</string>
+    <string name="settings_ui_lang_system_hint">Android-Einstellung</string>
+    <string name="settings_ui_lang_system_sub">Folgt der Sprache von Android TV</string>
+    <string name="settings_ui_lang_profile_sub">Gilt nur für dieses Profil auf diesem Gerät</string>
     <string name="settings_signed_in_as">Angemeldet als</string>
     <string name="settings_signed_in_as_sub">Profil dieses Geräts</string>
     <string name="settings_sign_out_sub">Meldet auch auf dem Server ab und führt zurück zur Benutzerauswahl</string>

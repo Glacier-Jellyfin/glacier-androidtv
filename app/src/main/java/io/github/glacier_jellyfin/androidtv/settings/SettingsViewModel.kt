@@ -18,6 +18,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferences
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyle
+import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
@@ -45,7 +46,7 @@ enum class SettingsCategory(val label: Int) {
 }
 
 /** Which language list is open. */
-enum class LanguageTarget { Audio, Subtitles }
+enum class LanguageTarget { Audio, Subtitles, Ui }
 
 data class SettingsUiState(
     val category: SettingsCategory = SettingsCategory.Appearance,
@@ -58,6 +59,8 @@ data class SettingsUiState(
     val userName: String = "",
     /** Backdrop behind the subtitle preview. */
     val previewImage: String? = null,
+    /** A new interface language: the activity is recreated in it, then focus goes back to its button. */
+    val refocusLanguage: UiLanguage? = null,
 )
 
 @HiltViewModel
@@ -119,18 +122,28 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun languageRefocused() = _state.update { it.copy(refocusLanguage = null) }
+
     fun openLanguages(target: LanguageTarget) = _state.update { it.copy(languagePicker = target) }
 
     fun closeLanguages() = _state.update { it.copy(languagePicker = null) }
 
-    /** [code] null: "Original" for audio, "None" for subtitles. */
+    /** [code] null: "Original" for audio, "None" for subtitles, the device language for the interface. */
     fun pickLanguage(code: String?) {
         val target = _state.value.languagePicker ?: return
         closeLanguages()
+        if (target == LanguageTarget.Ui) {
+            val language = UiLanguage.of(code)
+            if (language == _state.value.profile.uiLanguage) return
+            _state.update { it.copy(refocusLanguage = language) }
+            viewModelScope.launch { settings.update { it.copy(uiLanguage = language) } }
+            return
+        }
         updateServer {
             when (target) {
                 LanguageTarget.Audio -> it.copy(audioLanguage = code)
                 LanguageTarget.Subtitles -> it.copy(subtitleLanguage = code)
+                LanguageTarget.Ui -> it
             }
         }
     }

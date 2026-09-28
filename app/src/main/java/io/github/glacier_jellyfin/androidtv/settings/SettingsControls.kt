@@ -295,7 +295,7 @@ internal fun ValueButton(
 /** One entry of the language list: a language, or the "no preference" entry on top. */
 internal data class LanguageEntry(val code: String?, val name: String, val hint: String)
 
-/** The language list (design: 620 × 820 sheet, the chosen language ticked). */
+/** The language list (design: 620 × 820 sheet, the chosen language ticked); shorter lists get a shorter sheet. */
 @Composable
 internal fun LanguagePicker(
     title: String,
@@ -315,7 +315,7 @@ internal fun LanguagePicker(
         Column(
             Modifier
                 .width(620.dp)
-                .height(820.dp)
+                .heightIn(max = 820.dp)
                 .clip(shape)
                 .background(GlacierColors.Deep)
                 .border(1.dp, GlacierColors.GlassBorder2, shape)
@@ -333,7 +333,7 @@ internal fun LanguagePicker(
                 )
             }
             Box(Modifier.fillMaxWidth().height(1.dp).background(GlacierColors.GlassBorder))
-            LazyColumn(state = listState, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            LazyColumn(state = listState, modifier = Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 itemsIndexed(entries, key = { _, entry -> entry.code ?: "" }) { index, entry ->
                     LanguageRow(
                         entry = entry,

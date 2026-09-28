@@ -88,6 +88,18 @@ class MusicRepository @Inject constructor(
         parseLyrics(dto.lyrics.map { LyricLine(it.text, it.start?.let { ticks -> ticks / TICKS_PER_MS }) })
     }
 
+    /**
+     * The first theme song of a movie or show, or null. Fetched again as an
+     * item for its format, which the theme song list leaves out.
+     */
+    suspend fun themeSong(itemId: UUID): MusicTrack? = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        val song = session.api.libraryApi.getThemeSongs(itemId = itemId, userId = session.userId, inheritFromParent = true)
+            .content.items.firstOrNull() ?: return@withContext null
+        session.api.libraryApi.getItems(userId = session.userId, ids = listOf(song.id), fields = TRACK_FIELDS)
+            .content.items.firstOrNull()?.let(MediaMapper(session.api)::track)
+    }
+
     private fun requireSession(): Session = checkNotNull(sessions.session.value) { "No profile is signed in" }
 
     private val Session.userId: UUID get() = UUID.fromString(user.userId)
