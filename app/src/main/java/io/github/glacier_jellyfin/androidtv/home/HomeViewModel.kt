@@ -9,6 +9,9 @@ import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeContent
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeSettings
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightSource
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.Library
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
@@ -21,24 +24,18 @@ import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SettingsRoute
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
-
-/**
- * Spotlight options from the design's settings (Settings › Home). Fixed to the
- * design's defaults until the settings screen exists.
- */
-data class SpotlightSettings(
-    val count: Int = 5,
-    val rotateSeconds: Int = 9,
-)
 
 data class HomeState(
     val loading: Boolean = true,
@@ -46,7 +43,7 @@ data class HomeState(
     val content: HomeContent? = null,
     val spotlight: List<MediaItem> = emptyList(),
     val userName: String = "",
-    val settings: SpotlightSettings = SpotlightSettings(),
+    val settings: HomeSettings = HomeSettings(),
 ) {
     val kinds: List<LibraryKind> get() = content?.libraries?.map { it.kind }?.distinct()?.sorted().orEmpty()
 }
@@ -55,10 +52,13 @@ data class HomeState(
 class HomeViewModel @Inject constructor(
     private val repository: HomeRepository,
     private val sessions: SessionManager,
+    private val settings: SettingsRepository,
     playback: PlaybackRepository,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(HomeState(userName = sessions.session.value?.user?.name.orEmpty()))
+    private val _state = MutableStateFlow(
+        HomeState(userName = sessions.session.value?.user?.name.orEmpty(), settings = settings.settings.value.home),
+    )
     val state: StateFlow<HomeState> = _state.asStateFlow()
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
@@ -68,13 +68,25 @@ class HomeViewModel @Inject constructor(
         load()
         // Back from the player: "continue watching" and progress bars follow what was just watched.
         viewModelScope.launch { playback.stopped.collect { refresh() } }
+        // Settings › Home changed: only the spotlight follows.
+        viewModelScope.launch {
+            settings.settings.map { it.home }.distinctUntilChanged().collect { home ->
+                if (home == _state.value.settings) return@collect
+                _state.update { it.copy(settings = home) }
+                _state.value.content?.let { content -> updateSpotlight(content) }
+            }
+        }
     }
 
     /** Reloads in the background: no spinner, and what is on screen stays if it fails. */
     private fun refresh() {
         viewModelScope.launch {
             runCatching { repository.load() }
-                .onSuccess { content -> _state.update { it.copy(content = content, spotlight = spotlightOf(content, it.settings)) } }
+                .onSuccess { content ->
+                    _state.update { it.copy(content = content) }
+                    // Only "continue watching" follows what was just watched; the other sources stay put.
+                    if (_state.value.settings.spotlightSource == SpotlightSource.ContinueWatching) updateSpotlight(content)
+                }
                 .onFailure { Log.w(TAG, "Refreshing home failed", it) }
         }
     }
@@ -84,7 +96,8 @@ class HomeViewModel @Inject constructor(
             _state.update { it.copy(loading = true, failed = false) }
             runCatching { repository.load() }
                 .onSuccess { content ->
-                    _state.update { it.copy(loading = false, content = content, spotlight = spotlightOf(content, it.settings)) }
+                    val spotlight = spotlightOf(content, _state.value.settings)
+                    _state.update { it.copy(loading = false, content = content, spotlight = spotlight) }
                 }
                 .onFailure { error ->
                     Log.w(TAG, "Loading home failed", error)
@@ -93,13 +106,21 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /** Spotlight source "Continue watching"; falls back to the newest titles like the design does. */
-    private fun spotlightOf(content: HomeContent, settings: SpotlightSettings): List<MediaItem> {
-        val playable = { item: MediaItem -> item.kind != ItemKind.Album && item.backdropUrl != null }
-        val continuing = content.continueWatching.filter(playable)
-        val source = continuing.ifEmpty { content.latest.flatMap { it.second }.filter(playable) }
-        return source.take(settings.count)
+    private suspend fun updateSpotlight(content: HomeContent) {
+        val spotlight = spotlightOf(content, _state.value.settings)
+        _state.update { it.copy(spotlight = spotlight) }
     }
+
+    /** What Settings › Home asks for; if the server cannot be asked, "continue watching" stands in. */
+    private suspend fun spotlightOf(content: HomeContent, settings: HomeSettings): List<MediaItem> = try {
+        repository.spotlight(settings, content.continueWatching)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w(TAG, "Loading the spotlight failed", e)
+        content.continueWatching.filter { it.backdropUrl != null }.take(settings.spotlightCount.count)
+    }
+
 
     fun toggleFavorite(item: MediaItem) {
         val favorite = !item.isFavorite

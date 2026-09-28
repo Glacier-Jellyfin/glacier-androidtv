@@ -78,8 +78,8 @@ fun HomeScreen(
     val spotlight = state.spotlight
 
     // Rotate the spotlight, pausing while focus is inside it; a manual pick restarts the timer.
-    LaunchedEffect(spotlight.size, spotlightFocused, spotIndex, state.settings.rotateSeconds) {
-        val seconds = state.settings.rotateSeconds
+    LaunchedEffect(spotlight.size, spotlightFocused, spotIndex, state.settings.spotlightRotation.seconds) {
+        val seconds = state.settings.spotlightRotation.seconds
         if (spotlight.size < 2 || spotlightFocused || seconds <= 0) return@LaunchedEffect
         delay(seconds * 1000L)
         spotIndex = (spotIndex + 1) % spotlight.size

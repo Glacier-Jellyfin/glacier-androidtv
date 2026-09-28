@@ -22,6 +22,8 @@ class SettingsSerializerTest {
                         segments = mapOf(SegmentKind.Intro to SegmentAction.Skip),
                     ),
                     subtitleStyle = SubtitleStyle(size = SubtitleSize.XLarge, edge = SubtitleEdge.Outline),
+                    appearance = AppearanceSettings(accent = AccentColor.Aurora, compact = true, groupCollections = false),
+                    home = HomeSettings(spotlightSource = SpotlightSource.Random, spotlightCount = SpotlightCount.N10),
                 ),
             ),
         )
@@ -36,6 +38,14 @@ class SettingsSerializerTest {
         val playback = SettingsSerializer.readFrom(ByteArrayInputStream(json.toByteArray())).profiles.getValue("s/u").playback
         assertEquals(UpNextChoice.WithCredits, playback.upNext)
         assertEquals(SeekStep.S5, playback.seekBack)
+    }
+
+    @Test
+    fun `settings written before appearance and home existed get their defaults`() = runTest {
+        val json = """{"profiles":{"s/u":{"playback":{"seekBack":"S5"}}}}"""
+        val profile = SettingsSerializer.readFrom(ByteArrayInputStream(json.toByteArray())).profiles.getValue("s/u")
+        assertEquals(AppearanceSettings(), profile.appearance)
+        assertEquals(HomeSettings(), profile.home)
     }
 
     @Test

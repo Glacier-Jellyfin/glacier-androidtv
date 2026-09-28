@@ -2,6 +2,9 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeSettings
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightSource
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -14,8 +17,12 @@ import org.jellyfin.sdk.api.client.extensions.userDataApi
 import org.jellyfin.sdk.api.client.extensions.userViewApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemFields
+import org.jellyfin.sdk.model.api.ItemFilter
+import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.MediaType
+import org.jellyfin.sdk.model.api.SortOrder
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -51,6 +58,40 @@ class HomeRepository @Inject constructor(
             continueWatching = mergeContinueWatching(resumeAsync.await(), nextUpAsync.await()).map(mapper::item),
             latest = latest,
         )
+    }
+
+    /**
+     * The spotlight as Settings › Home asks for it. "Continue watching" comes
+     * from [continueWatching]; the other sources ask the server. Only titles
+     * with a backdrop qualify. Nothing matching falls back to the newest titles
+     * of the type, as the design falls back to something rather than nothing.
+     */
+    suspend fun spotlight(settings: HomeSettings, continueWatching: List<MediaItem>): List<MediaItem> = withContext(Dispatchers.IO) {
+        val count = settings.spotlightCount.count
+        val session = requireSession()
+        val mapper = MediaMapper(session.api)
+        suspend fun fromServer(sort: ItemSortBy, favorites: Boolean, unwatched: Boolean): List<MediaItem> =
+            session.api.libraryApi.getItems(
+                userId = session.userId,
+                recursive = true,
+                includeItemTypes = settings.spotlightType.itemTypes,
+                isFavorite = true.takeIf { favorites },
+                filters = listOfNotNull(ItemFilter.IS_UNPLAYED.takeIf { unwatched }),
+                imageTypes = listOf(ImageType.BACKDROP),
+                sortBy = listOf(sort),
+                sortOrder = listOf(SortOrder.DESCENDING),
+                fields = FIELDS,
+                enableUserData = true,
+                limit = count,
+            ).content.items.map(mapper::item)
+        val unwatched = settings.spotlightUnwatched
+        val items = when (settings.spotlightSource) {
+            SpotlightSource.ContinueWatching -> continueWatching.filter { it.backdropUrl != null && settings.spotlightType.matches(it.kind) }
+            SpotlightSource.RecentlyAdded -> fromServer(ItemSortBy.DATE_CREATED, false, unwatched)
+            SpotlightSource.Favorites -> fromServer(ItemSortBy.DATE_CREATED, true, unwatched)
+            SpotlightSource.Random -> fromServer(ItemSortBy.RANDOM, false, unwatched)
+        }
+        items.ifEmpty { fromServer(ItemSortBy.DATE_CREATED, false, false) }.take(count)
     }
 
     suspend fun setFavorite(itemId: UUID, favorite: Boolean) {
@@ -131,6 +172,19 @@ class HomeRepository @Inject constructor(
     private fun requireSession(): Session = checkNotNull(sessions.session.value) { "No profile is signed in" }
 
     private val Session.userId: UUID get() = UUID.fromString(user.userId)
+
+    private val SpotlightType.itemTypes: List<BaseItemKind>
+        get() = when (this) {
+            SpotlightType.All -> listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES)
+            SpotlightType.Movies -> listOf(BaseItemKind.MOVIE)
+            SpotlightType.Shows -> listOf(BaseItemKind.SERIES)
+        }
+
+    private fun SpotlightType.matches(kind: ItemKind): Boolean = when (this) {
+        SpotlightType.All -> kind == ItemKind.Movie || kind == ItemKind.Series || kind == ItemKind.Episode
+        SpotlightType.Movies -> kind == ItemKind.Movie
+        SpotlightType.Shows -> kind == ItemKind.Series || kind == ItemKind.Episode
+    }
 
     private val LibraryKind.countedType: BaseItemKind
         get() = when (this) {

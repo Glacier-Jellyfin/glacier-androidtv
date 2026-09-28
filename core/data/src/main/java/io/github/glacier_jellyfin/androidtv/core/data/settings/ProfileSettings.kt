@@ -16,9 +16,51 @@ import kotlinx.serialization.Serializable
 data class ProfileSettings(
     val playback: PlaybackSettings = PlaybackSettings(),
     val subtitleStyle: SubtitleStyle = SubtitleStyle(),
+    val appearance: AppearanceSettings = AppearanceSettings(),
+    val home: HomeSettings = HomeSettings(),
     /** Tracks of the last title played, for "use the tracks of the last title". */
     val lastTracks: LastTracks = LastTracks(),
 )
+
+/** Settings › Appearance. */
+@Serializable
+data class AppearanceSettings(
+    val accent: AccentColor = AccentColor.Crevasse,
+    /** Row density "Compact": smaller cards, more of them per row. */
+    val compact: Boolean = false,
+    /** Focus without scaling, no Ken Burns and no animated scrolling. */
+    val reduceMotion: Boolean = false,
+    /** Movies of a collection show up in the library as one collection card. */
+    val groupCollections: Boolean = true,
+)
+
+/** The design's five accents; the colours themselves live in the design system. */
+@Serializable
+enum class AccentColor { Crevasse, BlueIce, Aurora, PolarNight, Firn }
+
+/** Settings › Home: what the spotlight at the top of the home screen shows. */
+@Serializable
+data class HomeSettings(
+    val spotlightSource: SpotlightSource = SpotlightSource.ContinueWatching,
+    val spotlightType: SpotlightType = SpotlightType.All,
+    val spotlightCount: SpotlightCount = SpotlightCount.N5,
+    val spotlightRotation: SpotlightRotation = SpotlightRotation.S9,
+    /** Leaves out watched titles; does not apply to "Continue watching". */
+    val spotlightUnwatched: Boolean = false,
+)
+
+@Serializable
+enum class SpotlightSource { ContinueWatching, RecentlyAdded, Favorites, Random }
+
+@Serializable
+enum class SpotlightType { All, Movies, Shows }
+
+@Serializable
+enum class SpotlightCount(val count: Int) { N3(3), N5(5), N7(7), N10(10) }
+
+/** Time until the spotlight moves on; [Off] stays on the first title. */
+@Serializable
+enum class SpotlightRotation(val seconds: Int) { Off(0), S6(6), S9(9), S15(15) }
 
 @Serializable
 data class PlaybackSettings(

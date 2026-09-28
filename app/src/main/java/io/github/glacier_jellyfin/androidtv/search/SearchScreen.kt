@@ -52,6 +52,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SystemTextInput
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
+import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PosterCard
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
@@ -231,7 +232,7 @@ private fun Results(state: SearchState, onOpen: (MediaItem) -> Unit, onRetry: ()
                 verticalArrangement = Arrangement.spacedBy(32.dp),
                 // Room for the focus ring and scale on the edges.
                 contentPadding = PaddingValues(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 60.dp),
-                modifier = Modifier.width((216 * Columns + 26 * (Columns - 1) + 24).dp),
+                modifier = Modifier.width((LocalCardSizes.current.posterWidth * Columns + 26 * (Columns - 1) + 24).dp),
             ) {
                 items(state.results, key = { it.id }) { item -> ResultCard(item, onClick = { onOpen(item) }) }
             }

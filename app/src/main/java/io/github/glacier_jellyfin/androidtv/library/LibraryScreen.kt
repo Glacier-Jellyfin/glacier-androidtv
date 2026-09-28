@@ -84,13 +84,13 @@ import io.github.glacier_jellyfin.androidtv.ui.CardShape
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.FilterChip
 import io.github.glacier_jellyfin.androidtv.ui.GridCard
+import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-private const val COLUMNS = 7
 private const val HEADER_ITEMS = 2
 private const val ROW_PIVOT = 330
 private const val ROW_TOLERANCE = 48
@@ -103,6 +103,7 @@ fun LibraryScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
+    val sizes = LocalCardSizes.current
 
     val gridState = rememberLazyGridState()
     val firstCardFocus = remember { FocusRequester() }
@@ -116,7 +117,7 @@ fun LibraryScreen(
     // Load the next page when the grid gets within three rows of the end.
     LaunchedEffect(gridState, state.items.size) {
         snapshotFlow { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
-            .collect { last -> if (last >= HEADER_ITEMS + state.items.size - 3 * COLUMNS) viewModel.loadMore() }
+            .collect { last -> if (last >= HEADER_ITEMS + state.items.size - 3 * sizes.gridColumns) viewModel.loadMore() }
     }
     LaunchedEffect(state.items.isNotEmpty()) {
         if (state.items.isNotEmpty() && !initialFocusDone) {
@@ -138,9 +139,9 @@ fun LibraryScreen(
             CompositionLocalProvider(LocalBringIntoViewSpec provides rememberGridPivotSpec(gridState)) {
                 LazyVerticalGrid(
                     state = gridState,
-                    columns = GridCells.Fixed(COLUMNS),
+                    columns = GridCells.Fixed(sizes.gridColumns),
                     contentPadding = PaddingValues(start = 80.dp, end = 22.dp, top = 150.dp, bottom = 120.dp),
-                    horizontalArrangement = Arrangement.spacedBy(26.dp),
+                    horizontalArrangement = Arrangement.spacedBy(sizes.gridGap.dp),
                     verticalArrangement = Arrangement.spacedBy(38.dp),
                     modifier = Modifier.weight(1f).fillMaxSize().focusRequester(gridFocus).focusRestorer(),
                 ) {

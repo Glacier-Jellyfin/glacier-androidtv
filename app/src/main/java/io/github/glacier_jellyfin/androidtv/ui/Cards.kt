@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -21,6 +22,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -47,15 +49,41 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
 
-/** Card sizes for the "Comfortable" row density of the design. */
+/** Card sizes of the design's two row densities (Settings › Appearance). */
+@Immutable
+data class CardSizes(
+    val continueWidth: Int,
+    val continueHeight: Int,
+    val posterWidth: Int,
+    val posterHeight: Int,
+    val rowGap: Int,
+    /** Space below a row of cards. */
+    val rowBottom: Int,
+    val gridColumns: Int,
+    val gridGap: Int,
+    val episodeWidth: Int,
+    val episodeHeight: Int,
+    val castSize: Int,
+    val castGap: Int,
+) {
+    companion object {
+        val Comfortable = CardSizes(
+            continueWidth = 316, continueHeight = 178, posterWidth = 216, posterHeight = 324, rowGap = 26, rowBottom = 46,
+            gridColumns = 7, gridGap = 26, episodeWidth = 340, episodeHeight = 192, castSize = 132, castGap = 30,
+        )
+        val Compact = CardSizes(
+            continueWidth = 276, continueHeight = 155, posterWidth = 188, posterHeight = 282, rowGap = 20, rowBottom = 34,
+            gridColumns = 8, gridGap = 22, episodeWidth = 296, episodeHeight = 167, castSize = 114, castGap = 24,
+        )
+    }
+}
+
+val LocalCardSizes = staticCompositionLocalOf { CardSizes.Comfortable }
+
+/** "My media" tiles keep their size in both densities. */
 object CardSize {
-    const val CONTINUE_WIDTH = 316
-    const val CONTINUE_HEIGHT = 178
-    const val POSTER_WIDTH = 216
-    const val POSTER_HEIGHT = 324
     const val LIBRARY_WIDTH = 340
     const val LIBRARY_HEIGHT = 172
-    const val ROW_GAP = 26
 }
 
 /**
@@ -98,10 +126,11 @@ private const val ARTWORK_RETRY_DELAY_MS = 800L
 fun ContinueCard(title: String, subtitle: String, imageUrl: String?, progress: Float?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
-    GlacierCard(onClick = onClick, modifier = modifier.width(CardSize.CONTINUE_WIDTH.dp)) { focused ->
+    val sizes = LocalCardSizes.current
+    GlacierCard(onClick = onClick, modifier = modifier.width(sizes.continueWidth.dp)) { focused ->
         Box(
             Modifier
-                .size(CardSize.CONTINUE_WIDTH.dp, CardSize.CONTINUE_HEIGHT.dp)
+                .size(sizes.continueWidth.dp, sizes.continueHeight.dp)
                 .focusFrame(focused, shape)
                 .clip(shape),
         ) {
@@ -166,8 +195,9 @@ fun PosterCard(
 ) {
     val accent = LocalAccent.current.main
     val shape: Shape = RoundedCornerShape(if (square) GlacierShapes.RadiusMd else GlacierShapes.RadiusLg)
-    val width = CardSize.POSTER_WIDTH
-    val height = if (square) CardSize.POSTER_WIDTH else CardSize.POSTER_HEIGHT
+    val sizes = LocalCardSizes.current
+    val width = sizes.posterWidth
+    val height = if (square) sizes.posterWidth else sizes.posterHeight
     GlacierCard(onClick = onClick, modifier = modifier.width(width.dp)) { focused ->
         Box(
             Modifier
@@ -275,8 +305,9 @@ fun GridCard(
         CardShape.Square -> RoundedCornerShape(GlacierShapes.RadiusMd)
         CardShape.Round -> PillShape
     }
-    val width = CardSize.POSTER_WIDTH
-    val height = if (shape == CardShape.Poster) CardSize.POSTER_HEIGHT else CardSize.POSTER_WIDTH
+    val sizes = LocalCardSizes.current
+    val width = sizes.posterWidth
+    val height = if (shape == CardShape.Poster) sizes.posterHeight else sizes.posterWidth
     GlacierCard(onClick = onClick, modifier = modifier.width(width.dp)) { focused ->
         Box(
             Modifier

@@ -66,6 +66,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
+import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 
 /**
@@ -291,10 +292,11 @@ fun EpisodeCard(
 ) {
     val accent = LocalAccent.current
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
-    GlacierCard(onClick = onClick, modifier = modifier.width(340.dp)) { focused ->
+    val sizes = LocalCardSizes.current
+    GlacierCard(onClick = onClick, modifier = modifier.width(sizes.episodeWidth.dp)) { focused ->
         Box(
             Modifier
-                .size(340.dp, 192.dp)
+                .size(sizes.episodeWidth.dp, sizes.episodeHeight.dp)
                 .focusFrame(focused, shape, unfocusedBorder = if (current) accent.deep else Color.Transparent)
                 .clip(shape),
         ) {
@@ -371,11 +373,12 @@ private fun Pill(text: String, modifier: Modifier, background: Color = GlacierCo
 @Composable
 fun CastCard(person: CastMember, onClick: () -> Unit) {
     val accent = LocalAccent.current
-    GlacierCard(onClick = onClick, modifier = Modifier.width(150.dp)) { focused ->
+    val size = LocalCardSizes.current.castSize
+    GlacierCard(onClick = onClick, modifier = Modifier.width((size + 18).dp)) { focused ->
         Box(
             Modifier
                 .align(Alignment.CenterHorizontally)
-                .size(132.dp)
+                .size(size.dp)
                 .focusFrame(focused, PillShape)
                 .clip(PillShape)
                 .background(Brush.linearGradient(listOf(accent.deep, GlacierColors.Void))),

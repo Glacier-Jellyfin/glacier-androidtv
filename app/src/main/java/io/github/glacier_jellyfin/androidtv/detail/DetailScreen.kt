@@ -70,6 +70,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
+import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.ComingSoonScreen
 import io.github.glacier_jellyfin.androidtv.ui.DetailBackdrop
 import io.github.glacier_jellyfin.androidtv.ui.FactsRow
@@ -184,7 +185,7 @@ private fun MediaDetail(state: DetailState, details: ItemDetails, viewModel: Det
                 }
                 if (details.cast.isNotEmpty()) {
                     item(key = "cast") {
-                        MediaRow(title = stringResource(R.string.detail_cast), gap = 30) {
+                        MediaRow(title = stringResource(R.string.detail_cast), gap = LocalCardSizes.current.castGap) {
                             items(details.cast, key = { it.id }) { person -> CastCard(person, onClick = { viewModel.openPerson(person) }) }
                         }
                     }

@@ -32,14 +32,15 @@ fun MediaRow(
     title: String?,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
-    bottomPadding: Int = 46,
-    gap: Int = CardSize.ROW_GAP,
+    /** Space below the row; the density's row spacing when null. */
+    bottomPadding: Int? = null,
+    gap: Int = LocalCardSizes.current.rowGap,
     state: LazyListState = rememberLazyListState(),
     content: LazyListScope.() -> Unit,
 ) {
     // The row's 26px vertical content padding leaves room for focus scale and ring;
     // pulling it up by 8px keeps the design's 18px between title and cards.
-    Column(modifier.fillMaxWidth().padding(top = 12.dp, bottom = (bottomPadding - 26).coerceAtLeast(0).dp)) {
+    Column(modifier.fillMaxWidth().padding(top = 12.dp, bottom = ((bottomPadding ?: LocalCardSizes.current.rowBottom) - 26).coerceAtLeast(0).dp)) {
         if (title != null) Row(
             Modifier.padding(start = PageEdge.dp, end = PageEdge.dp),
             verticalAlignment = Alignment.Bottom,

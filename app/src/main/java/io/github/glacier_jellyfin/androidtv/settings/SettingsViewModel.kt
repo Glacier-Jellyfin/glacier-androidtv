@@ -9,6 +9,8 @@ import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryQuery
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.AppearanceSettings
+import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.Language
 import io.github.glacier_jellyfin.androidtv.core.data.settings.PlaybackSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ProfileSettings
@@ -34,6 +36,8 @@ import javax.inject.Inject
 
 /** Settings categories in the design's order; the rest follow in later steps. */
 enum class SettingsCategory(val label: Int) {
+    Appearance(R.string.settings_cat_appearance),
+    Home(R.string.settings_cat_home),
     Playback(R.string.settings_cat_playback),
     Audio(R.string.settings_cat_audio),
     Subtitles(R.string.settings_cat_subtitles),
@@ -44,7 +48,7 @@ enum class SettingsCategory(val label: Int) {
 enum class LanguageTarget { Audio, Subtitles }
 
 data class SettingsUiState(
-    val category: SettingsCategory = SettingsCategory.Playback,
+    val category: SettingsCategory = SettingsCategory.Appearance,
     val profile: ProfileSettings = ProfileSettings(),
     /** Null while loading or when the server cannot be reached ([serverFailed]). */
     val server: ServerPreferences? = null,
@@ -89,6 +93,14 @@ class SettingsViewModel @Inject constructor(
 
     fun updatePlayback(transform: (PlaybackSettings) -> PlaybackSettings) {
         viewModelScope.launch { settings.updatePlayback(transform) }
+    }
+
+    fun updateAppearance(transform: (AppearanceSettings) -> AppearanceSettings) {
+        viewModelScope.launch { settings.updateAppearance(transform) }
+    }
+
+    fun updateHome(transform: (HomeSettings) -> HomeSettings) {
+        viewModelScope.launch { settings.updateHome(transform) }
     }
 
     fun updateSubtitleStyle(transform: (SubtitleStyle) -> SubtitleStyle) {

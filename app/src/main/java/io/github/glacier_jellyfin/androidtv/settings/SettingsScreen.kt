@@ -36,9 +36,14 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentAction
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.UpNextMode
+import io.github.glacier_jellyfin.androidtv.core.data.settings.AccentColor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AudioChannels
 import io.github.glacier_jellyfin.androidtv.core.data.settings.MaxBitrate
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SeekStep
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightCount
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightRotation
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightSource
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightType
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleColor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleEdge
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleFont
@@ -47,6 +52,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitlePosition
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleSize
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyleMode
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UpNextChoice
+import io.github.glacier_jellyfin.androidtv.core.designsystem.Accent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.SubtitleBurnIn
@@ -73,6 +79,15 @@ private sealed interface SettingRow {
         override val label: String,
         override val sub: String,
         val options: List<String>,
+        val selected: Int,
+        val onSelect: (Int) -> Unit,
+        override val enabled: Boolean = true,
+    ) : SettingRow
+
+    data class Swatches(
+        override val label: String,
+        override val sub: String,
+        val swatches: List<Swatch>,
         val selected: Int,
         val onSelect: (Int) -> Unit,
         override val enabled: Boolean = true,
@@ -190,6 +205,7 @@ private fun SettingCard(row: SettingRow) {
     when (row) {
         is SettingRow.Toggle -> OptionCard(row.label, row.sub, row.enabled, trailing = { ToggleSwitch(row.checked, row.onToggle, row.enabled) })
         is SettingRow.Choice -> OptionCard(row.label, row.sub, row.enabled, below = { ChoicePills(row.options, row.selected, row.onSelect, row.enabled) })
+        is SettingRow.Swatches -> OptionCard(row.label, row.sub, row.enabled, below = { SwatchPicker(row.swatches, row.selected, row.onSelect) })
         is SettingRow.Value -> OptionCard(
             row.label,
             row.sub,
@@ -208,10 +224,116 @@ private fun SettingCard(row: SettingRow) {
 
 @Composable
 private fun rows(state: SettingsUiState, viewModel: SettingsViewModel, languageFocus: FocusRequester): List<SettingGroup> = when (state.category) {
+    SettingsCategory.Appearance -> appearanceRows(state, viewModel)
+    SettingsCategory.Home -> homeRows(state, viewModel)
     SettingsCategory.Playback -> playbackRows(state, viewModel)
     SettingsCategory.Audio -> audioRows(state, viewModel, languageFocus)
     SettingsCategory.Subtitles -> subtitleRows(state, viewModel, languageFocus)
     SettingsCategory.Account -> accountRows(state, viewModel)
+}
+
+@Composable
+private fun appearanceRows(state: SettingsUiState, viewModel: SettingsViewModel): List<SettingGroup> {
+    val appearance = state.profile.appearance
+    val names = listOf(
+        R.string.settings_accent_crevasse,
+        R.string.settings_accent_blueice,
+        R.string.settings_accent_aurora,
+        R.string.settings_accent_polarnight,
+        R.string.settings_accent_firn,
+    )
+    return listOf(
+        SettingGroup(
+            stringResource(R.string.settings_group_look),
+            listOf(
+                SettingRow.Swatches(
+                    stringResource(R.string.settings_accent),
+                    stringResource(R.string.settings_accent_sub),
+                    Accent.entries.mapIndexed { i, accent -> Swatch(stringResource(names[i]), accent.main) },
+                    appearance.accent.ordinal,
+                    onSelect = { i -> viewModel.updateAppearance { it.copy(accent = AccentColor.entries[i]) } },
+                ),
+                SettingRow.Choice(
+                    stringResource(R.string.settings_density),
+                    stringResource(R.string.settings_density_sub),
+                    listOf(stringResource(R.string.settings_density_comfortable), stringResource(R.string.settings_density_compact)),
+                    if (appearance.compact) 1 else 0,
+                    onSelect = { i -> viewModel.updateAppearance { it.copy(compact = i == 1) } },
+                ),
+                SettingRow.Toggle(
+                    stringResource(R.string.settings_reduce_motion),
+                    stringResource(R.string.settings_reduce_motion_sub),
+                    appearance.reduceMotion,
+                    onToggle = { viewModel.updateAppearance { it.copy(reduceMotion = !it.reduceMotion) } },
+                ),
+            ),
+        ),
+        SettingGroup(
+            stringResource(R.string.settings_group_library),
+            listOf(
+                SettingRow.Toggle(
+                    stringResource(R.string.settings_group_sets),
+                    stringResource(R.string.settings_group_sets_sub),
+                    appearance.groupCollections,
+                    onToggle = { viewModel.updateAppearance { it.copy(groupCollections = !it.groupCollections) } },
+                ),
+            ),
+        ),
+    )
+}
+
+@Composable
+private fun homeRows(state: SettingsUiState, viewModel: SettingsViewModel): List<SettingGroup> {
+    val home = state.profile.home
+    val sources = listOf(
+        Triple(SpotlightSource.ContinueWatching, R.string.settings_spot_continue, R.string.settings_spot_continue_sub),
+        Triple(SpotlightSource.RecentlyAdded, R.string.settings_spot_recent, R.string.settings_spot_recent_sub),
+        Triple(SpotlightSource.Favorites, R.string.settings_spot_favorites, R.string.settings_spot_favorites_sub),
+        Triple(SpotlightSource.Random, R.string.settings_spot_random, R.string.settings_spot_random_sub),
+    )
+    val source = sources.first { it.first == home.spotlightSource }
+    return listOf(
+        SettingGroup(
+            stringResource(R.string.settings_group_spotlight),
+            listOf(
+                SettingRow.Choice(
+                    stringResource(R.string.settings_spot_source),
+                    stringResource(source.third),
+                    sources.map { stringResource(it.second) },
+                    sources.indexOf(source),
+                    onSelect = { i -> viewModel.updateHome { it.copy(spotlightSource = sources[i].first) } },
+                ),
+                SettingRow.Choice(
+                    stringResource(R.string.settings_spot_type),
+                    stringResource(R.string.settings_spot_type_sub),
+                    listOf(R.string.settings_spot_all, R.string.settings_spot_movies, R.string.settings_spot_shows).map { stringResource(it) },
+                    home.spotlightType.ordinal,
+                    onSelect = { i -> viewModel.updateHome { it.copy(spotlightType = SpotlightType.entries[i]) } },
+                ),
+                SettingRow.Choice(
+                    stringResource(R.string.settings_spot_count),
+                    stringResource(R.string.settings_spot_count_sub),
+                    SpotlightCount.entries.map { it.count.toString() },
+                    home.spotlightCount.ordinal,
+                    onSelect = { i -> viewModel.updateHome { it.copy(spotlightCount = SpotlightCount.entries[i]) } },
+                ),
+                SettingRow.Choice(
+                    stringResource(R.string.settings_spot_rotation),
+                    stringResource(R.string.settings_spot_rotation_sub),
+                    SpotlightRotation.entries.map { if (it == SpotlightRotation.Off) stringResource(R.string.settings_off) else stringResource(R.string.settings_seconds, it.seconds) },
+                    home.spotlightRotation.ordinal,
+                    onSelect = { i -> viewModel.updateHome { it.copy(spotlightRotation = SpotlightRotation.entries[i]) } },
+                ),
+                SettingRow.Toggle(
+                    stringResource(R.string.settings_spot_unwatched),
+                    stringResource(R.string.settings_spot_unwatched_sub),
+                    home.spotlightUnwatched,
+                    onToggle = { viewModel.updateHome { it.copy(spotlightUnwatched = !it.spotlightUnwatched) } },
+                    enabled = home.spotlightSource != SpotlightSource.ContinueWatching,
+                ),
+            ),
+        ),
+    )
 }
 
 @Composable

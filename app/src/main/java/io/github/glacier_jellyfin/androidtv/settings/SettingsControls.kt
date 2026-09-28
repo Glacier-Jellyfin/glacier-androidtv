@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
@@ -66,12 +67,14 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitlePosition
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyle
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyleMode
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierCard
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
+import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
 import io.github.glacier_jellyfin.androidtv.player.usesNative
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.core.designsystem.R as DesignR
@@ -224,6 +227,38 @@ internal fun ChoicePills(options: List<String>, selected: Int, onSelect: (Int) -
                         },
                     )
                 }
+            }
+        }
+    }
+}
+
+/** One accent to pick: its name and colour. */
+internal data class Swatch(val label: String, val color: Color)
+
+/** The accent swatches (design: 150 wide, gradient chip, name and hex below; the active one in its colour). */
+@Composable
+internal fun SwatchPicker(swatches: List<Swatch>, selected: Int, onSelect: (Int) -> Unit) {
+    val accent = LocalAccent.current.main
+    val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
+    Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+        swatches.forEachIndexed { index, swatch ->
+            val active = index == selected
+            GlacierCard(onClick = { onSelect(index) }, modifier = Modifier.width(150.dp)) { focused ->
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                        .focusFrame(focused, shape, unfocusedBorder = if (active) swatch.color else GlacierColors.GlassBorder2)
+                        .clip(shape)
+                        .background(Brush.linearGradient(listOf(swatch.color, swatch.color.copy(alpha = 0.53f)))),
+                )
+                Text(
+                    swatch.label,
+                    style = GlacierText.body(16, FontWeight.SemiBold),
+                    color = if (active) accent else GlacierColors.Ice,
+                    modifier = Modifier.padding(top = 10.dp),
+                )
+                Text("#%06x".format(swatch.color.toArgb() and 0xFFFFFF), style = GlacierText.mono(14), color = GlacierColors.Mist, modifier = Modifier.padding(top = 10.dp))
             }
         }
     }

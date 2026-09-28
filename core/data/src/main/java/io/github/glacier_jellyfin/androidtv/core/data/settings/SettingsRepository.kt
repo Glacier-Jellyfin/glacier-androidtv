@@ -82,5 +82,9 @@ class SettingsRepository @Inject constructor(
 
     suspend fun updatePlayback(transform: (PlaybackSettings) -> PlaybackSettings) = update { it.copy(playback = transform(it.playback)) }
 
+    suspend fun updateAppearance(transform: (AppearanceSettings) -> AppearanceSettings) = update { it.copy(appearance = transform(it.appearance)) }
+
+    suspend fun updateHome(transform: (HomeSettings) -> HomeSettings) = update { it.copy(home = transform(it.home)) }
+
     suspend fun updateSubtitleStyle(transform: (SubtitleStyle) -> SubtitleStyle) = update { it.copy(subtitleStyle = transform(it.subtitleStyle)) }
 }

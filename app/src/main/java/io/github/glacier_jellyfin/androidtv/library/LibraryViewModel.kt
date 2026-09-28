@@ -12,6 +12,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryQuery
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryScope
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
@@ -57,6 +58,7 @@ class LibraryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: LibraryRepository,
     private val sessions: SessionManager,
+    settings: SettingsRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<LibraryRoute>()
@@ -67,6 +69,7 @@ class LibraryViewModel @Inject constructor(
                 kind = LibraryKind.valueOf(route.kind),
                 libraryId = route.libraryId?.let(UUID::fromString),
                 genreId = route.genreId?.let(UUID::fromString),
+                groupCollections = settings.settings.value.appearance.groupCollections,
             ),
             title = route.title,
             userName = sessions.session.value?.user?.name.orEmpty(),

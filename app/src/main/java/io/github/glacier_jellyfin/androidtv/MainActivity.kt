@@ -14,22 +14,36 @@ import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.core.data.AccountRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.AppearanceSettings
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
+import io.github.glacier_jellyfin.androidtv.core.designsystem.Accent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierBackground
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierTheme
 import io.github.glacier_jellyfin.androidtv.navigation.GlacierNavHost
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ServerListRoute
+import io.github.glacier_jellyfin.androidtv.ui.CardSizes
+import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
 import io.github.glacier_jellyfin.androidtv.ui.ToastHost
 import io.github.glacier_jellyfin.androidtv.ui.Toaster
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /** Picks the first screen: "Who's watching?" for the last server, otherwise setup. */
 @HiltViewModel
-class StartViewModel @Inject constructor(accounts: AccountRepository) : ViewModel() {
+class StartViewModel @Inject constructor(accounts: AccountRepository, settings: SettingsRepository) : ViewModel() {
+    /** The signed-in profile's look; defaults on the setup and profile screens. */
+    val appearance: StateFlow<AppearanceSettings> = settings.settings
+        .map { it.appearance }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, settings.settings.value.appearance)
+
     private val _start = MutableStateFlow<Any?>(null)
     val start = _start.asStateFlow()
 
@@ -50,9 +64,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            GlacierTheme {
+            val appearance by startViewModel.appearance.collectAsStateWithLifecycle()
+            GlacierTheme(accent = Accent.valueOf(appearance.accent.name), reduceMotion = appearance.reduceMotion) {
                 val toaster = remember { Toaster() }
-                CompositionLocalProvider(LocalToaster provides toaster) {
+                CompositionLocalProvider(
+                    LocalToaster provides toaster,
+                    LocalCardSizes provides if (appearance.compact) CardSizes.Compact else CardSizes.Comfortable,
+                ) {
                     GlacierBackground {
                         val start by startViewModel.start.collectAsStateWithLifecycle()
                         start?.let { GlacierNavHost(rememberNavController(), startDestination = it) }
