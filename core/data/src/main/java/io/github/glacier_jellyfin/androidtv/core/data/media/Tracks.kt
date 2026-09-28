@@ -63,6 +63,37 @@ object Languages {
         return normal.takeIf { byIso3.containsKey(it) }
     }
 
+    /**
+     * Flag for a language, as a file name in the app's flags/ assets ("gb",
+     * "es-ct"): the country most people link with it. Region tags win
+     * ("pt-BR" is Brazil). Null for languages without a clear country.
+     */
+    fun flag(code: String?): String? {
+        val value = code?.trim()?.lowercase()?.replace('_', '-') ?: return null
+        regionFlags[value]?.let { return it }
+        return flags[iso3(value.substringBefore('-'))]
+    }
+
+    private val flags = mapOf(
+        "afr" to "za", "amh" to "et", "ara" to "sa", "aze" to "az", "bel" to "by", "ben" to "bd", "bos" to "ba",
+        "bul" to "bg", "cat" to "es-ct", "ces" to "cz", "cym" to "gb-wls", "dan" to "dk", "deu" to "de",
+        "ell" to "gr", "eng" to "gb", "est" to "ee", "eus" to "es-pv", "fas" to "ir", "fil" to "ph", "fin" to "fi",
+        "fra" to "fr", "gle" to "ie", "glg" to "es-ga", "heb" to "il", "hin" to "in", "hrv" to "hr", "hun" to "hu",
+        "hye" to "am", "ind" to "id", "isl" to "is", "ita" to "it", "jpn" to "jp", "kan" to "in", "kat" to "ge",
+        "kaz" to "kz", "khm" to "kh", "kor" to "kr", "lao" to "la", "lav" to "lv", "lit" to "lt", "ltz" to "lu",
+        "mal" to "in", "mar" to "in", "mkd" to "mk", "mlt" to "mt", "mon" to "mn", "msa" to "my", "mya" to "mm",
+        "nep" to "np", "nld" to "nl", "nno" to "no", "nob" to "no", "nor" to "no", "pol" to "pl", "por" to "pt",
+        "ron" to "ro", "rus" to "ru", "sin" to "lk", "slk" to "sk", "slv" to "si", "som" to "so", "spa" to "es",
+        "sqi" to "al", "srp" to "rs", "swa" to "ke", "swe" to "se", "tam" to "in", "tel" to "in", "tgl" to "ph",
+        "tha" to "th", "tur" to "tr", "ukr" to "ua", "urd" to "pk", "uzb" to "uz", "vie" to "vn", "yue" to "hk",
+        "zho" to "cn", "zul" to "za",
+    )
+
+    private val regionFlags = mapOf(
+        "en-us" to "us", "es-419" to "mx", "es-mx" to "mx", "fr-ca" to "ca", "pt-br" to "br", "zh-hk" to "hk",
+        "zh-tw" to "tw",
+    )
+
     /** Two-letter code for compact labels ("de"), or null if unknown. */
     fun iso2(code: String?): String? = iso3(code)?.let { byIso3[it]?.language }
 

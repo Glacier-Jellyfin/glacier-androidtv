@@ -80,4 +80,17 @@ class TracksTest {
         assertEquals(listOf("2.0 (TRUEHD)").size, trackBadges(audio("Stereo", "truehd", 2), false, de).size)
         assertEquals(listOf("2.0 (AAC)", "Commentary"), trackBadges(audio("Commentary", "aac", 2, "eng"), false, de))
     }
+
+    @Test
+    fun `flags follow the language and region tags`() {
+        assertEquals("de", Languages.flag("ger"))
+        assertEquals("gb", Languages.flag("eng"))
+        assertEquals("jp", Languages.flag("jpn"))
+        assertEquals("fr", Languages.flag("fre"))
+        assertEquals("br", Languages.flag("pt-BR"))
+        assertEquals("pt", Languages.flag("por"))
+        assertEquals("es-ct", Languages.flag("cat"))
+        assertNull(Languages.flag("und"))
+        assertNull(Languages.flag(null))
+    }
 }

@@ -1,10 +1,20 @@
 package io.github.glacier_jellyfin.androidtv
 
 import android.app.Application
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
+import coil3.svg.SvgDecoder
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
-class GlacierApplication : Application() {
+class GlacierApplication : Application(), SingletonImageLoader.Factory {
+
+    /** Coil's defaults plus SVG, for the language flags. */
+    override fun newImageLoader(context: PlatformContext): ImageLoader =
+        ImageLoader.Builder(context)
+            .components { add(SvgDecoder.Factory()) }
+            .build()
 
     init {
         // The Jellyfin SDK logs through kotlin-logging, which otherwise expects

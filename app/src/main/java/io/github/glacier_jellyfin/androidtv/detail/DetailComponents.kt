@@ -29,6 +29,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -66,9 +68,6 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 
-/** Languages the design draws a flag for; everything else is written out. */
-private val FlagLanguages = setOf("deu", "eng", "jpn")
-
 /**
  * One line of [TrackPanel]: [label] with its [flag] and [badges];
  * [full] is the complete name for the confirmation toast.
@@ -87,7 +86,7 @@ fun trackOptions(tracks: List<Track>, subtitle: Boolean): TrackOptions {
             val full = trackLabel(track, subtitle)
             // Audio rows show the format as a badge, so the label keeps just the language.
             val label = if (subtitle) full else Languages.name(track.language, locale) ?: full
-            TrackRow(label, Languages.iso3(track.language)?.takeIf { it in FlagLanguages }, trackBadges(track, subtitle, listOf(locale)), full)
+            TrackRow(label, Languages.flag(track.language), trackBadges(track, subtitle, listOf(locale)), full)
         }
     val indices = (if (subtitle) listOf<Int?>(null) else emptyList()) + tracks.map { it.index }
     return TrackOptions(rows, indices)
@@ -117,7 +116,7 @@ fun trackLabel(track: Track, subtitle: Boolean): String {
 @Composable
 fun trackChipLabel(track: Track?, subtitle: Boolean): Pair<String, String?> {
     if (track == null) return stringResource(R.string.track_off) to null
-    val iso = Languages.iso3(track.language)?.takeIf { it in FlagLanguages }
+    val iso = Languages.flag(track.language)
     val full = trackLabel(track, subtitle)
     if (iso == null) return full to null
     val locale = LocalConfiguration.current.locales[0]
@@ -131,12 +130,13 @@ fun trackChipLabel(track: Track?, subtitle: Boolean): Pair<String, String?> {
 }
 
 /**
- * Small flag in the design's style (27×18 in a rounded mist outline). The
- * flag itself stays square: inside the outline's 4 corner radius and the
- * gap, a matching inner radius would be under 1 and the same 4 bulged out.
+ * A language's flag in the design's style (27×18 in a rounded mist outline),
+ * from the flag-icons set in the app's assets (MIT, assets/flags/LICENSE).
+ * The flag itself stays square: inside the outline's radius and the gap, a
+ * matching inner radius would be under 1.
  */
 @Composable
-fun LanguageFlag(iso3: String, modifier: Modifier = Modifier, width: Int = 24, height: Int = 16) {
+fun LanguageFlag(flag: String, modifier: Modifier = Modifier, width: Int = 24, height: Int = 16) {
     Box(
         modifier
             .padding(2.dp)
@@ -145,28 +145,13 @@ fun LanguageFlag(iso3: String, modifier: Modifier = Modifier, width: Int = 24, h
             .size(width.dp, height.dp)
             .clipToBounds(),
     ) {
-        Canvas(Modifier.fillMaxSize()) {
-            when (iso3) {
-                "deu" -> {
-                    val band = size.height / 3
-                    drawRect(Color.Black, size = Size(size.width, band))
-                    drawRect(Color(0xFFDD0000), topLeft = Offset(0f, band), size = Size(size.width, band))
-                    drawRect(Color(0xFFFFCE00), topLeft = Offset(0f, band * 2), size = Size(size.width, size.height - band * 2))
-                }
-                "jpn" -> {
-                    drawRect(Color.White)
-                    drawCircle(Color(0xFFBC002D), radius = size.height * 0.3f)
-                }
-                "eng" -> {
-                    // Simplified Union Jack, as in the design: blue field, white and red cross.
-                    drawRect(Color(0xFF012169))
-                    drawRect(Color.White, topLeft = Offset(0f, size.height * 0.3f), size = Size(size.width, size.height * 0.4f))
-                    drawRect(Color.White, topLeft = Offset(size.width * 0.37f, 0f), size = Size(size.width * 0.26f, size.height))
-                    drawRect(Color(0xFFC8102E), topLeft = Offset(0f, size.height * 0.39f), size = Size(size.width, size.height * 0.22f))
-                    drawRect(Color(0xFFC8102E), topLeft = Offset(size.width * 0.43f, 0f), size = Size(size.width * 0.14f, size.height))
-                }
-            }
-        }
+        AsyncImage(
+            model = "file:///android_asset/flags/$flag.svg",
+            contentDescription = null,
+            // 4:3 artwork in a 3:2 frame: trim top and bottom, as flags usually are.
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }
 

@@ -100,6 +100,8 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    // Language flags (assets/flags) are SVGs.
+    implementation(libs.coil.svg)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

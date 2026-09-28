@@ -189,7 +189,9 @@ private fun PosterFor(item: MediaItem, onClick: () -> Unit) {
     } else {
         PosterCard(
             imageUrl = item.posterUrl,
-            caption = listOfNotNull(item.year?.toString(), item.genres.firstOrNull()).joinToString(" · ").ifEmpty { item.title },
+            // Title above year and genre, like the album cards.
+            caption = listOfNotNull(item.year?.toString(), item.genres.firstOrNull()).joinToString(" · "),
+            title = item.title,
             badge = item.unwatchedCount,
             onClick = onClick,
         )
