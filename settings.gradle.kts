@@ -22,5 +22,6 @@ include(
     ":core:jellyfin",
     ":core:data",
     ":core:player",
+    ":core:ffmpeg",
     ":core:updater",
 )

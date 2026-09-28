@@ -69,6 +69,8 @@ object GlacierPlayer {
         val renderers = DefaultRenderersFactory(context)
             // Platform decoders first; a software fallback only when a hardware decoder fails.
             .setEnableDecoderFallback(true)
+            // FFmpeg (core/ffmpeg) for audio formats no platform decoder or passthrough handles, e.g. DTS.
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
         val player = ExoPlayer.Builder(context, AssRenderersFactory(ass, renderers))
             .setMediaSourceFactory(mediaSources)
             .setAudioAttributes(

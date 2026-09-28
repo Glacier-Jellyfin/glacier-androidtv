@@ -39,6 +39,8 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
+      - uses: ./.github/actions/ffmpeg
+
       - name: Extract release notes
         run: scripts/release-notes.sh "${{ steps.tag.outputs.version }}" > "$RUNNER_TEMP/notes.md"
 
@@ -63,6 +65,7 @@ jobs:
           apk="app/build/outputs/apk/release/app-release.apk"
           apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
           "$apksigner" verify --print-certs "$apk"
+          scripts/check-ffmpeg-apk.sh "$apk"
           mv "$apk" "glacier-androidtv-${{ steps.tag.outputs.version }}.apk"
 
       - name: Publish release

@@ -1,0 +1,26 @@
+name: FFmpeg
+description: >
+  Installs the NDK and CMake core/ffmpeg builds with, and provides FFmpeg's
+  headers and static libraries (scripts/build-ffmpeg.sh), cached until the
+  script or the NDK changes.
+
+runs:
+  using: composite
+  steps:
+    - name: Install NDK and CMake
+      shell: bash
+      run: |
+        # Keep in sync with ndkVersion and the CMake version in core/ffmpeg/build.gradle.kts.
+        yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;28.2.13676358" "cmake;3.31.6" > /dev/null
+
+    - name: Cache FFmpeg
+      id: cache
+      uses: actions/cache@v6
+      with:
+        path: core/ffmpeg/src/main/jni/ffmpeg
+        key: ffmpeg-${{ runner.os }}-ndk28.2.13676358-${{ hashFiles('scripts/build-ffmpeg.sh') }}
+
+    - name: Build FFmpeg
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: scripts/build-ffmpeg.sh "$ANDROID_HOME/ndk/28.2.13676358"

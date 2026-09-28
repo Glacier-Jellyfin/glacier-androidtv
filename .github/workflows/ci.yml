@@ -25,12 +25,24 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v6
 
+      - uses: ./.github/actions/ffmpeg
+
       - name: Unit tests, lint and debug build
         run: ./gradlew testDebugUnitTest lintDebug assembleDebug
 
       # Optimised with R8 like a release, so shrinking problems show up before tagging.
       - name: Staging build
         run: ./gradlew :app:assembleStaging
+
+      - name: FFmpeg decoder in the APK
+        run: scripts/check-ffmpeg-apk.sh app/build/outputs/apk/staging/app-staging.apk
+
+      # For local builds on machines that cannot run scripts/build-ffmpeg.sh (see core/ffmpeg/README.md).
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ffmpeg-android
+          path: core/ffmpeg/src/main/jni/ffmpeg/
+          retention-days: 30
 
       - uses: actions/upload-artifact@v7
         if: always()

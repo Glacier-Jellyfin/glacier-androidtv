@@ -22,6 +22,8 @@ dependencies {
     // SubtitleView: Media3 has no Compose subtitle renderer yet.
     api(libs.media3.ui)
     implementation(libs.media3.exoplayer.hls)
+    // FFmpeg audio decoder for formats the device cannot decode (see core/ffmpeg/README.md).
+    implementation(project(":core:ffmpeg"))
     // Full ASS/SSA rendering (signs, fonts, animation) that Media3's own parser lacks.
     api(libs.libass.media)
 }

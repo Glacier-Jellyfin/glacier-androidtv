@@ -18,6 +18,7 @@ import javax.inject.Singleton
 @Singleton
 class MediaCapabilityDetector @Inject constructor(
     @param:ApplicationContext private val context: Context,
+    private val softwareAudio: SoftwareAudioCodecs,
 ) {
 
     val capabilities: DeviceCapabilities by lazy { detect() }
@@ -47,6 +48,7 @@ class MediaCapabilityDetector @Inject constructor(
         val audio = buildSet {
             AUDIO_DECODERS.forEach { (mime, codecs) -> if (has(mime)) addAll(codecs) }
             passthroughCodecs().forEach(::add)
+            addAll(softwareAudio.codecs())
         }
 
         return DeviceCapabilities(

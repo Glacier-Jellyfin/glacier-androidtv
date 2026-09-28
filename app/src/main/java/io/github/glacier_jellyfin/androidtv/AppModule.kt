@@ -4,6 +4,8 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.SoftwareAudioCodecs
+import io.github.glacier_jellyfin.androidtv.core.player.FfmpegAudio
 import org.jellyfin.sdk.model.ClientInfo
 
 @Module
@@ -13,4 +15,8 @@ object AppModule {
     /** How Glacier identifies itself to Jellyfin servers (shown in the server's device list). */
     @Provides
     fun provideClientInfo(): ClientInfo = ClientInfo(name = "Glacier", version = BuildConfig.VERSION_NAME)
+
+    /** Audio the bundled FFmpeg decoder plays, announced to the server with the platform's decoders. */
+    @Provides
+    fun provideSoftwareAudioCodecs(): SoftwareAudioCodecs = SoftwareAudioCodecs(FfmpegAudio::jellyfinCodecs)
 }
