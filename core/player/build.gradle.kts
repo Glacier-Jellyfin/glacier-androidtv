@@ -18,5 +18,6 @@ android {
 
 dependencies {
     api(libs.media3.exoplayer)
+    api(libs.media3.ui.compose)
     implementation(libs.media3.exoplayer.hls)
 }

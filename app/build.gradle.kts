@@ -85,6 +85,7 @@ android {
 dependencies {
     implementation(project(":core:designsystem"))
     implementation(project(":core:data"))
+    implementation(project(":core:player"))
     implementation(project(":core:updater"))
 
     implementation(libs.androidx.core.ktx)

@@ -10,6 +10,7 @@ import org.jellyfin.sdk.model.api.MediaStreamType
 import org.jellyfin.sdk.model.api.VideoRangeType
 import java.util.UUID
 
+private const val TICKS_PER_MS = 10_000L
 private const val TICKS_PER_MINUTE = 600_000_000L
 private const val UHD_MIN_WIDTH = 3200
 
@@ -61,6 +62,7 @@ internal class MediaMapper(private val api: ApiClient) {
             episodeNumber = dto.indexNumber,
             progress = dto.userData?.playedPercentage?.let { (it / 100).toFloat() }?.takeIf { it > 0f },
             remainingMinutes = remaining,
+            resumePositionMs = position / TICKS_PER_MS,
             unwatchedCount = dto.userData?.unplayedItemCount?.takeIf { kind == ItemKind.Series && it > 0 },
             isFavorite = dto.userData?.isFavorite ?: false,
             played = dto.userData?.played ?: false,

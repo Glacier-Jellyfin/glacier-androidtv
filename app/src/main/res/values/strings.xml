@@ -235,4 +235,18 @@
     <string name="quick_connect_signed_in">Signed in with Quick Connect</string>
     <string name="quick_connect_unavailable">Quick Connect is disabled on this server</string>
     <string name="quick_connect_failed">Quick Connect failed</string>
+
+    <!-- Player -->
+    <string name="player_loading">Loading …</string>
+    <string name="player_error">Playback failed</string>
+    <string name="player_play">Play</string>
+    <string name="player_pause">Pause</string>
+    <string name="player_rewind">Back 10 seconds</string>
+    <string name="player_forward">Forward 30 seconds</string>
+    <string name="player_stop">Stop</string>
+    <string name="player_ends_at">Ends at %1$s</string>
+    <string name="player_episode_title">E%1$d · %2$s</string>
+    <string name="player_direct_play">Direct Play</string>
+    <string name="player_direct_stream">Direct Stream</string>
+    <string name="player_transcode">Transcoding</string>
 </resources>

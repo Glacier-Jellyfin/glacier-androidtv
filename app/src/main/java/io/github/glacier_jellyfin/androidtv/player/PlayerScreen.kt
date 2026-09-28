@@ -1,0 +1,231 @@
+package io.github.glacier_jellyfin.androidtv.player
+
+import androidx.activity.compose.BackHandler
+import androidx.annotation.OptIn
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.compose.ContentFrame
+import androidx.tv.material3.Text
+import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
+import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
+import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
+import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
+import io.github.glacier_jellyfin.androidtv.ui.Artwork
+import kotlinx.coroutines.delay
+
+/** OSD hides after this long without input while playing (agreed: 3 s). */
+private const val OSD_TIMEOUT_MS = 3_000L
+
+/** Scrubbing on the timeline only moves the preview; the jump happens after this pause (design: 1.2 s). */
+private const val SCRUB_COMMIT_MS = 1_200L
+
+@OptIn(UnstableApi::class)
+@Composable
+fun PlayerScreen(
+    onBack: () -> Unit,
+    viewModel: PlayerViewModel = hiltViewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val progress by viewModel.progress.collectAsStateWithLifecycle()
+
+    LaunchedEffect(viewModel) { viewModel.finished.collect { onBack() } }
+    BackHandler { viewModel.stop() }
+    // Leaving the app (Home button) pauses; nobody is watching.
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.pause() }
+    val view = LocalView.current
+    DisposableEffect(view) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
+
+    val rootFocus = remember { FocusRequester() }
+    val seekFocus = remember { FocusRequester() }
+    val playFocus = remember { FocusRequester() }
+    var osdVisible by remember { mutableStateOf(true) }
+    /** Which control gets focus when the OSD appears. */
+    var osdTarget by remember { mutableStateOf(playFocus) }
+    var interaction by remember { mutableIntStateOf(0) }
+    var scrubMs by remember { mutableStateOf<Long?>(null) }
+
+    fun showOsd(target: FocusRequester) {
+        osdTarget = target
+        osdVisible = true
+        interaction++
+    }
+
+    fun scrub(deltaMs: Long) {
+        val duration = progress.durationMs.takeIf { it > 0 } ?: Long.MAX_VALUE
+        scrubMs = ((scrubMs ?: progress.positionMs) + deltaMs).coerceIn(0, duration)
+        interaction++
+    }
+
+    LaunchedEffect(scrubMs) {
+        val target = scrubMs ?: return@LaunchedEffect
+        delay(SCRUB_COMMIT_MS)
+        viewModel.seekTo(target)
+        scrubMs = null
+    }
+    LaunchedEffect(osdVisible, interaction, state.playing, scrubMs) {
+        if (osdVisible && state.playing && scrubMs == null) {
+            delay(OSD_TIMEOUT_MS)
+            osdVisible = false
+        }
+    }
+    // The OSD focuses its own target once it is on screen; hidden, the root takes the keys.
+    LaunchedEffect(osdVisible) {
+        if (osdVisible) return@LaunchedEffect
+        withFrameNanos { }
+        runCatching { rootFocus.requestFocus() }
+    }
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .focusRequester(rootFocus)
+            .onPreviewKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                interaction++
+                when (event.key) {
+                    Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause -> {
+                        viewModel.togglePlay()
+                        showOsd(playFocus)
+                        true
+                    }
+                    Key.MediaRewind -> { viewModel.seekBy(-GlacierPlayer.SEEK_BACK_MS); true }
+                    Key.MediaFastForward -> { viewModel.seekBy(GlacierPlayer.SEEK_FORWARD_MS); true }
+                    // With the OSD hidden, Left/Right scrub straight away (-10 s / +30 s).
+                    Key.DirectionLeft, Key.DirectionRight -> if (!osdVisible && !state.loading) {
+                        showOsd(seekFocus)
+                        scrub(if (event.key == Key.DirectionLeft) -GlacierPlayer.SEEK_BACK_MS else GlacierPlayer.SEEK_FORWARD_MS)
+                        true
+                    } else {
+                        false
+                    }
+                    Key.DirectionCenter, Key.Enter, Key.DirectionUp, Key.DirectionDown -> if (!osdVisible) {
+                        showOsd(playFocus)
+                        true
+                    } else {
+                        false
+                    }
+                    else -> false
+                }
+            }
+            .focusable(),
+    ) {
+        state.player?.let { player ->
+            ContentFrame(player = player, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+        }
+
+        if (state.loading || state.failed) {
+            Artwork(state.details?.item?.backdropUrl, Modifier.fillMaxSize())
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Brush.radialGradient(listOf(Color.Transparent, Color(0x99050910)), radius = 1400f)),
+            )
+        }
+
+        AnimatedVisibility(visible = osdVisible && !state.failed, enter = fadeIn(), exit = fadeOut()) {
+            PlayerOsd(
+                state = state,
+                progress = progress,
+                scrubMs = scrubMs,
+                seekFocus = seekFocus,
+                playFocus = playFocus,
+                initialFocus = osdTarget,
+                onScrub = ::scrub,
+                onCommitScrub = {
+                    scrubMs?.let(viewModel::seekTo)
+                    scrubMs = null
+                },
+                onTogglePlay = viewModel::togglePlay,
+                onSeekBy = viewModel::seekBy,
+                onStop = viewModel::stop,
+            )
+        }
+
+        if (state.loading && !state.failed) {
+            Column(
+                Modifier.align(Alignment.Center),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+            ) {
+                SpinningDiamond(110)
+                Text(stringResource(R.string.player_loading), style = GlacierText.body(21), color = GlacierColors.Mist)
+            }
+        }
+
+        if (state.failed) {
+            val retryFocus = remember { FocusRequester() }
+            Column(
+                Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 80.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(28.dp),
+            ) {
+                Text(stringResource(R.string.player_error), style = GlacierText.display(30), color = GlacierColors.Ice)
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    PillButton(stringResource(R.string.action_retry), onClick = viewModel::load, primary = true, modifier = Modifier.focusRequester(retryFocus))
+                    PillButton(stringResource(R.string.action_back), onClick = viewModel::stop)
+                }
+            }
+            LaunchedEffect(Unit) {
+                withFrameNanos { }
+                runCatching { retryFocus.requestFocus() }
+            }
+        }
+    }
+}
+
+/** The bottom gradient keeps the OSD legible on bright pictures (design: 420 high). */
+internal fun Modifier.osdScrim(top: Boolean): Modifier = fillMaxWidth()
+    .height(if (top) 220.dp else 420.dp)
+    .background(
+        Brush.verticalGradient(
+            if (top) listOf(Color(0xD9050910), Color.Transparent) else listOf(Color.Transparent, Color(0xEB050910)),
+        ),
+    )

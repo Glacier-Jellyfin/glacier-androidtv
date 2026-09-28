@@ -1,0 +1,276 @@
+package io.github.glacier_jellyfin.androidtv.player
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.tv.material3.Icon
+import androidx.tv.material3.Text
+import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
+import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackMethod
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
+import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
+import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
+import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
+import io.github.glacier_jellyfin.androidtv.ui.qualityText
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+
+@Composable
+fun PlayerOsd(
+    state: PlayerUiState,
+    progress: PlayerProgress,
+    scrubMs: Long?,
+    seekFocus: FocusRequester,
+    playFocus: FocusRequester,
+    /** Focused when the OSD appears: the timeline after Left/Right, else play. */
+    initialFocus: FocusRequester,
+    onScrub: (Long) -> Unit,
+    onCommitScrub: () -> Unit,
+    onTogglePlay: () -> Unit,
+    onSeekBy: (Long) -> Unit,
+    onStop: () -> Unit,
+) {
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        runCatching { initialFocus.requestFocus() }
+    }
+    Box(Modifier.fillMaxSize()) {
+        Box(Modifier.align(Alignment.TopCenter).osdScrim(top = true))
+        Box(Modifier.align(Alignment.BottomCenter).osdScrim(top = false))
+
+        TitleBlock(state, Modifier.align(Alignment.TopStart).padding(start = 80.dp, top = 60.dp))
+        StatusBlock(state, Modifier.align(Alignment.TopEnd).padding(end = 80.dp, top = 64.dp))
+
+        Column(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .padding(start = 80.dp, end = 80.dp, bottom = 72.dp),
+            verticalArrangement = Arrangement.spacedBy(30.dp),
+        ) {
+            Timeline(
+                progress = progress,
+                scrubMs = scrubMs,
+                focusRequester = seekFocus,
+                onScrub = onScrub,
+                onCommit = { if (scrubMs != null) onCommitScrub() else onTogglePlay() },
+            )
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ControlButton(GlacierIcons.Replay, stringResource(R.string.player_rewind), onClick = { onSeekBy(-GlacierPlayer.SEEK_BACK_MS) })
+                    ControlButton(
+                        if (state.playing) GlacierIcons.Pause else GlacierIcons.Play,
+                        stringResource(if (state.playing) R.string.player_pause else R.string.player_play),
+                        onClick = onTogglePlay,
+                        big = true,
+                        modifier = Modifier.focusRequester(playFocus),
+                    )
+                    ControlButton(GlacierIcons.Forward, stringResource(R.string.player_forward), onClick = { onSeekBy(GlacierPlayer.SEEK_FORWARD_MS) })
+                    ControlButton(GlacierIcons.Close, stringResource(R.string.player_stop), onClick = onStop)
+                }
+                Spacer(Modifier.weight(1f))
+                if (progress.durationMs > 0) {
+                    val end = LocalTime.now().plusSeconds((progress.durationMs - progress.positionMs).coerceAtLeast(0) / 1000)
+                    Text(stringResource(R.string.player_ends_at, end.format(ClockFormat)), style = GlacierText.body(18), color = GlacierColors.Mist)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TitleBlock(state: PlayerUiState, modifier: Modifier) {
+    val item = state.details?.item ?: return
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val crumb = if (item.kind == ItemKind.Episode) {
+            listOfNotNull(item.parentTitle, item.seasonNumber?.let { stringResource(R.string.season_number, it) })
+        } else {
+            listOfNotNull(stringResource(R.string.library_movies), item.year?.toString(), item.genres.firstOrNull())
+        }.joinToString(" · ")
+        Text(crumb.uppercase(), style = GlacierText.body(18).copy(letterSpacing = 0.06.em), color = GlacierColors.Mist)
+        val title = item.episodeNumber?.takeIf { item.kind == ItemKind.Episode }
+            ?.let { stringResource(R.string.player_episode_title, it, item.title) } ?: item.title
+        Text(title, style = GlacierText.display(46), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Picture quality, how the stream is delivered, and the time of day. */
+@Composable
+private fun StatusBlock(state: PlayerUiState, modifier: Modifier) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        qualityText(state.details?.item?.quality)?.let { StatusPill(it) }
+        state.method?.let {
+            StatusPill(
+                stringResource(
+                    when (it) {
+                        PlaybackMethod.DirectPlay -> R.string.player_direct_play
+                        PlaybackMethod.DirectStream -> R.string.player_direct_stream
+                        PlaybackMethod.Transcode -> R.string.player_transcode
+                    },
+                ),
+            )
+        }
+        Text(LocalTime.now().format(ClockFormat), style = GlacierText.mono(20), color = GlacierColors.Mist)
+    }
+}
+
+@Composable
+private fun StatusPill(text: String) {
+    Box(
+        Modifier
+            .height(44.dp)
+            .clip(PillShape)
+            .background(GlacierColors.GlassFill)
+            .border(1.dp, GlacierColors.GlassBorder, PillShape)
+            .padding(horizontal = 18.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, style = GlacierText.body(17, FontWeight.SemiBold), color = GlacierColors.Ice)
+    }
+}
+
+/**
+ * The seek bar: buffered range, played range and a knob. Focused, Left/Right
+ * move only the knob (scrubbing); the jump follows after a short pause or OK.
+ */
+@Composable
+private fun Timeline(
+    progress: PlayerProgress,
+    scrubMs: Long?,
+    focusRequester: FocusRequester,
+    onScrub: (Long) -> Unit,
+    onCommit: () -> Unit,
+) {
+    val accent = LocalAccent.current.main
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val duration = progress.durationMs.coerceAtLeast(1)
+    val shown = scrubMs ?: progress.positionMs
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        BoxWithConstraints(
+            Modifier
+                .fillMaxWidth()
+                .height(38.dp)
+                .focusRequester(focusRequester)
+                .onKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                    when (event.key) {
+                        Key.DirectionLeft -> { onScrub(-GlacierPlayer.SEEK_BACK_MS); true }
+                        Key.DirectionRight -> { onScrub(GlacierPlayer.SEEK_FORWARD_MS); true }
+                        Key.DirectionCenter, Key.Enter -> { onCommit(); true }
+                        else -> false
+                    }
+                }
+                .focusable(interactionSource = interaction),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            val trackHeight = if (focused) 12.dp else 7.dp
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(trackHeight)
+                    .clip(PillShape)
+                    .background(GlacierColors.GlassFill),
+            ) {
+                Box(Modifier.fillMaxHeight().fillMaxWidth(fraction(progress.bufferedMs, duration)).background(GlacierColors.GlassFill2))
+                Box(Modifier.fillMaxHeight().fillMaxWidth(fraction(progress.positionMs, duration)).background(accent))
+            }
+            val knob = if (focused) 26.dp else 18.dp
+            if (progress.durationMs > 0) Box(
+                Modifier
+                    .offset(x = maxWidth * fraction(shown, duration) - knob / 2)
+                    .size(knob)
+                    .shadow(8.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(accent),
+            )
+        }
+        Row(Modifier.fillMaxWidth()) {
+            Text(formatTime(shown), style = GlacierText.mono(20), color = GlacierColors.Ice)
+            Spacer(Modifier.weight(1f))
+            if (progress.durationMs > 0) {
+                Text("−" + formatTime(progress.durationMs - progress.positionMs), style = GlacierText.mono(20), color = GlacierColors.Mist)
+            }
+        }
+    }
+}
+
+/** Round OSD button: 62 across, the play button 78 (design). */
+@Composable
+private fun ControlButton(
+    icon: ImageVector,
+    description: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    big: Boolean = false,
+) {
+    val accent = LocalAccent.current.main
+    val size = if (big) 78.dp else 62.dp
+    GlacierClickable(onClick = onClick, shape = CircleShape, modifier = modifier, contentAlignment = Alignment.Center) { focused ->
+        Box(
+            Modifier
+                .size(size)
+                .clip(CircleShape)
+                .background(if (focused) accent else if (big) GlacierColors.GlassFill2 else GlacierColors.GlassFill)
+                .border(2.dp, if (focused) accent else if (big) GlacierColors.GlassBorder2 else GlacierColors.GlassBorder, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = description, tint = if (focused) GlacierColors.Void else GlacierColors.Ice, modifier = Modifier.size(if (big) 30.dp else 24.dp))
+        }
+    }
+}
+
+private fun fraction(value: Long, total: Long): Float = (value.toFloat() / total).coerceIn(0f, 1f)
+
+private val ClockFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+/** 1:02:03 or 12:34. */
+internal fun formatTime(ms: Long): String {
+    val total = (ms.coerceAtLeast(0) / 1000)
+    val h = total / 3600
+    val m = total % 3600 / 60
+    val s = total % 60
+    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+}
+

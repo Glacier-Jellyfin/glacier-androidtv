@@ -39,6 +39,8 @@ data class MediaItem(
     val episodeNumber: Int?,
     val progress: Float?,
     val remainingMinutes: Int?,
+    /** Exact resume point; 0 when not started. */
+    val resumePositionMs: Long = 0,
     val unwatchedCount: Int?,
     val isFavorite: Boolean,
     val played: Boolean,
