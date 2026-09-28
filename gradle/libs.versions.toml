@@ -17,6 +17,8 @@ coroutines = "1.11.0"
 serialization = "1.11.0"
 coil = "3.6.3"
 media3 = "1.11.1"
+# libass for ASS/SSA subtitles (MIT); 0.5.x is built against Media3 1.8 and works with 1.11.
+libass-android = "0.5.1"
 # Generated from the 12.1 API; its minimum supported server is still 12.0.
 jellyfin-sdk = "1.9.1"
 junit = "4.13.2"
@@ -46,6 +48,7 @@ media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = 
 media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls", version.ref = "media3" }
 media3-ui-compose = { module = "androidx.media3:media3-ui-compose", version.ref = "media3" }
 media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
+libass-media = { module = "io.github.peerless2012:ass-media", version.ref = "libass-android" }
 jellyfin-core = { module = "org.jellyfin.sdk:jellyfin-core", version.ref = "jellyfin-sdk" }
 junit = { module = "junit:junit", version.ref = "junit" }
 

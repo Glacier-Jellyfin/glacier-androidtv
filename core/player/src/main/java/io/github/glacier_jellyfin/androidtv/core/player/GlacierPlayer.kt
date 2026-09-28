@@ -12,6 +12,14 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.extractor.DefaultExtractorsFactory
+import androidx.media3.ui.SubtitleView
+import io.github.peerless2012.ass.media.AssHandler
+import io.github.peerless2012.ass.media.factory.AssRenderersFactory
+import io.github.peerless2012.ass.media.kt.withAssMkvSupport
+import io.github.peerless2012.ass.media.parser.AssSubtitleParserFactory
+import io.github.peerless2012.ass.media.type.AssRenderType
+import io.github.peerless2012.ass.media.widget.AssSubtitleView
 
 /** One stream to play: the URL the server handed out and the headers it needs. */
 data class StreamRequest(
@@ -31,19 +39,38 @@ data class SideloadedSubtitle(
     val language: String?,
 )
 
+/**
+ * A player and its ASS renderer. libass draws ASS/SSA subtitles itself, in a
+ * view that [attachAss] puts into the SubtitleView; every other format still
+ * arrives as Media3 cues.
+ */
+class GlacierPlayback(val player: ExoPlayer, private val ass: AssHandler) {
+
+    @OptIn(UnstableApi::class)
+    fun attachAss(subtitleView: SubtitleView) {
+        subtitleView.addView(AssSubtitleView(subtitleView.context, ass))
+    }
+}
+
 /** Creates the ExoPlayer used for video, set up for TV playback. */
 object GlacierPlayer {
 
     @OptIn(UnstableApi::class)
-    fun create(context: Context, request: StreamRequest): ExoPlayer {
+    fun create(context: Context, request: StreamRequest): GlacierPlayback {
         val dataSource = DefaultHttpDataSource.Factory()
             .setDefaultRequestProperties(request.headers)
             .setAllowCrossProtocolRedirects(true)
+        // Rendered on its own GL thread above the video, with animation and embedded fonts.
+        val ass = AssHandler(AssRenderType.OVERLAY_OPEN_GL)
+        val assParsers = AssSubtitleParserFactory(ass)
+        val mediaSources = DefaultMediaSourceFactory(dataSource, DefaultExtractorsFactory().withAssMkvSupport(assParsers, ass))
+            // Side-loaded .ass files go through the same parser.
+            .setSubtitleParserFactory(assParsers)
         val renderers = DefaultRenderersFactory(context)
             // Platform decoders first; a software fallback only when a hardware decoder fails.
             .setEnableDecoderFallback(true)
-        return ExoPlayer.Builder(context, renderers)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSource))
+        val player = ExoPlayer.Builder(context, AssRenderersFactory(ass, renderers))
+            .setMediaSourceFactory(mediaSources)
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(C.USAGE_MEDIA)
@@ -54,7 +81,7 @@ object GlacierPlayer {
             .setSeekBackIncrementMs(SEEK_BACK_MS)
             .setSeekForwardIncrementMs(SEEK_FORWARD_MS)
             .build()
-            .apply {
+        player.apply {
                 setMediaItem(
                     MediaItem.Builder()
                         .setUri(request.url)
@@ -65,6 +92,8 @@ object GlacierPlayer {
                 )
                 prepare()
             }
+        ass.init(player)
+        return GlacierPlayback(player, ass)
     }
 
     private fun SideloadedSubtitle.toConfiguration() =

@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -53,6 +54,7 @@ import androidx.media3.common.text.Cue
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.SubtitleView
+import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
 import androidx.tv.material3.Text
 import coil3.SingletonImageLoader
 import coil3.network.NetworkHeaders
@@ -185,12 +187,15 @@ private fun ChapterCard(chapter: Chapter, fallbackImage: String?, onClick: () ->
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun PlayerSubtitles(player: Player, lift: SubtitleLift, modifier: Modifier = Modifier) {
+fun PlayerSubtitles(playback: GlacierPlayback, lift: SubtitleLift, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val view = remember {
+    val player = playback.player
+    // A new player (track change, next episode) brings a new ASS renderer, so a new view.
+    val view = remember(playback) {
         SubtitleView(context).apply {
             setUserDefaultStyle()
             setUserDefaultTextSize()
+            playback.attachAss(this)
         }
     }
     var cues by remember { mutableStateOf(emptyList<Cue>()) }
@@ -206,14 +211,16 @@ fun PlayerSubtitles(player: Player, lift: SubtitleLift, modifier: Modifier = Mod
             cues = emptyList()
         }
     }
-    AndroidView(
-        factory = { view },
-        update = {
-            it.setBottomPaddingFraction(liftedPadding(lift.fraction))
-            it.setCues(cues.map { cue -> cue.lifted(lift) })
-        },
-        modifier = modifier,
-    )
+    key(view) {
+        AndroidView(
+            factory = { view },
+            update = {
+                it.setBottomPaddingFraction(liftedPadding(lift.fraction))
+                it.setCues(cues.map { cue -> cue.lifted(lift) })
+            },
+            modifier = modifier,
+        )
+    }
 }
 
 /** One seek preview picture, cut from its trickplay tile. */

@@ -35,6 +35,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackMethod
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackPosition
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
+import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
@@ -55,6 +56,8 @@ import javax.inject.Inject
 data class PlayerUiState(
     val details: ItemDetails? = null,
     val player: ExoPlayer? = null,
+    /** The player with its ASS renderer, for the subtitle view. */
+    val playback: GlacierPlayback? = null,
     /** Until the first frame can be shown. */
     val loading: Boolean = true,
     val failed: Boolean = false,
@@ -207,13 +210,15 @@ class PlayerViewModel @Inject constructor(
                         .filter { it.delivery == SubtitleDelivery.External && it.url != null }
                         .map { SideloadedSubtitle(it.track.index, it.url!!, it.track.codec, it.track.language) },
                 )
-                val player = GlacierPlayer.create(context, request)
+                val playback = GlacierPlayer.create(context, request)
+                val player = playback.player
                 player.addListener(listener)
                 player.playWhenReady = true
                 tracksPending = true
                 _state.update {
                     it.copy(
                         player = player,
+                        playback = playback,
                         method = opened.method,
                         audioTracks = opened.audioTracks,
                         subtitles = opened.subtitles,
@@ -471,7 +476,7 @@ class PlayerViewModel @Inject constructor(
             it.removeListener(listener)
             it.release()
         }
-        _state.update { it.copy(player = null) }
+        _state.update { it.copy(player = null, playback = null) }
         started = false
     }
 

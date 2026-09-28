@@ -264,7 +264,10 @@ private fun TrackOption(row: TrackRow, selected: Boolean, onClick: () -> Unit, m
         if (row.flag != null) LanguageFlag(row.flag, width = 27, height = 18)
         Text(row.label, style = GlacierText.body(19), color = foreground, modifier = Modifier.weight(1f))
         row.badges.forEach { TrackBadge(it, focused) }
-        if (selected) Icon(GlacierIcons.Check, contentDescription = null, tint = foreground, modifier = Modifier.size(22.dp))
+        // The check keeps its place on every row, so the badges line up whether a row is selected or not.
+        Box(Modifier.size(22.dp)) {
+            if (selected) Icon(GlacierIcons.Check, contentDescription = null, tint = foreground, modifier = Modifier.size(22.dp))
+        }
     }
 }
 

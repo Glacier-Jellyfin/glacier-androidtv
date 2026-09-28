@@ -214,14 +214,15 @@ fun PlayerScreen(
             }
             .focusable(),
     ) {
-        state.player?.let { player ->
+        state.playback?.let { playback ->
+            val player = playback.player
             ContentFrame(player = player, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
             val lift = when {
                 state.chaptersOpen -> SubtitleLift.Chapters
                 osdVisible -> SubtitleLift.Osd
                 else -> SubtitleLift.None
             }
-            PlayerSubtitles(player, lift, modifier = Modifier.fillMaxSize())
+            PlayerSubtitles(playback, lift, modifier = Modifier.fillMaxSize())
         }
 
         if (state.loading || state.failed) {

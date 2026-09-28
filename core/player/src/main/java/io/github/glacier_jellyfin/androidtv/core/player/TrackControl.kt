@@ -1,6 +1,8 @@
 package io.github.glacier_jellyfin.androidtv.core.player
 
 import androidx.media3.common.C
+import androidx.media3.common.Format
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
@@ -41,12 +43,20 @@ object TrackControl {
 
     private fun selectText(player: Player, group: Tracks.Group?): Boolean {
         group ?: return false
-        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+        val before = player.trackSelectionParameters
+        val alreadySelected = !before.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT) &&
+            before.overrides[group.mediaTrackGroup] != null
+        player.trackSelectionParameters = before.buildUpon()
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
             .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, 0))
             .build()
+        // libass only keeps events of the track it renders; the ones read ahead
+        // before the switch are gone. Reading again from here brings them back.
+        if (!alreadySelected && group.getTrackFormat(0).isSsa()) player.seekTo(player.currentPosition)
         return true
     }
+
+    private fun Format.isSsa() = sampleMimeType == MimeTypes.TEXT_SSA || codecs == MimeTypes.TEXT_SSA
 
     private fun textGroups(player: Player) = player.currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
 
