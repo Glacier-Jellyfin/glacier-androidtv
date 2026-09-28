@@ -42,6 +42,8 @@ data class ItemDetails(
     val trickplay: Trickplay? = null,
 )
 
+data class EpisodeNeighbours(val previous: MediaItem?, val next: MediaItem?)
+
 data class Chapter(val name: String, val startMs: Long, val imageUrl: String?)
 
 /**

@@ -6,6 +6,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.width
 import io.github.glacier_jellyfin.androidtv.core.data.media.Chapter
 import io.github.glacier_jellyfin.androidtv.core.data.media.Trickplay
+import io.github.glacier_jellyfin.androidtv.core.data.playback.MediaSegment
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.TileMode
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,15 +32,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
@@ -71,20 +75,16 @@ fun PlayerOsd(
     scrubMs: Long?,
     seekFocus: FocusRequester,
     playFocus: FocusRequester,
-    /** Focused when the OSD appears: the timeline after Left/Right, else play. */
-    initialFocus: FocusRequester,
     buttonFocus: Map<OsdButton, FocusRequester>,
     onScrub: (Long) -> Unit,
     onCommitScrub: () -> Unit,
     onTogglePlay: () -> Unit,
     onSeekBy: (Long) -> Unit,
     onOpen: (OsdButton) -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
     onStop: () -> Unit,
 ) {
-    LaunchedEffect(Unit) {
-        withFrameNanos { }
-        runCatching { initialFocus.requestFocus() }
-    }
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.align(Alignment.TopCenter).osdScrim(top = true))
         Box(Modifier.align(Alignment.BottomCenter).osdScrim(top = false))
@@ -102,14 +102,19 @@ fun PlayerOsd(
                 progress = progress,
                 scrubMs = scrubMs,
                 chapters = state.chapters,
+                segments = state.segments,
                 trickplay = state.details?.trickplay,
                 imageHeaders = state.imageHeaders,
                 focusRequester = seekFocus,
+                downFocus = playFocus,
                 onScrub = onScrub,
                 onCommit = { if (scrubMs != null) onCommitScrub() else onTogglePlay() },
             )
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (state.previous != null) {
+                        ControlButton(GlacierIcons.SkipBack, stringResource(R.string.player_previous), onClick = onPrevious)
+                    }
                     ControlButton(GlacierIcons.Replay, stringResource(R.string.player_rewind), onClick = { onSeekBy(-GlacierPlayer.SEEK_BACK_MS) })
                     ControlButton(
                         if (state.playWhenReady) GlacierIcons.Pause else GlacierIcons.Play,
@@ -119,6 +124,9 @@ fun PlayerOsd(
                         modifier = Modifier.focusRequester(playFocus),
                     )
                     ControlButton(GlacierIcons.Forward, stringResource(R.string.player_forward), onClick = { onSeekBy(GlacierPlayer.SEEK_FORWARD_MS) })
+                    if (state.next != null) {
+                        ControlButton(GlacierIcons.SkipForward, stringResource(R.string.player_next), onClick = onNext)
+                    }
                     LabelButton(GlacierIcons.Speaker, stringResource(R.string.player_audio), { onOpen(OsdButton.Audio) }, Modifier.focusRequester(buttonFocus.getValue(OsdButton.Audio)))
                     LabelButton(GlacierIcons.Subtitles, stringResource(R.string.player_subtitles), { onOpen(OsdButton.Subtitles) }, Modifier.focusRequester(buttonFocus.getValue(OsdButton.Subtitles)))
                     if (state.chapters.isNotEmpty()) {
@@ -196,9 +204,12 @@ private fun Timeline(
     progress: PlayerProgress,
     scrubMs: Long?,
     chapters: List<Chapter>,
+    segments: List<MediaSegment>,
     trickplay: Trickplay?,
     imageHeaders: Map<String, String>,
     focusRequester: FocusRequester,
+    /** Down always lands on play; the nearest button under the knob could be Stop. */
+    downFocus: FocusRequester,
     onScrub: (Long) -> Unit,
     onCommit: () -> Unit,
 ) {
@@ -223,6 +234,7 @@ private fun Timeline(
                 .fillMaxWidth()
                 .height(38.dp)
                 .focusRequester(focusRequester)
+                .focusProperties { down = downFocus }
                 .onKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                     when (event.key) {
@@ -236,6 +248,7 @@ private fun Timeline(
             contentAlignment = Alignment.CenterStart,
         ) {
             val trackHeight = if (focused) 12.dp else 7.dp
+            val trackWidth = maxWidth
             Box(
                 Modifier
                     .fillMaxWidth()
@@ -245,6 +258,19 @@ private fun Timeline(
             ) {
                 Box(Modifier.fillMaxHeight().fillMaxWidth(fraction(progress.bufferedMs, duration)).background(GlacierColors.GlassFill2))
                 Box(Modifier.fillMaxHeight().fillMaxWidth(fraction(progress.positionMs, duration)).background(accent))
+                // Known segments (intro, credits …) as hatched stretches (design).
+                if (progress.durationMs > 0) {
+                    segments.forEach { segment ->
+                        Box(
+                            Modifier
+                                .offset(x = trackWidth * fraction(segment.startMs, duration))
+                                .width(trackWidth * (fraction(segment.endMs, duration) - fraction(segment.startMs, duration)))
+                                .fillMaxHeight()
+                                .clip(PillShape)
+                                .drawBehind { drawRect(SegmentHatch) },
+                        )
+                    }
+                }
             }
             // Chapter starts as small gaps in the track (design: ticks).
             if (progress.durationMs > 0) {
@@ -395,6 +421,14 @@ private fun ControlButton(
         }
     }
 }
+
+/** Diagonal stripes, 5 px ice and 5 px clear (design: repeating 115° gradient). */
+private val SegmentHatch = Brush.linearGradient(
+    0f to Color(0x57E8F4F7), 0.5f to Color(0x57E8F4F7), 0.5f to Color.Transparent, 1f to Color.Transparent,
+    start = Offset.Zero,
+    end = Offset(9f, -4.2f),
+    tileMode = TileMode.Repeated,
+)
 
 private fun fraction(value: Long, total: Long): Float = (value.toFloat() / total).coerceIn(0f, 1f)
 

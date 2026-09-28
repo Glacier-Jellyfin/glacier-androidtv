@@ -14,10 +14,16 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.Chapter
+import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
+import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.Track
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelection
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelections
+import io.github.glacier_jellyfin.androidtv.core.data.playback.MediaSegment
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSubtitle
+import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentAction
+import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentKind
+import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentPolicy
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SubtitleDelivery
 import io.github.glacier_jellyfin.androidtv.core.player.SideloadedSubtitle
 import io.github.glacier_jellyfin.androidtv.core.player.TrackControl
@@ -65,8 +71,15 @@ data class PlayerUiState(
     val chaptersOpen: Boolean = false,
     /** Headers for authenticated images (trickplay tiles). */
     val imageHeaders: Map<String, String> = emptyMap(),
+    val segments: List<MediaSegment> = emptyList(),
+    /** Neighbouring episodes of the show; null for films and at either end. */
+    val previous: MediaItem? = null,
+    val next: MediaItem? = null,
+    /** "Watch credits" hides the "Up next" card for the rest of this episode. */
+    val upNextDismissed: Boolean = false,
 ) {
     val chapters: List<Chapter> get() = details?.chapters.orEmpty()
+    val isEpisode: Boolean get() = details?.item?.kind == ItemKind.Episode
 }
 
 /** Position data, kept apart from [PlayerUiState] so ticking only redraws the timeline. */
@@ -74,7 +87,13 @@ data class PlayerProgress(
     val positionMs: Long = 0,
     val durationMs: Long = 0,
     val bufferedMs: Long = 0,
+    /** The segment offered for skipping right now. */
+    val skip: MediaSegment? = null,
+    val upNext: UpNextCountdown? = null,
 )
+
+/** The "Up next" card: time until the next episode starts and how much of the lead time is left. */
+data class UpNextCountdown(val remainingMs: Long, val fraction: Float)
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
@@ -86,7 +105,11 @@ class PlayerViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<PlayerRoute>()
-    private val itemId = UUID.fromString(route.itemId)
+    /** Changes when playback moves on to another episode. */
+    private var itemId = UUID.fromString(route.itemId)
+    private var fromStart = route.fromStart
+    /** Design defaults until the settings screen exists. */
+    private val policy = SegmentPolicy()
 
     private val _state = MutableStateFlow(PlayerUiState())
     val state: StateFlow<PlayerUiState> = _state.asStateFlow()
@@ -104,6 +127,9 @@ class PlayerViewModel @Inject constructor(
     private var source: PlaybackSource? = null
     private var started = false
     private var ticker: Job? = null
+    private var opening: Job? = null
+    /** Segments already skipped automatically; seeking back into one plays it. */
+    private val autoSkipped = mutableSetOf<MediaSegment>()
     /** Tracks to apply once Media3 knows the file's tracks. */
     private var tracksPending = false
 
@@ -117,7 +143,7 @@ class PlayerViewModel @Inject constructor(
                         source?.let { playback.reportStart(it, position()) }
                     }
                 }
-                Player.STATE_ENDED -> finish()
+                Player.STATE_ENDED -> onEnded()
                 else -> Unit
             }
         }
@@ -154,12 +180,16 @@ class PlayerViewModel @Inject constructor(
 
     /** [startMs] null: the saved resume point (or 0 for "from start"). */
     private fun open(startMs: Long?, audio: Int?, subtitle: Int?) {
-        viewModelScope.launch {
+        opening?.cancel()
+        opening = viewModelScope.launch {
             releasePlayer()
             _state.update { it.copy(loading = true, failed = false, trackPanel = null) }
             try {
-                val item = _state.value.details ?: details.details(itemId).also { d -> _state.update { it.copy(details = d) } }
-                val start = startMs ?: if (route.fromStart) 0 else item.item.resumePositionMs
+                val item = _state.value.details ?: details.details(itemId).also { d ->
+                    _state.update { it.copy(details = d) }
+                    loadExtras(d)
+                }
+                val start = startMs ?: if (fromStart) 0 else item.item.resumePositionMs
                 val opened = playback.open(itemId, start, audio, subtitle)
                 source = opened
                 val request = StreamRequest(
@@ -194,6 +224,83 @@ class PlayerViewModel @Inject constructor(
                 _state.update { it.copy(failed = true, loading = false) }
             }
         }
+    }
+
+    /** Segments and the neighbouring episodes; playback does without them when they fail. */
+    private fun loadExtras(item: ItemDetails) {
+        val id = item.item.id
+        viewModelScope.launch {
+            val segments = playback.segments(id)
+            if (id == itemId) _state.update { it.copy(segments = segments) }
+        }
+        val seriesId = item.seriesId ?: return
+        if (item.item.kind != ItemKind.Episode) return
+        viewModelScope.launch {
+            try {
+                val neighbours = details.neighbours(seriesId, id)
+                if (id == itemId) _state.update { it.copy(previous = neighbours.previous, next = neighbours.next) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Loading neighbouring episodes failed", e)
+            }
+        }
+    }
+
+    /** The skip button: jumps past the segment; skipping credits that run to the end starts the next episode. */
+    fun skipSegment() {
+        val segment = _progress.value.skip ?: return
+        val next = _state.value.next
+        val duration = _progress.value.durationMs
+        if (next != null && duration > 0 && segment.endMs >= duration - END_TOLERANCE_MS) {
+            switchTo(next)
+        } else {
+            seekTo(segment.endMs)
+        }
+        _progress.update { it.copy(skip = null) }
+    }
+
+    fun playNext() = _state.value.next?.let(::switchTo)
+
+    fun playPrevious() = _state.value.previous?.let(::switchTo)
+
+    /** "Watch credits". */
+    fun dismissUpNext() {
+        _state.update { it.copy(upNextDismissed = true) }
+        _progress.update { it.copy(upNext = null) }
+    }
+
+    private fun onEnded() {
+        val state = _state.value
+        val next = state.next
+        if (next != null && !state.upNextDismissed && policy.upNextAtMs(state.segments, _progress.value.durationMs) != null) {
+            switchTo(next)
+        } else {
+            finish()
+        }
+    }
+
+    /** Stops this title and plays [item] from its resume point, with the tracks chosen for it (or the server's). */
+    private fun switchTo(item: MediaItem) {
+        source?.let { playback.reportStopped(it, currentPositionMs()) }
+        source = null
+        itemId = item.id
+        fromStart = false
+        autoSkipped.clear()
+        _state.update {
+            it.copy(
+                details = null,
+                segments = emptyList(),
+                previous = null,
+                next = null,
+                upNextDismissed = false,
+                chaptersOpen = false,
+                trackPanel = null,
+            )
+        }
+        _progress.value = PlayerProgress()
+        val selection = trackSelections.get(item.id)
+        open(startMs = item.resumePositionMs, audio = selection?.audio, subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE })
     }
 
     fun openTracks(kind: TrackKind) = _state.update { it.copy(trackPanel = kind, chaptersOpen = false) }
@@ -305,10 +412,22 @@ class PlayerViewModel @Inject constructor(
             var sinceReport = 0L
             while (isActive) {
                 val player = _state.value.player ?: break
+                val position = player.currentPosition
+                val duration = player.duration.coerceAtLeast(0)
+                val segment = policy.active(_state.value.segments, position)
+                if (segment != null && policy.action(segment.kind) == SegmentAction.Skip && player.isPlaying) {
+                    autoSkip(segment)
+                }
+                val upNext = upNext(position, duration)
                 _progress.value = PlayerProgress(
                     positionMs = player.currentPosition,
-                    durationMs = player.duration.coerceAtLeast(0),
+                    durationMs = duration,
                     bufferedMs = player.bufferedPosition,
+                    // The card takes over the credits button.
+                    skip = segment?.takeIf {
+                        policy.action(it.kind) == SegmentAction.Ask && !(it.kind == SegmentKind.Outro && upNext != null)
+                    },
+                    upNext = upNext,
                 )
                 sinceReport += TICK_MS
                 if (sinceReport >= REPORT_INTERVAL_MS && player.isPlaying) {
@@ -318,6 +437,22 @@ class PlayerViewModel @Inject constructor(
                 delay(TICK_MS)
             }
         }
+    }
+
+    private fun upNext(positionMs: Long, durationMs: Long): UpNextCountdown? {
+        val state = _state.value
+        if (state.next == null || state.upNextDismissed || state.loading) return null
+        val at = policy.upNextAtMs(state.segments, durationMs) ?: return null
+        if (positionMs < at) return null
+        val remaining = (durationMs - positionMs).coerceAtLeast(0)
+        return UpNextCountdown(remaining, remaining.toFloat() / (durationMs - at).coerceAtLeast(1))
+    }
+
+    /** Once per segment; seeking back into it later plays it. */
+    private fun autoSkip(segment: MediaSegment) {
+        if (!autoSkipped.add(segment)) return
+        seekTo(segment.endMs)
+        viewModelScope.launch { _events.send(UiEvent.Toast(segment.kind.skippedMessage(), emptyList())) }
     }
 
     private fun currentPositionMs(): Long = _state.value.player?.currentPosition ?: _progress.value.positionMs
@@ -344,7 +479,25 @@ class PlayerViewModel @Inject constructor(
         const val TAG = "Player"
         const val TICK_MS = 500L
         const val REPORT_INTERVAL_MS = 10_000L
+        /** Credits ending this close to the end count as running to the end. */
+        const val END_TOLERANCE_MS = 2_000L
         /** The server's "no subtitles". */
         const val NO_SUBTITLE = -1
     }
+}
+
+internal fun SegmentKind.skipLabel(): Int = when (this) {
+    SegmentKind.Intro -> R.string.skip_intro
+    SegmentKind.Recap -> R.string.skip_recap
+    SegmentKind.Preview -> R.string.skip_preview
+    SegmentKind.Commercial -> R.string.skip_commercial
+    SegmentKind.Outro -> R.string.skip_outro
+}
+
+private fun SegmentKind.skippedMessage(): Int = when (this) {
+    SegmentKind.Intro -> R.string.skipped_intro
+    SegmentKind.Recap -> R.string.skipped_recap
+    SegmentKind.Preview -> R.string.skipped_preview
+    SegmentKind.Commercial -> R.string.skipped_commercial
+    SegmentKind.Outro -> R.string.skipped_outro
 }

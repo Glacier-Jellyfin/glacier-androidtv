@@ -111,6 +111,24 @@ class DetailRepository @Inject constructor(
             .content.items.firstOrNull()?.let(MediaMapper(session.api)::item)
     }
 
+    /** The episodes before and after [episodeId] in the whole show, across seasons. */
+    suspend fun neighbours(seriesId: UUID, episodeId: UUID): EpisodeNeighbours = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        val mapper = MediaMapper(session.api)
+        val items = session.api.showApi.getEpisodes(
+            seriesId = seriesId,
+            userId = session.userId,
+            adjacentTo = episodeId,
+            enableUserData = true,
+        ).content.items
+        val index = items.indexOfFirst { it.id == episodeId }
+        if (index < 0) return@withContext EpisodeNeighbours(null, null)
+        EpisodeNeighbours(
+            previous = items.getOrNull(index - 1)?.let(mapper::item),
+            next = items.getOrNull(index + 1)?.let(mapper::item),
+        )
+    }
+
     suspend fun similar(id: UUID): List<MediaItem> = withContext(Dispatchers.IO) {
         val session = requireSession()
         val mapper = MediaMapper(session.api)

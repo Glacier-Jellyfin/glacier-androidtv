@@ -252,5 +252,21 @@
     <string name="player_audio">Audio</string>
     <string name="player_subtitles">Subtitles</string>
     <string name="player_chapters">Chapters</string>
+    <string name="player_previous">Previous episode</string>
+    <string name="player_next">Next episode</string>
+    <string name="skip_intro">Skip intro</string>
+    <string name="skip_recap">Skip recap</string>
+    <string name="skip_preview">Skip preview</string>
+    <string name="skip_commercial">Skip ad</string>
+    <string name="skip_outro">Skip credits</string>
+    <string name="skipped_intro">Intro skipped</string>
+    <string name="skipped_recap">Recap skipped</string>
+    <string name="skipped_preview">Preview skipped</string>
+    <string name="skipped_commercial">Ad skipped</string>
+    <string name="skipped_outro">Credits skipped</string>
+    <string name="up_next_in">Next episode in %1$s</string>
+    <string name="up_next_episode">Season %1$d · Episode %2$d</string>
+    <string name="up_next_play">Play now</string>
+    <string name="up_next_credits">Watch credits</string>
     <string name="track_applies_now">Applies now</string>
 </resources>

@@ -13,10 +13,12 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.mediaInfoApi
+import org.jellyfin.sdk.api.client.extensions.mediaSegmentApi
 import org.jellyfin.sdk.api.client.extensions.sessionApi
 import org.jellyfin.sdk.api.client.extensions.videoApi
 import org.jellyfin.sdk.api.client.util.AuthorizationHeaderBuilder
 import org.jellyfin.sdk.model.api.MediaStreamProtocol
+import org.jellyfin.sdk.model.api.MediaSegmentType
 import org.jellyfin.sdk.model.api.MediaStreamType
 import org.jellyfin.sdk.model.api.SubtitleDeliveryMethod
 import org.jellyfin.sdk.model.api.PlayMethod
@@ -153,6 +155,26 @@ class PlaybackRepository @Inject constructor(
                 if (delivery == SubtitleDelivery.External && url == null) null else PlaybackSubtitle(stream.toTrack(), delivery, url)
             },
         )
+    }
+
+    /** Intro, credits and the like; empty when the server has none or cannot tell (no segment provider). */
+    suspend fun segments(itemId: UUID): List<MediaSegment> = withContext(Dispatchers.IO) {
+        val api = requireSession().api
+        runCatching { api.mediaSegmentApi.getItemSegments(itemId).content.items }
+            .onFailure { Log.w(TAG, "Loading media segments failed", it) }
+            .getOrDefault(emptyList())
+            .mapNotNull { dto ->
+                val kind = when (dto.type) {
+                    MediaSegmentType.INTRO -> SegmentKind.Intro
+                    MediaSegmentType.RECAP -> SegmentKind.Recap
+                    MediaSegmentType.PREVIEW -> SegmentKind.Preview
+                    MediaSegmentType.COMMERCIAL -> SegmentKind.Commercial
+                    MediaSegmentType.OUTRO -> SegmentKind.Outro
+                    else -> return@mapNotNull null
+                }
+                MediaSegment(kind, dto.startTicks / TICKS_PER_MS, dto.endTicks / TICKS_PER_MS).takeIf { it.endMs > it.startMs }
+            }
+            .sortedBy { it.startMs }
     }
 
     fun reportStart(source: PlaybackSource, position: PlaybackPosition) = report("start") {

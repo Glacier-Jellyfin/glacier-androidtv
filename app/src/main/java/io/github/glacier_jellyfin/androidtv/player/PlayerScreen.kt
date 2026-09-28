@@ -22,12 +22,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -87,7 +89,20 @@ fun PlayerScreen(
     val seekFocus = remember { FocusRequester() }
     val playFocus = remember { FocusRequester() }
     val buttonFocus = remember { OsdButton.entries.associateWith { FocusRequester() } }
+    val skipFocus = remember { FocusRequester() }
+    val upNextFocus = remember { FocusRequester() }
     val overlayOpen = state.trackPanel != null || state.chaptersOpen
+    val upNext = progress.upNext?.let { countdown -> state.next?.let { it to countdown } }
+    val skip = progress.skip
+    /** Skip button or "Up next" card on screen; with the OSD hidden, it holds the focus. */
+    val prompt = when {
+        overlayOpen || state.loading || state.failed -> null
+        upNext != null -> upNextFocus
+        skip != null -> skipFocus
+        else -> null
+    }
+    var promptFocused by remember { mutableStateOf(false) }
+    val currentPrompt by rememberUpdatedState(prompt)
     var osdVisible by remember { mutableStateOf(true) }
     /** Which control gets focus when the OSD appears. */
     var osdTarget by remember { mutableStateOf(playFocus) }
@@ -127,11 +142,27 @@ fun PlayerScreen(
         runCatching { buttonFocus.getValue(button).requestFocus() }
         lastOverlay = null
     }
-    // The OSD focuses its own target once it is on screen; hidden, the root takes the keys.
+    // Showing the OSD focuses its target. Keyed here rather than inside the OSD: an OSD shown again while
+    // still fading out keeps its composition, so an effect in there would not run and the root would keep focus.
     LaunchedEffect(osdVisible) {
-        if (osdVisible) return@LaunchedEffect
+        if (!osdVisible) return@LaunchedEffect
         withFrameNanos { }
-        runCatching { rootFocus.requestFocus() }
+        runCatching { osdTarget.requestFocus() }
+    }
+    // Hidden, a prompt or the root takes the keys.
+    LaunchedEffect(osdVisible, prompt) {
+        if (osdVisible) {
+            // A prompt that went away while focused hands focus back to the OSD.
+            if (prompt == null && promptFocused) {
+                promptFocused = false
+                withFrameNanos { }
+                runCatching { playFocus.requestFocus() }
+            }
+            return@LaunchedEffect
+        }
+        if (prompt == null) promptFocused = false
+        withFrameNanos { }
+        runCatching { (prompt ?: rootFocus).requestFocus() }
     }
 
     Box(
@@ -150,15 +181,22 @@ fun PlayerScreen(
                     }
                     Key.MediaRewind -> { viewModel.seekBy(-GlacierPlayer.SEEK_BACK_MS); true }
                     Key.MediaFastForward -> { viewModel.seekBy(GlacierPlayer.SEEK_FORWARD_MS); true }
-                    // With the OSD hidden, Left/Right scrub straight away (-10 s / +30 s).
-                    Key.DirectionLeft, Key.DirectionRight -> if (!osdVisible && !state.loading) {
+                    // With the OSD hidden, Left/Right scrub straight away (-10 s / +30 s), except between the card's buttons.
+                    Key.DirectionLeft, Key.DirectionRight -> if (!osdVisible && !state.loading && prompt != upNextFocus) {
                         showOsd(seekFocus)
                         scrub(if (event.key == Key.DirectionLeft) -GlacierPlayer.SEEK_BACK_MS else GlacierPlayer.SEEK_FORWARD_MS)
                         true
                     } else {
                         false
                     }
-                    Key.DirectionCenter, Key.Enter, Key.DirectionUp, Key.DirectionDown -> if (!osdVisible) {
+                    // OK presses a focused prompt.
+                    Key.DirectionCenter, Key.Enter -> if (!osdVisible && prompt == null) {
+                        showOsd(playFocus)
+                        true
+                    } else {
+                        false
+                    }
+                    Key.DirectionUp, Key.DirectionDown -> if (!osdVisible) {
                         showOsd(playFocus)
                         true
                     } else {
@@ -190,7 +228,6 @@ fun PlayerScreen(
                 scrubMs = scrubMs,
                 seekFocus = seekFocus,
                 playFocus = playFocus,
-                initialFocus = osdTarget,
                 buttonFocus = buttonFocus,
                 onOpen = { button ->
                     lastOverlay = button
@@ -207,8 +244,32 @@ fun PlayerScreen(
                 },
                 onTogglePlay = viewModel::togglePlay,
                 onSeekBy = viewModel::seekBy,
+                onPrevious = viewModel::playPrevious,
+                onNext = viewModel::playNext,
                 onStop = viewModel::stop,
             )
+        }
+
+        if (prompt != null) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 80.dp, bottom = 300.dp)
+                                        // Losing focus because the prompt is going away must not clear the flag the refocus above relies on.
+                    .onFocusChanged { if (currentPrompt != null || it.hasFocus) promptFocused = it.hasFocus },
+            ) {
+                if (upNext != null) {
+                    UpNextCard(
+                        next = upNext.first,
+                        countdown = upNext.second,
+                        playFocus = upNextFocus,
+                        onPlay = viewModel::playNext,
+                        onDismiss = viewModel::dismissUpNext,
+                    )
+                } else if (skip != null) {
+                    SkipButton(skip, progress.positionMs, onClick = viewModel::skipSegment, modifier = Modifier.focusRequester(skipFocus))
+                }
+            }
         }
 
         state.trackPanel?.let { PlayerTrackPanel(state, it, viewModel) }

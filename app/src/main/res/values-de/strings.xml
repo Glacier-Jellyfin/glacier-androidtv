@@ -248,5 +248,21 @@
     <string name="player_audio">Ton</string>
     <string name="player_subtitles">Untertitel</string>
     <string name="player_chapters">Kapitel</string>
+    <string name="player_previous">Vorherige Folge</string>
+    <string name="player_next">Nächste Folge</string>
+    <string name="skip_intro">Intro überspringen</string>
+    <string name="skip_recap">Rückblick überspringen</string>
+    <string name="skip_preview">Vorschau überspringen</string>
+    <string name="skip_commercial">Werbung überspringen</string>
+    <string name="skip_outro">Abspann überspringen</string>
+    <string name="skipped_intro">Intro übersprungen</string>
+    <string name="skipped_recap">Rückblick übersprungen</string>
+    <string name="skipped_preview">Vorschau übersprungen</string>
+    <string name="skipped_commercial">Werbung übersprungen</string>
+    <string name="skipped_outro">Abspann übersprungen</string>
+    <string name="up_next_in">Nächste Folge in %1$s</string>
+    <string name="up_next_episode">Staffel %1$d · Folge %2$d</string>
+    <string name="up_next_play">Jetzt abspielen</string>
+    <string name="up_next_credits">Abspann ansehen</string>
     <string name="track_applies_now">Gilt ab sofort</string>
 </resources>
