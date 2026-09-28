@@ -37,6 +37,7 @@ const val FocusScale = 1.07f
  * scale is dropped and only border and ring remain.
  *
  * [content] receives the focus state so labels can switch to the accent colour.
+ * Text fields pass [scaleOnFocus] = false: the design only rings them.
  */
 @Composable
 fun GlacierClickable(
@@ -47,13 +48,14 @@ fun GlacierClickable(
     unfocusedBorder: Color = Color.Transparent,
     borderWidth: Int = 2,
     contentAlignment: Alignment = Alignment.TopStart,
+    scaleOnFocus: Boolean = true,
     content: @Composable BoxScope.(focused: Boolean) -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     Box(
         modifier = modifier
-            .focusScale(focused)
+            .focusScale(focused && scaleOnFocus)
             .focusFrame(focused, shape, unfocusedBorder, borderWidth)
             .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick),
         contentAlignment = contentAlignment,

@@ -17,6 +17,7 @@ import io.github.glacier_jellyfin.androidtv.library.LibraryScreen
 import io.github.glacier_jellyfin.androidtv.profiles.ProfilesScreen
 import io.github.glacier_jellyfin.androidtv.settings.SettingsPlaceholderScreen
 import io.github.glacier_jellyfin.androidtv.setup.ServerAddressScreen
+import io.github.glacier_jellyfin.androidtv.setup.QuickConnectScreen
 import io.github.glacier_jellyfin.androidtv.setup.ServerListScreen
 import io.github.glacier_jellyfin.androidtv.setup.SignInScreen
 import io.github.glacier_jellyfin.androidtv.ui.ComingSoonScreen
@@ -52,8 +53,9 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
         composable<ServerListRoute> {
             ServerListScreen(onNavigate = navigate, onManualAddress = { navController.navigate(ServerAddressRoute) })
         }
-        composable<ServerAddressRoute> { ServerAddressScreen(onNavigate = navigate) }
+        composable<ServerAddressRoute> { ServerAddressScreen(onNavigate = navigate, onBack = back) }
         composable<SignInRoute> { SignInScreen(onNavigate = navigate) }
+        composable<QuickConnectRoute> { QuickConnectScreen(onNavigate = navigate, onBack = back) }
         composable<ProfilesRoute> { ProfilesScreen(onNavigate = navigate) }
         composable<HomeRoute> { HomeScreen(onNavigate = navigate) }
         composable<LibraryRoute> { LibraryScreen(onNavigate = navigate) }

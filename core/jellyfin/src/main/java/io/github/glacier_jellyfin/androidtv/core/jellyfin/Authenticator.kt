@@ -82,6 +82,17 @@ class Authenticator @Inject constructor(
      * flow completes after [QuickConnectState.Authorized], [QuickConnectState.Unavailable]
      * or [QuickConnectState.Failed].
      */
+    /** Whether the server allows Quick Connect; false when it cannot be asked. */
+    suspend fun isQuickConnectEnabled(server: ServerInfo): Boolean = withContext(Dispatchers.IO) {
+        try {
+            jellyfin.createApi(baseUrl = server.address).authenticationApi.getQuickConnectEnabled().content
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     fun quickConnect(server: ServerInfo): Flow<QuickConnectState> = flow {
         val api = jellyfin.createApi(baseUrl = server.address).authenticationApi
         try {

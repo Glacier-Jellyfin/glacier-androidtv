@@ -28,10 +28,6 @@
     <!-- Einrichtung: Adresse -->
     <string name="address_title">Serveradresse</string>
     <string name="address_connect">Verbinden</string>
-    <string name="address_clear">Leeren</string>
-    <string name="address_examples">Beispiele</string>
-    <string name="address_note">Hinweis</string>
-    <string name="address_note_body">Ohne Protokoll versucht Glacier zuerst HTTPS und dann HTTP auf Port 8096. Ein abweichender Port kann mit :Port angehängt werden.</string>
     <string name="address_invalid">Bitte eine gültige Adresse eingeben</string>
     <string name="address_not_found">Unter %1$s wurde kein Jellyfin-Server gefunden</string>
     <string name="keyboard_space">Leer</string>
@@ -42,13 +38,10 @@
     <string name="signin_username_hint">z. B. anna</string>
     <string name="signin_password">Kennwort</string>
     <string name="signin_password_hint">optional</string>
-    <string name="signin_connected_to">Verbunden mit</string>
-    <string name="signin_stays_signed_in">Dieses Gerät bleibt angemeldet. Benutzer lassen sich später über das Profil in der oberen Navigation wechseln.</string>
     <string name="signin_username_required">Benutzername erforderlich</string>
     <string name="signin_invalid">Benutzername oder Kennwort falsch</string>
     <string name="signin_failed">Anmeldung fehlgeschlagen: %1$s</string>
     <string name="quick_connect">Quick Connect</string>
-    <string name="quick_connect_hint">Gib diesen Code in einer anderen Jellyfin-App, in der du angemeldet bist, unter Quick Connect ein.</string>
 
     <!-- Profile -->
     <string name="profiles_title">Wer schaut?</string>
@@ -213,4 +206,29 @@
     <string name="search_error">Suche fehlgeschlagen.</string>
     <string name="keyboard_system">Systemtastatur</string>
     <string name="keyboard_delete">Löschen</string>
+
+    <!-- Setup (redesign) -->
+    <string name="address_heading">Server hinzufügen</string>
+    <string name="address_intro">Gib die Adresse deines Jellyfin-Servers ein – als Domain oder IP-Adresse.</string>
+    <string name="address_hint">Glacier probiert zuerst HTTPS, dann HTTP – jeweils auf dem Standardport und auf %1$s. Für einen anderen Port %2$s anhängen.</string>
+    <string name="address_port">Port</string>
+    <string name="signin_intro">Melde dich mit deinem Jellyfin-Konto an. Dieses Gerät bleibt danach angemeldet.</string>
+    <string name="signin_change_server">Server wechseln</string>
+    <string name="setup_step_account">Konto</string>
+    <string name="field_ok">OK</string>
+    <string name="field_typing">Tippen …</string>
+    <string name="keyboard_open_hint">Systemtastatur aktiv · mit OK bestätigen, mit Zurück schließen</string>
+    <string name="keyboard_closed_hint">OK auf einem Feld öffnet die Systemtastatur</string>
+    <string name="quick_connect_intro">Melde dich ohne Kennwort an – bestätige den Code auf einem Gerät, auf dem du bereits angemeldet bist.</string>
+    <string name="quick_connect_step1">Jellyfin auf Handy oder Computer öffnen</string>
+    <string name="quick_connect_step2">Profil → %1$s</string>
+    <string name="quick_connect_step3">Code eingeben und autorisieren</string>
+    <string name="quick_connect_code_for">Dein Code für %1$s</string>
+    <string name="quick_connect_waiting">Warte auf Bestätigung …</string>
+    <string name="quick_connect_valid">Gültig %1$s</string>
+    <string name="quick_connect_new_code">Neuer Code</string>
+    <string name="quick_connect_use_password">Mit Kennwort anmelden</string>
+    <string name="quick_connect_signed_in">Über Quick Connect angemeldet</string>
+    <string name="quick_connect_unavailable">Quick Connect ist auf diesem Server deaktiviert</string>
+    <string name="quick_connect_failed">Quick Connect fehlgeschlagen</string>
 </resources>

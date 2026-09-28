@@ -10,9 +10,13 @@ data object ServerListRoute
 @Serializable
 data object ServerAddressRoute
 
-/** Username/password sign-in, plus Quick Connect when the server allows it. */
+/** Username/password sign-in, with a way to Quick Connect when the server allows it. */
 @Serializable
 data class SignInRoute(val serverId: String, val username: String? = null)
+
+/** Sign-in by approving a code on another device. */
+@Serializable
+data class QuickConnectRoute(val serverId: String)
 
 /** "Who's watching?" */
 @Serializable

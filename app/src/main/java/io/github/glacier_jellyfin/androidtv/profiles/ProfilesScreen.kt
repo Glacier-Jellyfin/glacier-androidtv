@@ -75,7 +75,7 @@ fun ProfilesScreen(
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 GlacierMark(size = 62)
                 Text(
-                    stringResource(R.string.brand_jellyfin).uppercase(),
+                    stringResource(R.string.app_name).uppercase(),
                     style = GlacierText.body(26, FontWeight.Bold).copy(letterSpacing = 0.34.em),
                     color = GlacierColors.Ice,
                 )

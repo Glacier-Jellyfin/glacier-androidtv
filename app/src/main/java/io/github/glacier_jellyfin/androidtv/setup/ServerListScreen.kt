@@ -1,12 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.setup
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,9 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -34,21 +26,16 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
-import io.github.glacier_jellyfin.androidtv.core.designsystem.AccentChip
 import io.github.glacier_jellyfin.androidtv.core.designsystem.BusyOverlay
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierMark
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
@@ -78,31 +65,12 @@ fun ServerListScreen(
         horizontalArrangement = Arrangement.spacedBy(110.dp),
     ) {
         Column(Modifier.width(560.dp), verticalArrangement = Arrangement.spacedBy(26.dp)) {
-            GlacierMark(size = 62)
-            Text(
-                stringResource(R.string.brand_jellyfin).uppercase(),
-                style = GlacierText.body(24, FontWeight.Bold).copy(letterSpacing = 0.34.em),
-                color = GlacierColors.Ice,
+            SetupHeading(
+                title = stringResource(R.string.setup_welcome),
+                body = stringResource(R.string.setup_intro),
+                brand = stringResource(R.string.app_name),
             )
-            Text(
-                stringResource(R.string.setup_welcome),
-                style = GlacierText.display(60).copy(lineHeight = 63.sp),
-                color = GlacierColors.Ice,
-            )
-            Text(
-                stringResource(R.string.setup_intro),
-                style = GlacierText.body(23).copy(lineHeight = 34.sp),
-                color = GlacierColors.Mist,
-                modifier = Modifier.widthIn(max = 470.dp),
-            )
-            Row(
-                modifier = Modifier.padding(top = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                AccentChip(stringResource(R.string.setup_step, 1, 2))
-                Text(stringResource(R.string.setup_step_server), style = GlacierText.body(18), color = GlacierColors.Mist)
-            }
+            SetupStep(1, stringResource(R.string.setup_step_server))
         }
 
         Column(
@@ -150,17 +118,8 @@ fun ServerListScreen(
 
 @Composable
 private fun SectionHeader(text: String, pulsing: Boolean) {
-    val accent = LocalAccent.current.main
-    val pulse = rememberInfiniteTransition(label = "pulse")
-    val alpha by pulse.animateFloat(0.5f, 1f, infiniteRepeatable(tween(700), RepeatMode.Reverse), label = "pulseAlpha")
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        Box(
-            Modifier
-                .size(10.dp)
-                .alpha(if (pulsing) alpha else 1f)
-                .clip(CircleShape)
-                .background(accent),
-        )
+        PulseDot(pulsing)
         Text(text, style = GlacierText.body(18), color = GlacierColors.Mist)
     }
 }

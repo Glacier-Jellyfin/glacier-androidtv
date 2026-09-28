@@ -1,6 +1,5 @@
 package io.github.glacier_jellyfin.androidtv.setup
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,14 +9,14 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.AccountRepository
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.Authenticator
-import io.github.glacier_jellyfin.androidtv.core.jellyfin.QuickConnectState
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.ServerInfo
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.SignInResult
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.SignedInUser
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
+import io.github.glacier_jellyfin.androidtv.navigation.QuickConnectRoute
+import io.github.glacier_jellyfin.androidtv.navigation.ServerListRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SignInRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,8 +34,8 @@ data class SignInState(
     val password: String = "",
     val field: SignInField = SignInField.Username,
     val busy: Boolean = false,
-    /** Current Quick Connect code; null while unavailable. */
-    val quickConnectCode: String? = null,
+    /** Shows the Quick Connect button; only when the server allows it. */
+    val quickConnectAvailable: Boolean = false,
 )
 
 @HiltViewModel
@@ -60,14 +59,13 @@ class SignInViewModel @Inject constructor(
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
-    private var quickConnect: Job? = null
-
     init {
         viewModelScope.launch {
             val stored = accounts.current().servers.firstOrNull { it.id == route.serverId } ?: return@launch
             val server = ServerInfo(stored.id, stored.name, stored.address, stored.version)
             _state.update { it.copy(server = server) }
-            startQuickConnect(server)
+            val available = authenticator.isQuickConnectEnabled(server)
+            _state.update { it.copy(quickConnectAvailable = available) }
         }
     }
 
@@ -77,7 +75,14 @@ class SignInViewModel @Inject constructor(
         if (it.field == SignInField.Username) it.copy(username = value) else it.copy(password = value)
     }
 
-    fun clearField() = setText("")
+    fun openQuickConnect() {
+        viewModelScope.launch { _events.send(UiEvent.Navigate(QuickConnectRoute(route.serverId))) }
+    }
+
+    /** Design: "Change server" returns to the server list and starts over. */
+    fun changeServer() {
+        viewModelScope.launch { _events.send(UiEvent.Navigate(ServerListRoute, clearBackStack = true)) }
+    }
 
     fun signIn() {
         val current = _state.value
@@ -103,32 +108,9 @@ class SignInViewModel @Inject constructor(
         }
     }
 
-    private fun startQuickConnect(server: ServerInfo) {
-        quickConnect?.cancel()
-        quickConnect = viewModelScope.launch {
-            authenticator.quickConnect(server).collect { qc ->
-                when (qc) {
-                    is QuickConnectState.WaitingForApproval -> _state.update { it.copy(quickConnectCode = qc.code) }
-                    // Finish outside this job: finish() cancels it, which would abort the sign-in itself.
-                    is QuickConnectState.Authorized -> viewModelScope.launch { finish(qc.user) }
-                    QuickConnectState.Unavailable -> _state.update { it.copy(quickConnectCode = null) }
-                    is QuickConnectState.Failed -> {
-                        Log.w(TAG, "Quick Connect failed", qc.cause)
-                        _state.update { it.copy(quickConnectCode = null) }
-                    }
-                }
-            }
-        }
-    }
-
     private suspend fun finish(user: SignedInUser) {
-        quickConnect?.cancel()
         accounts.rememberSignIn(user)
         sessions.open(user.serverId, user.userId.toString())
         _events.send(UiEvent.Navigate(HomeRoute, clearBackStack = true))
-    }
-
-    private companion object {
-        const val TAG = "SignIn"
     }
 }

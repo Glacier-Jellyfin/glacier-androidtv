@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">Glacier</string>
-    <string name="brand_jellyfin" translatable="false">Jellyfin</string>
 
     <!-- Setup: server -->
     <string name="setup_welcome">Welcome</string>
@@ -31,10 +30,6 @@
     <!-- Setup: address -->
     <string name="address_title">Server address</string>
     <string name="address_connect">Connect</string>
-    <string name="address_clear">Clear</string>
-    <string name="address_examples">Examples</string>
-    <string name="address_note">Note</string>
-    <string name="address_note_body">Without a protocol, Glacier tries HTTPS first and then HTTP on port 8096. A different port can be appended with :port.</string>
     <string name="address_invalid">Please enter a valid address</string>
     <string name="address_not_found">No Jellyfin server found at %1$s</string>
     <string name="keyboard_space">Space</string>
@@ -45,17 +40,14 @@
     <string name="signin_username_hint">e.g. anna</string>
     <string name="signin_password">Password</string>
     <string name="signin_password_hint">optional</string>
-    <string name="signin_connected_to">Connected to</string>
-    <string name="signin_stays_signed_in">This device stays signed in. You can switch users later from the profile in the top navigation.</string>
     <string name="signin_username_required">Username required</string>
     <string name="signin_invalid">Wrong username or password</string>
     <string name="signin_failed">Sign-in failed: %1$s</string>
     <string name="quick_connect">Quick Connect</string>
-    <string name="quick_connect_hint">Enter this code in another Jellyfin app you are signed in to, under Quick Connect.</string>
 
     <!-- Profiles -->
     <string name="profiles_title">Who’s watching?</string>
-    <string name="profiles_subtitle" translatable="false">Glacier · Android TV</string>
+    <string name="profiles_subtitle" translatable="false">Android TV</string>
     <string name="profiles_other_user">Other user</string>
     <string name="profiles_server_line">%1$s · Jellyfin %2$s · Glacier %3$s</string>
     <string name="profiles_offline">Server not reachable · showing profiles known on this device</string>
@@ -218,4 +210,29 @@
     <string name="search_error">Search failed.</string>
     <string name="keyboard_system">System keyboard</string>
     <string name="keyboard_delete">Delete</string>
+
+    <!-- Setup (redesign) -->
+    <string name="address_heading">Add server</string>
+    <string name="address_intro">Enter the address of your Jellyfin server, as a domain or an IP address.</string>
+    <string name="address_hint">Glacier tries HTTPS first, then HTTP, each on the default port and on %1$s. For another port, append %2$s.</string>
+    <string name="address_port">Port</string>
+    <string name="signin_intro">Sign in with your Jellyfin account. This device stays signed in afterwards.</string>
+    <string name="signin_change_server">Change server</string>
+    <string name="setup_step_account">Account</string>
+    <string name="field_ok">OK</string>
+    <string name="field_typing">Typing …</string>
+    <string name="keyboard_open_hint">System keyboard active · confirm with OK, close with Back</string>
+    <string name="keyboard_closed_hint">OK on a field opens the system keyboard</string>
+    <string name="quick_connect_intro">Sign in without a password: approve the code on a device where you are already signed in.</string>
+    <string name="quick_connect_step1">Open Jellyfin on your phone or computer</string>
+    <string name="quick_connect_step2">Profile → %1$s</string>
+    <string name="quick_connect_step3">Enter the code and authorize it</string>
+    <string name="quick_connect_code_for">Your code for %1$s</string>
+    <string name="quick_connect_waiting">Waiting for approval …</string>
+    <string name="quick_connect_valid">Valid %1$s</string>
+    <string name="quick_connect_new_code">New code</string>
+    <string name="quick_connect_use_password">Sign in with password</string>
+    <string name="quick_connect_signed_in">Signed in with Quick Connect</string>
+    <string name="quick_connect_unavailable">Quick Connect is disabled on this server</string>
+    <string name="quick_connect_failed">Quick Connect failed</string>
 </resources>

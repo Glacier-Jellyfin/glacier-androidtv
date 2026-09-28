@@ -32,6 +32,19 @@ object GlacierIcons {
         "M7 17.5h.01",
     )
     val Plus = icon("M5 12h14", "M12 5v14")
+    val Globe = icon(
+        "M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z",
+        "M3 12h18",
+        "M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18",
+        strokeWidth = 1.9f,
+    )
+    val User = icon("M12 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8z", "M4 21a8 8 0 0 1 16 0", strokeWidth = 1.9f)
+    val Password = icon(
+        "M6 10h12a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z",
+        "M8 10V7a4 4 0 0 1 8 0v3",
+        strokeWidth = 1.9f,
+    )
+    val Bolt = icon("M13 2 4 14h7l-1 8 9-12h-7z", strokeWidth = 2.2f)
     val ChevronRight = icon("m9 18 6-6-6-6")
     val Lock = icon(
         "M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z",

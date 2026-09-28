@@ -1,10 +1,5 @@
 package io.github.glacier_jellyfin.androidtv.core.designsystem
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -32,7 +27,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
@@ -117,55 +111,6 @@ fun AccentChip(text: String) {
     ) {
         Text(text, style = GlacierText.body(16, FontWeight.SemiBold), color = GlacierColors.Ice)
     }
-}
-
-/**
- * Read-only text field with the design's blinking caret; text is entered
- * through [OnScreenKeyboard] or the system keyboard.
- */
-@Composable
-fun FieldDisplay(
-    text: String,
-    placeholder: String,
-    active: Boolean,
-    modifier: Modifier = Modifier,
-    label: String? = null,
-    height: Int = 84,
-    fontSize: Int = 27,
-    masked: Boolean = false,
-) {
-    val shown = if (masked) "•".repeat(text.length) else text
-    Column(
-        modifier = modifier.height(height.dp).padding(horizontal = 26.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
-    ) {
-        if (label != null) Text(label.uppercase(), style = GlacierText.label(16), color = GlacierColors.Mist)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = shown.ifEmpty { placeholder },
-                style = GlacierText.mono(fontSize),
-                color = if (shown.isEmpty()) GlacierColors.Mist else GlacierColors.Ice,
-                maxLines = 1,
-                overflow = TextOverflow.StartEllipsis,
-                modifier = Modifier.weight(1f, fill = false),
-            )
-            if (active) Caret(height = (fontSize + 7))
-        }
-    }
-}
-
-@Composable
-private fun Caret(height: Int) {
-    val pulse = rememberInfiniteTransition(label = "caret")
-    val alpha by pulse.animateFloat(0.5f, 1f, infiniteRepeatable(tween(550), RepeatMode.Reverse), label = "caretAlpha")
-    Box(
-        Modifier
-            .padding(start = 2.dp)
-            .width(2.dp)
-            .height(height.dp)
-            .alpha(alpha)
-            .background(LocalAccent.current.main),
-    )
 }
 
 /** The four dots above a PIN pad. */
