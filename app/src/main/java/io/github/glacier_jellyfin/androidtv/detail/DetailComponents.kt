@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -119,22 +120,30 @@ fun trackChipLabel(track: Track?, subtitle: Boolean): Pair<String, String?> {
     val iso = Languages.iso3(track.language)?.takeIf { it in FlagLanguages }
     val full = trackLabel(track, subtitle)
     if (iso == null) return full to null
-    val language = Languages.name(track.language, LocalConfiguration.current.locales[0]).orEmpty()
+    val locale = LocalConfiguration.current.locales[0]
+    val language = Languages.name(track.language, locale).orEmpty()
+    // The flag already says the language: a plain subtitle shows what tells it apart ("CR/ASS", "PGS").
+    if (subtitle && !track.forced && !track.hearingImpaired) {
+        trackBadges(track, subtitle = true, locales = listOf(locale)).firstOrNull()?.let { return it to iso }
+    }
     val rest = full.removePrefix(language).trim().removeSurrounding("(", ")")
     return (rest.ifEmpty { language }.replaceFirstChar { it.uppercase() }) to iso
 }
 
-/** Small flag in the design's style (27×18, rounded, mist outline). */
+/**
+ * Small flag in the design's style (27×18 in a rounded mist outline). The
+ * flag itself stays square: inside the outline's 4 corner radius and the
+ * gap, a matching inner radius would be under 1 and the same 4 bulged out.
+ */
 @Composable
 fun LanguageFlag(iso3: String, modifier: Modifier = Modifier, width: Int = 24, height: Int = 16) {
-    val shape = RoundedCornerShape(4.dp)
     Box(
         modifier
             .padding(2.dp)
-            .border(1.5.dp, GlacierColors.Mist, shape)
+            .border(1.5.dp, GlacierColors.Mist, RoundedCornerShape(4.dp))
             .padding(2.dp)
             .size(width.dp, height.dp)
-            .clip(shape),
+            .clipToBounds(),
     ) {
         Canvas(Modifier.fillMaxSize()) {
             when (iso3) {

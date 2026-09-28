@@ -1,6 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.core.designsystem
 
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.animateFloat
@@ -56,16 +57,23 @@ fun SpinningDiamond(size: Int, modifier: Modifier = Modifier) {
         ),
         label = "turn",
     )
+    // Design gCorePop: the core shrinks while the diamond turns and pops back,
+    // slightly overshooting, the moment it snaps into place (35 % and 85 %).
     val pop by transition.animateFloat(
         initialValue = 1f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
             keyframes {
                 durationMillis = 2400
-                1f at 0
-                1.35f at 240
-                1.35f at 600
-                1f at 960
+                1f at 0 using EaseInOut
+                0.45f at 240 using EaseInOut
+                0.45f at 600 using EaseInOut
+                1.12f at 840 using EaseInOut
+                1f at 1008 using EaseInOut
+                0.45f at 1440 using EaseInOut
+                0.45f at 1800 using EaseInOut
+                1.12f at 2040 using EaseInOut
+                1f at 2208 using EaseInOut
             },
         ),
         label = "pop",
