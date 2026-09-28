@@ -3,6 +3,7 @@ package io.github.glacier_jellyfin.androidtv.core.data.playback
 import android.util.Log
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.data.media.Track
 import io.github.glacier_jellyfin.androidtv.core.data.media.toTrack
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.DeviceProfiles
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jellyfin.sdk.api.client.extensions.audioApi
 import org.jellyfin.sdk.api.client.extensions.mediaInfoApi
 import org.jellyfin.sdk.api.client.extensions.mediaSegmentApi
 import org.jellyfin.sdk.api.client.extensions.sessionApi
@@ -162,6 +164,45 @@ class PlaybackRepository @Inject constructor(
                 val url = stream.deliveryUrl?.let { if (it.startsWith("http")) it else baseUrl + it }
                 if (delivery == SubtitleDelivery.External && url == null) null else PlaybackSubtitle(stream.toTrack(), delivery, url)
             },
+        )
+    }
+
+    /**
+     * A song for the music queue, built without asking the server so the whole
+     * queue can go to the player at once: the file itself when this device
+     * decodes its codec, else the server's AAC transcode over HLS.
+     */
+    fun audioSource(track: MusicTrack): PlaybackSource {
+        val session = requireSession()
+        val api = session.api
+        val direct = track.format?.codec?.lowercase()?.let { it in capabilities.capabilities.audioCodecs } == true
+        val url = if (direct) {
+            api.audioApi.getAudioStreamUrl(itemId = track.id, static = true)
+        } else {
+            api.audioApi.getUniversalAudioStreamUrl(
+                itemId = track.id,
+                // Only what the direct path above already rules out, so the server never sends the file itself.
+                container = listOf("mp4|aac"),
+                userId = session.userId,
+                deviceId = api.deviceInfo.id,
+                maxStreamingBitrate = MAX_BITRATE,
+                audioCodec = "aac",
+                transcodingContainer = "mp4",
+                transcodingProtocol = MediaStreamProtocol.HLS,
+            )
+        }
+        return PlaybackSource(
+            itemId = track.id,
+            mediaSourceId = track.id.toString().replace("-", ""),
+            playSessionId = null,
+            url = url,
+            isHls = !direct,
+            method = if (direct) PlaybackMethod.DirectPlay else PlaybackMethod.Transcode,
+            headers = mapOf("Authorization" to authorization(session)),
+            audioIndex = null,
+            subtitleIndex = null,
+            audioTracks = emptyList(),
+            subtitles = emptyList(),
         )
     }
 

@@ -13,6 +13,7 @@ import io.github.glacier_jellyfin.androidtv.player.PlayerScreen
 import io.github.glacier_jellyfin.androidtv.search.SearchScreen
 import io.github.glacier_jellyfin.androidtv.home.HomeScreen
 import io.github.glacier_jellyfin.androidtv.library.LibraryScreen
+import io.github.glacier_jellyfin.androidtv.music.MusicPlayerScreen
 import io.github.glacier_jellyfin.androidtv.profiles.ProfilesScreen
 import io.github.glacier_jellyfin.androidtv.settings.SettingsPlaceholderScreen
 import io.github.glacier_jellyfin.androidtv.setup.ServerAddressScreen
@@ -64,6 +65,7 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
         // Later development steps; placeholders keep the navigation testable.
         composable<TrailerRoute> { TrailerScreen(onNavigate = navigate, onBack = back) }
         composable<PlayerRoute> { PlayerScreen(onBack = back) }
+        composable<MusicRoute> { MusicPlayerScreen(onBack = back) }
         composable<SearchRoute> { SearchScreen(onNavigate = navigate) }
         composable<SettingsRoute> {
             SettingsPlaceholderScreen(

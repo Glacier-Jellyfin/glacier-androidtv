@@ -14,7 +14,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -31,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.delay
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierCard
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
@@ -51,16 +58,40 @@ object CardSize {
     const val ROW_GAP = 26
 }
 
-/** Server artwork over a quiet accent-tinted fill, so missing images still look intentional. */
+/**
+ * Server artwork over a quiet accent-tinted fill, so missing images still look intentional.
+ * A failed load is tried once more: Jellyfin can fail a resize it is asked for several
+ * times at once (the same cover down a music queue) until the first one is cached.
+ */
 @Composable
 fun Artwork(url: String?, modifier: Modifier = Modifier) {
     val accent = LocalAccent.current
     Box(modifier.background(Brush.linearGradient(listOf(accent.deep.copy(alpha = 0.45f), GlacierColors.Deep)))) {
         if (url != null) {
-            AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            var attempt by remember(url) { mutableIntStateOf(0) }
+            var failed by remember(url) { mutableStateOf(false) }
+            LaunchedEffect(failed) {
+                if (failed && attempt < ARTWORK_RETRIES) {
+                    delay(ARTWORK_RETRY_DELAY_MS)
+                    attempt++
+                    failed = false
+                }
+            }
+            key(attempt) {
+                AsyncImage(
+                    model = url,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    onError = { failed = true },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
     }
 }
+
+private const val ARTWORK_RETRIES = 1
+private const val ARTWORK_RETRY_DELAY_MS = 800L
 
 /** "Continue watching": 16:9 still, progress bar, play button on focus, title and time left. */
 @Composable

@@ -12,10 +12,14 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
+import io.github.glacier_jellyfin.androidtv.core.data.media.MusicRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.MusicShuffle
+import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.data.media.Season
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelection
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelections
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
+import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PersonRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.TrailerRoute
@@ -51,6 +55,11 @@ data class DetailState(
     val nextEpisode: MediaItem? = null,
     val selection: TrackSelection? = null,
     val trackPanel: TrackKind? = null,
+    /** Songs of an album or playlist. */
+    val musicTracks: List<MusicTrack> = emptyList(),
+    /** Albums of an artist, newest first. */
+    val artistAlbums: List<MediaItem> = emptyList(),
+    val shuffle: Boolean = false,
 ) {
     val item: MediaItem? get() = details?.item
 }
@@ -60,6 +69,8 @@ class DetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: DetailRepository,
     private val trackSelections: TrackSelections,
+    private val music: MusicRepository,
+    private val shuffle: MusicShuffle,
 ) : ViewModel() {
 
     private var itemId: UUID = UUID.fromString(savedStateHandle.toRoute<DetailRoute>().itemId)
@@ -72,6 +83,7 @@ class DetailViewModel @Inject constructor(
 
     init {
         load()
+        viewModelScope.launch { shuffle.on.collect { on -> _state.update { it.copy(shuffle = on) } } }
     }
 
     fun load() {
@@ -90,9 +102,12 @@ class DetailViewModel @Inject constructor(
                     ItemKind.Series -> loadSeries(details)
                     ItemKind.Episode -> loadSeasonOf(details)
                     ItemKind.Collection -> loadCollection(details)
+                    ItemKind.Album -> _state.update { it.copy(musicTracks = music.albumTracks(itemId)) }
+                    ItemKind.Playlist -> _state.update { it.copy(musicTracks = music.playlistTracks(itemId)) }
+                    ItemKind.Artist -> _state.update { it.copy(artistAlbums = music.artistAlbums(itemId)) }
                     else -> Unit
                 }
-                val withSimilar = details.item.kind == ItemKind.Movie || details.item.kind == ItemKind.Series
+                val withSimilar = details.item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Album)
                 _state.update { it.copy(loading = false, similar = if (withSimilar) similarAsync.await() else emptyList()) }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -168,6 +183,18 @@ class DetailViewModel @Inject constructor(
         navigate(PlayerRoute(target.id.toString(), fromStart))
     }
 
+    /** Album, artist or playlist in the music player, from [track] or from the start. */
+    fun playMusic(track: MusicTrack? = null) {
+        val item = _state.value.item ?: return
+        navigate(MusicRoute(item.id.toString(), track?.id?.toString()))
+    }
+
+    fun toggleShuffle() {
+        val on = !shuffle.on.value
+        shuffle.set(on)
+        toast(if (on) R.string.shuffle_on else R.string.shuffle_off)
+    }
+
     fun playTrailer() {
         val item = _state.value.item ?: return
         navigate(TrailerRoute(item.id.toString()))
@@ -191,7 +218,14 @@ class DetailViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { repository.setPlayed(item.id, played) }
                 .onSuccess {
-                    toast(if (played) R.string.marked_watched else R.string.marked_unwatched)
+                    toast(
+                        when {
+                            item.kind == ItemKind.Album && played -> R.string.marked_heard
+                            item.kind == ItemKind.Album -> R.string.marked_unheard
+                            played -> R.string.marked_watched
+                            else -> R.string.marked_unwatched
+                        },
+                    )
                     // A whole show or collection changes its episodes or movies too.
                     if (item.kind == ItemKind.Series) _state.value.season?.let { selectSeason(it, item.id) }
                     if (item.kind == ItemKind.Collection) loadCollection(_state.value.details ?: return@onSuccess)

@@ -67,6 +67,21 @@ object GlacierIcons {
     val SkipBack = filled("M19 20 9 12 19 4z", "M5 19V5", strokeWidth = 2f)
     val SkipForward = filled("M5 4 15 12 5 20z", "M19 5v14", strokeWidth = 2f)
     val Close = icon("M18 6 6 18", "m6 6 12 12")
+    val Shuffle = icon(
+        "m18 14 4 4-4 4", "m18 2 4 4-4 4",
+        "M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-7.6a4 4 0 0 1 3.3-1.7H22",
+        "M2 6h1.972a4 4 0 0 1 3.126 1.5l.302.5",
+        "M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45",
+    )
+    private val REPEAT = arrayOf("m17 2 4 4-4 4", "M3 11v-1a4 4 0 0 1 4-4h14", "m7 22-4-4 4-4", "M21 13v1a4 4 0 0 1-4 4H3")
+    val Repeat = icon(*REPEAT)
+    val RepeatOne = icon(*REPEAT, "M11 10h1v4")
+    /** Lyrics (a singer's microphone). */
+    val Lyrics = icon(
+        "m11 7.601-5.994 8.19a1 1 0 0 0 .1 1.298l.817.818a1 1 0 0 0 1.314.087L15.09 12",
+        "M16.5 21.174C15.5 20.5 14.372 20 13 20c-2.058 0-3.928 2.356-6 2-2.072-.356-2.775-3.369-1.5-4.5",
+        "M16 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10z",
+    )
     val Film = icon(
         "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z",
         "M7 3v18", "M3 7.5h4", "M3 12h18", "M3 16.5h4", "M17 3v18", "M17 7.5h4", "M17 16.5h4",

@@ -90,7 +90,9 @@ private const val MEDIA_BACKDROP = 760
 private const val EPISODE_BACKDROP = 720
 
 /** Height of the part above the first row; focus there scrolls the page to the top. */
-private const val HEADER_REGION = 700
+internal const val HEADER_REGION = 700
+
+private val MusicKinds = setOf(ItemKind.Album, ItemKind.Artist, ItemKind.Playlist)
 
 @Composable
 fun DetailScreen(
@@ -109,7 +111,10 @@ fun DetailScreen(
             details.item.kind == ItemKind.Movie || details.item.kind == ItemKind.Series -> MediaDetail(state, details, viewModel)
             details.item.kind == ItemKind.Episode -> EpisodeDetail(state, details, viewModel)
             details.item.kind == ItemKind.Collection -> CollectionDetail(state, details, viewModel)
-            // Albums, artists and playlists come with the music section.
+            // Playlists of videos only have no page yet; mixed ones list their songs.
+            details.item.kind == ItemKind.Playlist && !state.loading && state.musicTracks.isEmpty() && (details.item.childCount ?: 0) > 0 ->
+                ComingSoonScreen(details.item.title, onBack = onBack)
+            details.item.kind in MusicKinds -> MusicDetail(state, details, viewModel)
             else -> ComingSoonScreen(details.item.title, onBack = onBack)
         }
         val panel = state.trackPanel
@@ -292,7 +297,7 @@ private fun EpisodeDetail(state: DetailState, details: ItemDetails, viewModel: D
 
 /** The backdrop scrolls away with the page, as it sits at the top of the design's scroll container. */
 @Composable
-private fun ScrollingBackdrop(url: String?, height: Int, listState: LazyListState) {
+internal fun ScrollingBackdrop(url: String?, height: Int, listState: LazyListState) {
     DetailBackdrop(
         url = url,
         height = height,
@@ -303,7 +308,7 @@ private fun ScrollingBackdrop(url: String?, height: Int, listState: LazyListStat
 }
 
 @Composable
-private fun Crumb(text: String) {
+internal fun Crumb(text: String) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Icon(GlacierIcons.ChevronLeft, contentDescription = null, tint = GlacierColors.Mist, modifier = Modifier.size(16.dp))
         Text(text.uppercase(), style = GlacierText.body(17).copy(letterSpacing = 0.06.em), color = GlacierColors.Mist)
@@ -311,7 +316,7 @@ private fun Crumb(text: String) {
 }
 
 @Composable
-private fun Title(text: String, size: Int, maxWidth: Int) {
+internal fun Title(text: String, size: Int, maxWidth: Int) {
     Text(
         text,
         style = GlacierText.display(size).copy(lineHeight = (size * 1.03).sp, shadow = Shadow(Color(0x99000000), blurRadius = 30f)),
@@ -323,7 +328,7 @@ private fun Title(text: String, size: Int, maxWidth: Int) {
 }
 
 @Composable
-private fun Overview(text: String, maxWidth: Int) {
+internal fun Overview(text: String, maxWidth: Int) {
     Text(
         text,
         style = GlacierText.body(21).copy(lineHeight = 34.sp),
@@ -363,7 +368,7 @@ private fun PlayButtons(
 }
 
 @Composable
-private fun SeenButton(played: Boolean, onClick: () -> Unit) {
+internal fun SeenButton(played: Boolean, onClick: () -> Unit) {
     ActionButton(
         onClick = onClick,
         icon = if (played) GlacierIcons.SeenFilled else GlacierIcons.Seen,
@@ -551,7 +556,7 @@ private fun techLine(details: ItemDetails): String? {
 }
 
 @Composable
-private fun ErrorState(onRetry: () -> Unit) {
+internal fun ErrorState(onRetry: () -> Unit) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     Column(

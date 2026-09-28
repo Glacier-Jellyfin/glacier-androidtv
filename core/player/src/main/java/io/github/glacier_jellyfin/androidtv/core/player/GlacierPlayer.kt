@@ -52,7 +52,7 @@ class GlacierPlayback(val player: ExoPlayer, private val ass: AssHandler) {
     }
 }
 
-/** Creates the ExoPlayer used for video, set up for TV playback. */
+/** Creates the ExoPlayers for video and music, set up for TV playback. */
 object GlacierPlayer {
 
     @OptIn(UnstableApi::class)
@@ -97,6 +97,35 @@ object GlacierPlayer {
         ass.init(player)
         return GlacierPlayback(player, ass)
     }
+
+    /** The music player: a queue of songs sharing one set of request [headers]; see [audioItem]. */
+    @OptIn(UnstableApi::class)
+    fun createAudio(context: Context, headers: Map<String, String>): ExoPlayer {
+        val dataSource = DefaultHttpDataSource.Factory()
+            .setDefaultRequestProperties(headers)
+            .setAllowCrossProtocolRedirects(true)
+        val renderers = DefaultRenderersFactory(context)
+            .setEnableDecoderFallback(true)
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+        return ExoPlayer.Builder(context, renderers)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSource))
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(C.USAGE_MEDIA)
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                    .build(),
+                /* handleAudioFocus = */ true,
+            )
+            .build()
+    }
+
+    /** One song of the queue; [id] comes back as the player's media id. */
+    fun audioItem(id: String, url: String, isHls: Boolean): MediaItem =
+        MediaItem.Builder()
+            .setMediaId(id)
+            .setUri(url)
+            .apply { if (isHls) setMimeType(MimeTypes.APPLICATION_M3U8) }
+            .build()
 
     private fun SideloadedSubtitle.toConfiguration() =
         MediaItem.SubtitleConfiguration.Builder(Uri.parse(url))

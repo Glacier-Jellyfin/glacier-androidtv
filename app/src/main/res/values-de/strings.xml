@@ -283,4 +283,44 @@
     <string name="trailer_none">Für diesen Titel gibt es keine abspielbaren Trailer.</string>
     <string name="trailer_open_youtube">In YouTube öffnen</string>
     <string name="trailer_no_youtube_app">Keine App für YouTube-Links installiert.</string>
+
+    <!-- Music -->
+    <string name="music_album">Album</string>
+    <string name="music_artist">Künstler</string>
+    <string name="music_playlist">Wiedergabeliste</string>
+    <string name="music_play_discography">Diskografie abspielen</string>
+    <string name="music_play_all">Alle abspielen</string>
+    <string name="action_mark_heard">Als gehört</string>
+    <string name="action_mark_unheard">Als ungehört</string>
+    <string name="marked_heard">Als gehört markiert</string>
+    <string name="marked_unheard">Als ungehört markiert</string>
+    <string name="action_shuffle">Zufällige Reihenfolge</string>
+    <string name="action_shuffle_off">Zufällige Reihenfolge aus</string>
+    <string name="shuffle_on">Zufällige Reihenfolge an</string>
+    <string name="shuffle_off">Zufällige Reihenfolge aus</string>
+    <string name="action_repeat">Wiederholen</string>
+    <string name="repeat_off">Wiederholen: Aus</string>
+    <string name="repeat_all">Wiederholen: Alle Titel</string>
+    <string name="repeat_one">Wiederholen: Aktueller Titel</string>
+    <string name="music_tracks">Titel</string>
+    <string name="music_albums">Alben</string>
+    <string name="audio_bit_depth">%1$d Bit</string>
+    <string name="audio_mono">Mono</string>
+    <string name="audio_stereo">Stereo</string>
+    <string name="music_track_failed">Titel nicht abspielbar, übersprungen</string>
+    <string name="music_queue_end">Ende der Wiedergabeliste</string>
+    <string name="music_playing_from">Wiedergabe aus %1$s</string>
+    <string name="music_now_playing">Läuft gerade</string>
+    <string name="music_paused">Pausiert</string>
+    <string name="music_repeating">Titel wird wiederholt</string>
+    <string name="music_up_next">Als Nächstes: %1$s</string>
+    <string name="music_last_track">Letzter Titel der Wiedergabeliste</string>
+    <string name="music_track_of">Titel %1$d von %2$d</string>
+    <string name="music_queue">Wiedergabeliste</string>
+    <string name="music_queue_left">noch %1$s</string>
+    <string name="lyrics_title">Songtext</string>
+    <string name="lyrics_synced">Songtext · synchronisiert</string>
+    <string name="lyrics_instrumental">Instrumental</string>
+    <string name="lyrics_none">Kein Songtext</string>
+    <string name="lyrics_none_hint">Zu diesem Titel liegt kein Songtext vor.</string>
 </resources>

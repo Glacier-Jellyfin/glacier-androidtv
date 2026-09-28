@@ -20,6 +20,8 @@ private object ImageWidth {
     const val THUMB = 720
     const val BACKDROP = 1920
     const val LIBRARY = 720
+    const val COVER_SMALL = 160
+    const val COVER_LARGE = 960
 }
 
 internal fun CollectionType?.toLibraryKind(): LibraryKind? = when (this) {
@@ -77,6 +79,32 @@ internal class MediaMapper(private val api: ApiClient) {
             showThumbUrl = showThumb(dto) ?: thumb(dto),
             backdropUrl = backdrop(dto),
         )
+    }
+
+    fun track(dto: BaseItemDto): MusicTrack {
+        val audio = dto.mediaStreams?.firstOrNull { it.type == MediaStreamType.AUDIO }
+        return MusicTrack(
+            id = dto.id,
+            title = dto.name.orEmpty(),
+            artist = dto.artists?.filter { it.isNotBlank() }?.joinToString(", ")?.ifEmpty { null } ?: dto.albumArtist,
+            album = dto.album,
+            albumId = dto.albumId,
+            year = dto.productionYear,
+            number = dto.indexNumber,
+            disc = dto.parentIndexNumber,
+            durationMs = (dto.runTimeTicks ?: 0) / TICKS_PER_MS,
+            coverUrl = cover(dto, ImageWidth.COVER_SMALL),
+            largeCoverUrl = cover(dto, ImageWidth.COVER_LARGE),
+            format = audio?.let { AudioFormat(it.codec, it.sampleRate, it.bitDepth, it.channels) },
+            isFavorite = dto.userData?.isFavorite ?: false,
+        )
+    }
+
+    private fun cover(dto: BaseItemDto, width: Int): String? {
+        val albumId = dto.albumId
+        val albumTag = dto.albumPrimaryImageTag
+        if (albumId != null && albumTag != null) return image(albumId, ImageType.PRIMARY, albumTag, width)
+        return dto.imageTags?.get(ImageType.PRIMARY)?.let { image(dto.id, ImageType.PRIMARY, it, width) }
     }
 
     fun library(dto: BaseItemDto, kind: LibraryKind, itemCount: Int?) = Library(

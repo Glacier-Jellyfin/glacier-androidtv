@@ -287,4 +287,44 @@
     <string name="trailer_none">This title has no playable trailers.</string>
     <string name="trailer_open_youtube">Open in YouTube</string>
     <string name="trailer_no_youtube_app">No app for YouTube links is installed.</string>
+
+    <!-- Music -->
+    <string name="music_album">Album</string>
+    <string name="music_artist">Artist</string>
+    <string name="music_playlist">Playlist</string>
+    <string name="music_play_discography">Play discography</string>
+    <string name="music_play_all">Play all</string>
+    <string name="action_mark_heard">Mark played</string>
+    <string name="action_mark_unheard">Mark unplayed</string>
+    <string name="marked_heard">Marked played</string>
+    <string name="marked_unheard">Marked unplayed</string>
+    <string name="action_shuffle">Shuffle</string>
+    <string name="action_shuffle_off">Shuffle off</string>
+    <string name="shuffle_on">Shuffle on</string>
+    <string name="shuffle_off">Shuffle off</string>
+    <string name="action_repeat">Repeat</string>
+    <string name="repeat_off">Repeat: off</string>
+    <string name="repeat_all">Repeat: all songs</string>
+    <string name="repeat_one">Repeat: this song</string>
+    <string name="music_tracks">Songs</string>
+    <string name="music_albums">Albums</string>
+    <string name="audio_bit_depth">%1$d-bit</string>
+    <string name="audio_mono">Mono</string>
+    <string name="audio_stereo">Stereo</string>
+    <string name="music_track_failed">Song could not be played, skipped</string>
+    <string name="music_queue_end">End of the queue</string>
+    <string name="music_playing_from">Playing from %1$s</string>
+    <string name="music_now_playing">Now playing</string>
+    <string name="music_paused">Paused</string>
+    <string name="music_repeating">Song repeats</string>
+    <string name="music_up_next">Up next: %1$s</string>
+    <string name="music_last_track">Last song in the queue</string>
+    <string name="music_track_of">Song %1$d of %2$d</string>
+    <string name="music_queue">Queue</string>
+    <string name="music_queue_left">%1$s left</string>
+    <string name="lyrics_title">Lyrics</string>
+    <string name="lyrics_synced">Lyrics · synced</string>
+    <string name="lyrics_instrumental">Instrumental</string>
+    <string name="lyrics_none">No lyrics</string>
+    <string name="lyrics_none_hint">There are no lyrics for this song.</string>
 </resources>
