@@ -110,6 +110,10 @@ fun LibraryScreen(
     val jumpFocus = remember { FocusRequester() }
     val gridFocus = remember { FocusRequester() }
     var initialFocusDone by rememberSaveable { mutableStateOf(false) }
+    // Back from a detail page the screen is composed anew; focus goes back to the card the
+    // user left from (the grid keeps its scroll), not to the nav on top.
+    var lastFocusId by rememberSaveable { mutableStateOf<String?>(null) }
+    val restoreFocus = remember { FocusRequester() }
     var focusedIndex by remember { mutableIntStateOf(-1) }
     var jumpTarget by remember { mutableStateOf<Int?>(null) }
     var sortAnchor by remember { mutableStateOf<Rect?>(null) }
@@ -119,11 +123,27 @@ fun LibraryScreen(
         snapshotFlow { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
             .collect { last -> if (last >= HEADER_ITEMS + state.items.size - 3 * sizes.gridColumns) viewModel.loadMore() }
     }
+    // Once per composition: a filter change later empties and refills the grid, and the
+    // focus stays on the chip then.
+    var focusPlaced by remember { mutableStateOf(false) }
     LaunchedEffect(state.items.isNotEmpty()) {
-        if (state.items.isNotEmpty() && !initialFocusDone) {
-            withFrameNanos { }
+        if (state.items.isEmpty() || focusPlaced) return@LaunchedEffect
+        focusPlaced = true
+        withFrameNanos { }
+        if (!initialFocusDone) {
             initialFocusDone = runCatching { firstCardFocus.requestFocus() }.isSuccess
+            return@LaunchedEffect
         }
+        val index = state.items.indexOfFirst { it.id.toString() == lastFocusId }
+        if (index < 0) {
+            runCatching { firstCardFocus.requestFocus() }
+            return@LaunchedEffect
+        }
+        if (gridState.layoutInfo.visibleItemsInfo.none { it.index == HEADER_ITEMS + index }) {
+            gridState.scrollToItem(HEADER_ITEMS + index)
+            withFrameNanos { }
+        }
+        runCatching { restoreFocus.requestFocus() }
     }
     LaunchedEffect(state.jumpTo) {
         val index = state.jumpTo ?: return@LaunchedEffect
@@ -139,7 +159,8 @@ fun LibraryScreen(
             CompositionLocalProvider(LocalBringIntoViewSpec provides rememberGridPivotSpec(gridState)) {
                 LazyVerticalGrid(
                     state = gridState,
-                    columns = GridCells.Fixed(sizes.gridColumns),
+                    // Cells as wide as the cards, packed from the left like the design's rows.
+                    columns = GridCells.FixedSize(sizes.posterWidth.dp),
                     contentPadding = PaddingValues(start = 80.dp, end = 22.dp, top = 150.dp, bottom = 120.dp),
                     horizontalArrangement = Arrangement.spacedBy(sizes.gridGap.dp),
                     verticalArrangement = Arrangement.spacedBy(38.dp),
@@ -157,11 +178,12 @@ fun LibraryScreen(
                         )
                     }
                     itemsIndexed(state.items, key = { _, item -> item.id }) { index, item ->
+                        val id = item.id.toString()
                         val focus = when {
                             index == jumpTarget -> Modifier.focusRequester(jumpFocus)
                             index == 0 -> Modifier.focusRequester(firstCardFocus)
                             else -> Modifier
-                        }
+                        }.then(if (id == lastFocusId) Modifier.focusRequester(restoreFocus) else Modifier)
                         GridCard(
                             imageUrl = item.posterUrl,
                             title = item.title,
@@ -174,7 +196,12 @@ fun LibraryScreen(
                             },
                             watched = item.played && item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode),
                             count = item.childCount.takeIf { item.kind == ItemKind.Collection },
-                            modifier = focus.onFocusChanged { if (it.isFocused) focusedIndex = index },
+                            modifier = focus.onFocusChanged {
+                                if (it.isFocused) {
+                                    focusedIndex = index
+                                    lastFocusId = id
+                                }
+                            },
                         )
                     }
                     when {
