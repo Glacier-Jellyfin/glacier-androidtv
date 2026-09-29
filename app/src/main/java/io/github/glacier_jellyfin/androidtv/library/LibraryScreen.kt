@@ -236,7 +236,7 @@ fun LibraryScreen(
                 val current = state.items.getOrNull(focusedIndex)?.let(::letterOf)
                 AlphabetRail(
                     letters = state.letters,
-                    descending = state.query.descending,
+                    descending = state.query.orderDescending,
                     current = current,
                     onLetter = viewModel::jumpToLetter,
                     modifier = Modifier.padding(top = 150.dp, end = 22.dp),
@@ -280,7 +280,7 @@ private fun Header(state: LibraryState) {
         if (total != null) {
             val count = countText(state.query.scope, state.query.kind, total)
             // Genres and artists are always listed by name, so there is no sort to report.
-            val sorted = state.query.scope !in setOf(LibraryScope.Genres, LibraryScope.Artists)
+            val sorted = !state.query.listedByName
             Text(
                 if (!sorted) count else stringResource(
                     R.string.library_summary,
@@ -323,7 +323,7 @@ private fun Toolbar(
         }
         Spacer(Modifier.weight(1f))
         // Genres and artists are always listed by name.
-        if (state.query.scope !in setOf(LibraryScope.Genres, LibraryScope.Artists)) {
+        if (!state.query.listedByName) {
             SortButton(
                 state,
                 onClick = { onSortMenu(!state.sortMenuOpen) },

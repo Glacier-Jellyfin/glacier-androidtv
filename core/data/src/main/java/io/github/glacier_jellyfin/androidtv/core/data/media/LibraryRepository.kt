@@ -39,6 +39,12 @@ data class LibraryQuery(
     /** Design setting "Group movies into collections"; on by default. */
     val groupCollections: Boolean = true,
 ) {
+    /** Genres and artists are always listed by name, A to Z, whatever the other scopes sort by. */
+    val listedByName: Boolean get() = scope == LibraryScope.Genres || scope == LibraryScope.Artists
+
+    /** The order actually requested: [descending] only applies to the chosen sort. */
+    val orderDescending: Boolean get() = descending && !listedByName
+
     /** Only title sorting has a meaningful A–Z order. */
     val alphabetical: Boolean get() = sort == LibrarySort.Title
 
@@ -99,7 +105,7 @@ class LibraryRepository @Inject constructor(
     suspend fun indexOfLetter(query: LibraryQuery, letter: Char, total: Int): Int = withContext(Dispatchers.IO) {
         val session = requireSession()
         suspend fun before(bound: String) = fetch(session, query, start = 0, limit = 0, nameLessThan = bound).totalRecordCount
-        if (!query.descending) {
+        if (!query.orderDescending) {
             if (letter == '#') 0 else before(letter.toString())
         } else {
             val next = AlphabetLetters.getOrNull(AlphabetLetters.indexOf(letter) + 1)
@@ -117,7 +123,7 @@ class LibraryRepository @Inject constructor(
     ): BaseItemDtoQueryResult {
         val userId = UUID.fromString(session.user.userId)
         val sortBy = query.sort.sortBy
-        val order = listOf(if (query.descending) SortOrder.DESCENDING else SortOrder.ASCENDING)
+        val order = listOf(if (query.orderDescending) SortOrder.DESCENDING else SortOrder.ASCENDING)
         return when (query.scope) {
             LibraryScope.Genres -> session.api.genreApi.getGenres(
                 userId = userId,
