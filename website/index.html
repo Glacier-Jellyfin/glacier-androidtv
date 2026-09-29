@@ -11,18 +11,156 @@
   <link rel="stylesheet" href="assets/site.css">
 </head>
 <body>
-  <main class="page">
-    <div class="top">
-      <img src="assets/mark.svg" width="44" height="44" alt="">
-      <a class="lang" href="de/" hreflang="de">Deutsch</a>
+  <nav class="nav">
+    <div class="wrap">
+      <a class="brand" href="#top">
+        <img src="assets/mark.svg" width="28" height="28" alt="">
+        Glacier
+      </a>
+      <div class="nav-links">
+        <a href="#showcase">Features</a>
+        <a href="#get-it">Get it</a>
+        <a class="button-ghost-sm" href="https://github.com/Glacier-Jellyfin/glacier-androidtv">GitHub</a>
+      </div>
+      <div class="nav-right">
+        <a class="lang" href="de/" hreflang="de">Deutsch</a>
+      </div>
     </div>
-    <section class="hero">
-      <span class="pill">In early development</span>
-      <h1>Glacier</h1>
-      <p>A Jellyfin client for Android TV, Google TV and Fire TV.</p>
-      <a class="button" href="https://github.com/Glacier-Jellyfin/glacier-androidtv">View on GitHub</a>
+  </nav>
+
+  <main id="top">
+    <section class="hero-section">
+      <div class="wrap hero">
+        <div class="hero-copy">
+          <span class="pill"><span class="dot"></span> In early development</span>
+          <h1>Your Jellyfin,<br>on the big screen.</h1>
+          <p>Glacier is a Jellyfin client built from the ground up for the TV: Android TV, Google TV and Fire TV, controlled entirely with a remote.</p>
+          <div class="actions">
+            <a class="button" href="#get-it">Get it</a>
+            <a class="button-ghost" href="https://github.com/Glacier-Jellyfin/glacier-androidtv">View on GitHub</a>
+          </div>
+          <div class="stats">
+            <div class="stat"><b>3</b><span>Android TV · Google TV · Fire TV</span></div>
+            <div class="stat"><b>GPL-3.0</b><span>Free &amp; open source</span></div>
+            <div class="stat"><b>0</b><span>Ads or telemetry</span></div>
+          </div>
+        </div>
+        <div class="hero-glow" aria-hidden="true"></div>
+        <div class="hero-shot reveal">
+          <video autoplay loop muted playsinline poster="assets/screenshots/home.jpg">
+            <source src="assets/screenshots/demo.webm" type="video/webm">
+            <source src="assets/screenshots/demo.mp4" type="video/mp4">
+          </video>
+        </div>
+      </div>
     </section>
-    <footer>Licensed under GPL-3.0-or-later. Not affiliated with the Jellyfin project.</footer>
+
+    <section id="showcase">
+      <div class="wrap">
+        <div class="showcase reveal">
+          <div class="showcase-media">
+            <img src="assets/screenshots/library.jpg" width="1280" height="720" alt="Glacier movie library grid" loading="lazy">
+          </div>
+          <div class="showcase-copy">
+            <p class="eyebrow">Library</p>
+            <h2 class="title">Browse everything, your way</h2>
+            <p class="lede">Every library in one place, with the sorting and filtering you'd expect from a modern app, not an afterthought.</p>
+            <ul>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Sort and filter by genre, favorites or unwatched</li>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Related movies grouped into collections</li>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> An A–Z rail for jumping around large libraries</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tight">
+      <div class="wrap">
+        <div class="showcase reverse reveal">
+          <div class="showcase-media">
+            <img src="assets/screenshots/detail.jpg" width="1280" height="720" alt="Glacier movie detail page with cast and similar titles" loading="lazy">
+          </div>
+          <div class="showcase-copy">
+            <p class="eyebrow">Details</p>
+            <h2 class="title">Every title, fully explored</h2>
+            <p class="lede">Cast, crew and context on every detail page, with trailers and track choices one click away.</p>
+            <ul>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Cast, crew and similar titles</li>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Local and YouTube trailers, played inline</li>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Audio and subtitle track picker</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="Features">
+      <div class="wrap">
+        <p class="eyebrow reveal">Everything else</p>
+        <h2 class="title reveal">Built for how households actually watch</h2>
+        <p class="lede reveal">Beyond browsing and playback, the details that make a shared TV app pleasant to live with.</p>
+        <div class="features">
+          <div class="feature reveal">
+            <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+            <h3>Profiles &amp; Quick Connect</h3>
+            <p>One device, several people. Switch profiles instantly and sign in to a new server with a six-digit Quick Connect code.</p>
+          </div>
+          <div class="feature reveal">
+            <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg></div>
+            <h3>Parental controls</h3>
+            <p>Age ratings and a PIN keep locked titles and settings out of reach, per profile.</p>
+          </div>
+          <div class="feature reveal">
+            <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 9l5 3-5 3V9Z" fill="currentColor" stroke="none"/></svg></div>
+            <h3>Accurate playback</h3>
+            <p>Media3/ExoPlayer with an extended FFmpeg audio codec set, so more of your library plays back directly instead of transcoding.</p>
+          </div>
+          <div class="feature reveal">
+            <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M7 3v18M17 3v18M2 9h5M2 15h5M17 9h5M17 15h5"/></svg></div>
+            <h3>Movies, shows &amp; music</h3>
+            <p>Your whole Jellyfin library, browsable with a remote: home, library, search and detail pages built for the big screen.</p>
+          </div>
+          <div class="feature reveal">
+            <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9l5 3-5 3V9Z" fill="currentColor" stroke="none"/></svg></div>
+            <h3>Trailers</h3>
+            <p>Local trailers and YouTube trailers, both playable straight from the detail page.</p>
+          </div>
+          <div class="feature reveal">
+            <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16"/><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8"/><path d="M3 16v4h4M21 8V4h-4"/></svg></div>
+            <h3>Stays current</h3>
+            <p>A built-in updater checks GitHub Releases for new Stable or Beta builds and installs them without a detour through a browser.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="get-it">
+      <div class="wrap">
+        <div class="cta reveal">
+          <p class="eyebrow">Get it</p>
+          <h2>Glacier is still in early development</h2>
+          <p>It isn't packaged for release yet &mdash; follow the project on GitHub to build it yourself or to catch the first release.</p>
+          <div class="actions">
+            <a class="button" href="https://github.com/Glacier-Jellyfin/glacier-androidtv">View on GitHub</a>
+            <a class="button-ghost" href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases">Releases</a>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-row">
+      <span>Licensed under GPL-3.0-or-later. Not affiliated with the Jellyfin project.</span>
+      <div class="footer-links">
+        <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv">GitHub</a>
+        <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases">Releases</a>
+        <a href="de/" hreflang="de">Deutsch</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/reveal.js"></script>
 </body>
 </html>

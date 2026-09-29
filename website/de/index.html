@@ -11,18 +11,156 @@
   <link rel="stylesheet" href="../assets/site.css">
 </head>
 <body>
-  <main class="page">
-    <div class="top">
-      <img src="../assets/mark.svg" width="44" height="44" alt="">
-      <a class="lang" href="../" hreflang="en">English</a>
+  <nav class="nav">
+    <div class="wrap">
+      <a class="brand" href="#top">
+        <img src="../assets/mark.svg" width="28" height="28" alt="">
+        Glacier
+      </a>
+      <div class="nav-links">
+        <a href="#showcase">Funktionen</a>
+        <a href="#get-it">Herunterladen</a>
+        <a class="button-ghost-sm" href="https://github.com/Glacier-Jellyfin/glacier-androidtv">GitHub</a>
+      </div>
+      <div class="nav-right">
+        <a class="lang" href="../" hreflang="en">English</a>
+      </div>
     </div>
-    <section class="hero">
-      <span class="pill">In früher Entwicklung</span>
-      <h1>Glacier</h1>
-      <p>Ein Jellyfin-Client für Android TV, Google TV und Fire TV.</p>
-      <a class="button" href="https://github.com/Glacier-Jellyfin/glacier-androidtv">Auf GitHub ansehen</a>
+  </nav>
+
+  <main id="top">
+    <section class="hero-section">
+      <div class="wrap hero">
+        <div class="hero-copy">
+          <span class="pill"><span class="dot"></span> In früher Entwicklung</span>
+          <h1>Dein Jellyfin,<br>auf dem Fernseher.</h1>
+          <p>Glacier ist ein Jellyfin-Client, von Grund auf für den Fernseher gebaut: Android TV, Google TV und Fire TV, vollständig mit der Fernbedienung bedienbar.</p>
+          <div class="actions">
+            <a class="button" href="#get-it">Herunterladen</a>
+            <a class="button-ghost" href="https://github.com/Glacier-Jellyfin/glacier-androidtv">Auf GitHub ansehen</a>
+          </div>
+          <div class="stats">
+            <div class="stat"><b>3</b><span>Android TV · Google TV · Fire TV</span></div>
+            <div class="stat"><b>GPL-3.0</b><span>Frei &amp; quelloffen</span></div>
+            <div class="stat"><b>0</b><span>Werbung oder Telemetrie</span></div>
+          </div>
+        </div>
+        <div class="hero-glow" aria-hidden="true"></div>
+        <div class="hero-shot reveal">
+          <video autoplay loop muted playsinline poster="../assets/screenshots/home.jpg">
+            <source src="../assets/screenshots/demo.webm" type="video/webm">
+            <source src="../assets/screenshots/demo.mp4" type="video/mp4">
+          </video>
+        </div>
+      </div>
     </section>
-    <footer>Lizenziert unter GPL-3.0-or-later. Kein offizielles Projekt von Jellyfin.</footer>
+
+    <section id="showcase">
+      <div class="wrap">
+        <div class="showcase reveal">
+          <div class="showcase-media">
+            <img src="../assets/screenshots/library.jpg" width="1280" height="720" alt="Glacier-Filmbibliothek als Raster" loading="lazy">
+          </div>
+          <div class="showcase-copy">
+            <p class="eyebrow">Bibliothek</p>
+            <h2 class="title">Alles durchsuchen, auf deine Art</h2>
+            <p class="lede">Jede Bibliothek an einem Ort, mit dem Sortieren und Filtern, das man von einer modernen App erwartet – kein nachträglicher Zusatz.</p>
+            <ul>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Sortieren und filtern nach Genre, Favoriten oder Ungesehenem</li>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Zusammengehörige Filme als Sammlungen gruppiert</li>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Eine A–Z-Leiste für große Bibliotheken</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tight">
+      <div class="wrap">
+        <div class="showcase reverse reveal">
+          <div class="showcase-media">
+            <img src="../assets/screenshots/detail.jpg" width="1280" height="720" alt="Glacier-Detailseite eines Films mit Besetzung und ähnlichen Titeln" loading="lazy">
+          </div>
+          <div class="showcase-copy">
+            <p class="eyebrow">Details</p>
+            <h2 class="title">Jeder Titel, vollständig erschlossen</h2>
+            <p class="lede">Besetzung, Crew und Kontext auf jeder Detailseite, mit Trailern und Spuren-Auswahl einen Klick entfernt.</p>
+            <ul>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Besetzung, Crew und ähnliche Titel</li>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Lokale und YouTube-Trailer, direkt abspielbar</li>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Auswahl von Audio- und Untertitelspur</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-label="Funktionen">
+      <div class="wrap">
+        <p class="eyebrow reveal">Alles Weitere</p>
+        <h2 class="title reveal">Gebaut dafür, wie Haushalte wirklich fernsehen</h2>
+        <p class="lede reveal">Neben Durchsuchen und Wiedergabe die Details, die eine gemeinsam genutzte TV-App angenehm machen.</p>
+        <div class="features">
+          <div class="feature reveal">
+            <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+            <h3>Profile &amp; Quick Connect</h3>
+            <p>Ein Gerät, mehrere Personen. Profile sofort wechseln und sich per sechsstelligem Quick-Connect-Code an einem neuen Server anmelden.</p>
+          </div>
+          <div class="feature reveal">
+            <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg></div>
+            <h3>Jugendschutz</h3>
+            <p>Altersfreigaben und eine PIN halten gesperrte Titel und Einstellungen außer Reichweite, je Profil.</p>
+          </div>
+          <div class="feature reveal">
+            <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 9l5 3-5 3V9Z" fill="currentColor" stroke="none"/></svg></div>
+            <h3>Präzise Wiedergabe</h3>
+            <p>Media3/ExoPlayer mit erweitertem FFmpeg-Audio-Codec-Set, damit mehr aus der Bibliothek direkt statt transkodiert abgespielt wird.</p>
+          </div>
+          <div class="feature reveal">
+            <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M7 3v18M17 3v18M2 9h5M2 15h5M17 9h5M17 15h5"/></svg></div>
+            <h3>Filme, Serien &amp; Musik</h3>
+            <p>Die ganze Jellyfin-Bibliothek, bedienbar mit der Fernbedienung: Startseite, Bibliothek, Suche und Detailseiten für den großen Bildschirm.</p>
+          </div>
+          <div class="feature reveal">
+            <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9l5 3-5 3V9Z" fill="currentColor" stroke="none"/></svg></div>
+            <h3>Trailer</h3>
+            <p>Lokale Trailer und YouTube-Trailer, beide direkt von der Detailseite aus abspielbar.</p>
+          </div>
+          <div class="feature reveal">
+            <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16"/><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8"/><path d="M3 16v4h4M21 8V4h-4"/></svg></div>
+            <h3>Bleibt aktuell</h3>
+            <p>Ein eingebauter Updater prüft GitHub Releases auf neue Stable- oder Beta-Builds und installiert sie ohne Umweg über den Browser.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="get-it">
+      <div class="wrap">
+        <div class="cta reveal">
+          <p class="eyebrow">Herunterladen</p>
+          <h2>Glacier befindet sich noch in früher Entwicklung</h2>
+          <p>Es gibt noch kein Release-Paket &mdash; folge dem Projekt auf GitHub, um es selbst zu bauen oder das erste Release nicht zu verpassen.</p>
+          <div class="actions">
+            <a class="button" href="https://github.com/Glacier-Jellyfin/glacier-androidtv">Auf GitHub ansehen</a>
+            <a class="button-ghost" href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases">Releases</a>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-row">
+      <span>Lizenziert unter GPL-3.0-or-later. Kein offizielles Projekt von Jellyfin.</span>
+      <div class="footer-links">
+        <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv">GitHub</a>
+        <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases">Releases</a>
+        <a href="../" hreflang="en">English</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../assets/reveal.js"></script>
 </body>
 </html>
