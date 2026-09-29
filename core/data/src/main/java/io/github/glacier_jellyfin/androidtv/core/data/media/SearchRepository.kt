@@ -25,6 +25,7 @@ import javax.inject.Singleton
 @Singleton
 class SearchRepository @Inject constructor(
     private val sessions: SessionManager,
+    private val ageFilter: AgeFilter,
 ) {
 
     suspend fun search(query: String): List<MediaItem> = withContext(Dispatchers.IO) {
@@ -44,7 +45,7 @@ class SearchRepository @Inject constructor(
                     .content.items.map { it.id }
                 if (genres.isEmpty()) emptyList() else items(session) { copy(genreIds = genres) }
             }
-            mergeResults(titles.await(), byPerson.await(), byGenre.await(), limit = RESULT_LIMIT) { it.id }.map(mapper::item)
+            ageFilter.visible(mergeResults(titles.await(), byPerson.await(), byGenre.await(), limit = RESULT_LIMIT) { it.id }.map(mapper::item))
         }
     }
 
@@ -56,7 +57,7 @@ class SearchRepository @Inject constructor(
             userId = session.userId,
             type = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
             limit = SUGGESTION_LIMIT,
-        ).content.items.map(mapper::item)
+        ).content.items.map(mapper::item).let { ageFilter.visible(it) }
     }
 
     private data class ItemFilter(

@@ -33,6 +33,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.UiLocale
+import io.github.glacier_jellyfin.androidtv.core.data.AgeLimit
+import io.github.glacier_jellyfin.androidtv.core.data.Protection
 import io.github.glacier_jellyfin.androidtv.core.data.media.Languages
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentAction
@@ -62,8 +64,11 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.SubtitleBurnIn
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
+import io.github.glacier_jellyfin.androidtv.ui.PinDialog
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import java.text.DateFormat
+import java.util.Date
 
 /** One card of the settings list; built per category by [rows]. */
 private sealed interface SettingRow {
@@ -77,6 +82,7 @@ private sealed interface SettingRow {
         val checked: Boolean,
         val onToggle: () -> Unit,
         override val enabled: Boolean = true,
+        val focus: FocusRequester? = null,
     ) : SettingRow
 
     data class Choice(
@@ -123,6 +129,20 @@ fun SettingsScreen(
     // Closing the language list returns to the button that opened it.
     val languageFocus = remember { FocusRequester() }
     var pickerWasOpen by remember { mutableStateOf(false) }
+    // Closing the PIN dialog returns to the button that opened it.
+    val pinPrompt by viewModel.pin.prompt.collectAsStateWithLifecycle()
+    val pinOrigins = remember { PinOrigins() }
+    var pinWasOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(pinPrompt == null) {
+        if (pinPrompt == null && pinWasOpen) {
+            withFrameNanos { }
+            // The unlock button is gone once the account is open: its first row takes over.
+            val restored = pinOrigins.restore() ||
+                (state.category == SettingsCategory.Account && runCatching { languageFocus.requestFocus() }.getOrDefault(false))
+            if (!restored) runCatching { categoryFocus.getValue(state.category).requestFocus() }
+        }
+        pinWasOpen = pinPrompt != null
+    }
     LaunchedEffect(state.languagePicker) {
         if (state.languagePicker == null && pickerWasOpen) runCatching { languageFocus.requestFocus() }
         pickerWasOpen = state.languagePicker != null
@@ -172,7 +192,7 @@ fun SettingsScreen(
                     SubtitlePreview(state.profile.subtitleStyle, state.previewImage)
                     Spacer(Modifier.height(18.dp))
                 }
-                val groups = rows(state, viewModel, languageFocus)
+                val groups = rows(state, viewModel, languageFocus, pinOrigins)
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(18.dp),
                     contentPadding = PaddingValues(bottom = 60.dp),
@@ -220,13 +240,16 @@ fun SettingsScreen(
             }
         }
 
+        pinPrompt?.let { PinDialog(it, onKey = viewModel.pin::key, onDismiss = viewModel.pin::dismiss) }
     }
 }
 
 @Composable
 private fun SettingCard(row: SettingRow) {
     when (row) {
-        is SettingRow.Toggle -> OptionCard(row.label, row.sub, row.enabled, trailing = { ToggleSwitch(row.checked, row.onToggle, row.enabled) })
+        is SettingRow.Toggle -> OptionCard(row.label, row.sub, row.enabled, trailing = {
+            ToggleSwitch(row.checked, row.onToggle, row.focus?.let { Modifier.focusRequester(it) } ?: Modifier, row.enabled)
+        })
         is SettingRow.Choice -> OptionCard(row.label, row.sub, row.enabled, below = { ChoicePills(row.options, row.selected, row.onSelect, row.enabled) })
         is SettingRow.Swatches -> OptionCard(row.label, row.sub, row.enabled, below = { SwatchPicker(row.swatches, row.selected, row.onSelect) })
         is SettingRow.Value -> OptionCard(
@@ -246,13 +269,18 @@ private fun SettingCard(row: SettingRow) {
 }
 
 @Composable
-private fun rows(state: SettingsUiState, viewModel: SettingsViewModel, languageFocus: FocusRequester): List<SettingGroup> = when (state.category) {
+private fun rows(
+    state: SettingsUiState,
+    viewModel: SettingsViewModel,
+    languageFocus: FocusRequester,
+    pinOrigins: PinOrigins,
+): List<SettingGroup> = when (state.category) {
     SettingsCategory.Appearance -> appearanceRows(state, viewModel)
     SettingsCategory.Home -> homeRows(state, viewModel)
     SettingsCategory.Playback -> playbackRows(state, viewModel)
     SettingsCategory.Audio -> audioRows(state, viewModel, languageFocus)
     SettingsCategory.Subtitles -> subtitleRows(state, viewModel, languageFocus)
-    SettingsCategory.Account -> accountRows(state, viewModel, languageFocus)
+    SettingsCategory.Account -> accountRows(state, viewModel, languageFocus, pinOrigins)
 }
 
 @Composable
@@ -631,39 +659,153 @@ private fun subtitleRows(state: SettingsUiState, viewModel: SettingsViewModel, l
 }
 
 @Composable
-private fun accountRows(state: SettingsUiState, viewModel: SettingsViewModel, languageFocus: FocusRequester): List<SettingGroup> = listOf(
-    SettingGroup(
-        stringResource(R.string.settings_group_profile),
-        listOf(
-            SettingRow.Value(
-                stringResource(R.string.settings_signed_in_as),
-                stringResource(R.string.settings_signed_in_as_sub),
-                value = state.userName,
-                onClick = null,
-                chevron = false,
+private fun accountRows(
+    state: SettingsUiState,
+    viewModel: SettingsViewModel,
+    languageFocus: FocusRequester,
+    pinOrigins: PinOrigins,
+): List<SettingGroup> {
+    val lock = state.lock
+    val protection = lock.protection
+    val signedInAs = SettingRow.Value(
+        stringResource(R.string.settings_signed_in_as),
+        stringResource(R.string.settings_signed_in_as_sub),
+        value = state.userName,
+        onClick = null,
+        chevron = false,
+    )
+    if (protection.pinForSettings && lock.hasPin && !state.accountUnlocked) {
+        return listOf(
+            SettingGroup(
+                stringResource(R.string.settings_group_profile),
+                listOf(
+                    signedInAs,
+                    SettingRow.Value(
+                        stringResource(R.string.settings_account_locked),
+                        stringResource(R.string.settings_account_locked_sub),
+                        value = stringResource(R.string.settings_account_unlock),
+                        onClick = pinOrigins.tap("unlock", viewModel::unlockAccount),
+                        focus = pinOrigins.of("unlock"),
+                    ),
+                ),
             ),
-            SettingRow.Value(
-                stringResource(R.string.settings_ui_lang),
-                stringResource(if (state.profile.uiLanguage == UiLanguage.System) R.string.settings_ui_lang_system_sub else R.string.settings_ui_lang_profile_sub),
-                value = UiLanguages.firstOrNull { it.code == state.profile.uiLanguage.tag }?.name ?: stringResource(R.string.settings_ui_lang_system),
-                onClick = { viewModel.openLanguages(LanguageTarget.Ui) },
-                focus = languageFocus,
+        )
+    }
+    val ages = AgeLimit.entries
+    val ageLabel = ageLabel(protection.maxAge)
+    @Composable
+    fun pinToggle(key: String, label: Int, sub: Int, checked: Boolean, transform: (Protection, Boolean) -> Protection) =
+        SettingRow.Toggle(
+            stringResource(label),
+            stringResource(sub),
+            checked = checked,
+            onToggle = pinOrigins.tap(key) { viewModel.setPinOption(!checked, transform) },
+            focus = pinOrigins.of(key),
+        )
+    return listOf(
+        SettingGroup(
+            stringResource(R.string.settings_group_profile),
+            listOf(
+                signedInAs,
+                SettingRow.Value(
+                    stringResource(R.string.settings_ui_lang),
+                    stringResource(if (state.profile.uiLanguage == UiLanguage.System) R.string.settings_ui_lang_system_sub else R.string.settings_ui_lang_profile_sub),
+                    value = UiLanguages.firstOrNull { it.code == state.profile.uiLanguage.tag }?.name ?: stringResource(R.string.settings_ui_lang_system),
+                    onClick = { viewModel.openLanguages(LanguageTarget.Ui) },
+                    focus = languageFocus,
+                ),
             ),
         ),
-    ),
-    SettingGroup(
-        stringResource(R.string.settings_group_session),
-        listOf(
-            SettingRow.Value(
-                stringResource(R.string.home_sign_out),
-                stringResource(R.string.settings_sign_out_sub),
-                value = stringResource(R.string.home_sign_out),
-                onClick = viewModel::signOut,
-                chevron = false,
+        SettingGroup(
+            stringResource(R.string.settings_group_parental),
+            listOf(
+                SettingRow.Choice(
+                    stringResource(R.string.settings_max_age),
+                    when {
+                        protection.maxAge == AgeLimit.All -> stringResource(R.string.settings_max_age_all_sub)
+                        protection.pinForLocked -> stringResource(R.string.settings_max_age_locked_sub, ageLabel)
+                        else -> stringResource(R.string.settings_max_age_hidden_sub, ageLabel)
+                    },
+                    options = ages.map { ageLabel(it) },
+                    selected = ages.indexOf(protection.maxAge),
+                    onSelect = { viewModel.setMaxAge(ages[it]) },
+                ),
+                SettingRow.Toggle(
+                    stringResource(R.string.settings_block_unrated),
+                    stringResource(R.string.settings_block_unrated_sub),
+                    checked = protection.blockUnrated,
+                    onToggle = { viewModel.setBlockUnrated(!protection.blockUnrated) },
+                ),
             ),
         ),
-    ),
-)
+        SettingGroup(
+            stringResource(R.string.settings_group_pin),
+            listOf(
+                pinToggle("profile", R.string.settings_pin_profile, R.string.settings_pin_profile_sub, protection.pinOnProfileSwitch) { p, on ->
+                    p.copy(pinOnProfileSwitch = on)
+                },
+                pinToggle("locked", R.string.settings_pin_locked, R.string.settings_pin_locked_sub, protection.pinForLocked) { p, on ->
+                    p.copy(pinForLocked = on)
+                },
+                pinToggle("settings", R.string.settings_pin_settings, R.string.settings_pin_settings_sub, protection.pinForSettings) { p, on ->
+                    p.copy(pinForSettings = on)
+                },
+                if (lock.hasPin) {
+                    SettingRow.Value(
+                        stringResource(R.string.settings_pin_change),
+                        lock.pinChangedAt
+                            ?.let { stringResource(R.string.settings_pin_change_sub, DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(it))) }
+                            .orEmpty(),
+                        value = stringResource(R.string.settings_pin_change_value),
+                        onClick = pinOrigins.tap("change", viewModel::changePin),
+                        chevron = false,
+                        focus = pinOrigins.of("change"),
+                    )
+                } else {
+                    SettingRow.Value(
+                        stringResource(R.string.settings_pin_set),
+                        stringResource(R.string.settings_pin_set_sub),
+                        value = stringResource(R.string.settings_pin_set_value),
+                        onClick = pinOrigins.tap("change", viewModel::changePin),
+                        chevron = false,
+                        focus = pinOrigins.of("change"),
+                    )
+                },
+            ),
+        ),
+        SettingGroup(
+            stringResource(R.string.settings_group_session),
+            listOf(
+                SettingRow.Value(
+                    stringResource(R.string.home_sign_out),
+                    stringResource(R.string.settings_sign_out_sub),
+                    value = stringResource(R.string.home_sign_out),
+                    onClick = viewModel::signOut,
+                    chevron = false,
+                ),
+            ),
+        ),
+    )
+}
+
+@Composable
+private fun ageLabel(limit: AgeLimit): String =
+    limit.age?.let { "$it+" } ?: stringResource(R.string.settings_age_all)
+
+/** Buttons that open the PIN dialog; focus goes back to the one used once it closes. */
+private class PinOrigins {
+    private val requesters = mutableMapOf<String, FocusRequester>()
+    private var last: String? = null
+
+    fun of(key: String): FocusRequester = requesters.getOrPut(key) { FocusRequester() }
+
+    fun tap(key: String, action: () -> Unit): () -> Unit = {
+        last = key
+        action()
+    }
+
+    fun restore(): Boolean = last?.let { runCatching { of(it).requestFocus() }.getOrDefault(false) } == true
+}
 
 /** Languages of Glacier itself, each named in its own language. */
 private val UiLanguages = listOf(Language("de", "Deutsch"), Language("en", "English"))

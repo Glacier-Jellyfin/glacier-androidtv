@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
+import io.github.glacier_jellyfin.androidtv.core.data.media.AgeFilter
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeContent
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
@@ -23,6 +25,7 @@ import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SettingsRoute
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
+import io.github.glacier_jellyfin.androidtv.ui.PinGate
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
@@ -53,6 +56,8 @@ class HomeViewModel @Inject constructor(
     private val repository: HomeRepository,
     private val sessions: SessionManager,
     private val settings: SettingsRepository,
+    private val parental: ParentalControl,
+    private val ageFilter: AgeFilter,
     playback: PlaybackRepository,
 ) : ViewModel() {
 
@@ -63,6 +68,8 @@ class HomeViewModel @Inject constructor(
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
+
+    val pin = PinGate(viewModelScope, parental) { _events.send(it) }
 
     init {
         load()
@@ -148,7 +155,14 @@ class HomeViewModel @Inject constructor(
         )
     }
 
-    fun play(item: MediaItem) = navigate(PlayerRoute(item.id.toString()))
+    /** Starts at once, so the age limit is checked here rather than on a detail page. */
+    fun play(item: MediaItem) = pin.openTitle(
+        ageFilter,
+        id = item.id,
+        name = item.title,
+        rating = item.officialRating,
+        parents = listOfNotNull(item.seriesId),
+    ) { navigate(PlayerRoute(item.id.toString())) }
 
     fun openDetails(item: MediaItem) = navigate(DetailRoute(item.id.toString()))
 

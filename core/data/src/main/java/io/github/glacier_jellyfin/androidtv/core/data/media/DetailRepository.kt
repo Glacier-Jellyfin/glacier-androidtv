@@ -24,6 +24,7 @@ import javax.inject.Singleton
 @Singleton
 class DetailRepository @Inject constructor(
     private val sessions: SessionManager,
+    private val ageFilter: AgeFilter,
 ) {
 
     suspend fun details(id: UUID): ItemDetails = withContext(Dispatchers.IO) {
@@ -119,7 +120,7 @@ class DetailRepository @Inject constructor(
             seasonId = seasonId,
             fields = listOf(ItemFields.OVERVIEW, ItemFields.MEDIA_STREAMS),
             enableUserData = true,
-        ).content.items.map(mapper::item)
+        ).content.items.map(mapper::item).let { ageFilter.visible(it) }
     }
 
     /** The episode to play for a show: in progress, else the next unwatched one. */
@@ -151,7 +152,7 @@ class DetailRepository @Inject constructor(
         val session = requireSession()
         val mapper = MediaMapper(session.api)
         session.api.libraryApi.getSimilarItems(itemId = id, userId = session.userId, limit = SIMILAR_LIMIT)
-            .content.items.map(mapper::item)
+            .content.items.map(mapper::item).let { ageFilter.visible(it) }
     }
 
     /** Movies of a Jellyfin collection in release order (design: "chronological"). */
@@ -165,7 +166,7 @@ class DetailRepository @Inject constructor(
             enableUserData = true,
             sortBy = listOf(ItemSortBy.PRODUCTION_YEAR, ItemSortBy.PREMIERE_DATE, ItemSortBy.SORT_NAME),
             sortOrder = listOf(SortOrder.ASCENDING),
-        ).content.items.map(mapper::item)
+        ).content.items.map(mapper::item).let { ageFilter.visible(it) }
     }
 
     suspend fun person(id: UUID): PersonDetails = withContext(Dispatchers.IO) {
@@ -183,7 +184,7 @@ class DetailRepository @Inject constructor(
             sortOrder = listOf(SortOrder.DESCENDING),
         ).content.items.map { item ->
             Credit(mapper.item(item), item.people?.firstOrNull { it.id == id }?.role?.takeIf { it.isNotBlank() })
-        }
+        }.let { credits -> ageFilter.visible(credits.map { it.item }).let { kept -> credits.filter { it.item in kept } } }
         PersonDetails(
             id = dto.id,
             name = dto.name.orEmpty(),

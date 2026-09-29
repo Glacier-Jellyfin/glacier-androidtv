@@ -40,6 +40,28 @@ class AccountStateTest {
     }
 
     @Test
+    fun `signing in again keeps parental control`() {
+        val state = AccountState()
+            .withSignIn(signIn(anna, "Anna"), now = 1)
+            .updateUser("s1", anna.toString()) { it.copy(protection = Protection(maxAge = AgeLimit.A12, pinForLocked = true)) }
+            .withSignIn(signIn(anna, "Anna", token = "new"), now = 2)
+        assertEquals(Protection(maxAge = AgeLimit.A12, pinForLocked = true), state.users.single().protection)
+    }
+
+    @Test
+    fun `a profile asks for its pin only when one is set and the switch is on`() {
+        val pin = Pins.hash("1234", salt = ByteArray(16), iterations = 1)
+        fun locked(change: (StoredUser) -> StoredUser) = AccountState()
+            .withSignIn(signIn(anna, "Anna"), now = 1)
+            .updateUser("s1", anna.toString(), change)
+            .profilesFor("s1", publicUsers = null)
+            .single().pinLocked
+        assertFalse(locked { it.copy(pin = pin) })
+        assertFalse(locked { it.copy(protection = Protection(pinOnProfileSwitch = true)) })
+        assertTrue(locked { it.copy(pin = pin, protection = Protection(pinOnProfileSwitch = true)) })
+    }
+
+    @Test
     fun `profiles list public users first, then hidden users known on this device`() {
         val state = AccountState()
             .withSignIn(signIn(hidden, "Hidden"), now = 1)

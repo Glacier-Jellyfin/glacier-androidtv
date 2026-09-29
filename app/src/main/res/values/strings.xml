@@ -55,6 +55,19 @@
     <string name="pin_hint">Enter four digits</string>
     <string name="pin_wrong">Wrong PIN · please try again</string>
     <string name="pin_required">Four digits required</string>
+    <string name="pin_saved">New PIN saved</string>
+    <string name="pin_current_title">Current PIN</string>
+    <string name="pin_current_hint">Enter the current PIN first</string>
+    <string name="pin_new_title">Set a new PIN</string>
+    <string name="pin_new_hint">Enter four new digits</string>
+    <string name="pin_confirm_title">Confirm the new PIN</string>
+    <string name="pin_confirm_hint">Repeat the new PIN</string>
+    <string name="pin_mismatch">PINs do not match · enter the new PIN again</string>
+    <string name="pin_settings_title">Account locked</string>
+    <string name="pin_settings_hint">Enter the PIN to open the account settings</string>
+    <string name="pin_title_rated_hint">Rated %1$s · above this profile\'s age limit · enter PIN</string>
+    <string name="pin_title_unrated_hint">No age rating · enter PIN</string>
+    <string name="pin_title_hidden">Not approved for this profile</string>
 
     <!-- Session -->
     <string name="home_sign_out">Sign out</string>
@@ -509,4 +522,28 @@
     <string name="settings_signed_in_as">Signed in as</string>
     <string name="settings_signed_in_as_sub">Profile on this device</string>
     <string name="settings_sign_out_sub">Signs out on the server too and goes back to profile selection</string>
+    <string name="settings_group_parental">Parental control</string>
+    <string name="settings_max_age">Age rating</string>
+    <string name="settings_max_age_all_sub">No restriction · all titles visible</string>
+    <string name="settings_max_age_hidden_sub">Titles rated above %1$s are hidden for this profile</string>
+    <string name="settings_max_age_locked_sub">Titles rated above %1$s stay visible but open only with the PIN</string>
+    <string name="settings_age_all">All</string>
+    <string name="settings_block_unrated">Lock unrated titles</string>
+    <string name="settings_block_unrated_sub">Titles without an age rating count as not approved</string>
+    <string name="settings_group_pin">PIN</string>
+    <string name="settings_pin_profile">PIN on profile switch</string>
+    <string name="settings_pin_profile_sub">Four-digit PIN before this profile opens</string>
+    <string name="settings_pin_locked">PIN for locked titles</string>
+    <string name="settings_pin_locked_sub">Titles above the age rating can be unlocked once with the PIN</string>
+    <string name="settings_pin_settings">PIN for settings</string>
+    <string name="settings_pin_settings_sub">Protects parental control, PIN and account from changes</string>
+    <string name="settings_pin_change">Change PIN</string>
+    <string name="settings_pin_change_sub">Last changed: %1$s</string>
+    <string name="settings_pin_change_value">Change</string>
+    <string name="settings_pin_set">Set PIN</string>
+    <string name="settings_pin_set_sub">No PIN yet · it is set when a PIN option is first switched on</string>
+    <string name="settings_pin_set_value">Set</string>
+    <string name="settings_account_locked">Account protected</string>
+    <string name="settings_account_locked_sub">Parental control, PIN and sign-out open only with this profile\'s PIN</string>
+    <string name="settings_account_unlock">Unlock</string>
 </resources>

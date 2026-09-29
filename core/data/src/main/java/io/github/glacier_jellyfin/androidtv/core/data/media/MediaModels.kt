@@ -35,6 +35,8 @@ data class MediaItem(
     val overview: String?,
     /** Series name for episodes, album artist for albums. */
     val parentTitle: String?,
+    /** The show of an episode or season. */
+    val seriesId: UUID? = null,
     val seasonNumber: Int?,
     val episodeNumber: Int?,
     val progress: Float?,

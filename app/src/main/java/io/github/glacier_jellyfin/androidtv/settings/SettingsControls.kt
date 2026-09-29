@@ -167,10 +167,10 @@ internal fun OptionCard(
 
 /** The on/off switch: accent track when on, the knob slides across. */
 @Composable
-internal fun ToggleSwitch(checked: Boolean, onToggle: () -> Unit, enabled: Boolean = true) {
+internal fun ToggleSwitch(checked: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
     val accent = LocalAccent.current.main
     val knob by animateDpAsState(if (checked) 42.dp else 4.dp, tween(200), label = "knob")
-    GlacierClickable(onClick = onToggle, shape = PillShape, enabled = enabled, unfocusedBorder = GlacierColors.GlassBorder2) {
+    GlacierClickable(onClick = onToggle, modifier = modifier, shape = PillShape, enabled = enabled, unfocusedBorder = GlacierColors.GlassBorder2) {
         Box(
             Modifier
                 .width(86.dp)

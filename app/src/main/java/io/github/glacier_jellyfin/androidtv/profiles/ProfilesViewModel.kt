@@ -95,7 +95,7 @@ class ProfilesViewModel @Inject constructor(
             navigate(SignInRoute(serverId, profile.name))
             return
         }
-        if (profile.hasPin) {
+        if (profile.pinLocked) {
             _state.update { it.copy(pinFor = profile, pin = "", pinWrong = false) }
             return
         }

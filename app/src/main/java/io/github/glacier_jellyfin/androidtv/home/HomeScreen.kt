@@ -49,6 +49,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.ui.CardSize
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
+import io.github.glacier_jellyfin.androidtv.ui.PinDialog
 import io.github.glacier_jellyfin.androidtv.ui.ContinueCard
 import io.github.glacier_jellyfin.androidtv.ui.LibraryCard
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
@@ -70,6 +71,7 @@ fun HomeScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
 
+    val pinPrompt by viewModel.pin.prompt.collectAsStateWithLifecycle()
     val playFocus = remember { FocusRequester() }
     // Saved: coming back from a detail page shows the same title again.
     var spotIndex by rememberSaveable { mutableIntStateOf(0) }
@@ -99,6 +101,15 @@ fun HomeScreen(
         withFrameNanos { }
         val restored = lastFocus?.let { requesters[it] }?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true
         if (!restored) runCatching { listFocus.requestFocus() }
+    }
+    // A dismissed PIN dialog gives focus back to the card that asked for it.
+    var pinWasOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(pinPrompt == null) {
+        if (pinPrompt == null && pinWasOpen) {
+            withFrameNanos { }
+            lastFocus?.let { requesters[it] }?.let { runCatching { it.requestFocus() } }
+        }
+        pinWasOpen = pinPrompt != null
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -200,6 +211,8 @@ fun HomeScreen(
                 .align(Alignment.TopCenter)
                 .padding(top = 34.dp),
         )
+
+        pinPrompt?.let { PinDialog(it, onKey = viewModel.pin::key, onDismiss = viewModel.pin::dismiss) }
     }
 }
 

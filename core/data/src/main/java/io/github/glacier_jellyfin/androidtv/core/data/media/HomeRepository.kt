@@ -30,6 +30,7 @@ import javax.inject.Singleton
 @Singleton
 class HomeRepository @Inject constructor(
     private val sessions: SessionManager,
+    private val ageFilter: AgeFilter,
 ) {
 
     /** Loads all home rows in parallel for the signed-in profile. */
@@ -49,13 +50,13 @@ class HomeRepository @Inject constructor(
         val excludes = excludesAsync.await()
         val latest = libraries
             .filterNot { it.id in excludes }
-            .map { library -> async { library to latest(session, userId, library).map(mapper::item) } }
+            .map { library -> async { library to ageFilter.visible(latest(session, userId, library).map(mapper::item)) } }
             .awaitAll()
             .filter { (_, items) -> items.isNotEmpty() }
 
         HomeContent(
             libraries = libraries,
-            continueWatching = mergeContinueWatching(resumeAsync.await(), nextUpAsync.await()).map(mapper::item),
+            continueWatching = ageFilter.visible(mergeContinueWatching(resumeAsync.await(), nextUpAsync.await()).map(mapper::item)),
             latest = latest,
         )
     }
@@ -83,7 +84,7 @@ class HomeRepository @Inject constructor(
                 fields = FIELDS,
                 enableUserData = true,
                 limit = count,
-            ).content.items.map(mapper::item)
+            ).content.items.map(mapper::item).let { ageFilter.visible(it) }
         val unwatched = settings.spotlightUnwatched
         val items = when (settings.spotlightSource) {
             SpotlightSource.ContinueWatching -> continueWatching.filter { it.backdropUrl != null && settings.spotlightType.matches(it.kind) }

@@ -33,9 +33,13 @@ class AccountRepository @Inject constructor(
         store.updateData { it.updateUser(serverId, userId) { user -> user.copy(accessToken = null) } }
     }
 
-    suspend fun setPin(serverId: String, userId: String, pin: String?) {
-        val hash = pin?.let { Pins.hash(it) }
-        store.updateData { it.updateUser(serverId, userId) { user -> user.copy(pin = hash) } }
+    suspend fun setPin(serverId: String, userId: String, pin: String) {
+        val hash = Pins.hash(pin)
+        store.updateData { it.updateUser(serverId, userId) { user -> user.copy(pin = hash, pinChangedAt = now()) } }
+    }
+
+    suspend fun updateProtection(serverId: String, userId: String, transform: (Protection) -> Protection) {
+        store.updateData { it.updateUser(serverId, userId) { user -> user.copy(protection = transform(user.protection)) } }
     }
 
     suspend fun verifyPin(serverId: String, userId: String, pin: String): Boolean {

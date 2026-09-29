@@ -16,13 +16,18 @@ internal fun AccountState.withServer(server: ServerInfo, now: Long): AccountStat
 internal fun AccountState.withSignIn(user: SignedInUser, now: Long): AccountState {
     val key = user.serverId to user.userId.toString()
     val existing = users.firstOrNull { (it.serverId to it.userId) == key }
-    val stored = StoredUser(
+    // PIN and parental control stay: they belong to this device, not to the sign-in.
+    val stored = existing?.copy(
+        name = user.name,
+        primaryImageTag = user.primaryImageTag,
+        accessToken = user.accessToken,
+        lastUsedAt = now,
+    ) ?: StoredUser(
         serverId = user.serverId,
         userId = user.userId.toString(),
         name = user.name,
         primaryImageTag = user.primaryImageTag,
         accessToken = user.accessToken,
-        pin = existing?.pin,
         lastUsedAt = now,
     )
     return copy(users = users.filterNot { (it.serverId to it.userId) == key } + stored, lastServerId = user.serverId)
@@ -44,7 +49,8 @@ data class Profile(
     val primaryImageTag: String?,
     /** A valid access token is stored; selecting the profile needs no password. */
     val isSignedIn: Boolean,
-    val hasPin: Boolean,
+    /** Opening the profile asks for its PIN. */
+    val pinLocked: Boolean,
 )
 
 /**
@@ -61,13 +67,15 @@ fun AccountState.profilesFor(serverId: String, publicUsers: List<PublicUser>?): 
             name = user.name,
             primaryImageTag = user.primaryImageTag ?: stored?.primaryImageTag,
             isSignedIn = stored?.accessToken != null,
-            hasPin = stored?.pin != null,
+            pinLocked = stored?.pinLocked == true,
         )
     }
     val listed = fromServer.mapTo(HashSet()) { it.userId }
     val localOnly = local.values
         .filterNot { it.userId in listed }
         .sortedByDescending { it.lastUsedAt }
-        .map { Profile(it.userId, it.name, it.primaryImageTag, it.accessToken != null, it.pin != null) }
+        .map { Profile(it.userId, it.name, it.primaryImageTag, it.accessToken != null, it.pinLocked) }
     return fromServer + localOnly
 }
+
+internal val StoredUser.pinLocked: Boolean get() = pin != null && protection.pinOnProfileSwitch

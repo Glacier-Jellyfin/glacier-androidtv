@@ -52,6 +52,19 @@
     <string name="pin_hint">Vier Ziffern eingeben</string>
     <string name="pin_wrong">Falsche PIN · bitte erneut versuchen</string>
     <string name="pin_required">Vier Ziffern erforderlich</string>
+    <string name="pin_saved">Neue PIN gespeichert</string>
+    <string name="pin_current_title">Aktuelle PIN</string>
+    <string name="pin_current_hint">Zum Ändern zuerst die aktuelle PIN eingeben</string>
+    <string name="pin_new_title">Neue PIN festlegen</string>
+    <string name="pin_new_hint">Vier neue Ziffern eingeben</string>
+    <string name="pin_confirm_title">Neue PIN bestätigen</string>
+    <string name="pin_confirm_hint">Neue PIN zur Bestätigung wiederholen</string>
+    <string name="pin_mismatch">PINs stimmen nicht überein · neue PIN erneut eingeben</string>
+    <string name="pin_settings_title">Konto gesperrt</string>
+    <string name="pin_settings_hint">PIN eingeben, um die Konto-Einstellungen zu öffnen</string>
+    <string name="pin_title_rated_hint">Freigabe %1$s · über der Altersfreigabe dieses Profils · PIN eingeben</string>
+    <string name="pin_title_unrated_hint">Ohne Altersfreigabe · PIN eingeben</string>
+    <string name="pin_title_hidden">Für dieses Profil nicht freigegeben</string>
 
     <!-- Sitzung -->
     <string name="home_sign_out">Abmelden</string>
@@ -505,4 +518,28 @@
     <string name="settings_signed_in_as">Angemeldet als</string>
     <string name="settings_signed_in_as_sub">Profil dieses Geräts</string>
     <string name="settings_sign_out_sub">Meldet auch auf dem Server ab und führt zurück zur Benutzerauswahl</string>
+    <string name="settings_group_parental">Jugendschutz</string>
+    <string name="settings_max_age">Altersfreigabe</string>
+    <string name="settings_max_age_all_sub">Keine Einschränkung · alle Titel sichtbar</string>
+    <string name="settings_max_age_hidden_sub">Freigaben über %1$s werden für dieses Profil ausgeblendet</string>
+    <string name="settings_max_age_locked_sub">Freigaben über %1$s bleiben sichtbar, öffnen sich aber nur mit PIN</string>
+    <string name="settings_age_all">Alle</string>
+    <string name="settings_block_unrated">Nicht eingestufte Titel sperren</string>
+    <string name="settings_block_unrated_sub">Titel ohne Altersfreigabe gelten als nicht freigegeben</string>
+    <string name="settings_group_pin">PIN</string>
+    <string name="settings_pin_profile">PIN beim Profilwechsel</string>
+    <string name="settings_pin_profile_sub">Vierstellige PIN, bevor dieses Profil geöffnet wird</string>
+    <string name="settings_pin_locked">PIN für gesperrte Inhalte</string>
+    <string name="settings_pin_locked_sub">Titel über der Altersfreigabe lassen sich mit PIN einmalig freischalten</string>
+    <string name="settings_pin_settings">PIN für Einstellungen</string>
+    <string name="settings_pin_settings_sub">Schützt Jugendschutz, PIN und Konto vor Änderungen</string>
+    <string name="settings_pin_change">PIN ändern</string>
+    <string name="settings_pin_change_sub">Zuletzt geändert: %1$s</string>
+    <string name="settings_pin_change_value">Ändern</string>
+    <string name="settings_pin_set">PIN festlegen</string>
+    <string name="settings_pin_set_sub">Noch keine PIN · wird beim ersten Einschalten eines PIN-Schutzes festgelegt</string>
+    <string name="settings_pin_set_value">Festlegen</string>
+    <string name="settings_account_locked">Konto geschützt</string>
+    <string name="settings_account_locked_sub">Jugendschutz, PIN und Abmelden öffnen sich nur mit der PIN dieses Profils</string>
+    <string name="settings_account_unlock">Entsperren</string>
 </resources>

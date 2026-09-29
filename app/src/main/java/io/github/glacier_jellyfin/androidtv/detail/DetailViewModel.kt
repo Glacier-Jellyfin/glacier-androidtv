@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
+import io.github.glacier_jellyfin.androidtv.core.data.media.AgeFilter
 import io.github.glacier_jellyfin.androidtv.core.data.media.CastMember
 import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
@@ -26,6 +28,7 @@ import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PersonRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.TrailerRoute
+import io.github.glacier_jellyfin.androidtv.ui.PinGate
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
@@ -65,6 +68,8 @@ data class DetailState(
     /** Albums of an artist, newest first. */
     val artistAlbums: List<MediaItem> = emptyList(),
     val shuffle: Boolean = false,
+    /** The title stays locked (PIN dialog dismissed, or hidden for this profile): leave the page. */
+    val leave: Boolean = false,
 ) {
     val item: MediaItem? get() = details?.item
 }
@@ -78,6 +83,8 @@ class DetailViewModel @Inject constructor(
     private val shuffle: MusicShuffle,
     private val playback: PlaybackRepository,
     private val settings: SettingsRepository,
+    private val parental: ParentalControl,
+    private val ageFilter: AgeFilter,
 ) : ViewModel() {
 
     private var itemId: UUID = UUID.fromString(savedStateHandle.toRoute<DetailRoute>().itemId)
@@ -89,6 +96,8 @@ class DetailViewModel @Inject constructor(
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
+    val pin = PinGate(viewModelScope, parental) { _events.send(it) }
+
     init {
         load()
         viewModelScope.launch { shuffle.on.collect { on -> _state.update { it.copy(shuffle = on) } } }
@@ -99,6 +108,10 @@ class DetailViewModel @Inject constructor(
             _state.update { it.copy(loading = true, failed = false) }
             try {
                 val details = repository.details(itemId)
+                if (ageFilter.isLocked(itemId, listOfNotNull(details.seriesId))) {
+                    askPin(details)
+                    return@launch
+                }
                 val similarAsync = async { runCatching { repository.similar(itemId) }.getOrDefault(emptyList()) }
                 _state.update {
                     it.copy(
@@ -126,6 +139,27 @@ class DetailViewModel @Inject constructor(
             }
         }
     }
+
+    /** The PIN reloads the page; without it the page is left. */
+    private fun askPin(details: ItemDetails) {
+        _state.update { it.copy(loading = false) }
+        pin.openTitle(
+            ageFilter,
+            id = itemId,
+            name = details.item.title,
+            rating = details.item.officialRating,
+            parents = listOfNotNull(details.seriesId),
+            onRefused = ::leave,
+            onOpen = ::load,
+        )
+    }
+
+    fun dismissPin() {
+        pin.dismiss()
+        leave()
+    }
+
+    private fun leave() = _state.update { it.copy(leave = true) }
 
     private fun loadThemeSong() {
         if (themeSongLoaded || !settings.settings.value.playback.themeSongs) return
@@ -164,6 +198,8 @@ class DetailViewModel @Inject constructor(
 
     private suspend fun loadCollection(details: ItemDetails) {
         val items = repository.collectionItems(details.item.id)
+        // The PIN given for the collection counts for its movies too.
+        if (details.item.id.toString() in parental.unlockedItems.value) items.forEach { parental.unlock(it.id.toString()) }
         _state.update { it.copy(collectionItems = items) }
     }
 

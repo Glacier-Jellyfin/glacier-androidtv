@@ -70,6 +70,7 @@ val AlphabetLetters: List<Char> = listOf('#') + ('A'..'Z')
 @Singleton
 class LibraryRepository @Inject constructor(
     private val sessions: SessionManager,
+    private val ageFilter: AgeFilter,
 ) {
 
     suspend fun page(query: LibraryQuery, start: Int, limit: Int): LibraryPage = withContext(Dispatchers.IO) {
@@ -123,6 +124,8 @@ class LibraryRepository @Inject constructor(
     ): BaseItemDtoQueryResult {
         val userId = UUID.fromString(session.user.userId)
         val sortBy = query.sort.sortBy
+        // Music and playlists have no age ratings worth filtering on.
+        val ages = if (query.kind == LibraryKind.Music || query.scope == LibraryScope.Playlists) null else ageFilter.limits()
         val order = listOf(if (query.orderDescending) SortOrder.DESCENDING else SortOrder.ASCENDING)
         return when (query.scope) {
             LibraryScope.Genres -> session.api.genreApi.getGenres(
@@ -156,6 +159,8 @@ class LibraryRepository @Inject constructor(
                 includeItemTypes = listOf(itemTypeFor(query)),
                 mediaTypes = if (query.scope == LibraryScope.Playlists) listOf(MediaType.AUDIO) else emptyList(),
                 genreIds = listOfNotNull(query.genreId),
+                maxOfficialRating = ages?.maxOfficialRating,
+                hasOfficialRating = ages?.hasOfficialRating,
                 filters = listOfNotNull(ItemFilter.IS_UNPLAYED.takeIf { query.scope == LibraryScope.Unwatched }),
                 isFavorite = true.takeIf { query.scope == LibraryScope.Favorites },
                 collapseBoxSetItems = (query.scope == LibraryScope.All && query.kind == LibraryKind.Movies &&

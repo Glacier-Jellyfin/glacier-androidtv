@@ -79,6 +79,7 @@ import io.github.glacier_jellyfin.androidtv.ui.GridCard
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
+import io.github.glacier_jellyfin.androidtv.ui.PinDialog
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.qualityText
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
@@ -104,6 +105,8 @@ fun DetailScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
     val details = state.details
+    val pinPrompt by viewModel.pin.prompt.collectAsStateWithLifecycle()
+    LaunchedEffect(state.leave) { if (state.leave) onBack() }
 
     Box(Modifier.fillMaxSize()) {
         when {
@@ -121,6 +124,7 @@ fun DetailScreen(
         val panel = state.trackPanel
         if (panel != null && details != null) TrackSheet(panel, state, details, viewModel)
         state.themeSong?.let { ThemeSong(it, onDone = viewModel::themeSongDone) }
+        pinPrompt?.let { PinDialog(it, onKey = viewModel.pin::key, onDismiss = viewModel::dismissPin) }
     }
 }
 

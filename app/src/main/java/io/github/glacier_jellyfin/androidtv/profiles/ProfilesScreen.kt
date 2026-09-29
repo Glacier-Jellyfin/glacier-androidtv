@@ -189,7 +189,7 @@ private fun ProfileTile(card: ProfileCard, onClick: () -> Unit, focusRequester: 
                         modifier = Modifier.size(168.dp),
                     )
                 }
-                if (card.profile.hasPin) {
+                if (card.profile.pinLocked) {
                     Box(
                         Modifier
                             .align(Alignment.TopEnd)
