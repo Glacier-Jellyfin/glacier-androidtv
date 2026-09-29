@@ -31,7 +31,13 @@ import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PinGate
 import io.github.glacier_jellyfin.androidtv.ui.PinReason
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.core.player.FfmpegAudio
+import io.github.glacier_jellyfin.androidtv.core.updater.UpdateChannel
+import io.github.glacier_jellyfin.androidtv.core.updater.UpdateManager
+import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import org.jellyfin.sdk.api.client.extensions.systemApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,7 +47,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** Settings categories in the design's order; the rest follow in later steps. */
+/** Settings categories in the design's order. */
 enum class SettingsCategory(val label: Int) {
     Appearance(R.string.settings_cat_appearance),
     Home(R.string.settings_cat_home),
@@ -49,6 +55,7 @@ enum class SettingsCategory(val label: Int) {
     Audio(R.string.settings_cat_audio),
     Subtitles(R.string.settings_cat_subtitles),
     Account(R.string.settings_cat_account),
+    System(R.string.settings_cat_system),
 }
 
 /** Which language list is open. */
@@ -69,7 +76,16 @@ data class SettingsUiState(
     val refocusLanguage: UiLanguage? = null,
     val lock: ProfileLock = ProfileLock(),
     val accountUnlocked: Boolean = false,
+    val update: UpdateState = UpdateState.Unchecked,
+    val updateChannel: UpdateChannel = UpdateChannel.Stable,
+    val autoUpdate: Boolean = true,
+    val serverSummary: ServerSummary? = null,
+    /** FFmpeg's version, null when this build has no FFmpeg decoder. */
+    val ffmpegVersion: String? = null,
 )
+
+/** Settings › System › Server; [version] is asked fresh from the server, the stored one until then. */
+data class ServerSummary(val name: String, val address: String, val version: String?)
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -78,6 +94,7 @@ class SettingsViewModel @Inject constructor(
     private val serverPreferences: ServerPreferencesRepository,
     private val library: LibraryRepository,
     private val parental: ParentalControl,
+    val updates: UpdateManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsUiState(userName = sessions.session.value?.user?.name.orEmpty()))
@@ -103,6 +120,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { parental.lock.collect { lock -> _state.update { it.copy(lock = lock) } } }
         viewModelScope.launch { parental.settingsUnlocked.collect { unlocked -> _state.update { it.copy(accountUnlocked = unlocked) } } }
         viewModelScope.launch { loadPreviewImage() }
+        viewModelScope.launch { updates.state.collect { update -> _state.update { it.copy(update = update) } } }
+        viewModelScope.launch { updates.channel.collect { channel -> _state.update { it.copy(updateChannel = channel) } } }
+        viewModelScope.launch { updates.autoCheck.collect { on -> _state.update { it.copy(autoUpdate = on) } } }
+        viewModelScope.launch { loadServerSummary() }
+        viewModelScope.launch(Dispatchers.Default) { FfmpegAudio.version()?.let { version -> _state.update { it.copy(ffmpegVersion = version) } } }
     }
 
     fun selectCategory(category: SettingsCategory) = _state.update { it.copy(category = category) }
@@ -206,6 +228,20 @@ class SettingsViewModel @Inject constructor(
                     _events.send(UiEvent.Navigate(ProfilesRoute(serverId), clearBackStack = true))
                 }
             }
+        }
+    }
+
+    private suspend fun loadServerSummary() {
+        val session = sessions.session.value ?: return
+        val server = session.server
+        _state.update { it.copy(serverSummary = ServerSummary(server.name, server.address, server.version)) }
+        try {
+            val version = session.api.systemApi.getPublicSystemInfo().content.version ?: return
+            _state.update { it.copy(serverSummary = it.serverSummary?.copy(version = version)) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Asking the server for its version failed", e)
         }
     }
 

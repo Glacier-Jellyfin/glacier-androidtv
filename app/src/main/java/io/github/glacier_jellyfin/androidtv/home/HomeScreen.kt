@@ -57,6 +57,10 @@ import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PosterCard
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
+import io.github.glacier_jellyfin.androidtv.update.UpdateDialog
+import io.github.glacier_jellyfin.androidtv.update.UpdateViewModel
+import io.github.glacier_jellyfin.androidtv.core.updater.UpdateCandidate
 import io.github.glacier_jellyfin.androidtv.ui.rememberCardPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import kotlinx.coroutines.delay
@@ -67,6 +71,7 @@ import kotlinx.coroutines.delay
 fun HomeScreen(
     onNavigate: (UiEvent.Navigate) -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
+    updates: UpdateViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
@@ -110,6 +115,28 @@ fun HomeScreen(
             lastFocus?.let { requesters[it] }?.let { runCatching { it.requestFocus() } }
         }
         pinWasOpen = pinPrompt != null
+    }
+
+    // A new version found at start: shown once, a moment after the home screen has settled.
+    val updatePrompt by updates.updates.prompt.collectAsStateWithLifecycle()
+    var updateShown by remember { mutableStateOf<UpdateCandidate?>(null) }
+    val toaster = LocalToaster.current
+    val laterText = stringResource(R.string.update_later_toast)
+    LaunchedEffect(updatePrompt, hasContent, pinPrompt == null) {
+        val candidate = updatePrompt ?: return@LaunchedEffect
+        if (!hasContent || pinPrompt != null) return@LaunchedEffect
+        delay(1200)
+        updateShown = candidate
+        updates.updates.promptShown()
+    }
+    var updateWasOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(updateShown == null) {
+        if (updateShown == null && updateWasOpen) {
+            withFrameNanos { }
+            val restored = lastFocus?.let { requesters[it] }?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true
+            if (!restored) runCatching { listFocus.requestFocus() }
+        }
+        updateWasOpen = updateShown != null
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -213,6 +240,22 @@ fun HomeScreen(
         )
 
         pinPrompt?.let { PinDialog(it, onKey = viewModel.pin::key, onDismiss = viewModel.pin::dismiss) }
+
+        val installed = updates.updates.installed
+        if (installed != null) updateShown?.let { candidate ->
+            UpdateDialog(
+                candidate,
+                installed,
+                onNow = {
+                    updateShown = null
+                    updates.updates.download(install = true)
+                },
+                onLater = {
+                    updateShown = null
+                    toaster.show(laterText)
+                },
+            )
+        }
     }
 }
 

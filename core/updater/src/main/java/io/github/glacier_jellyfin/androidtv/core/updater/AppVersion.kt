@@ -1,5 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.core.updater
 
+import kotlinx.serialization.Serializable
+
 /**
  * A Glacier release version: `MAJOR.MINOR.PATCH` with an optional `-beta.N`.
  *
@@ -9,6 +11,7 @@ package io.github.glacier_jellyfin.androidtv.core.updater
  *
  * [versionCode] must stay identical to `versionCodeOf` in app/build.gradle.kts.
  */
+@Serializable
 data class AppVersion(
     val major: Int,
     val minor: Int,
@@ -24,6 +27,9 @@ data class AppVersion(
     override fun compareTo(other: AppVersion): Int = versionCode.compareTo(other.versionCode)
 
     override fun toString(): String = "$major.$minor.$patch" + (beta?.let { "-beta.$it" } ?: "")
+
+    /** For people: "1.4.0" or "1.4.0 Beta 2". */
+    val displayName: String get() = "$major.$minor.$patch" + (beta?.let { " Beta $it" } ?: "")
 
     companion object {
         private const val STABLE_SUFFIX = 99

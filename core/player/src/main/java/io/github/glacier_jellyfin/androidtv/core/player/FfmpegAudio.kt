@@ -23,6 +23,11 @@ object FfmpegAudio {
         MimeTypes.AUDIO_AAC to listOf("aac"),
     )
 
+    /** The decoder's version ("libavcodec 60.3.100"), null in builds without FFmpeg. */
+    @OptIn(UnstableApi::class)
+    fun version(): String? =
+        if (FfmpegLibrary.isAvailable()) FfmpegLibrary.getVersion()?.replace(Regex("^Lavc"), "libavcodec ") else null
+
     @OptIn(UnstableApi::class)
     fun jellyfinCodecs(): Set<String> {
         if (!FfmpegLibrary.isAvailable()) {

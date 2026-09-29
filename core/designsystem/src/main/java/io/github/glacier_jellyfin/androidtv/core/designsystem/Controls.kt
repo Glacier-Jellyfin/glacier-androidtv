@@ -48,13 +48,15 @@ fun PillButton(
     enabled: Boolean = true,
     /** Stretch to the available width with the label at the start, like the design's list actions. */
     fillWidth: Boolean = false,
+    /** A fixed width with the label centred, like the update dialog's buttons. */
+    width: Int? = null,
 ) {
     val accent = LocalAccent.current
     GlacierClickable(
         onClick = onClick,
         shape = PillShape,
         modifier = modifier
-            .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
+            .then(if (fillWidth) Modifier.fillMaxWidth() else if (width != null) Modifier.width(width.dp) else Modifier)
             .alpha(if (enabled) 1f else 0.5f),
         enabled = enabled,
     ) { focused ->
@@ -66,14 +68,14 @@ fun PillButton(
         val foreground = if (focused || primary) GlacierColors.Void else GlacierColors.Ice
         Row(
             modifier = Modifier
-                .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
+                .then(if (fillWidth || width != null) Modifier.fillMaxWidth() else Modifier)
                 .height(height.dp)
                 .clip(PillShape)
                 .background(background)
                 .then(if (!focused && !primary) Modifier.border(2.dp, GlacierColors.GlassBorder, PillShape) else Modifier)
                 .padding(horizontal = if (fillWidth) 30.dp else if (primary) 40.dp else 34.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp, if (width != null) Alignment.CenterHorizontally else Alignment.Start),
         ) {
             if (icon != null) Icon(icon, contentDescription = null, tint = foreground, modifier = Modifier.size(20.dp))
             Text(text, style = GlacierText.body(21, FontWeight.SemiBold), color = foreground)

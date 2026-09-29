@@ -4,9 +4,14 @@ import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -32,6 +37,10 @@ import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
 import io.github.glacier_jellyfin.androidtv.ui.ToastHost
 import io.github.glacier_jellyfin.androidtv.ui.Toaster
+import io.github.glacier_jellyfin.androidtv.update.InstallingOverlay
+import io.github.glacier_jellyfin.androidtv.update.text
+import io.github.glacier_jellyfin.androidtv.core.updater.UpdateManager
+import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -48,6 +57,7 @@ import javax.inject.Inject
 class StartViewModel @Inject constructor(
     accounts: AccountRepository,
     settings: SettingsRepository,
+    val updates: UpdateManager,
 ) : ViewModel() {
     /** The signed-in profile's look; defaults on the setup and profile screens. */
     val appearance: StateFlow<AppearanceSettings> = settings.settings
@@ -61,6 +71,7 @@ class StartViewModel @Inject constructor(
     val start = _start.asStateFlow()
 
     init {
+        updates.start()
         viewModelScope.launch {
             val state = accounts.current()
             val server = state.lastServerId?.takeIf { id -> state.servers.any { it.id == id } }
@@ -98,13 +109,25 @@ class MainActivity : ComponentActivity() {
                     LocalToaster provides toaster,
                     LocalCardSizes provides if (appearance.compact) CardSizes.Compact else CardSizes.Comfortable,
                 ) {
-                    GlacierBackground {
+                    // Nothing reacts to keys while Android installs an update.
+                    val update by startViewModel.updates.state.collectAsStateWithLifecycle()
+                    GlacierBackground(Modifier.onPreviewKeyEvent { update is UpdateState.Installing }) {
                         val start by startViewModel.start.collectAsStateWithLifecycle()
                         start?.let { GlacierNavHost(rememberNavController(), startDestination = it) }
+                        UpdateLayer(startViewModel.updates, toaster)
                         ToastHost(toaster)
                     }
                 }
             }
         }
     }
+}
+
+/** What the updater shows on any screen: its notices as toasts and the overlay while Android installs. */
+@Composable
+private fun UpdateLayer(updates: UpdateManager, toaster: Toaster) {
+    val context = LocalContext.current
+    LaunchedEffect(updates) { updates.notices.collect { toaster.show(it.text(context)) } }
+    val state by updates.state.collectAsStateWithLifecycle()
+    (state as? UpdateState.Installing)?.let { InstallingOverlay(it.candidate.version) }
 }

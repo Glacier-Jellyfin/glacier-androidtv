@@ -26,6 +26,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -67,7 +68,21 @@ import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PinDialog
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import android.content.Context
+import android.hardware.display.DisplayManager
+import android.os.Build
+import android.provider.Settings
+import android.view.Display
+import io.github.glacier_jellyfin.androidtv.BuildConfig
+import io.github.glacier_jellyfin.androidtv.core.updater.ReleaseNotes
+import io.github.glacier_jellyfin.androidtv.core.updater.UpdateCandidate
+import io.github.glacier_jellyfin.androidtv.core.updater.UpdateChannel
+import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
+import io.github.glacier_jellyfin.androidtv.update.megabytes
+import io.github.glacier_jellyfin.androidtv.update.message
+import io.github.glacier_jellyfin.androidtv.update.publishedDate
 import java.text.DateFormat
+import kotlin.math.roundToInt
 import java.util.Date
 
 /** One card of the settings list; built per category by [rows]. */
@@ -75,6 +90,9 @@ private sealed interface SettingRow {
     val label: String
     val sub: String
     val enabled: Boolean
+
+    /** Identifies the card in the list; stays the same while its texts change. */
+    val key: String get() = label
 
     data class Toggle(
         override val label: String,
@@ -112,7 +130,26 @@ private sealed interface SettingRow {
         override val enabled: Boolean = true,
         val chevron: Boolean = true,
         val focus: FocusRequester? = null,
+        val primary: Boolean = false,
     ) : SettingRow
+
+    /** The app update: its state, an action, a progress bar while downloading and the notes of a new version. */
+    data class Update(
+        override val label: String,
+        override val sub: String,
+        val value: String,
+        val primary: Boolean,
+        val onClick: () -> Unit,
+        /** 0..1 while downloading. */
+        val progress: Float? = null,
+        val progressStart: String = "",
+        val progressEnd: String = "",
+        val notesTitle: String = "",
+        val notes: List<String> = emptyList(),
+        override val enabled: Boolean = true,
+    ) : SettingRow {
+        override val key: String get() = "update"
+    }
 }
 
 private data class SettingGroup(val title: String, val rows: List<SettingRow>)
@@ -177,6 +214,7 @@ fun SettingsScreen(
                     CategoryPill(
                         label = stringResource(category.label),
                         active = category == state.category,
+                        dot = category == SettingsCategory.System && state.update.let { it is UpdateState.Available || it is UpdateState.Ready },
                         onFocused = { viewModel.selectCategory(category) },
                         modifier = Modifier.focusRequester(categoryFocus.getValue(category)),
                     )
@@ -199,7 +237,7 @@ fun SettingsScreen(
                 ) {
                     groups.forEachIndexed { groupIndex, group ->
                         item(key = "${state.category}/${group.title}") { GroupHeading(group.title, first = groupIndex == 0) }
-                        items(group.rows, key = { "${state.category}/${group.title}/${it.label}" }) { row -> SettingCard(row) }
+                        items(group.rows, key = { "${state.category}/${group.title}/${it.key}" }) { row -> SettingCard(row) }
                     }
                 }
             }
@@ -252,6 +290,7 @@ private fun SettingCard(row: SettingRow) {
         })
         is SettingRow.Choice -> OptionCard(row.label, row.sub, row.enabled, below = { ChoicePills(row.options, row.selected, row.onSelect, row.enabled) })
         is SettingRow.Swatches -> OptionCard(row.label, row.sub, row.enabled, below = { SwatchPicker(row.swatches, row.selected, row.onSelect) })
+        is SettingRow.Update -> UpdateCard(row)
         is SettingRow.Value -> OptionCard(
             row.label,
             row.sub,
@@ -262,6 +301,7 @@ private fun SettingCard(row: SettingRow) {
                     enabled = row.enabled && row.onClick != null,
                     chevron = row.chevron,
                     mono = !row.chevron,
+                    primary = row.primary,
                     modifier = row.focus?.let { Modifier.focusRequester(it) } ?: Modifier,
                 ) },
         )
@@ -281,6 +321,7 @@ private fun rows(
     SettingsCategory.Audio -> audioRows(state, viewModel, languageFocus)
     SettingsCategory.Subtitles -> subtitleRows(state, viewModel, languageFocus)
     SettingsCategory.Account -> accountRows(state, viewModel, languageFocus, pinOrigins)
+    SettingsCategory.System -> systemRows(state, viewModel)
 }
 
 @Composable
@@ -819,3 +860,209 @@ private fun languageName(state: SettingsUiState, code: String): String =
 @Composable
 private fun seconds(ms: Long): String =
     if (ms >= 60_000) stringResource(R.string.settings_minute) else stringResource(R.string.settings_seconds, (ms / 1000).toInt())
+
+@Composable
+private fun systemRows(state: SettingsUiState, viewModel: SettingsViewModel): List<SettingGroup> {
+    val context = LocalContext.current
+    val device = remember { deviceSummary(context) }
+    val server = state.serverSummary
+    // Informational values stay focusable so the list scrolls down to them.
+    fun info(label: String, sub: String, value: String) = SettingRow.Value(label, sub, value, onClick = {}, chevron = false)
+    return listOf(
+        SettingGroup(
+            stringResource(R.string.settings_group_update),
+            listOf(
+                updateRow(state, viewModel),
+                SettingRow.Choice(
+                    stringResource(R.string.update_channel),
+                    stringResource(if (state.updateChannel == UpdateChannel.Beta) R.string.update_channel_beta_sub else R.string.update_channel_stable_sub),
+                    UpdateChannel.entries.map { it.name },
+                    state.updateChannel.ordinal,
+                    onSelect = { viewModel.updates.setChannel(UpdateChannel.entries[it]) },
+                ),
+                SettingRow.Toggle(
+                    stringResource(R.string.update_auto),
+                    stringResource(R.string.update_auto_sub),
+                    state.autoUpdate,
+                    onToggle = { viewModel.updates.setAutoCheck(!state.autoUpdate) },
+                ),
+            ),
+        ),
+        SettingGroup(
+            stringResource(R.string.settings_group_device),
+            listOf(
+                info(
+                    stringResource(R.string.settings_device_name),
+                    stringResource(R.string.settings_device_sub, Build.VERSION.RELEASE, device.width, device.height, device.refreshRate),
+                    device.name,
+                ),
+            ),
+        ),
+        SettingGroup(
+            stringResource(R.string.settings_group_server),
+            listOf(
+                info(stringResource(R.string.settings_server_address), server?.name.orEmpty(), server?.address?.let(::hostOf).orEmpty()),
+                info(
+                    stringResource(R.string.settings_server_version),
+                    stringResource(R.string.settings_server_version_sub),
+                    server?.version ?: stringResource(R.string.settings_unknown),
+                ),
+            ),
+        ),
+        SettingGroup(
+            stringResource(R.string.settings_group_about),
+            listOf(
+                info(stringResource(R.string.app_name), stringResource(R.string.settings_about_sub), BuildConfig.VERSION_NAME),
+                info(stringResource(R.string.settings_source), stringResource(R.string.settings_source_sub), SOURCE_URL),
+                info(
+                    stringResource(R.string.settings_ffmpeg),
+                    stringResource(R.string.settings_ffmpeg_sub),
+                    state.ffmpegVersion ?: stringResource(R.string.settings_ffmpeg_missing),
+                ),
+            ),
+        ),
+    )
+}
+
+/** The update card for each state of the updater (design `updRow()`). */
+@Composable
+private fun updateRow(state: SettingsUiState, viewModel: SettingsViewModel): SettingRow.Update {
+    val updates = viewModel.updates
+    val installed = updates.installed
+    val resources = LocalResources.current
+    val channel = state.updateChannel.name
+    // Busy states keep a button that does nothing: disabling it would drop the focus.
+    val none = {}
+    if (installed == null) {
+        return SettingRow.Update(
+            stringResource(R.string.update_unsupported),
+            stringResource(R.string.update_unsupported_sub, BuildConfig.VERSION_NAME),
+            value = stringResource(R.string.update_check),
+            primary = false,
+            onClick = none,
+            enabled = false,
+        )
+    }
+    return when (val update = state.update) {
+        UpdateState.Unchecked -> SettingRow.Update(
+            stringResource(R.string.update_unchecked),
+            stringResource(R.string.update_unchecked_sub, installed.toString(), channel),
+            stringResource(R.string.update_check),
+            primary = false,
+            onClick = updates::check,
+        )
+        UpdateState.Checking -> SettingRow.Update(
+            stringResource(R.string.update_checking),
+            stringResource(R.string.update_checking_sub),
+            stringResource(R.string.update_checking_value),
+            primary = false,
+            onClick = none,
+        )
+        is UpdateState.Current -> SettingRow.Update(
+            stringResource(R.string.update_current),
+            stringResource(
+                R.string.update_current_sub,
+                installed.toString(),
+                channel,
+                DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(update.checkedAt)),
+            ),
+            stringResource(R.string.update_check),
+            primary = false,
+            onClick = updates::check,
+        )
+        is UpdateState.Available -> {
+            val candidate = update.candidate
+            SettingRow.Update(
+                stringResource(if (candidate.version.isBeta) R.string.update_available_beta else R.string.update_available, candidate.version.displayName),
+                stringResource(
+                    R.string.update_available_sub,
+                    installed.toString(),
+                    megabytes(resources, candidate.apk.sizeBytes),
+                    publishedDate(candidate).orEmpty(),
+                ),
+                stringResource(R.string.update_download),
+                primary = true,
+                onClick = { updates.download() },
+                notesTitle = stringResource(R.string.update_new_in, candidate.version.toString()),
+                notes = notes(candidate),
+            )
+        }
+        is UpdateState.Downloading -> {
+            val total = update.candidate.apk.sizeBytes.coerceAtLeast(1)
+            val share = (update.bytes.toFloat() / total).coerceIn(0f, 1f)
+            SettingRow.Update(
+                stringResource(R.string.update_downloading),
+                stringResource(R.string.update_downloading_sub),
+                stringResource(R.string.update_percent, (share * 100).toInt()),
+                primary = false,
+                onClick = none,
+                progress = share,
+                progressStart = stringResource(R.string.update_bar_version, update.candidate.version.toString()),
+                progressEnd = stringResource(R.string.update_bar_size, megabytes(resources, update.bytes), megabytes(resources, total)),
+            )
+        }
+        is UpdateState.Ready -> SettingRow.Update(
+            stringResource(R.string.update_ready, update.candidate.version.displayName),
+            stringResource(R.string.update_ready_sub),
+            stringResource(R.string.update_install_now),
+            primary = true,
+            onClick = updates::install,
+            notesTitle = stringResource(R.string.update_new_in, update.candidate.version.toString()),
+            notes = notes(update.candidate),
+        )
+        is UpdateState.Installing -> SettingRow.Update(
+            stringResource(R.string.update_installing),
+            stringResource(R.string.update_installing_sub),
+            stringResource(R.string.update_installing),
+            primary = false,
+            onClick = none,
+        )
+        is UpdateState.Failed -> SettingRow.Update(
+            update.candidate?.let { stringResource(R.string.update_failed, it.version.displayName) } ?: stringResource(R.string.update_check_failed),
+            stringResource(update.error.message()),
+            stringResource(R.string.update_retry),
+            primary = false,
+            onClick = updates::retry,
+        )
+    }
+}
+
+/** The release notes as single lines, "New · Voice search". */
+@Composable
+private fun notes(candidate: UpdateCandidate): List<String> {
+    val fallback = stringResource(R.string.update_notes_fallback)
+    val resources = LocalResources.current
+    return remember(candidate, resources) {
+        ReleaseNotes.parse(candidate.release.body, fallback).flatMap { section ->
+            section.items.map { resources.getString(R.string.update_note, section.heading, it.text) }
+        }
+    }
+}
+
+@Composable
+private fun UpdateCard(row: SettingRow.Update) {
+    OptionCard(
+        row.label,
+        row.sub,
+        row.enabled,
+        trailing = { ValueButton(row.value, onClick = row.onClick, enabled = row.enabled, chevron = false, mono = true, primary = row.primary) },
+        below = if (row.progress == null && row.notes.isEmpty()) null else {
+            { UpdateDetails(row.progress, row.progressStart, row.progressEnd, row.notesTitle, row.notes) }
+        },
+    )
+}
+
+private data class DeviceSummary(val name: String, val width: Int, val height: Int, val refreshRate: Int)
+
+/** The name the device has in the Android settings, and its current display mode. */
+private fun deviceSummary(context: Context): DeviceSummary {
+    val name = Settings.Global.getString(context.contentResolver, Settings.Global.DEVICE_NAME)?.takeIf { it.isNotBlank() }
+        ?: "${Build.MANUFACTURER} ${Build.MODEL}"
+    val mode = context.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY)?.mode
+    return DeviceSummary(name, mode?.physicalWidth ?: 0, mode?.physicalHeight ?: 0, mode?.refreshRate?.roundToInt() ?: 0)
+}
+
+/** "https://jellyfin.example.org:8920" -> "jellyfin.example.org:8920". */
+private fun hostOf(address: String): String = address.substringAfter("://").trimEnd('/')
+
+private const val SOURCE_URL = "github.com/Glacier-Jellyfin/glacier-androidtv"

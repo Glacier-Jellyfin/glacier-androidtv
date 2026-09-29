@@ -36,6 +36,8 @@ android {
         targetSdk = 37
         versionName = glacierVersion
         versionCode = versionCodeOf(glacierVersion)
+        // Empty: the GitHub releases API (core/updater ReleaseFeed.GITHUB).
+        buildConfigField("String", "UPDATE_FEED", "\"\"")
     }
 
     signingConfigs {
@@ -54,6 +56,8 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
+            // Local test releases for the updater, see docs/RELEASING.md.
+            providers.gradleProperty("glacier.updateFeed").orNull?.let { buildConfigField("String", "UPDATE_FEED", "\"$it\"") }
         }
         release {
             isMinifyEnabled = true

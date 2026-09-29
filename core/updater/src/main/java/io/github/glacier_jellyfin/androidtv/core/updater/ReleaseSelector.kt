@@ -1,15 +1,23 @@
 package io.github.glacier_jellyfin.androidtv.core.updater
 
+import kotlinx.serialization.Serializable
+
 enum class UpdateChannel { Stable, Beta }
 
 /** The parts of a GitHub release the updater cares about. */
+@Serializable
 data class Release(
     val tag: String,
     val isDraft: Boolean,
     val isPrerelease: Boolean,
     val assets: List<ReleaseAsset>,
+    /** Markdown release notes: the version's CHANGELOG.md section. */
+    val body: String = "",
+    /** ISO 8601, e.g. "2026-09-24T18:02:11Z". */
+    val publishedAt: String? = null,
 )
 
+@Serializable
 data class ReleaseAsset(
     val name: String,
     val downloadUrl: String,
@@ -18,6 +26,7 @@ data class ReleaseAsset(
     val digest: String?,
 )
 
+@Serializable
 data class UpdateCandidate(
     val version: AppVersion,
     val release: Release,

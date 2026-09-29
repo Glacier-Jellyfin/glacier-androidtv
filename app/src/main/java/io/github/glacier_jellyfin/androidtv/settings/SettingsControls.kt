@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -81,7 +82,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.R as DesignR
 
 /** A category on the left (design `pill()`): accent when focused, tinted when it is the open one. */
 @Composable
-internal fun CategoryPill(label: String, active: Boolean, onFocused: () -> Unit, modifier: Modifier = Modifier) {
+internal fun CategoryPill(label: String, active: Boolean, onFocused: () -> Unit, modifier: Modifier = Modifier, dot: Boolean = false) {
     val accent = LocalAccent.current.main
     GlacierClickable(
         onClick = onFocused,
@@ -90,7 +91,12 @@ internal fun CategoryPill(label: String, active: Boolean, onFocused: () -> Unit,
         modifier = modifier.fillMaxWidth(),
     ) { focused ->
         if (focused) LaunchedEffect(Unit) { onFocused() }
-        Box(
+        val color = when {
+            focused -> GlacierColors.Void
+            active -> GlacierColors.Ice
+            else -> GlacierColors.Mist
+        }
+        Row(
             Modifier
                 .fillMaxWidth()
                 .height(66.dp)
@@ -103,17 +109,11 @@ internal fun CategoryPill(label: String, active: Boolean, onFocused: () -> Unit,
                     },
                 )
                 .padding(horizontal = 24.dp),
-            contentAlignment = Alignment.CenterStart,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                label,
-                style = GlacierText.body(21, FontWeight.SemiBold),
-                color = when {
-                    focused -> GlacierColors.Void
-                    active -> GlacierColors.Ice
-                    else -> GlacierColors.Mist
-                },
-            )
+            Text(label, style = GlacierText.body(21, FontWeight.SemiBold), color = color, modifier = Modifier.weight(1f))
+            // Something waits there, e.g. an app update.
+            if (dot) Box(Modifier.size(10.dp).clip(CircleShape).background(color))
         }
     }
 }
@@ -147,6 +147,8 @@ internal fun OptionCard(
     Column(
         Modifier
             .fillMaxWidth()
+            // Up/Down move card by card, also between a switch on the right and choices on the left.
+            .focusGroup()
             .clip(shape)
             .background(GlacierColors.GlassFill)
             .border(1.dp, GlacierColors.GlassBorder, shape)
@@ -273,14 +275,28 @@ internal fun ValueButton(
     enabled: Boolean = true,
     chevron: Boolean = true,
     mono: Boolean = false,
+    /** The next step to take, e.g. "Download": tinted like a chosen option. */
+    primary: Boolean = false,
 ) {
     val accent = LocalAccent.current.main
-    GlacierClickable(onClick = onClick, shape = PillShape, enabled = enabled, modifier = modifier) { focused ->
+    GlacierClickable(
+        onClick = onClick,
+        shape = PillShape,
+        enabled = enabled,
+        modifier = modifier,
+        unfocusedBorder = if (primary) accent.copy(alpha = 0.45f) else Color.Transparent,
+    ) { focused ->
         Row(
             Modifier
                 .height(if (chevron) 52.dp else 48.dp)
                 .clip(PillShape)
-                .background(if (focused) accent else GlacierColors.GlassFill)
+                .background(
+                    when {
+                        focused -> accent
+                        primary -> accent.copy(alpha = 0.18f)
+                        else -> GlacierColors.GlassFill
+                    },
+                )
                 .padding(start = if (chevron) 24.dp else 20.dp, end = if (chevron) 18.dp else 20.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -288,6 +304,35 @@ internal fun ValueButton(
             val color = if (focused) GlacierColors.Void else GlacierColors.Ice
             Text(value, style = if (mono) GlacierText.mono(19) else GlacierText.body(19, FontWeight.SemiBold), color = color)
             if (chevron) Icon(GlacierIcons.ChevronRight, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+        }
+    }
+}
+
+/** Below the update card: the download progress, or the notes of the version on offer. */
+@Composable
+internal fun UpdateDetails(progress: Float?, progressStart: String, progressEnd: String, notesTitle: String, notes: List<String>) {
+    val accent = LocalAccent.current.main
+    if (progress != null) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.fillMaxWidth().height(8.dp).clip(PillShape).background(GlacierColors.GlassFill2)) {
+                Box(Modifier.fillMaxWidth(progress).fillMaxHeight().clip(PillShape).background(accent))
+            }
+            Row(Modifier.fillMaxWidth()) {
+                Text(progressStart, style = GlacierText.mono(16), color = GlacierColors.Mist, modifier = Modifier.weight(1f))
+                Text(progressEnd, style = GlacierText.mono(16), color = GlacierColors.Mist)
+            }
+        }
+    }
+    if (notes.isNotEmpty()) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.fillMaxWidth().height(1.dp).background(GlacierColors.GlassBorder))
+            Text(notesTitle.uppercase(), style = GlacierText.label(15, 0.04), color = GlacierColors.Mist, modifier = Modifier.padding(top = 8.dp))
+            notes.forEach { note ->
+                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Box(Modifier.padding(top = 11.dp).size(6.dp).clip(CircleShape).background(accent))
+                    Text(note, style = GlacierText.body(18), color = GlacierColors.Ice)
+                }
+            }
         }
     }
 }
