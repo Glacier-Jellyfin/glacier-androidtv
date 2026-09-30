@@ -110,6 +110,9 @@ import java.time.format.DateTimeFormatter
 /** The OSD hides after this long without input while playing (design: 5 s). */
 private const val OSD_TIMEOUT_MS = 5_000L
 
+/** With the small YouTube frame the OSD leaves sooner, so the video reaches full screen faster. */
+private const val YOUTUBE_OSD_TIMEOUT_MS = 2_000L
+
 /** The end screen takes focus after this pause. */
 private const val END_FOCUS_DELAY_MS = 600L
 
@@ -167,7 +170,7 @@ fun TrailerScreen(
     LaunchedEffect(state.playWhenReady) { if (!state.playWhenReady) showOsd() }
     LaunchedEffect(osdVisible, interaction, state.playWhenReady, state.loading) {
         if (osdVisible && state.playWhenReady && !state.loading) {
-            delay(OSD_TIMEOUT_MS)
+            delay(if (youTube != null) YOUTUBE_OSD_TIMEOUT_MS else OSD_TIMEOUT_MS)
             osdVisible = false
         }
     }
