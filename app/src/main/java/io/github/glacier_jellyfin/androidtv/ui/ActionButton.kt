@@ -46,6 +46,7 @@ fun ActionButton(
     contentDescription: String? = label,
     /** Second icon drawn over [icon] in the button's background colour, e.g. a check in a filled circle. */
     iconMark: ImageVector? = null,
+    enabled: Boolean = true,
 ) {
     val accent = LocalAccent.current
     val interaction = remember { MutableInteractionSource() }
@@ -71,7 +72,7 @@ fun ActionButton(
             .defaultMinSize(minWidth = 62.dp)
             .clip(PillShape)
             .background(background)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = if (label != null) 32.dp else 18.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(11.dp, Alignment.CenterHorizontally),

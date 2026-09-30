@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -281,45 +282,58 @@ internal fun SwatchPicker(swatches: List<Swatch>, selected: Int, onSelect: (Int)
     }
 }
 
-/** A value that opens a list (language) or runs an action, at the end of its card. */
+/** The current value at the end of its card, opening a list to pick another (language). */
 @Composable
 internal fun ValueButton(
     value: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    chevron: Boolean = true,
-    mono: Boolean = false,
-    /** The next step to take, e.g. "Download": tinted like a chosen option. */
-    primary: Boolean = false,
 ) {
     val accent = LocalAccent.current.main
-    GlacierClickable(
-        onClick = onClick,
-        shape = PillShape,
-        enabled = enabled,
-        modifier = modifier,
-        unfocusedBorder = if (primary) accent.copy(alpha = 0.45f) else Color.Transparent,
-    ) { focused ->
+    GlacierClickable(onClick = onClick, shape = PillShape, enabled = enabled, modifier = modifier) { focused ->
         Row(
             Modifier
-                .height(if (chevron) 52.dp else 48.dp)
+                .height(52.dp)
                 .clip(PillShape)
-                .background(
-                    when {
-                        focused -> accent
-                        primary -> accent.copy(alpha = 0.18f)
-                        else -> GlacierColors.GlassFill
-                    },
-                )
-                .padding(start = if (chevron) 24.dp else 20.dp, end = if (chevron) 18.dp else 20.dp),
+                .background(if (focused) accent else GlacierColors.GlassFill)
+                .padding(start = 24.dp, end = 18.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             val color = if (focused) GlacierColors.Void else GlacierColors.Ice
-            Text(value, style = if (mono) GlacierText.mono(19) else GlacierText.body(19, FontWeight.SemiBold), color = color)
-            if (chevron) Icon(GlacierIcons.ChevronRight, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+            Text(value, style = GlacierText.body(19, FontWeight.SemiBold), color = color)
+            Icon(GlacierIcons.ChevronRight, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
         }
+    }
+}
+
+/**
+ * A read-only fact as a card: the value is plain text, never a pill, so it cannot be mistaken
+ * for a button. When [focusable] the whole card takes focus (a lit border only, no ring or
+ * scale), so the list can scroll down to it.
+ */
+@Composable
+internal fun InfoCard(label: String, sub: String, value: String, focusable: Boolean) {
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .then(if (focusable) Modifier.focusable(interactionSource = interaction) else Modifier)
+            .clip(shape)
+            .background(GlacierColors.GlassFill)
+            .border(if (focused) 2.dp else 1.dp, if (focused) LocalAccent.current.main.copy(alpha = 0.6f) else GlacierColors.GlassBorder, shape)
+            .padding(horizontal = 30.dp, vertical = 26.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(24.dp),
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(label, style = GlacierText.body(22, FontWeight.SemiBold), color = GlacierColors.Ice)
+            Text(sub, style = GlacierText.body(17), color = GlacierColors.Mist)
+        }
+        Text(value, style = GlacierText.mono(19), color = GlacierColors.Mist, textAlign = TextAlign.End)
     }
 }
 

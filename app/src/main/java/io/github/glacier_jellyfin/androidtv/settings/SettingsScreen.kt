@@ -76,6 +76,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.SubtitleBurnIn
 import io.github.glacier_jellyfin.androidtv.player.subtitleTypeface
+import io.github.glacier_jellyfin.androidtv.ui.ActionButton
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PinDialog
@@ -146,14 +147,33 @@ private sealed interface SettingRow {
         override val enabled: Boolean = true,
     ) : SettingRow
 
-    /** A value at the end of the card: a language list to open, or an action. */
+    /** The current value at the end of the card, opening a list to pick another, e.g. a language. */
     data class Value(
         override val label: String,
         override val sub: String,
         val value: String,
-        val onClick: (() -> Unit)?,
+        val onClick: () -> Unit,
         override val enabled: Boolean = true,
-        val chevron: Boolean = true,
+        val focus: FocusRequester? = null,
+    ) : SettingRow
+
+    /** A read-only fact, its value as plain text; [focusable] lets the list scroll down to it. */
+    data class Info(
+        override val label: String,
+        override val sub: String,
+        val value: String,
+        val focusable: Boolean = false,
+    ) : SettingRow {
+        override val enabled: Boolean get() = true
+    }
+
+    /** Something to do, e.g. sign out: a button like the ones on the rest of the app. */
+    data class Action(
+        override val label: String,
+        override val sub: String,
+        val button: String,
+        val onClick: () -> Unit,
+        override val enabled: Boolean = true,
         val focus: FocusRequester? = null,
         val primary: Boolean = false,
     ) : SettingRow
@@ -337,11 +357,21 @@ private fun SettingCard(row: SettingRow) {
             row.enabled,
             trailing = { ValueButton(
                     row.value,
-                    onClick = { row.onClick?.invoke() },
-                    enabled = row.enabled && row.onClick != null,
-                    chevron = row.chevron,
-                    mono = !row.chevron,
+                    onClick = row.onClick,
+                    enabled = row.enabled,
+                    modifier = row.focus?.let { Modifier.focusRequester(it) } ?: Modifier,
+                ) },
+        )
+        is SettingRow.Info -> InfoCard(row.label, row.sub, row.value, row.focusable)
+        is SettingRow.Action -> OptionCard(
+            row.label,
+            row.sub,
+            row.enabled,
+            trailing = { ActionButton(
+                    onClick = row.onClick,
+                    label = row.button,
                     primary = row.primary,
+                    enabled = row.enabled,
                     modifier = row.focus?.let { Modifier.focusRequester(it) } ?: Modifier,
                 ) },
         )
@@ -793,12 +823,10 @@ private fun accountRows(
 ): List<SettingGroup> {
     val lock = state.lock
     val protection = lock.protection
-    val signedInAs = SettingRow.Value(
+    val signedInAs = SettingRow.Info(
         stringResource(R.string.settings_signed_in_as),
         stringResource(R.string.settings_signed_in_as_sub),
         value = state.userName,
-        onClick = null,
-        chevron = false,
     )
     if (protection.pinForSettings && lock.hasPin && !state.accountUnlocked) {
         return listOf(
@@ -806,10 +834,10 @@ private fun accountRows(
                 stringResource(R.string.settings_group_profile),
                 listOf(
                     signedInAs,
-                    SettingRow.Value(
+                    SettingRow.Action(
                         stringResource(R.string.settings_account_locked),
                         stringResource(R.string.settings_account_locked_sub),
-                        value = stringResource(R.string.settings_account_unlock),
+                        button = stringResource(R.string.settings_account_unlock),
                         onClick = pinOrigins.tap("unlock", viewModel::unlockAccount),
                         focus = pinOrigins.of("unlock"),
                     ),
@@ -877,23 +905,21 @@ private fun accountRows(
                     p.copy(pinForSettings = on)
                 },
                 if (lock.hasPin) {
-                    SettingRow.Value(
+                    SettingRow.Action(
                         stringResource(R.string.settings_pin_change),
                         lock.pinChangedAt
                             ?.let { stringResource(R.string.settings_pin_change_sub, DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(it))) }
                             .orEmpty(),
-                        value = stringResource(R.string.settings_pin_change_value),
+                        button = stringResource(R.string.settings_pin_change_value),
                         onClick = pinOrigins.tap("change", viewModel::changePin),
-                        chevron = false,
                         focus = pinOrigins.of("change"),
                     )
                 } else {
-                    SettingRow.Value(
+                    SettingRow.Action(
                         stringResource(R.string.settings_pin_set),
                         stringResource(R.string.settings_pin_set_sub),
-                        value = stringResource(R.string.settings_pin_set_value),
+                        button = stringResource(R.string.settings_pin_set_value),
                         onClick = pinOrigins.tap("change", viewModel::changePin),
-                        chevron = false,
                         focus = pinOrigins.of("change"),
                     )
                 },
@@ -902,12 +928,11 @@ private fun accountRows(
         SettingGroup(
             stringResource(R.string.settings_group_session),
             listOf(
-                SettingRow.Value(
+                SettingRow.Action(
                     stringResource(R.string.home_sign_out),
                     stringResource(R.string.settings_sign_out_sub),
-                    value = stringResource(R.string.home_sign_out),
+                    button = stringResource(R.string.home_sign_out),
                     onClick = viewModel::signOut,
-                    chevron = false,
                 ),
             ),
         ),
@@ -952,7 +977,7 @@ private fun systemRows(state: SettingsUiState, viewModel: SettingsViewModel): Li
     val device = remember { deviceSummary(context) }
     val server = state.serverSummary
     // Informational values stay focusable so the list scrolls down to them.
-    fun info(label: String, sub: String, value: String) = SettingRow.Value(label, sub, value, onClick = {}, chevron = false)
+    fun info(label: String, sub: String, value: String) = SettingRow.Info(label, sub, value, focusable = true)
     return listOf(
         SettingGroup(
             stringResource(R.string.settings_group_update),
@@ -1130,7 +1155,7 @@ private fun UpdateCard(row: SettingRow.Update) {
         row.label,
         row.sub,
         row.enabled,
-        trailing = { ValueButton(row.value, onClick = row.onClick, enabled = row.enabled, chevron = false, mono = true, primary = row.primary) },
+        trailing = { ActionButton(onClick = row.onClick, label = row.value, primary = row.primary, enabled = row.enabled) },
         below = if (row.progress == null && row.notes.isEmpty()) null else {
             { UpdateDetails(row.progress, row.progressStart, row.progressEnd, row.notesTitle, row.notes) }
         },
