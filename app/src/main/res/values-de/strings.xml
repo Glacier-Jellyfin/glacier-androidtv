@@ -130,7 +130,6 @@
     <string name="sort_runtime">Laufzeit</string>
     <string name="sort_ascending">aufsteigend</string>
     <string name="sort_descending">absteigend</string>
-    <string name="library_summary">%1$s · sortiert nach %2$s · %3$s</string>
     <plurals name="count_collections">
         <item quantity="one">%1$d Sammlung</item>
         <item quantity="other">%1$d Sammlungen</item>

@@ -59,6 +59,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -94,6 +95,7 @@ import kotlin.math.abs
 private const val HEADER_ITEMS = 2
 private const val ROW_PIVOT = 330
 private const val ROW_TOLERANCE = 48
+private const val RAIL_TOP = 150
 
 @OptIn(ExperimentalFoundationApi::class) // LocalBringIntoViewSpec
 @Composable
@@ -239,7 +241,9 @@ fun LibraryScreen(
                     descending = state.query.orderDescending,
                     current = current,
                     onLetter = viewModel::jumpToLetter,
-                    modifier = Modifier.padding(top = 150.dp, end = 22.dp),
+                    modifier = Modifier
+                        .padding(end = 22.dp)
+                        .offset { IntOffset(0, railTop(gridState, RAIL_TOP.dp.roundToPx())) },
                 )
             }
         }
@@ -276,22 +280,14 @@ private fun Header(state: LibraryState) {
     )
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, style = GlacierText.display(50), color = GlacierColors.Ice)
+        // The sort button already shows sort and order, so the line only counts. It keeps its
+        // height while a filter loads, so the chips below do not jump up.
         val total = state.total
-        if (total != null) {
-            val count = countText(state.query.scope, state.query.kind, total)
-            // Genres and artists are always listed by name, so there is no sort to report.
-            val sorted = !state.query.listedByName
-            Text(
-                if (!sorted) count else stringResource(
-                    R.string.library_summary,
-                    count,
-                    stringResource(state.query.sort.label),
-                    stringResource(if (state.query.descending) R.string.sort_descending else R.string.sort_ascending),
-                ),
-                style = GlacierText.body(19),
-                color = GlacierColors.Mist,
-            )
-        }
+        Text(
+            if (total != null) countText(state.query.scope, state.query.kind, total) else " ",
+            style = GlacierText.body(19),
+            color = GlacierColors.Mist,
+        )
     }
 }
 
@@ -507,6 +503,16 @@ private fun rememberGridPivotSpec(gridState: LazyGridState): BringIntoViewSpec {
             }
         }
     }
+}
+
+/**
+ * The design keeps the A–Z rail level with the first row of cards and lets it stick
+ * [RAIL_TOP] from the top once that row scrolls up.
+ */
+private fun railTop(gridState: LazyGridState, stickyTop: Int): Int {
+    val info = gridState.layoutInfo
+    val firstRow = info.visibleItemsInfo.firstOrNull { it.index == HEADER_ITEMS } ?: return stickyTop
+    return maxOf(stickyTop, firstRow.offset.y - info.viewportStartOffset)
 }
 
 private fun letterOf(item: MediaItem): Char {

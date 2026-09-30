@@ -133,7 +133,6 @@
     <string name="sort_runtime">Runtime</string>
     <string name="sort_ascending">ascending</string>
     <string name="sort_descending">descending</string>
-    <string name="library_summary">%1$s · sorted by %2$s · %3$s</string>
     <plurals name="count_collections">
         <item quantity="one">%1$d collection</item>
         <item quantity="other">%1$d collections</item>
