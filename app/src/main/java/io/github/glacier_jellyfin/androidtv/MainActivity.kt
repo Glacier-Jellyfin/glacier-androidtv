@@ -10,7 +10,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
@@ -35,6 +39,7 @@ import io.github.glacier_jellyfin.androidtv.navigation.ServerListRoute
 import io.github.glacier_jellyfin.androidtv.ui.CardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
+import io.github.glacier_jellyfin.androidtv.ui.NavDirection
 import io.github.glacier_jellyfin.androidtv.ui.ToastHost
 import io.github.glacier_jellyfin.androidtv.ui.Toaster
 import io.github.glacier_jellyfin.androidtv.update.InstallingOverlay
@@ -111,7 +116,17 @@ class MainActivity : ComponentActivity() {
                 ) {
                     // Nothing reacts to keys while Android installs an update.
                     val update by startViewModel.updates.state.collectAsStateWithLifecycle()
-                    GlacierBackground(Modifier.onPreviewKeyEvent { update is UpdateState.Installing }) {
+                    GlacierBackground(
+                        Modifier.onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown) {
+                                when (event.key) {
+                                    Key.DirectionUp, Key.DirectionDown -> NavDirection.vertical = true
+                                    Key.DirectionLeft, Key.DirectionRight -> NavDirection.vertical = false
+                                }
+                            }
+                            update is UpdateState.Installing
+                        },
+                    ) {
                         val start by startViewModel.start.collectAsStateWithLifecycle()
                         start?.let { GlacierNavHost(rememberNavController(), startDestination = it) }
                         UpdateLayer(startViewModel.updates, toaster)

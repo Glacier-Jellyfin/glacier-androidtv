@@ -44,7 +44,17 @@ fun rememberRowPivotSpec(listState: LazyListState, topHeight: Int): BringIntoVie
     }
 }
 
-/** Horizontal counterpart: the focused card settles [CardPivot] from the left edge. */
+/** Whether the last D-pad key moved up or down; set by the activity's key handler. */
+object NavDirection {
+    @Volatile
+    var vertical = false
+}
+
+/**
+ * Horizontal counterpart: the focused card settles [CardPivot] from the left edge.
+ * Arriving from above or below only scrolls a card that is not fully visible,
+ * so a row does not jump while the focus merely passes through.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun rememberCardPivotSpec(): BringIntoViewSpec {
@@ -52,7 +62,12 @@ fun rememberCardPivotSpec(): BringIntoViewSpec {
     return remember(density) {
         val pivot = with(density) { CardPivot.dp.toPx() }
         object : BringIntoViewSpec {
-            override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = offset - pivot
+            override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = when {
+                !NavDirection.vertical -> offset - pivot
+                offset < 0f -> offset
+                offset + size > containerSize -> offset + size - containerSize
+                else -> 0f
+            }
         }
     }
 }
