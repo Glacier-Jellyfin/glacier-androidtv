@@ -57,7 +57,7 @@ jobs:
           fi
           export GLACIER_KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
           echo "$GLACIER_KEYSTORE_BASE64" | base64 --decode > "$GLACIER_KEYSTORE_PATH"
-          ./gradlew testReleaseUnitTest :app:assembleRelease -Pglacier.version="${{ steps.tag.outputs.version }}"
+          ./gradlew testDebugUnitTest :app:assembleRelease -Pglacier.version="${{ steps.tag.outputs.version }}"
           rm "$GLACIER_KEYSTORE_PATH"
 
       - name: Verify signature

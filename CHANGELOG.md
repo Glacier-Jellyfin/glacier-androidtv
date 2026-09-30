@@ -18,7 +18,7 @@ renders the reference separately.
 
 ## [Unreleased]
 
-## [0.1.0-beta.1] - 2026-09-30
+## [0.1.0-beta.2] - 2026-09-30
 
 ### New
 - Sign in with a Jellyfin account or Quick Connect, choose a public user, and
