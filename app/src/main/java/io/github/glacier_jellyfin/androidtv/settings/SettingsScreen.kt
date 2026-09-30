@@ -23,7 +23,14 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
@@ -162,6 +169,9 @@ fun SettingsScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
     val categoryFocus = remember { SettingsCategory.entries.associateWith { FocusRequester() } }
+    val focusManager = LocalFocusManager.current
+    // Read right after a focus move, so a plain holder rather than state.
+    val cardsFocus = remember { object { var value = false } }
     var initialFocusDone by rememberSaveable { mutableStateOf(false) }
     // Closing the language list returns to the button that opened it.
     val languageFocus = remember { FocusRequester() }
@@ -223,8 +233,16 @@ fun SettingsScreen(
             Column(
                 Modifier
                     .weight(1f)
-                    // Left from any card goes back to the open category, not the nearest one.
-                    .focusProperties { left = categoryFocus.getValue(state.category) },
+                    .onFocusChanged { cardsFocus.value = it.hasFocus }
+                    // Left out of the cards always lands on the open category, not the nearest one. Focus
+                    // properties cannot redirect it reliably here, so the move is made by hand and corrected.
+                    .onKeyEvent { event ->
+                        if (event.type != KeyEventType.KeyDown || event.key != Key.DirectionLeft) return@onKeyEvent false
+                        if (focusManager.moveFocus(FocusDirection.Left) && !cardsFocus.value) {
+                            runCatching { categoryFocus.getValue(state.category).requestFocus() }
+                        }
+                        true
+                    },
             ) {
                 if (state.category == SettingsCategory.Subtitles) {
                     SubtitlePreview(state.profile.subtitleStyle, state.previewImage)
