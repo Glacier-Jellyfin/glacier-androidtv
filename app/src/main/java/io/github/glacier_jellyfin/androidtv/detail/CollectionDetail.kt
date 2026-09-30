@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -177,7 +177,7 @@ fun CollectionDetail(state: DetailState, details: ItemDetails, viewModel: Detail
                             bottomPadding = 110,
                             modifier = Modifier.padding(top = 46.dp),
                         ) {
-                            itemsIndexed(items, key = { _, item -> item.id }) { index, item -> CollectionCard(index + 1, item, onClick = { viewModel.openItem(item) }) }
+                            items(items, key = { it.id }) { item -> CollectionCard(item, onClick = { viewModel.openItem(item) }) }
                         }
                     }
                 }
@@ -234,28 +234,14 @@ private fun PosterStack(items: List<MediaItem>) {
     }
 }
 
-/** Movie of a collection: poster with its place in the order, watched state, title and "year · runtime". */
+/** Movie of a collection: poster with its watched state, title and "year · runtime". */
 @Composable
-private fun CollectionCard(order: Int, item: MediaItem, onClick: () -> Unit) {
-    Box {
-        GridCard(
-            imageUrl = item.posterUrl,
-            title = item.title,
-            caption = listOfNotNull(item.year?.toString(), item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }).joinToString(" · "),
-            onClick = onClick,
-            watched = item.played,
-        )
-        Box(
-            Modifier
-                .padding(14.dp)
-                .height(36.dp)
-                .clip(PillShape)
-                .background(GlacierColors.GlassFill2)
-                .border(1.dp, GlacierColors.GlassBorder2, PillShape)
-                .padding(horizontal = 11.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(order.toString(), style = GlacierText.display(17), color = GlacierColors.Ice)
-        }
-    }
+private fun CollectionCard(item: MediaItem, onClick: () -> Unit) {
+    GridCard(
+        imageUrl = item.posterUrl,
+        title = item.title,
+        caption = listOfNotNull(item.year?.toString(), item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }).joinToString(" · "),
+        onClick = onClick,
+        watched = item.played,
+    )
 }
