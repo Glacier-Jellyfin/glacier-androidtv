@@ -321,14 +321,15 @@ class PlayerViewModel @Inject constructor(
         val next = _state.value.next
         val duration = _progress.value.durationMs
         if (next != null && duration > 0 && segment.endMs >= duration - END_TOLERANCE_MS) {
-            switchTo(next)
+            switchTo(next, watched = true)
         } else {
             seekTo(segment.endMs)
         }
         _progress.update { it.copy(skip = null) }
     }
 
-    fun playNext() = _state.value.next?.let(::switchTo)
+    /** Moving on to the next episode counts the current one as watched. */
+    fun playNext() = _state.value.next?.let { switchTo(it, watched = true) }
 
     fun playPrevious() = _state.value.previous?.let(::switchTo)
 
@@ -349,8 +350,8 @@ class PlayerViewModel @Inject constructor(
     }
 
     /** Stops this title and plays [item] from its resume point, with the tracks chosen for it (or the server's). */
-    private fun switchTo(item: MediaItem) {
-        source?.let { playback.reportStopped(it, currentPositionMs()) }
+    private fun switchTo(item: MediaItem, watched: Boolean = false) {
+        source?.let { playback.reportStopped(it, currentPositionMs(), watched = watched) }
         source = null
         itemId = item.id
         fromStart = false

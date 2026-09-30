@@ -21,6 +21,7 @@ import org.jellyfin.sdk.api.client.extensions.audioApi
 import org.jellyfin.sdk.api.client.extensions.mediaInfoApi
 import org.jellyfin.sdk.api.client.extensions.mediaSegmentApi
 import org.jellyfin.sdk.api.client.extensions.sessionApi
+import org.jellyfin.sdk.api.client.extensions.userDataApi
 import org.jellyfin.sdk.api.client.extensions.videoApi
 import org.jellyfin.sdk.api.client.util.AuthorizationHeaderBuilder
 import org.jellyfin.sdk.model.api.MediaStreamProtocol
@@ -279,18 +280,23 @@ class PlaybackRepository @Inject constructor(
         )
     }
 
-    /** The server stores the resume point from this, and marks the title watched near its end. */
-    fun reportStopped(source: PlaybackSource, positionMs: Long, failed: Boolean = false) = report("stopped", onDone = { _stopped.tryEmit(source.itemId) }) {
-        sessionApi.reportPlaybackStopped(
-            PlaybackStopInfo(
-                itemId = source.itemId,
-                mediaSourceId = source.mediaSourceId,
-                playSessionId = source.playSessionId,
-                positionTicks = positionMs * TICKS_PER_MS,
-                failed = failed,
-            ),
-        )
-    }
+    /**
+     * The server stores the resume point from this, and marks the title watched near its end.
+     * [watched] marks it watched in any case, after the stop so the stop cannot undo it.
+     */
+    fun reportStopped(source: PlaybackSource, positionMs: Long, failed: Boolean = false, watched: Boolean = false) =
+        report("stopped", onDone = { _stopped.tryEmit(source.itemId) }) {
+            sessionApi.reportPlaybackStopped(
+                PlaybackStopInfo(
+                    itemId = source.itemId,
+                    mediaSourceId = source.mediaSourceId,
+                    playSessionId = source.playSessionId,
+                    positionTicks = positionMs * TICKS_PER_MS,
+                    failed = failed,
+                ),
+            )
+            if (watched) userDataApi.markPlayedItem(itemId = source.itemId)
+        }
 
     private fun report(what: String, onDone: () -> Unit = {}, call: suspend org.jellyfin.sdk.api.client.ApiClient.() -> Unit) {
         val api = sessions.session.value?.api ?: return

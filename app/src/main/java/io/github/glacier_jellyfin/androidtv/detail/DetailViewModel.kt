@@ -272,7 +272,10 @@ class DetailViewModel @Inject constructor(
     fun togglePlayed() {
         val item = _state.value.item ?: return
         val played = !item.played
-        updateItem { it.copy(played = played) }
+        // The server drops the resume point both ways; the resume button and the episode row follow at once.
+        val marked: (MediaItem) -> MediaItem = { it.copy(played = played, progress = null, remainingMinutes = null, resumePositionMs = 0) }
+        updateItem(marked)
+        _state.update { state -> state.copy(episodes = state.episodes.map { if (it.id == item.id) marked(it) else it }) }
         viewModelScope.launch {
             runCatching { repository.setPlayed(item.id, played) }
                 .onSuccess {
@@ -285,10 +288,17 @@ class DetailViewModel @Inject constructor(
                         },
                     )
                     // A whole show or collection changes its episodes or movies too.
-                    if (item.kind == ItemKind.Series) _state.value.season?.let { selectSeason(it, item.id) }
+                    if (item.kind == ItemKind.Series) {
+                        _state.value.season?.let { selectSeason(it, item.id) }
+                        val next = runCatching { repository.nextEpisode(item.id) }.getOrNull()
+                        _state.update { it.copy(nextEpisode = next) }
+                    }
                     if (item.kind == ItemKind.Collection) loadCollection(_state.value.details ?: return@onSuccess)
                 }
-                .onFailure { updateItem { current -> current.copy(played = !played) } }
+                .onFailure {
+                    updateItem { item }
+                    _state.update { state -> state.copy(episodes = state.episodes.map { if (it.id == item.id) item else it }) }
+                }
         }
     }
 
