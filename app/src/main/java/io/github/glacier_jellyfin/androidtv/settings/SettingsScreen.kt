@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -266,7 +267,10 @@ fun SettingsScreen(
                     Spacer(Modifier.height(18.dp))
                 }
                 val groups = rows(state, viewModel, languageFocus, pinOrigins)
+                // Every category opens scrolled to the top, not where the previous one was left.
+                val listState = remember(state.category) { LazyListState() }
                 LazyColumn(
+                    state = listState,
                     verticalArrangement = Arrangement.spacedBy(18.dp),
                     contentPadding = PaddingValues(bottom = 60.dp),
                 ) {
