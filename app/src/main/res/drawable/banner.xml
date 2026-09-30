@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Launcher banner (320x180dp). Placeholder until the final artwork exists. -->
+<!-- Launcher banner (320x180dp): the mark and the GLACIER wordmark (Google Sans
+     Bold, 0.3em tracking, converted to outlines) on a faint ice glow. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:ignore="VectorRaster"
+    tools:ignore="VectorPath,VectorRaster"
     android:width="320dp"
     android:height="180dp"
     android:viewportWidth="320"
@@ -10,12 +12,30 @@
     <path
         android:fillColor="@color/glacier_void"
         android:pathData="M0,0 H320 V180 H0 Z" />
+    <!-- Elliptical glow from the top edge: a circular gradient squashed vertically. -->
+    <group android:scaleY="0.51136">
+        <path android:pathData="M0,0 H320 V352 H0 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="radial"
+                    android:centerX="160"
+                    android:centerY="0"
+                    android:gradientRadius="253.4">
+                    <item android:offset="0" android:color="#FF16304A" />
+                    <item android:offset="1" android:color="#000A1420" />
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
     <path
-        android:pathData="M160,54 L196,90 L160,126 L124,90 Z"
-        android:strokeWidth="2.5"
+        android:pathData="M65.90,68.42 L87.47,90.00 L65.90,111.58 L44.32,90.00 Z"
+        android:strokeWidth="2.16"
         android:strokeColor="@color/glacier_accent"
         android:strokeLineJoin="round" />
     <path
         android:fillColor="@color/glacier_accent"
-        android:pathData="M160,75 L175,90 L160,105 L145,90 Z" />
+        android:pathData="M65.90,79.21 L76.68,90.00 L65.90,100.79 L55.11,90.00 Z" />
+    <path
+        android:fillColor="@color/glacier_ice"
+        android:pathData="M120.15 100.28Q118.04 100.28 116.15 99.52Q114.27 98.75 112.82 97.37Q111.38 96 110.57 94.11Q109.76 92.23 109.76 90Q109.76 87.77 110.57 85.89Q111.38 84 112.81 82.63Q114.24 81.25 116.12 80.48Q118.01 79.72 120.15 79.72Q122.52 79.72 124.42 80.54Q126.31 81.36 127.66 82.82L125.1 85.33Q124.47 84.64 123.73 84.18Q122.99 83.73 122.11 83.48Q121.23 83.23 120.13 83.23Q118.78 83.23 117.58 83.72Q116.39 84.2 115.46 85.09Q114.54 85.98 114.02 87.22Q113.5 88.46 113.5 90Q113.5 91.54 114.02 92.78Q114.54 94.02 115.46 94.91Q116.39 95.8 117.59 96.28Q118.81 96.77 120.18 96.77Q121.56 96.77 122.63 96.38Q123.7 96 124.46 95.34Q125.21 94.67 125.67 93.86Q126.12 93.05 126.26 92.2H120.07V89.04H129.72Q129.81 89.31 129.86 89.86Q129.92 90.41 129.92 90.77Q129.92 92.94 129.19 94.7Q128.46 96.46 127.15 97.71Q125.85 98.97 124.06 99.62Q122.27 100.28 120.15 100.28ZM141.49 99.84V80.16H145.21V96.33H153.54V99.84ZM163.52 99.84 170.89 80.16H175.15L182.55 99.84H178.45L173.86 86.78L173.15 84.42H172.93L172.21 86.78L167.62 99.84ZM172.82 95.14V91.73H177.41L178.62 95.14ZM167.45 95.14 168.64 91.73H172.82V95.14ZM201.94 100.28Q199.77 100.28 197.88 99.5Q196 98.72 194.6 97.31Q193.19 95.91 192.41 94.04Q191.63 92.17 191.63 90Q191.63 87.83 192.41 85.96Q193.19 84.09 194.6 82.69Q196 81.28 197.88 80.5Q199.77 79.72 201.94 79.72Q203.51 79.72 204.83 80.09Q206.15 80.46 207.26 81.17Q208.37 81.89 209.31 82.93L206.7 85.46Q206.12 84.78 205.42 84.28Q204.72 83.78 203.86 83.51Q203.01 83.23 201.97 83.23Q200.12 83.23 198.62 84.07Q197.13 84.91 196.25 86.42Q195.37 87.94 195.37 90Q195.37 92.03 196.25 93.56Q197.13 95.09 198.62 95.93Q200.12 96.77 201.97 96.77Q203.62 96.77 204.89 96.08Q206.17 95.39 207.16 94.18L209.8 96.68Q208.84 97.84 207.63 98.65Q206.42 99.46 204.99 99.87Q203.56 100.28 201.94 100.28ZM221.35 99.84V80.16H225.07V99.84ZM237.77 99.84V80.16H250.26V83.67H241.48V96.33H250.26V99.84ZM239.83 91.76V88.24H249.38V91.76ZM262.14 99.84V80.16H269.31Q271.29 80.16 272.76 80.95Q274.24 81.75 275.06 83.15Q275.89 84.55 275.89 86.37Q275.89 87.72 275.32 88.83Q274.76 89.94 273.78 90.76Q272.81 91.57 271.5 92.01Q270.19 92.45 268.71 92.45H264.2V89.04H269.29Q270.14 89.04 270.77 88.68Q271.4 88.32 271.77 87.7Q272.15 87.08 272.15 86.31Q272.15 85.6 271.83 84.98Q271.51 84.36 270.88 83.98Q270.25 83.59 269.34 83.59H265.85V99.84ZM266.48 90.91H270.83L276.93 99.62V99.84H272.67Z" />
 </vector>
