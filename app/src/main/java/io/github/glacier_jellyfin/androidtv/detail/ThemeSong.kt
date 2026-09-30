@@ -108,14 +108,25 @@ private object ThemeSongs {
         if (area != null) finished = true
     }
 
+    /** Fades the song out quickly rather than cutting it off, then lets the player go. */
     private fun stopPlayer() {
         fade?.cancel()
-        player?.release()
+        val stopping = player ?: return
         player = null
+        scope.launch {
+            val start = stopping.volume
+            for (step in FADE_OUT_STEPS - 1 downTo 0) {
+                delay(FADE_OUT_MS / FADE_OUT_STEPS)
+                stopping.volume = start * step / FADE_OUT_STEPS
+            }
+            stopping.release()
+        }
     }
 }
 
 private const val THEME_VOLUME = 0.35f
 private const val FADE_IN_MS = 2500L
 private const val FADE_STEPS = 50
-private const val LEAVE_GRACE_MS = 1000L
+private const val FADE_OUT_MS = 700L
+private const val FADE_OUT_STEPS = 20
+private const val LEAVE_GRACE_MS = 400L
