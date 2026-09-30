@@ -156,20 +156,23 @@ fun LanguageFlag(flag: String, modifier: Modifier = Modifier, width: Int = 24, h
     }
 }
 
-/** Audio or subtitle chip after the action buttons: quiet until focused. */
+/**
+ * Audio or subtitle chip after the action buttons: quiet until focused, but on
+ * light glass with a clear edge so it stays readable over a bright backdrop.
+ */
 @Composable
 fun TrackChip(label: String, flag: String?, audio: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val foreground = if (focused) GlacierColors.Void else GlacierColors.Mist
+    val foreground = if (focused) GlacierColors.Void else GlacierColors.Ice
     Row(
         modifier
             .focusScale(focused)
             .height(46.dp)
             .clip(PillShape)
-            .background(if (focused) accent else Color.Transparent)
-            .border(1.5.dp, if (focused) accent else Color.Transparent, PillShape)
+            .background(if (focused) accent else GlacierColors.GlassFill2)
+            .border(1.5.dp, if (focused) accent else GlacierColors.GlassBorder2, PillShape)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,

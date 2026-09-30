@@ -55,7 +55,7 @@ fun DetailBackdrop(url: String?, height: Int, modifier: Modifier = Modifier) {
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Brush.horizontalGradient(0f to Color(0xF70A1420), 0.44f to Color(0xCC0A1420), 0.8f to Color(0x290A1420))),
+                .background(Brush.horizontalGradient(0f to Color(0xF70A1420), 0.44f to Color(0xCC0A1420), 0.62f to Color(0x990A1420), 0.9f to Color(0x290A1420))),
         )
         Box(
             Modifier
