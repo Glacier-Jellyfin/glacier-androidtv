@@ -46,8 +46,9 @@ fun MediaRow(
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(title, style = GlacierText.display(28), color = GlacierColors.Ice)
-            if (subtitle != null) Text(subtitle, style = GlacierText.body(17), color = GlacierColors.Mist)
+            // Both texts share one baseline, so the count sits on the title's line.
+            Text(title, style = GlacierText.display(28), color = GlacierColors.Ice, modifier = Modifier.alignByBaseline())
+            if (subtitle != null) Text(subtitle, style = GlacierText.body(17), color = GlacierColors.Mist, modifier = Modifier.alignByBaseline())
         }
         CompositionLocalProvider(LocalBringIntoViewSpec provides rememberCardPivotSpec()) {
             LazyRow(

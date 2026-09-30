@@ -190,7 +190,7 @@ private fun MediaDetail(state: DetailState, details: ItemDetails, viewModel: Det
                 }
                 if (details.cast.isNotEmpty()) {
                     item(key = "cast") {
-                        MediaRow(title = stringResource(R.string.detail_cast), gap = LocalCardSizes.current.castGap) {
+                        MediaRow(title = stringResource(R.string.detail_cast), gap = LocalCardSizes.current.castGap, modifier = Modifier.padding(top = 48.dp)) {
                             items(details.cast, key = { it.id }) { person -> CastCard(person, onClick = { viewModel.openPerson(person) }) }
                         }
                     }
