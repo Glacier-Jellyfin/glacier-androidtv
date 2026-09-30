@@ -52,7 +52,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -63,7 +62,6 @@ import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.settings.Language
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleEdge
-import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleFont
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitlePosition
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyle
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyleMode
@@ -76,9 +74,9 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
+import io.github.glacier_jellyfin.androidtv.player.subtitleTypeface
 import io.github.glacier_jellyfin.androidtv.player.usesNative
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
-import io.github.glacier_jellyfin.androidtv.core.designsystem.R as DesignR
 
 /** A category on the left (design `pill()`): accent when focused, tinted when it is the open one. */
 @Composable
@@ -194,7 +192,17 @@ internal fun ToggleSwitch(checked: Boolean, onToggle: () -> Unit, modifier: Modi
 /** The options of a choice, wrapping onto more lines when needed; [check] ticks the chosen ones (several may be). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun ChoicePills(options: List<String>, selected: (Int) -> Boolean, onSelect: (Int) -> Unit, enabled: Boolean = true, check: Boolean = false) {
+internal fun ChoicePills(
+    options: List<String>,
+    selected: (Int) -> Boolean,
+    onSelect: (Int) -> Unit,
+    enabled: Boolean = true,
+    check: Boolean = false,
+    /** A colour dot before each label, for colour choices. */
+    dots: List<Color>? = null,
+    /** Each label in its own font, for font choices. */
+    fonts: List<FontFamily>? = null,
+) {
     val accent = LocalAccent.current.main
     FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         options.forEachIndexed { index, label ->
@@ -226,7 +234,15 @@ internal fun ChoicePills(options: List<String>, selected: (Int) -> Boolean, onSe
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     if (check && active) Icon(GlacierIcons.Check, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
-                    Text(label, style = GlacierText.body(18, FontWeight.SemiBold), color = color)
+                    dots?.getOrNull(index)?.let { dot ->
+                        Box(Modifier.size(20.dp).clip(CircleShape).background(dot).border(1.dp, Color(0x66000000), CircleShape))
+                    }
+                    val font = fonts?.getOrNull(index)
+                    Text(
+                        label,
+                        style = if (font == null) GlacierText.body(18, FontWeight.SemiBold) else GlacierText.body(18).copy(fontFamily = font),
+                        color = color,
+                    )
                 }
             }
         }
@@ -432,7 +448,9 @@ private fun LanguageRow(entry: LanguageEntry, selected: Boolean, onClick: () -> 
  */
 @Composable
 internal fun SubtitlePreview(style: SubtitleStyle, image: String?) {
-    val native = style.usesNative(LocalContext.current)
+    val context = LocalContext.current
+    val native = style.usesNative(context)
+    val typeface = remember(style.font, style.weight) { FontFamily(subtitleTypeface(context, style.font, style.weight)) }
     val tag = when {
         style.mode == SubtitleStyleMode.Auto && native -> R.string.settings_preview_auto_system
         style.mode == SubtitleStyleMode.Auto -> R.string.settings_preview_auto_custom
@@ -472,12 +490,12 @@ internal fun SubtitlePreview(style: SubtitleStyle, image: String?) {
             else -> -style.position.line - 1
         }
         val text = TextStyle(
-            fontFamily = if (native) FontFamily.SansSerif else previewFont(style.font),
-            fontWeight = if (!native && style.bold) FontWeight.Bold else FontWeight.Normal,
+            fontFamily = if (native) FontFamily.SansSerif else typeface,
             fontSize = fontSize,
             lineHeight = fontSize * 1.3f,
             textAlign = TextAlign.Center,
             color = if (native) Color.White else Color(style.color.argb),
+            background = if (native) Color.Unspecified else Color(style.background.argb),
             shadow = if (native) Shadow(Color(0xCC000000), Offset(0f, 1f), 2f) else previewShadow(style.edge),
         )
         Column(
@@ -494,12 +512,15 @@ internal fun SubtitlePreview(style: SubtitleStyle, image: String?) {
     }
 }
 
-/** Compose text has one shadow; an outline is the text drawn as a black stroke underneath. */
+/**
+ * Compose text has one shadow; an outline is the text drawn as a black stroke
+ * underneath. That lower copy carries the background, so it stays behind the stroke.
+ */
 @Composable
 private fun OutlinedText(text: String, style: TextStyle, outline: Boolean) {
     Box {
         if (outline) Text(text, style = style.copy(color = Color.Black, shadow = null, drawStyle = Stroke(width = 4f)))
-        Text(text, style = style)
+        Text(text, style = if (outline) style.copy(background = Color.Unspecified) else style)
     }
 }
 
@@ -509,14 +530,6 @@ private fun previewShadow(edge: SubtitleEdge): Shadow? = when (edge) {
     SubtitleEdge.Depressed -> Shadow(Color(0xF2000000), Offset(0f, -1f), 1f)
     SubtitleEdge.Shadow -> Shadow(Color(0xF2000000), Offset.Zero, 10f)
 }
-
-private fun previewFont(font: SubtitleFont): FontFamily = when (font) {
-    SubtitleFont.Default -> GlacierSubtitleFont
-    SubtitleFont.Serif -> FontFamily.Serif
-    SubtitleFont.Monospace -> FontFamily.Monospace
-}
-
-private val GlacierSubtitleFont = FontFamily(Font(DesignR.font.google_sans))
 
 /** Media3's default text size (5.33 % of the height), what the system style roughly looks like. */
 private const val NATIVE_PREVIEW_SIZE = 0.0533f

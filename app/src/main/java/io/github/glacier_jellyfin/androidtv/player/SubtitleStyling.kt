@@ -5,7 +5,9 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.view.accessibility.CaptioningManager
 import androidx.annotation.OptIn
-import androidx.core.content.res.ResourcesCompat
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.createFontFamilyResolver
+import androidx.compose.ui.text.font.resolveAsTypeface
 import androidx.media3.common.text.Cue
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.CaptionStyleCompat
@@ -15,7 +17,8 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleFont
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitlePosition
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyle
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyleMode
-import io.github.glacier_jellyfin.androidtv.core.designsystem.R as DesignR
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleWeight
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GoogleSans
 
 /** "Auto" follows the Android caption settings: native when the user switched them on (agreed). */
 fun SubtitleStyle.usesNative(context: Context): Boolean = when (mode) {
@@ -35,7 +38,7 @@ fun SubtitleView.applyStyle(style: SubtitleStyle) {
     setStyle(
         CaptionStyleCompat(
             style.color.argb.toInt(),
-            Color.TRANSPARENT,
+            style.background.argb.toInt(),
             Color.TRANSPARENT,
             when (style.edge) {
                 SubtitleEdge.None -> CaptionStyleCompat.EDGE_TYPE_NONE
@@ -45,19 +48,17 @@ fun SubtitleView.applyStyle(style: SubtitleStyle) {
                 SubtitleEdge.Shadow -> CaptionStyleCompat.EDGE_TYPE_DROP_SHADOW
             },
             Color.BLACK,
-            subtitleTypeface(context, style.font, style.bold),
+            subtitleTypeface(context, style.font, style.weight),
         ),
     )
     setFractionalTextSize(style.size.fraction)
 }
 
-private fun subtitleTypeface(context: Context, font: SubtitleFont, bold: Boolean): Typeface {
-    val base = when (font) {
-        SubtitleFont.Default -> ResourcesCompat.getFont(context, DesignR.font.google_sans) ?: Typeface.SANS_SERIF
-        SubtitleFont.Serif -> Typeface.SERIF
-        SubtitleFont.Monospace -> Typeface.MONOSPACE
-    }
-    return Typeface.create(base, if (bold) 700 else 400, false)
+/** The typeface the player draws with; the settings preview uses the same one. */
+fun subtitleTypeface(context: Context, font: SubtitleFont, weight: SubtitleWeight): Typeface {
+    val family = font.family ?: return createFontFamilyResolver(context)
+        .resolveAsTypeface(GoogleSans, FontWeight(weight.value)).value
+    return Typeface.create(Typeface.create(family, Typeface.NORMAL), weight.value, false)
 }
 
 /**

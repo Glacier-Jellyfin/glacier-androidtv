@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -35,6 +36,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -57,6 +59,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightCount
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightRotation
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightSource
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightType
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleBackground
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleColor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleEdge
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleFont
@@ -64,12 +67,14 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleMode
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitlePosition
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleSize
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyleMode
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleWeight
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UpNextChoice
 import io.github.glacier_jellyfin.androidtv.core.designsystem.Accent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.SubtitleBurnIn
+import io.github.glacier_jellyfin.androidtv.player.subtitleTypeface
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PinDialog
@@ -117,6 +122,8 @@ private sealed interface SettingRow {
         val selected: Int,
         val onSelect: (Int) -> Unit,
         override val enabled: Boolean = true,
+        val dots: List<Color>? = null,
+        val fonts: List<FontFamily>? = null,
     ) : SettingRow
 
     /** Options switched on and off each, any number of them. */
@@ -316,7 +323,7 @@ private fun SettingCard(row: SettingRow) {
         is SettingRow.Toggle -> OptionCard(row.label, row.sub, row.enabled, trailing = {
             ToggleSwitch(row.checked, row.onToggle, row.focus?.let { Modifier.focusRequester(it) } ?: Modifier, row.enabled)
         })
-        is SettingRow.Choice -> OptionCard(row.label, row.sub, row.enabled, below = { ChoicePills(row.options, { it == row.selected }, row.onSelect, row.enabled) })
+        is SettingRow.Choice -> OptionCard(row.label, row.sub, row.enabled, below = { ChoicePills(row.options, { it == row.selected }, row.onSelect, row.enabled, dots = row.dots, fonts = row.fonts) })
         is SettingRow.MultiChoice -> OptionCard(row.label, row.sub, row.enabled, below = { ChoicePills(row.options, { it in row.selected }, row.onToggle, row.enabled, check = true) })
         is SettingRow.Swatches -> OptionCard(row.label, row.sub, row.enabled, below = { SwatchPicker(row.swatches, row.selected, row.onSelect) })
         is SettingRow.Update -> UpdateCard(row)
@@ -613,6 +620,8 @@ private fun audioRows(state: SettingsUiState, viewModel: SettingsViewModel, lang
 @Composable
 private fun subtitleRows(state: SettingsUiState, viewModel: SettingsViewModel, languageFocus: FocusRequester): List<SettingGroup> {
     val style = state.profile.subtitleStyle
+    val context = LocalContext.current
+    val fonts = remember { SubtitleFont.entries.map { FontFamily(subtitleTypeface(context, it, SubtitleWeight.Regular)) } }
     val server = state.server
     val unavailable = stringResource(R.string.settings_server_unavailable).takeIf { state.serverFailed }
     val modes = listOf(
@@ -691,23 +700,60 @@ private fun subtitleRows(state: SettingsUiState, viewModel: SettingsViewModel, l
                 SettingRow.Choice(
                     stringResource(R.string.settings_sub_weight),
                     stringResource(R.string.settings_sub_weight_sub),
-                    listOf(stringResource(R.string.settings_sub_weight_regular), stringResource(R.string.settings_sub_weight_bold)),
-                    if (style.bold) 1 else 0,
-                    onSelect = { i -> viewModel.updateSubtitleStyle { it.copy(bold = i == 1) } },
+                    listOf(
+                        R.string.settings_sub_weight_regular,
+                        R.string.settings_sub_weight_medium,
+                        R.string.settings_sub_weight_semibold,
+                        R.string.settings_sub_weight_bold,
+                    ).map { stringResource(it) },
+                    style.weight.ordinal,
+                    onSelect = { i -> viewModel.updateSubtitleStyle { it.copy(weight = SubtitleWeight.entries[i]) } },
                 ),
                 SettingRow.Choice(
                     stringResource(R.string.settings_sub_font),
                     stringResource(R.string.settings_sub_font_sub),
-                    listOf(R.string.settings_sub_font_default, R.string.settings_sub_font_serif, R.string.settings_sub_font_mono).map { stringResource(it) },
+                    listOf(
+                        R.string.settings_sub_font_default,
+                        R.string.settings_sub_font_sans,
+                        R.string.settings_sub_font_condensed,
+                        R.string.settings_sub_font_serif,
+                        R.string.settings_sub_font_mono,
+                        R.string.settings_sub_font_serif_mono,
+                        R.string.settings_sub_font_casual,
+                        R.string.settings_sub_font_cursive,
+                        R.string.settings_sub_font_smallcaps,
+                    ).map { stringResource(it) },
                     style.font.ordinal,
                     onSelect = { i -> viewModel.updateSubtitleStyle { it.copy(font = SubtitleFont.entries[i]) } },
+                    fonts = fonts,
                 ),
                 SettingRow.Choice(
                     stringResource(R.string.settings_sub_color),
                     "#%06X".format(style.color.argb and 0xFFFFFF),
-                    listOf(R.string.settings_sub_color_white, R.string.settings_sub_color_yellow, R.string.settings_sub_color_ice, R.string.settings_sub_color_grey).map { stringResource(it) },
+                    listOf(
+                        R.string.settings_sub_color_white,
+                        R.string.settings_sub_color_grey,
+                        R.string.settings_sub_color_yellow,
+                        R.string.settings_sub_color_amber,
+                        R.string.settings_sub_color_green,
+                        R.string.settings_sub_color_cyan,
+                        R.string.settings_sub_color_ice,
+                        R.string.settings_sub_color_pink,
+                    ).map { stringResource(it) },
                     style.color.ordinal,
                     onSelect = { i -> viewModel.updateSubtitleStyle { it.copy(color = SubtitleColor.entries[i]) } },
+                    dots = SubtitleColor.entries.map { Color(it.argb) },
+                ),
+                SettingRow.Choice(
+                    stringResource(R.string.settings_sub_background),
+                    stringResource(R.string.settings_sub_background_sub),
+                    listOf(
+                        R.string.settings_sub_background_none,
+                        R.string.settings_sub_background_translucent,
+                        R.string.settings_sub_background_solid,
+                    ).map { stringResource(it) },
+                    style.background.ordinal,
+                    onSelect = { i -> viewModel.updateSubtitleStyle { it.copy(background = SubtitleBackground.entries[i]) } },
                 ),
                 SettingRow.Choice(
                     stringResource(R.string.settings_sub_edge),

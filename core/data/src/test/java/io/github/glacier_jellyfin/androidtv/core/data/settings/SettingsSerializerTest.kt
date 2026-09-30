@@ -21,7 +21,14 @@ class SettingsSerializerTest {
                         maxBitrate = MaxBitrate.M1_5,
                         segments = mapOf(SegmentKind.Intro to SegmentAction.Skip),
                     ),
-                    subtitleStyle = SubtitleStyle(size = SubtitleSize.XLarge, edge = SubtitleEdge.Outline),
+                    subtitleStyle = SubtitleStyle(
+                        size = SubtitleSize.XLarge,
+                        weight = SubtitleWeight.SemiBold,
+                        font = SubtitleFont.Condensed,
+                        color = SubtitleColor.Cyan,
+                        background = SubtitleBackground.Translucent,
+                        edge = SubtitleEdge.Outline,
+                    ),
                     appearance = AppearanceSettings(accent = AccentColor.Aurora, compact = true, groupCollections = false),
                     home = HomeSettings(spotlightSources = setOf(SpotlightSource.Random, SpotlightSource.Favorites), spotlightCount = SpotlightCount.N10),
                 ),
@@ -53,6 +60,21 @@ class SettingsSerializerTest {
         val json = """{"profiles":{"s/u":{"home":{"spotlightSource":"Favorites"}}}}"""
         val home = SettingsSerializer.readFrom(ByteArrayInputStream(json.toByteArray())).profiles.getValue("s/u").home
         assertEquals(setOf(SpotlightSource.Favorites), home.spotlightSources)
+    }
+
+    @Test
+    fun `the bold switch of earlier versions becomes the bold weight`() = runTest {
+        val json = """{"profiles":{"s/u":{"subtitleStyle":{"bold":true}}}}"""
+        val style = SettingsSerializer.readFrom(ByteArrayInputStream(json.toByteArray())).profiles.getValue("s/u").subtitleStyle
+        assertEquals(SubtitleWeight.Bold, style.weight)
+    }
+
+    @Test
+    fun `a weight chosen after the bold switch survives a round trip`() = runTest {
+        val state = SettingsState(mapOf("s/u" to ProfileSettings(subtitleStyle = SubtitleStyle(legacyBold = true, weight = SubtitleWeight.Regular))))
+        val out = ByteArrayOutputStream()
+        SettingsSerializer.writeTo(state, out)
+        assertEquals(SubtitleWeight.Regular, SettingsSerializer.readFrom(ByteArrayInputStream(out.toByteArray())).profiles.getValue("s/u").subtitleStyle.weight)
     }
 
     @Test

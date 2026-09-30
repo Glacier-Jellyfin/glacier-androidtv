@@ -143,9 +143,12 @@ enum class AudioChannels(val max: Int?) {
 data class SubtitleStyle(
     val mode: SubtitleStyleMode = SubtitleStyleMode.Auto,
     val size: SubtitleSize = SubtitleSize.Small,
-    val bold: Boolean = false,
+    /** The bold switch of earlier versions; only read, as the default of [weight]. */
+    @SerialName("bold") val legacyBold: Boolean = false,
+    val weight: SubtitleWeight = if (legacyBold) SubtitleWeight.Bold else SubtitleWeight.Regular,
     val font: SubtitleFont = SubtitleFont.Default,
     val color: SubtitleColor = SubtitleColor.White,
+    val background: SubtitleBackground = SubtitleBackground.None,
     val edge: SubtitleEdge = SubtitleEdge.None,
     val position: SubtitlePosition = SubtitlePosition.Bottom1,
 )
@@ -164,13 +167,36 @@ enum class SubtitleSize(val fraction: Float) {
     XSmall(0.035f), Small(0.043f), Normal(0.0533f), Large(0.065f), XLarge(0.08f),
 }
 
+/** Variable weights of the Glacier font; system fonts use their nearest cut. */
 @Serializable
-enum class SubtitleFont { Default, Serif, Monospace }
+enum class SubtitleWeight(val value: Int) { Regular(400), Medium(500), SemiBold(600), Bold(700) }
+
+/**
+ * [Default] is the Glacier font; the others are the system families Android's
+ * own caption settings offer; a device without one draws sans-serif instead.
+ */
+@Serializable
+enum class SubtitleFont(val family: String?) {
+    Default(null),
+    Sans("sans-serif"),
+    Condensed("sans-serif-condensed"),
+    Serif("serif"),
+    Monospace("monospace"),
+    SerifMonospace("serif-monospace"),
+    Casual("casual"),
+    Cursive("cursive"),
+    SmallCaps("sans-serif-smallcaps"),
+}
 
 @Serializable
 enum class SubtitleColor(val argb: Long) {
-    White(0xFFFFFFFF), Yellow(0xFFFFE66D), IceBlue(0xFFCFE8FF), Grey(0xFFBFC6CE),
+    White(0xFFFFFFFF), Grey(0xFFBFC6CE), Yellow(0xFFFFE66D), Amber(0xFFFFB74D),
+    Green(0xFF9BE89B), Cyan(0xFF7FE3F0), IceBlue(0xFFCFE8FF), Pink(0xFFF7A8D8),
 }
+
+/** Box behind each line, for pictures too bright for an outline. */
+@Serializable
+enum class SubtitleBackground(val argb: Long) { None(0x00000000), Translucent(0x99000000), Solid(0xFF000000) }
 
 @Serializable
 enum class SubtitleEdge { None, Raised, Depressed, Outline, Shadow }
