@@ -94,6 +94,9 @@
         <item quantity="other">%1$d albums</item>
     </plurals>
     <string name="home_error">The home screen could not be loaded.</string>
+    <string name="home_exit_title">Quit Glacier?</string>
+    <string name="home_exit_body">You will return to the TV\'s home screen.</string>
+    <string name="home_exit_confirm">Quit</string>
     <string name="action_retry">Try again</string>
     <string name="hero_play">Play</string>
     <string name="hero_resume">Resume</string>

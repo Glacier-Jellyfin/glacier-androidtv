@@ -1,5 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.home
 
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
@@ -58,6 +60,7 @@ import io.github.glacier_jellyfin.androidtv.ui.PosterCard
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
+import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
 import io.github.glacier_jellyfin.androidtv.update.UpdateDialog
 import io.github.glacier_jellyfin.androidtv.update.UpdateViewModel
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateCandidate
@@ -137,6 +140,18 @@ fun HomeScreen(
             if (!restored) runCatching { listFocus.requestFocus() }
         }
         updateWasOpen = updateShown != null
+    }
+
+    // Home is the bottom of the stack: Back asks before it closes the app.
+    var exitAsked by remember { mutableStateOf(false) }
+    BackHandler(enabled = !exitAsked) { exitAsked = true }
+    var exitWasOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(exitAsked) {
+        if (!exitAsked && exitWasOpen) {
+            withFrameNanos { }
+            lastFocus?.let { requesters[it] }?.let { runCatching { it.requestFocus() } }
+        }
+        exitWasOpen = exitAsked
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -239,6 +254,11 @@ fun HomeScreen(
                 .padding(top = 34.dp),
         )
 
+        if (exitAsked) {
+            val activity = LocalActivity.current
+            ExitDialog(onCancel = { exitAsked = false }, onQuit = { activity?.finish() })
+        }
+
         pinPrompt?.let { PinDialog(it, onKey = viewModel.pin::key, onDismiss = viewModel.pin::dismiss) }
 
         val installed = updates.updates.installed
@@ -319,5 +339,28 @@ private fun ErrorState(onRetry: () -> Unit) {
     ) {
         Text(stringResource(R.string.home_error), style = GlacierText.display(30), color = GlacierColors.Ice)
         PillButton(stringResource(R.string.action_retry), onClick = onRetry, primary = true, modifier = Modifier.focusRequester(focus))
+    }
+}
+
+/**
+ * "Quit Glacier?" on Back from the home screen. Quit is the primary action and has the
+ * focus, so Back then OK leaves; a second Back closes the dialog instead.
+ */
+@Composable
+private fun ExitDialog(onCancel: () -> Unit, onQuit: () -> Unit) {
+    ModalSheet(onDismiss = onCancel) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(stringResource(R.string.home_exit_title), style = GlacierText.display(28), color = GlacierColors.Ice)
+            Text(stringResource(R.string.home_exit_body), style = GlacierText.body(19), color = GlacierColors.Mist)
+        }
+        val quitFocus = remember { FocusRequester() }
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            PillButton(stringResource(R.string.action_cancel), onClick = onCancel)
+            PillButton(stringResource(R.string.home_exit_confirm), onClick = onQuit, primary = true, modifier = Modifier.focusRequester(quitFocus))
+        }
+        LaunchedEffect(Unit) {
+            withFrameNanos { }
+            runCatching { quitFocus.requestFocus() }
+        }
     }
 }

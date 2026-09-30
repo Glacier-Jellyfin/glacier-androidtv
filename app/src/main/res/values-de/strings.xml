@@ -91,6 +91,9 @@
         <item quantity="other">%1$d Alben</item>
     </plurals>
     <string name="home_error">Die Startseite konnte nicht geladen werden.</string>
+    <string name="home_exit_title">Glacier beenden?</string>
+    <string name="home_exit_body">Du kehrst zum Startbildschirm des Fernsehers zurück.</string>
+    <string name="home_exit_confirm">Beenden</string>
     <string name="action_retry">Erneut versuchen</string>
     <string name="hero_play">Abspielen</string>
     <string name="hero_resume">Fortsetzen</string>
