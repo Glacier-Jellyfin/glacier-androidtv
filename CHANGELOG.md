@@ -19,4 +19,27 @@ renders the reference separately.
 ## [Unreleased]
 
 ### New
-- Project skeleton: build setup, Glacier design tokens, update version logic, CI and release workflows
+- Sign in with a Jellyfin account or Quick Connect, choose a public user, and
+  switch between saved servers and profiles, with an optional PIN per profile
+- Home screen with continue watching, next up and freshly added titles
+- Browse movies, shows and music with sorting, filtering, genres and
+  collections, and jump around large libraries with an A–Z rail
+- Search across the whole library
+- Detail pages for movies, series and episodes with cast, similar titles and
+  collections
+- Video playback with subtitle, audio and chapter selection, trickplay
+  scrubbing, media segment skipping (intro, recap, credits) and up next
+- Extended audio codec support (DTS, TrueHD and more) for more titles to play
+  back directly instead of being transcoded
+- Local and YouTube trailers, played from the detail page
+- Music library with album, artist and playlist pages, and a dedicated music
+  player with lyrics and shuffle
+- Settings for playback, audio, subtitles, appearance, home screen, account
+  and system, including interface language, theme songs, accent colours and
+  card density
+- Parental controls: age ratings and PIN locks per profile
+- Built-in updater: checks GitHub Releases for Stable or Beta builds and
+  installs them without leaving the app
+
+### Known issues
+- Some 4K Dolby Vision titles with TrueHD audio fail to play when transcoded

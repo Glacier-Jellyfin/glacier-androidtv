@@ -9,17 +9,21 @@
 </p>
 
 > [!NOTE]
-> Glacier is in early development. There is no usable release yet.
+> Glacier is in early development. There is no packaged release yet; build it
+> yourself (see [Building](#building)) or follow the project for the first one.
 
-## Features (planned for 1.0)
+## Features
 
-- Movies, shows and music from your Jellyfin server
+- Movies, shows and music from your Jellyfin server, with search and an
+  A–Z rail for large libraries
 - Multiple servers and users, server discovery, Quick Connect
 - Profile and parental-control PINs, stored only on the device
 - Media segments: skip intros, recaps, previews and credits
 - Trickplay previews while seeking, chapters, "next episode"
+- Extended audio codec support (DTS, TrueHD and more) for more direct playback
+- Local and YouTube trailers
 - Audio and subtitle preferences synced with your Jellyfin account
-- English and German user interface
+- English and German user interface, with theme songs and accent colours
 - Built-in updates from GitHub releases, with a Stable and a Beta channel
 
 ## Requirements
@@ -31,11 +35,15 @@
 
 ## Installation
 
-Glacier is distributed through [GitHub releases](https://github.com/Glacier-Jellyfin/glacier-androidtv/releases)
-only. Download `glacier-androidtv-<version>.apk` and sideload it, for example
-with [Downloader](https://www.aftvnews.com/downloader/). Once installed, Glacier
+Glacier will be distributed only through
+[GitHub releases](https://github.com/Glacier-Jellyfin/glacier-androidtv/releases) —
+no release has been published yet. Once one exists, download
+`glacier-androidtv-<version>.apk` and sideload it, for example with
+[Downloader](https://www.aftvnews.com/downloader/). Once installed, Glacier
 keeps itself up to date; Android asks once for permission to install updates
 from Glacier.
+
+Until then, build it yourself; see [Building](#building) below.
 
 ## Building
 
