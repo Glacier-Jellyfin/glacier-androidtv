@@ -91,7 +91,7 @@ fun PlayerScreen(
     val buttonFocus = remember { OsdButton.entries.associateWith { FocusRequester() } }
     val skipFocus = remember { FocusRequester() }
     val upNextFocus = remember { FocusRequester() }
-    val overlayOpen = state.trackPanel != null || state.chaptersOpen
+    val overlayOpen = state.trackPanel != null || state.chaptersOpen || state.infoOpen
     val upNext = progress.upNext?.let { countdown -> state.next?.let { it to countdown } }
     val skip = progress.skip
     /** Skip button or "Up next" card on screen; with the OSD hidden, it holds the focus. */
@@ -251,6 +251,7 @@ fun PlayerScreen(
                         OsdButton.Audio -> viewModel.openTracks(TrackKind.Audio)
                         OsdButton.Subtitles -> viewModel.openTracks(TrackKind.Subtitles)
                         OsdButton.Chapters -> viewModel.openChapters()
+                        OsdButton.Info -> viewModel.openInfo()
                     }
                 },
                 onScrub = ::scrub,
@@ -262,7 +263,6 @@ fun PlayerScreen(
                 onSeekBy = viewModel::seekBy,
                 onPrevious = viewModel::playPrevious,
                 onNext = viewModel::playNext,
-                onStop = viewModel::stop,
             )
         }
 
@@ -291,6 +291,7 @@ fun PlayerScreen(
         }
 
         state.trackPanel?.let { PlayerTrackPanel(state, it, viewModel) }
+        if (state.infoOpen) InfoPanel(state, progress, onDismiss = viewModel::closeInfo)
         if (state.chaptersOpen) {
             ChapterSheet(
                 chapters = state.chapters,

@@ -9,6 +9,9 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.common.util.UnstableApi
+import androidx.annotation.OptIn
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -79,6 +82,11 @@ data class PlayerUiState(
     val subtitleIndex: Int? = null,
     val trackPanel: TrackKind? = null,
     val chaptersOpen: Boolean = false,
+    /** The info sheet: overview and what is playing. */
+    val infoOpen: Boolean = false,
+    /** Decoders Media3 picked, for the info sheet ("c2.android.hevc.decoder", "ffmpegLib"). */
+    val videoDecoder: String? = null,
+    val audioDecoder: String? = null,
     /** Headers for authenticated images (trickplay tiles). */
     val imageHeaders: Map<String, String> = emptyMap(),
     val segments: List<MediaSegment> = emptyList(),
@@ -148,6 +156,19 @@ class PlayerViewModel @Inject constructor(
     private val autoSkipped = mutableSetOf<MediaSegment>()
     /** Tracks to apply once Media3 knows the file's tracks. */
     private var tracksPending = false
+
+    @OptIn(UnstableApi::class)
+    private val decoders = object : AnalyticsListener {
+        @OptIn(UnstableApi::class)
+        override fun onVideoDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
+            _state.update { it.copy(videoDecoder = decoderName) }
+        }
+
+        @OptIn(UnstableApi::class)
+        override fun onAudioDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
+            _state.update { it.copy(audioDecoder = decoderName) }
+        }
+    }
 
     private val listener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -248,6 +269,7 @@ class PlayerViewModel @Inject constructor(
                 val playback = GlacierPlayer.create(context, request)
                 val player = playback.player
                 player.addListener(listener)
+                addDecoderListener(player)
                 player.playWhenReady = true
                 tracksPending = true
                 _state.update {
@@ -342,6 +364,7 @@ class PlayerViewModel @Inject constructor(
                 upNextDismissed = false,
                 chaptersOpen = false,
                 trackPanel = null,
+                infoOpen = false,
             )
         }
         _progress.value = PlayerProgress()
@@ -356,6 +379,10 @@ class PlayerViewModel @Inject constructor(
     fun openChapters() = _state.update { it.copy(chaptersOpen = true, trackPanel = null) }
 
     fun closeChapters() = _state.update { it.copy(chaptersOpen = false) }
+
+    fun openInfo() = _state.update { it.copy(infoOpen = true, chaptersOpen = false, trackPanel = null) }
+
+    fun closeInfo() = _state.update { it.copy(infoOpen = false) }
 
     fun playChapter(chapter: Chapter) {
         seekTo(chapter.startMs)
@@ -522,13 +549,16 @@ class PlayerViewModel @Inject constructor(
 
     private fun position() = PlaybackPosition(currentPositionMs(), paused = _state.value.player?.isPlaying != true)
 
+    @OptIn(UnstableApi::class)
+    private fun addDecoderListener(player: ExoPlayer) = player.addAnalyticsListener(decoders)
+
     private fun releasePlayer() {
         ticker?.cancel()
         _state.value.player?.let {
             it.removeListener(listener)
             it.release()
         }
-        _state.update { it.copy(player = null, playback = null) }
+        _state.update { it.copy(player = null, playback = null, videoDecoder = null, audioDecoder = null) }
         started = false
     }
 

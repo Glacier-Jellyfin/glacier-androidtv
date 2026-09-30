@@ -82,7 +82,6 @@ fun PlayerOsd(
     onOpen: (OsdButton) -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
-    onStop: () -> Unit,
 ) {
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.align(Alignment.TopCenter).osdScrim(top = true))
@@ -135,7 +134,7 @@ fun PlayerOsd(
                     if (state.chapters.isNotEmpty()) {
                         LabelButton(GlacierIcons.Chapters, stringResource(R.string.player_chapters), { onOpen(OsdButton.Chapters) }, Modifier.focusRequester(buttonFocus.getValue(OsdButton.Chapters)))
                     }
-                    ControlButton(GlacierIcons.Close, stringResource(R.string.player_stop), onClick = onStop)
+                    ControlButton(GlacierIcons.Info, stringResource(R.string.player_info), onClick = { onOpen(OsdButton.Info) }, modifier = Modifier.focusRequester(buttonFocus.getValue(OsdButton.Info)))
                 }
                 Spacer(Modifier.weight(1f))
                 if (progress.durationMs > 0) {
@@ -326,7 +325,7 @@ private fun Timeline(
 }
 
 /** OSD buttons that open an overlay; the overlay hands focus back to them when it closes. */
-enum class OsdButton { Audio, Subtitles, Chapters }
+enum class OsdButton { Audio, Subtitles, Chapters, Info }
 
 private fun chapterAt(chapters: List<Chapter>, positionMs: Long): Chapter? = chapters.lastOrNull { it.startMs <= positionMs }
 
