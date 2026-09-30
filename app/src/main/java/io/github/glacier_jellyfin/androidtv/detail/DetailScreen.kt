@@ -124,7 +124,10 @@ fun DetailScreen(
         }
         val panel = state.trackPanel
         if (panel != null && details != null) TrackSheet(panel, state, details, viewModel)
-        state.themeSong?.let { ThemeSong(it, onDone = viewModel::themeSongDone) }
+        // A show and its episode pages share one theme song, so moving between them keeps it going.
+        val themeArea = details?.let { d -> ((if (d.item.kind == ItemKind.Episode) d.seriesId else null) ?: d.item.id).toString() }
+            ?: viewModel.routeThemeArea
+        if (themeArea != null) ThemeSong(themeArea, source = state.themeSong)
         pinPrompt?.let { PinDialog(it, onKey = viewModel.pin::key, onDismiss = viewModel::dismissPin) }
     }
 }

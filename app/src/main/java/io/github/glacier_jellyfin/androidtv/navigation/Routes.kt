@@ -35,8 +35,9 @@ data class LibraryRoute(
     val genreId: String? = null,
 )
 
+/** [themeArea] is the show of an episode opened from its show, known before the page loads (theme song). */
 @Serializable
-data class DetailRoute(val itemId: String)
+data class DetailRoute(val itemId: String, val themeArea: String? = null)
 
 @Serializable
 data class PlayerRoute(val itemId: String, val fromStart: Boolean = false)

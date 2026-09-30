@@ -88,6 +88,9 @@ class DetailViewModel @Inject constructor(
 ) : ViewModel() {
 
     private var itemId: UUID = UUID.fromString(savedStateHandle.toRoute<DetailRoute>().itemId)
+
+    /** Theme song area known from the route, before the page has loaded. */
+    val routeThemeArea: String? = savedStateHandle.toRoute<DetailRoute>().themeArea
     private var themeSongLoaded = false
 
     private val _state = MutableStateFlow(DetailState())
@@ -170,9 +173,6 @@ class DetailViewModel @Inject constructor(
                 .onFailure { Log.w(TAG, "Loading the theme song failed", it) }
         }
     }
-
-    /** The page was left (or the song ended): not again on return. */
-    fun themeSongDone() = _state.update { it.copy(themeSong = null) }
 
     /** Design: open a show on the first season with something unwatched. */
     private suspend fun loadSeries(details: ItemDetails) {
@@ -316,7 +316,7 @@ class DetailViewModel @Inject constructor(
         }
     }
 
-    fun openEpisode(episode: MediaItem) = navigate(DetailRoute(episode.id.toString()))
+    fun openEpisode(episode: MediaItem) = navigate(DetailRoute(episode.id.toString(), themeArea = episode.seriesId?.toString()))
 
     fun openItem(item: MediaItem) = navigate(DetailRoute(item.id.toString()))
 
