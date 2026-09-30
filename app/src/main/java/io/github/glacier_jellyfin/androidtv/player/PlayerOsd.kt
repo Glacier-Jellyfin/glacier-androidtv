@@ -140,7 +140,7 @@ fun PlayerOsd(
                 Spacer(Modifier.weight(1f))
                 if (progress.durationMs > 0) {
                     val end = LocalTime.now().plusSeconds((progress.durationMs - progress.positionMs).coerceAtLeast(0) / 1000)
-                    Text(stringResource(R.string.player_ends_at, end.format(ClockFormat)), style = GlacierText.body(18), color = GlacierColors.Mist)
+                    Text(stringResource(R.string.player_ends_at, end.format(ClockFormat)), style = GlacierText.body(18), color = OsdSecondary)
                 }
             }
         }
@@ -156,7 +156,7 @@ private fun TitleBlock(state: PlayerUiState, modifier: Modifier) {
         } else {
             listOfNotNull(stringResource(R.string.library_movies), item.year?.toString(), item.genres.firstOrNull())
         }.joinToString(" · ")
-        Text(crumb.uppercase(), style = GlacierText.body(18).copy(letterSpacing = 0.06.em), color = GlacierColors.Mist)
+        Text(crumb.uppercase(), style = GlacierText.body(18).copy(letterSpacing = 0.06.em), color = OsdSecondary)
         val title = item.episodeNumber?.takeIf { item.kind == ItemKind.Episode }
             ?.let { stringResource(R.string.player_episode_title, it, item.title) } ?: item.title
         Text(title, style = GlacierText.display(46), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -179,7 +179,7 @@ private fun StatusBlock(state: PlayerUiState, modifier: Modifier) {
                 ),
             )
         }
-        Text(LocalTime.now().format(ClockFormat), style = GlacierText.mono(20), color = GlacierColors.Mist)
+        Text(LocalTime.now().format(ClockFormat), style = GlacierText.mono(20), color = OsdSecondary)
     }
 }
 
@@ -189,8 +189,8 @@ private fun StatusPill(text: String) {
         Modifier
             .height(44.dp)
             .clip(PillShape)
-            .background(GlacierColors.GlassFill)
-            .border(1.dp, GlacierColors.GlassBorder, PillShape)
+            .background(OsdGlass)
+            .border(1.dp, GlacierColors.GlassBorder2, PillShape)
             .padding(horizontal = 18.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -259,9 +259,9 @@ private fun Timeline(
                     .fillMaxWidth()
                     .height(trackHeight)
                     .clip(PillShape)
-                    .background(GlacierColors.GlassFill),
+                    .background(OsdGlass),
             ) {
-                Box(Modifier.fillMaxHeight().fillMaxWidth(fraction(progress.bufferedMs, duration)).background(GlacierColors.GlassFill2))
+                Box(Modifier.fillMaxHeight().fillMaxWidth(fraction(progress.bufferedMs, duration)).background(GlacierColors.GlassBorder2))
                 Box(Modifier.fillMaxHeight().fillMaxWidth(fraction(progress.positionMs, duration)).background(accent))
                 // Known segments (intro, credits …) as hatched stretches (design).
                 if (progress.durationMs > 0) {
@@ -312,14 +312,14 @@ private fun Timeline(
             Text(
                 chapterAt(chapters, progress.positionMs)?.name.orEmpty(),
                 style = GlacierText.mono(20),
-                color = GlacierColors.Mist,
+                color = OsdSecondary,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f).padding(horizontal = 24.dp),
             )
             if (progress.durationMs > 0) {
-                Text("−" + formatTime(progress.durationMs - progress.positionMs), style = GlacierText.mono(20), color = GlacierColors.Mist)
+                Text("−" + formatTime(progress.durationMs - progress.positionMs), style = GlacierText.mono(20), color = OsdSecondary)
             }
         }
     }
@@ -398,8 +398,8 @@ internal fun LabelButton(icon: ImageVector, label: String, onClick: () -> Unit, 
             Modifier
                 .height(62.dp)
                 .clip(PillShape)
-                .background(if (focused) accent.main else if (primary) accent.deep else GlacierColors.GlassFill)
-                .border(2.dp, if (focused) accent.main else if (primary) accent.deep else GlacierColors.GlassBorder, PillShape)
+                .background(if (focused) accent.main else if (primary) accent.deep else OsdGlass)
+                .border(2.dp, if (focused) accent.main else if (primary) accent.deep else GlacierColors.GlassBorder2, PillShape)
                 .padding(horizontal = 22.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -427,8 +427,8 @@ internal fun ControlButton(
             Modifier
                 .size(size)
                 .clip(CircleShape)
-                .background(if (focused) accent else if (big) GlacierColors.GlassFill2 else GlacierColors.GlassFill)
-                .border(2.dp, if (focused) accent else if (big) GlacierColors.GlassBorder2 else GlacierColors.GlassBorder, CircleShape),
+                .background(if (focused) accent else OsdGlass)
+                .border(2.dp, if (focused) accent else GlacierColors.GlassBorder2, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(icon, contentDescription = description, tint = if (focused) GlacierColors.Void else GlacierColors.Ice, modifier = Modifier.size(if (big) 30.dp else 24.dp))
@@ -443,6 +443,15 @@ private val SegmentHatch = Brush.linearGradient(
     end = Offset(9f, -4.2f),
     tileMode = TileMode.Repeated,
 )
+
+/**
+ * Glass behind OSD controls: the design's light glass, a step stronger. The
+ * contrast on bright pictures comes from the darker scrims ([osdScrim]).
+ */
+internal val OsdGlass = GlacierColors.GlassFill2
+
+/** Secondary OSD text; lighter than Mist so it holds up over the picture. */
+internal val OsdSecondary = Color(0xFFC4D4DC)
 
 private fun fraction(value: Long, total: Long): Float = (value.toFloat() / total).coerceIn(0f, 1f)
 

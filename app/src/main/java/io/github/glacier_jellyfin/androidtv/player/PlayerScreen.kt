@@ -3,6 +3,7 @@ package io.github.glacier_jellyfin.androidtv.player
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -196,8 +197,9 @@ fun PlayerScreen(
                     } else {
                         false
                     }
-                    // OK presses a focused prompt.
+                    // OK presses a focused prompt; otherwise, with the OSD hidden, it pauses like a click on the picture.
                     Key.DirectionCenter, Key.Enter -> if (!osdVisible && prompt == null) {
+                        viewModel.togglePlay()
                         showOsd(playFocus)
                         true
                     } else {
@@ -264,12 +266,14 @@ fun PlayerScreen(
             )
         }
 
+        // Above the OSD while it shows; lower down over the bare picture.
+        val promptBottom by animateDpAsState(if (osdVisible) 300.dp else 96.dp, label = "promptBottom")
         if (prompt != null) {
             Box(
                 Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 80.dp, bottom = 300.dp)
-                                        // Losing focus because the prompt is going away must not clear the flag the refocus above relies on.
+                    .padding(end = 80.dp, bottom = promptBottom)
+                    // Losing focus because the prompt is going away must not clear the flag the refocus above relies on.
                     .onFocusChanged { if (currentPrompt != null || it.hasFocus) promptFocused = it.hasFocus },
             ) {
                 if (upNext != null) {
@@ -331,11 +335,16 @@ fun PlayerScreen(
     }
 }
 
-/** The bottom gradient keeps the OSD legible on bright pictures (design: 420 high). */
+/**
+ * The gradients keep the OSD legible on bright pictures. Taller and darker than
+ * the design (420 high): its lighter version left the controls hard to see on snow or daylight.
+ */
 internal fun Modifier.osdScrim(top: Boolean): Modifier = fillMaxWidth()
-    .height(if (top) 220.dp else 420.dp)
+    .height(if (top) 280.dp else 560.dp)
     .background(
-        Brush.verticalGradient(
-            if (top) listOf(Color(0xD9050910), Color.Transparent) else listOf(Color.Transparent, Color(0xEB050910)),
-        ),
+        if (top) {
+            Brush.verticalGradient(0f to Color(0xF0050910), 0.55f to Color(0x99050910), 1f to Color.Transparent)
+        } else {
+            Brush.verticalGradient(0f to Color.Transparent, 0.4f to Color(0xA6050910), 1f to Color(0xF5050910))
+        },
     )
