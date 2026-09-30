@@ -18,6 +18,8 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.1.0-beta.1] - 2026-09-30
+
 ### New
 - Sign in with a Jellyfin account or Quick Connect, choose a public user, and
   switch between saved servers and profiles, with an optional PIN per profile
