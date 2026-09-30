@@ -458,7 +458,7 @@ private fun AlphabetRail(
             .clip(PillShape)
             .background(GlacierColors.GlassFill)
             .border(1.dp, GlacierColors.GlassBorder, PillShape)
-            .padding(vertical = 8.dp),
+            .padding(vertical = 18.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         order.forEach { letter -> RailLetter(letter, available = letter in letters, current = letter == current, onClick = { onLetter(letter) }) }
