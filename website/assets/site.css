@@ -179,6 +179,18 @@ h2.title { margin: 0 0 16px; font-size: clamp(26px, 6vw, 42px); font-weight: 700
   .hero-shot:hover { transform: none; }
 }
 
+/* Design-principle pillars */
+.pillars {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 40px;
+}
+.pillar h3 { margin: 14px 0 8px; font-size: 17px; font-weight: 700; }
+.pillar p { margin: 0; color: var(--mist); font-size: 15px; line-height: 1.55; }
+@media (max-width: 760px) {
+  .pillars { grid-template-columns: 1fr; gap: 32px; }
+}
+
 /* Showcase rows (image + copy) */
 .showcase {
   display: grid;
