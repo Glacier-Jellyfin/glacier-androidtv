@@ -201,10 +201,11 @@ internal fun ChoicePills(
     check: Boolean = false,
     /** A colour dot before each label, for colour choices. */
     dots: List<Color>? = null,
-    /** Each label in its own font, for font choices. */
+    /** Each label in its own font, for font choices; their pills are narrower so all fonts fit one line. */
     fonts: List<FontFamily>? = null,
 ) {
     val accent = LocalAccent.current.main
+    val side = if (fonts != null) 20.dp else 24.dp
     FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         options.forEachIndexed { index, label ->
             val active = selected(index)
@@ -230,7 +231,7 @@ internal fun ChoicePills(
                                 else -> GlacierColors.GlassFill
                             },
                         )
-                        .padding(start = if (check && active) 18.dp else 24.dp, end = 24.dp),
+                        .padding(start = if (check && active) 18.dp else side, end = side),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
