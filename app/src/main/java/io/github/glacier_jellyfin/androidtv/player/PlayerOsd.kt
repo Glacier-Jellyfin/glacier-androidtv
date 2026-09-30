@@ -129,7 +129,9 @@ fun PlayerOsd(
                         ControlButton(GlacierIcons.SkipForward, stringResource(R.string.player_next), onClick = onNext)
                     }
                     LabelButton(GlacierIcons.Speaker, stringResource(R.string.player_audio), { onOpen(OsdButton.Audio) }, Modifier.focusRequester(buttonFocus.getValue(OsdButton.Audio)))
-                    LabelButton(GlacierIcons.Subtitles, stringResource(R.string.player_subtitles), { onOpen(OsdButton.Subtitles) }, Modifier.focusRequester(buttonFocus.getValue(OsdButton.Subtitles)))
+                    if (state.subtitles.isNotEmpty()) {
+                        LabelButton(GlacierIcons.Subtitles, stringResource(R.string.player_subtitles), { onOpen(OsdButton.Subtitles) }, Modifier.focusRequester(buttonFocus.getValue(OsdButton.Subtitles)))
+                    }
                     if (state.chapters.isNotEmpty()) {
                         LabelButton(GlacierIcons.Chapters, stringResource(R.string.player_chapters), { onOpen(OsdButton.Chapters) }, Modifier.focusRequester(buttonFocus.getValue(OsdButton.Chapters)))
                     }
