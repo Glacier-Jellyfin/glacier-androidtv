@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -106,6 +107,7 @@ fun LibraryScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
     val sizes = LocalCardSizes.current
+    val density = LocalDensity.current
 
     val gridState = rememberLazyGridState()
     val firstCardFocus = remember { FocusRequester() }
@@ -149,10 +151,18 @@ fun LibraryScreen(
     }
     LaunchedEffect(state.jumpTo) {
         val index = state.jumpTo ?: return@LaunchedEffect
+        // Only the grid moves: the focus stays on the rail so the user can pick the next
+        // letter, and Left then enters the grid at the first title of this one.
         jumpTarget = index
+        focusedIndex = index
         gridState.scrollToItem(HEADER_ITEMS + index)
         withFrameNanos { }
-        runCatching { jumpFocus.requestFocus() }
+        // Settle the row where focused rows sit, not under the nav.
+        val row = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == HEADER_ITEMS + index }
+        if (row != null) {
+            val top = row.offset.y - gridState.layoutInfo.viewportStartOffset
+            gridState.scrollBy((top - with(density) { ROW_PIVOT.dp.toPx() }))
+        }
         viewModel.jumpHandled()
     }
 
@@ -242,6 +252,12 @@ fun LibraryScreen(
                     current = current,
                     onLetter = viewModel::jumpToLetter,
                     modifier = Modifier
+                        .focusProperties {
+                            val target = jumpTarget
+                            if (target != null && gridState.layoutInfo.visibleItemsInfo.any { it.index == HEADER_ITEMS + target }) {
+                                left = jumpFocus
+                            }
+                        }
                         .padding(end = 22.dp)
                         .offset { IntOffset(0, railTop(gridState, RAIL_TOP.dp.roundToPx())) },
                 )
