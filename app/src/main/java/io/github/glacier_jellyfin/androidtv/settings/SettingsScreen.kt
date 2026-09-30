@@ -2,6 +2,7 @@ package io.github.glacier_jellyfin.androidtv.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -12,7 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -21,6 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -98,6 +100,7 @@ import io.github.glacier_jellyfin.androidtv.update.publishedDate
 import java.text.DateFormat
 import kotlin.math.roundToInt
 import java.util.Date
+import kotlinx.coroutines.launch
 
 /** One card of the settings list; built per category by [rows]. */
 private sealed interface SettingRow {
@@ -157,12 +160,11 @@ private sealed interface SettingRow {
         val focus: FocusRequester? = null,
     ) : SettingRow
 
-    /** A read-only fact, its value as plain text; [focusable] lets the list scroll down to it. */
+    /** A read-only fact, its value as plain text. */
     data class Info(
         override val label: String,
         override val sub: String,
         val value: String,
-        val focusable: Boolean = false,
     ) : SettingRow {
         override val enabled: Boolean get() = true
     }
@@ -248,6 +250,12 @@ fun SettingsScreen(
         }
     }
 
+    // Every category opens scrolled to the top, not where the previous one was left.
+    val listState = remember(state.category) { LazyListState() }
+    // Right out of the categories always lands on the first card, not the nearest one.
+    val firstCard = remember { FocusRequester() }
+    val scope = rememberCoroutineScope()
+
     Box(Modifier.fillMaxSize()) {
         Row(
             Modifier
@@ -255,7 +263,22 @@ fun SettingsScreen(
                 .padding(start = 80.dp, end = 80.dp, top = 150.dp),
             horizontalArrangement = Arrangement.spacedBy(56.dp),
         ) {
-            Column(Modifier.width(420.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                Modifier
+                    .width(420.dp)
+                    .onKeyEvent { event ->
+                        if (event.type != KeyEventType.KeyDown || event.key != Key.DirectionRight) return@onKeyEvent false
+                        scope.launch {
+                            if (listState.firstVisibleItemIndex != 0 || listState.firstVisibleItemScrollOffset != 0) {
+                                listState.scrollToItem(0)
+                                withFrameNanos { }
+                            }
+                            runCatching { firstCard.requestFocus() }
+                        }
+                        true
+                    },
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 Text(stringResource(R.string.nav_settings), style = GlacierText.display(44), color = GlacierColors.Ice)
                 Spacer(Modifier.height(12.dp))
                 SettingsCategory.entries.forEach { category ->
@@ -287,8 +310,6 @@ fun SettingsScreen(
                     Spacer(Modifier.height(18.dp))
                 }
                 val groups = rows(state, viewModel, languageFocus, pinOrigins)
-                // Every category opens scrolled to the top, not where the previous one was left.
-                val listState = remember(state.category) { LazyListState() }
                 LazyColumn(
                     state = listState,
                     verticalArrangement = Arrangement.spacedBy(18.dp),
@@ -296,7 +317,13 @@ fun SettingsScreen(
                 ) {
                     groups.forEachIndexed { groupIndex, group ->
                         item(key = "${state.category}/${group.title}") { GroupHeading(group.title, first = groupIndex == 0) }
-                        items(group.rows, key = { "${state.category}/${group.title}/${it.key}" }) { row -> SettingCard(row) }
+                        itemsIndexed(group.rows, key = { _, row -> "${state.category}/${group.title}/${row.key}" }) { rowIndex, row ->
+                            if (groupIndex == 0 && rowIndex == 0) {
+                                Box(Modifier.focusRequester(firstCard).focusGroup()) { SettingCard(row) }
+                            } else {
+                                SettingCard(row)
+                            }
+                        }
                     }
                 }
             }
@@ -362,7 +389,7 @@ private fun SettingCard(row: SettingRow) {
                     modifier = row.focus?.let { Modifier.focusRequester(it) } ?: Modifier,
                 ) },
         )
-        is SettingRow.Info -> InfoCard(row.label, row.sub, row.value, row.focusable)
+        is SettingRow.Info -> InfoCard(row.label, row.sub, row.value)
         is SettingRow.Action -> OptionCard(
             row.label,
             row.sub,
@@ -976,8 +1003,7 @@ private fun systemRows(state: SettingsUiState, viewModel: SettingsViewModel): Li
     val context = LocalContext.current
     val device = remember { deviceSummary(context) }
     val server = state.serverSummary
-    // Informational values stay focusable so the list scrolls down to them.
-    fun info(label: String, sub: String, value: String) = SettingRow.Info(label, sub, value, focusable = true)
+    fun info(label: String, sub: String, value: String) = SettingRow.Info(label, sub, value)
     return listOf(
         SettingGroup(
             stringResource(R.string.settings_group_update),

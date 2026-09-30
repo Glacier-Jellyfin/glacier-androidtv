@@ -310,18 +310,18 @@ internal fun ValueButton(
 
 /**
  * A read-only fact as a card: the value is plain text, never a pill, so it cannot be mistaken
- * for a button. When [focusable] the whole card takes focus (a lit border only, no ring or
- * scale), so the list can scroll down to it.
+ * for a button. The whole card takes focus (a lit border only, no ring or scale), so the list
+ * can scroll down to it.
  */
 @Composable
-internal fun InfoCard(label: String, sub: String, value: String, focusable: Boolean) {
+internal fun InfoCard(label: String, sub: String, value: String) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     Row(
         Modifier
             .fillMaxWidth()
-            .then(if (focusable) Modifier.focusable(interactionSource = interaction) else Modifier)
+            .focusable(interactionSource = interaction)
             .clip(shape)
             .background(GlacierColors.GlassFill)
             .border(if (focused) 2.dp else 1.dp, if (focused) LocalAccent.current.main.copy(alpha = 0.6f) else GlacierColors.GlassBorder, shape)
