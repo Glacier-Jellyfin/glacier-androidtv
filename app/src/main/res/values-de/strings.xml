@@ -163,6 +163,7 @@
     <string name="marked_watched">Als gesehen markiert</string>
     <string name="marked_unwatched">Als ungesehen markiert</string>
     <string name="season_number">Staffel %1$d</string>
+    <string name="season_specials">Specials</string>
     <plurals name="count_seasons">
         <item quantity="one">%1$d Staffel</item>
         <item quantity="other">%1$d Staffeln</item>
@@ -173,7 +174,7 @@
     </plurals>
     <string name="episode_badge">F%1$d</string>
     <string name="episode_play">Folge abspielen</string>
-    <string name="episode_more">Weitere Folgen · Staffel %1$d</string>
+    <string name="episode_more">Weitere Folgen · %1$s</string>
     <string name="episode_crumb">%1$s · Staffel %2$d · Folge %3$d</string>
     <string name="episode_progress">%1$d %% gesehen · noch %2$d Min.</string>
     <string name="track_audio">Tonspur</string>

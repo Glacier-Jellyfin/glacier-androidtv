@@ -63,6 +63,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
+import io.github.glacier_jellyfin.androidtv.ui.seasonLabel
 import io.github.glacier_jellyfin.androidtv.ui.qualityText
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -151,7 +152,7 @@ private fun TitleBlock(state: PlayerUiState, modifier: Modifier) {
     val item = state.details?.item ?: return
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val crumb = if (item.kind == ItemKind.Episode) {
-            listOfNotNull(item.parentTitle, item.seasonNumber?.let { stringResource(R.string.season_number, it) })
+            listOfNotNull(item.parentTitle, item.seasonNumber?.let { seasonLabel(it) })
         } else {
             listOfNotNull(stringResource(R.string.library_movies), item.year?.toString(), item.genres.firstOrNull())
         }.joinToString(" · ")

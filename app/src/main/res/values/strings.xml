@@ -166,6 +166,7 @@
     <string name="marked_watched">Marked watched</string>
     <string name="marked_unwatched">Marked unwatched</string>
     <string name="season_number">Season %1$d</string>
+    <string name="season_specials">Specials</string>
     <plurals name="count_seasons">
         <item quantity="one">%1$d season</item>
         <item quantity="other">%1$d seasons</item>
@@ -176,7 +177,7 @@
     </plurals>
     <string name="episode_badge">E%1$d</string>
     <string name="episode_play">Play episode</string>
-    <string name="episode_more">More episodes · Season %1$d</string>
+    <string name="episode_more">More episodes · %1$s</string>
     <string name="episode_crumb">%1$s · Season %2$d · Episode %3$d</string>
     <string name="episode_progress">%1$d%% watched · %2$d min left</string>
     <string name="track_audio">Audio track</string>

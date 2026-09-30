@@ -67,6 +67,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
+import io.github.glacier_jellyfin.androidtv.ui.seasonLabel
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
@@ -148,7 +149,7 @@ private fun MediaDetail(state: DetailState, details: ItemDetails, viewModel: Det
                         Crumb(
                             listOfNotNull(
                                 stringResource(if (item.kind == ItemKind.Series) R.string.library_shows else R.string.library_movies),
-                                state.season?.number?.let { stringResource(R.string.season_number, it) }.takeIf { item.kind == ItemKind.Series },
+                                state.season?.number?.let { seasonLabel(it) }.takeIf { item.kind == ItemKind.Series },
                             ).joinToString(" · "),
                         )
                         Title(item.title, size = 84, maxWidth = 1180)
@@ -282,7 +283,7 @@ private fun EpisodeDetail(state: DetailState, details: ItemDetails, viewModel: D
                 if (state.episodes.size > 1) {
                     item(key = "more") {
                         Text(
-                            stringResource(R.string.episode_more, episode.seasonNumber ?: 1),
+                            stringResource(R.string.episode_more, seasonLabel(episode.seasonNumber ?: 1)),
                             style = GlacierText.display(28),
                             color = GlacierColors.Ice,
                             modifier = Modifier.padding(start = PageEdge.dp, top = 44.dp),
@@ -448,7 +449,7 @@ private fun SeasonChips(state: DetailState, viewModel: DetailViewModel) {
         state.seasons.forEach { season ->
             val selected = season.id == state.season?.id
             FilterChip(
-                label = season.number?.let { stringResource(R.string.season_number, it) } ?: season.name,
+                label = season.number?.let { seasonLabel(it) } ?: season.name,
                 active = selected,
                 onClick = { viewModel.selectSeason(season) },
                 height = 50,

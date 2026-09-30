@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -218,6 +219,7 @@ fun PosterCard(
                         .align(Alignment.TopEnd)
                         .padding(14.dp)
                         .height(34.dp)
+                        .widthIn(min = 34.dp)
                         .clip(PillShape)
                         .background(accent)
                         .padding(horizontal = 10.dp),
@@ -360,6 +362,7 @@ private fun Badge(text: String, color: Color, modifier: Modifier) {
         modifier
             .padding(14.dp)
             .height(34.dp)
+            .widthIn(min = 34.dp)
             .clip(PillShape)
             .background(color)
             .padding(horizontal = 10.dp),

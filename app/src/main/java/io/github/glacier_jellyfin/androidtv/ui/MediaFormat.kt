@@ -48,3 +48,8 @@ fun episodeText(item: MediaItem): String? {
     val episode = item.episodeNumber ?: return null
     return stringResource(R.string.episode_short, season, episode)
 }
+
+/** "Season 2"; season 0 holds a show's specials and is named so. */
+@Composable
+fun seasonLabel(number: Int): String =
+    if (number == 0) stringResource(R.string.season_specials) else stringResource(R.string.season_number, number)
