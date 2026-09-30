@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -219,7 +220,7 @@ private fun Results(state: SearchState, onOpen: (MediaItem) -> Unit, onRetry: ()
                 Text(stringResource(R.string.search_error), style = GlacierText.body(21), color = GlacierColors.Mist)
                 PillButton(stringResource(R.string.action_retry), onClick = onRetry)
             }
-            state.loading && state.results.isEmpty() -> Box(Modifier.padding(top = 60.dp)) { SpinningDiamond(60) }
+            state.loading && state.results.isEmpty() -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { SpinningDiamond(60) }
             state.resultsFor != null && state.results.isEmpty() -> Text(
                 stringResource(R.string.search_none, state.resultsFor),
                 style = GlacierText.body(21),
