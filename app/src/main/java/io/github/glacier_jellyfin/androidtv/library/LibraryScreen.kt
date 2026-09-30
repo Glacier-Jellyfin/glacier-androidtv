@@ -207,7 +207,6 @@ fun LibraryScreen(
                                 else -> CardShape.Poster
                             },
                             watched = item.played && item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode),
-                            count = item.childCount.takeIf { item.kind == ItemKind.Collection },
                             modifier = focus.onFocusChanged {
                                 if (it.isFocused) {
                                     focusedIndex = index

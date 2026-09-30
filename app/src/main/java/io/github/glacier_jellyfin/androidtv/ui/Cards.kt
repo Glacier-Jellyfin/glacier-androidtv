@@ -286,7 +286,7 @@ enum class CardShape { Poster, Square, Round }
 
 /**
  * Library grid tile (design: `libGrid`): artwork, title and one caption line,
- * plus a watched check or a count badge (titles in a collection).
+ * plus a watched check. Collections give their size in the caption, not a badge.
  */
 @Composable
 fun GridCard(
@@ -297,7 +297,6 @@ fun GridCard(
     modifier: Modifier = Modifier,
     shape: CardShape = CardShape.Poster,
     watched: Boolean = false,
-    count: Int? = null,
 ) {
     val accent = LocalAccent.current.main
     val outline: Shape = when (shape) {
@@ -332,9 +331,8 @@ fun GridCard(
                     .fillMaxSize()
                     .background(Brush.linearGradient(0f to Color(0x1AE8F4F7), 0.42f to Color.Transparent, start = Offset(Float.POSITIVE_INFINITY, 0f), end = Offset(0f, Float.POSITIVE_INFINITY))),
             )
-            when {
-                count != null -> Badge(count.toString(), accent, Modifier.align(Alignment.TopEnd))
-                watched -> Box(
+            if (watched) {
+                Box(
                     Modifier
                         .align(Alignment.TopEnd)
                         .padding(14.dp)
@@ -351,20 +349,5 @@ fun GridCard(
             Text(title, style = GlacierText.display(20), color = if (focused) accent else GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (caption != null) Text(caption, style = GlacierText.body(16), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-    }
-}
-
-@Composable
-private fun Badge(text: String, color: Color, modifier: Modifier) {
-    Box(
-        modifier
-            .padding(14.dp)
-            .height(34.dp)
-            .clip(PillShape)
-            .background(color)
-            .padding(horizontal = 10.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text, style = GlacierText.body(16, FontWeight.Bold), color = GlacierColors.Void)
     }
 }
