@@ -3,7 +3,6 @@ package io.github.glacier_jellyfin.androidtv.player
 import androidx.annotation.OptIn
 import androidx.media3.common.text.Cue
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.ui.SubtitleView
 
 /**
  * What covers the bottom of the picture, as shares of the height: [fraction]
@@ -46,10 +45,9 @@ internal fun Cue.lifted(lift: SubtitleLift): Cue {
     }
 }
 
-/** Space below cues without a position: the usual margin, or above the covered area. */
-@OptIn(UnstableApi::class)
+/** Space below cues without a position: [BOTTOM_MARGIN], or above the covered area. */
 internal fun liftedPadding(lift: Float): Float =
-    if (lift <= 0f) SubtitleView.DEFAULT_BOTTOM_PADDING_FRACTION else lift + LIFT_MARGIN
+    if (lift <= 0f) BOTTOM_MARGIN else lift + LIFT_MARGIN
 
 /** A positioned cue moves up by [lift] when its lower edge reaches below [covered] from the bottom, else it stays. */
 internal fun liftedLine(line: Float, bottom: Float, lift: Float, covered: Float): Float =
@@ -68,6 +66,9 @@ internal fun bottomLineAsFraction(line: Float, lift: Float): Float = 1f - lifted
 
 /** Height of one text line as a share of the picture (default size 5.33 % plus spacing). */
 private const val TEXT_LINE = 0.07f
+
+/** Space below the lowest line with nothing covering the picture; lower than Media3's 8 %, which sat high on a TV. */
+private const val BOTTOM_MARGIN = 0.04f
 
 /** Gap between lifted subtitles and whatever covers the bottom. */
 private const val LIFT_MARGIN = 0.03f
