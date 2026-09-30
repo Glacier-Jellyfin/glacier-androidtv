@@ -92,7 +92,7 @@ class HomeViewModel @Inject constructor(
                 .onSuccess { content ->
                     _state.update { it.copy(content = content) }
                     // Only "continue watching" follows what was just watched; the other sources stay put.
-                    if (_state.value.settings.spotlightSource == SpotlightSource.ContinueWatching) updateSpotlight(content)
+                    if (SpotlightSource.ContinueWatching in _state.value.settings.spotlightSources) updateSpotlight(content)
                 }
                 .onFailure { Log.w(TAG, "Refreshing home failed", it) }
         }
@@ -125,7 +125,8 @@ class HomeViewModel @Inject constructor(
         throw e
     } catch (e: Exception) {
         Log.w(TAG, "Loading the spotlight failed", e)
-        content.continueWatching.filter { it.backdropUrl != null }.take(settings.spotlightCount.count)
+        if (settings.spotlightSources.isEmpty()) emptyList()
+        else content.continueWatching.filter { it.backdropUrl != null }.take(settings.spotlightCount.count)
     }
 
 

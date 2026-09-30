@@ -5,6 +5,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentPolicy
 import io.github.glacier_jellyfin.androidtv.core.data.playback.UpNextMode
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.SubtitleBurnIn
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -52,11 +53,14 @@ enum class AccentColor { Crevasse, BlueIce, Aurora, PolarNight, Firn }
 /** Settings › Home: what the spotlight at the top of the home screen shows. */
 @Serializable
 data class HomeSettings(
-    val spotlightSource: SpotlightSource = SpotlightSource.ContinueWatching,
+    /** The single source of earlier versions; only read, as the default of [spotlightSources]. */
+    @SerialName("spotlightSource") val legacySpotlightSource: SpotlightSource? = null,
+    /** Mixed into one spotlight; none switches the spotlight off. */
+    val spotlightSources: Set<SpotlightSource> = setOf(legacySpotlightSource ?: SpotlightSource.ContinueWatching),
     val spotlightType: SpotlightType = SpotlightType.All,
     val spotlightCount: SpotlightCount = SpotlightCount.N5,
     val spotlightRotation: SpotlightRotation = SpotlightRotation.S9,
-    /** Leaves out watched titles; does not apply to "Continue watching". */
+    /** Leaves out watched titles; "Continue watching" holds no watched ones anyway. */
     val spotlightUnwatched: Boolean = false,
 )
 

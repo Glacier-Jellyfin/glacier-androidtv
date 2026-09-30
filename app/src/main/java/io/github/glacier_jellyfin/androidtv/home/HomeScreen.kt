@@ -1,7 +1,11 @@
 package io.github.glacier_jellyfin.androidtv.home
 
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +27,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -34,6 +39,11 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -67,6 +77,7 @@ import io.github.glacier_jellyfin.androidtv.core.updater.UpdateCandidate
 import io.github.glacier_jellyfin.androidtv.ui.rememberCardPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 
 @OptIn(ExperimentalFoundationApi::class) // LocalBringIntoViewSpec
@@ -84,15 +95,31 @@ fun HomeScreen(
     // Saved: coming back from a detail page shows the same title again.
     var spotIndex by rememberSaveable { mutableIntStateOf(0) }
     val listFocus = remember { FocusRequester() }
-    var spotlightFocused by remember { mutableStateOf(false) }
     val spotlight = state.spotlight
 
-    // Rotate the spotlight, pausing while focus is inside it; a manual pick restarts the timer.
-    LaunchedEffect(spotlight.size, spotlightFocused, spotIndex, state.settings.spotlightRotation.seconds) {
-        val seconds = state.settings.spotlightRotation.seconds
-        if (spotlight.size < 2 || spotlightFocused || seconds <= 0) return@LaunchedEffect
-        delay(seconds * 1000L)
+    // The spotlight moves on by itself, also while "Play" has the focus: it pauses only on
+    // "More info" and the favorite button, and after the user picked a title with Left/Right
+    // (until the focus leaves the spotlight). Any key in it starts the time anew.
+    var spotlightButton by remember { mutableStateOf<String?>(null) }
+    var pickedByHand by remember { mutableStateOf(false) }
+    var timerStart by remember { mutableIntStateOf(0) }
+    var switchedAt by remember { mutableLongStateOf(0L) }
+    val seconds = state.settings.spotlightRotation.seconds
+    val rotates = spotlight.size > 1 && seconds > 0
+    val paused = pickedByHand || spotlightButton == "info" || spotlightButton == "favorite"
+    val timer = remember { Animatable(0f) }
+    // Which timerStart the timer was last reset for: a pause keeps the time run so far.
+    val timerResetFor = remember { intArrayOf(-1) }
+    LaunchedEffect(rotates, paused, seconds, timerStart) {
+        if (timerResetFor[0] != timerStart || !rotates) {
+            timerResetFor[0] = timerStart
+            timer.snapTo(0f)
+        }
+        if (!rotates || paused) return@LaunchedEffect
+        timer.animateTo(1f, tween(((1f - timer.value) * seconds * 1000).roundToInt(), easing = LinearEasing))
+        switchedAt = SystemClock.uptimeMillis()
         spotIndex = (spotIndex + 1) % spotlight.size
+        timerStart++
     }
     // Focus "Play" once, when the spotlight first appears (not when returning later).
     var initialFocusDone by rememberSaveable { mutableStateOf(false) }
@@ -100,9 +127,9 @@ fun HomeScreen(
     // user left from (the lists keep their scroll), not to the nav on top.
     var lastFocus by rememberSaveable { mutableStateOf<String?>(null) }
     val requesters = remember { mutableMapOf<String, FocusRequester>() }
-    fun Modifier.remembered(key: String): Modifier = this
+    fun Modifier.remembered(key: String, restoreTo: String = key): Modifier = this
         .focusRequester(requesters.getOrPut(key) { FocusRequester() })
-        .onFocusChanged { if (it.isFocused) lastFocus = key }
+        .onFocusChanged { if (it.isFocused) lastFocus = restoreTo }
     val hasContent = state.content != null
     LaunchedEffect(hasContent) {
         if (!hasContent || !initialFocusDone) return@LaunchedEffect
@@ -172,13 +199,35 @@ fun HomeScreen(
                                 Spotlight(
                                     items = spotlight,
                                     index = spotIndex.coerceIn(0, spotlight.lastIndex),
-                                    onSelect = { spotIndex = it },
+                                    onSelect = {
+                                        spotIndex = it
+                                        pickedByHand = true
+                                    },
                                     onPlay = viewModel::play,
                                     onInfo = viewModel::openDetails,
                                     onFavorite = viewModel::toggleFavorite,
                                     playFocus = playFocus,
-                                    modifier = Modifier.onFocusChanged { spotlightFocused = it.hasFocus },
-                                    buttonModifier = { Modifier.remembered("spotlight-$it") },
+                                    progress = { if (rotates) timer.value else null },
+                                    modifier = Modifier
+                                        .onFocusChanged {
+                                            if (!it.hasFocus) {
+                                                spotlightButton = null
+                                                pickedByHand = false
+                                            }
+                                        }
+                                        .onPreviewKeyEvent { event ->
+                                            // OK right after the title changed by itself was meant for the one before.
+                                            val justSwitched = SystemClock.uptimeMillis() - switchedAt < SWITCH_GRACE_MS
+                                            if (justSwitched && event.key in ConfirmKeys) return@onPreviewKeyEvent true
+                                            if (event.type == KeyEventType.KeyDown) timerStart++
+                                            false
+                                        },
+                                    // Coming back from another page lands on "Play" as well.
+                                    buttonModifier = { key ->
+                                        Modifier
+                                            .remembered("spotlight-$key", restoreTo = "spotlight-play")
+                                            .onFocusChanged { if (it.isFocused) spotlightButton = key }
+                                    },
                                 )
                                 LaunchedEffect(Unit) {
                                     if (!initialFocusDone) {
@@ -189,6 +238,13 @@ fun HomeScreen(
                                 }
                             } else {
                                 Box(Modifier.padding(top = 160.dp))
+                                // Spotlight switched off: the first row takes the first focus.
+                                LaunchedEffect(Unit) {
+                                    if (!initialFocusDone) {
+                                        withFrameNanos { }
+                                        initialFocusDone = runCatching { listFocus.requestFocus() }.isSuccess
+                                    }
+                                }
                             }
                         }
                         if (content.continueWatching.isNotEmpty()) {
@@ -278,6 +334,11 @@ fun HomeScreen(
         }
     }
 }
+
+/** How long OK is ignored after the spotlight moved on by itself. */
+private const val SWITCH_GRACE_MS = 700L
+
+private val ConfirmKeys = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
 
 @Composable
 private fun PosterFor(item: MediaItem, onClick: () -> Unit, modifier: Modifier) {

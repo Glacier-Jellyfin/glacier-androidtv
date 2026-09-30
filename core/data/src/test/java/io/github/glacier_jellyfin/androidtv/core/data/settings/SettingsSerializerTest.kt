@@ -23,7 +23,7 @@ class SettingsSerializerTest {
                     ),
                     subtitleStyle = SubtitleStyle(size = SubtitleSize.XLarge, edge = SubtitleEdge.Outline),
                     appearance = AppearanceSettings(accent = AccentColor.Aurora, compact = true, groupCollections = false),
-                    home = HomeSettings(spotlightSource = SpotlightSource.Random, spotlightCount = SpotlightCount.N10),
+                    home = HomeSettings(spotlightSources = setOf(SpotlightSource.Random, SpotlightSource.Favorites), spotlightCount = SpotlightCount.N10),
                 ),
             ),
         )
@@ -46,6 +46,21 @@ class SettingsSerializerTest {
         val profile = SettingsSerializer.readFrom(ByteArrayInputStream(json.toByteArray())).profiles.getValue("s/u")
         assertEquals(AppearanceSettings(), profile.appearance)
         assertEquals(HomeSettings(), profile.home)
+    }
+
+    @Test
+    fun `the single spotlight source of earlier versions becomes the only one chosen`() = runTest {
+        val json = """{"profiles":{"s/u":{"home":{"spotlightSource":"Favorites"}}}}"""
+        val home = SettingsSerializer.readFrom(ByteArrayInputStream(json.toByteArray())).profiles.getValue("s/u").home
+        assertEquals(setOf(SpotlightSource.Favorites), home.spotlightSources)
+    }
+
+    @Test
+    fun `no spotlight source chosen survives a round trip`() = runTest {
+        val state = SettingsState(mapOf("s/u" to ProfileSettings(home = HomeSettings(legacySpotlightSource = SpotlightSource.Random, spotlightSources = emptySet()))))
+        val out = ByteArrayOutputStream()
+        SettingsSerializer.writeTo(state, out)
+        assertEquals(emptySet<SpotlightSource>(), SettingsSerializer.readFrom(ByteArrayInputStream(out.toByteArray())).profiles.getValue("s/u").home.spotlightSources)
     }
 
     @Test

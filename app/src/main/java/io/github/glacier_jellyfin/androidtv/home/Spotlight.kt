@@ -5,9 +5,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,18 +18,29 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.dropShadow
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.shadow.Shadow as DropShadow
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,7 +66,11 @@ import io.github.glacier_jellyfin.androidtv.ui.episodeText
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 const val SpotlightHeight = 680
 
-/** The home screen's hero ("Spotlight"): backdrop, title, facts, actions and position dots. */
+/**
+ * The home screen's hero ("Spotlight"): backdrop, title, facts, actions and position dots.
+ * Left on "Play" and Right on the favorite button move to the previous and next title;
+ * coming into it from elsewhere always lands on "Play".
+ */
 @Composable
 fun Spotlight(
     items: List<MediaItem>,
@@ -68,12 +81,27 @@ fun Spotlight(
     onFavorite: (MediaItem) -> Unit,
     playFocus: FocusRequester,
     modifier: Modifier = Modifier,
+    /** Time to the next title as 0..1, shown in the active dot; null while it does not move on. */
+    progress: () -> Float? = { null },
     /** Lets the screen find a button again (keys "play", "info", "favorite"). */
     buttonModifier: (String) -> Modifier = { Modifier },
 ) {
     val item = items.getOrNull(index) ?: return
+    fun step(by: Int) = Modifier.onPreviewKeyEvent { event ->
+        val key = if (by < 0) Key.DirectionLeft else Key.DirectionRight
+        if (items.size < 2 || event.key != key) return@onPreviewKeyEvent false
+        if (event.type == KeyEventType.KeyDown) onSelect((index + by).mod(items.size))
+        true
+    }
     // Clipped: the Ken Burns zoom would otherwise spill over the first row.
-    Box(modifier.fillMaxWidth().height(SpotlightHeight.dp).clipToBounds()) {
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(SpotlightHeight.dp)
+            .clipToBounds()
+            .focusProperties { onEnter = { playFocus.requestFocus() } }
+            .focusGroup(),
+    ) {
         Crossfade(targetState = item.backdropUrl, animationSpec = tween(600), label = "backdrop") { url ->
             KenBurns { Artwork(url, Modifier.fillMaxSize()) }
         }
@@ -95,7 +123,13 @@ fun Spotlight(
             onInfo = { onInfo(item) },
             onFavorite = { onFavorite(item) },
             playFocus = playFocus,
-            buttonModifier = buttonModifier,
+            buttonModifier = { key ->
+                when (key) {
+                    "play" -> step(-1)
+                    "favorite" -> step(1)
+                    else -> Modifier
+                }.then(buttonModifier(key))
+            },
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(start = 80.dp, bottom = 74.dp)
@@ -108,7 +142,7 @@ fun Spotlight(
                     .padding(end = 80.dp, bottom = 78.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                items.indices.forEach { i -> Dot(active = i == index, onClick = { onSelect(i) }) }
+                items.indices.forEach { i -> Dot(active = i == index, progress = progress) }
             }
         }
     }
@@ -201,26 +235,35 @@ private fun ResumeChip() {
     }
 }
 
-/** Position dot; the active one is a wide accent pill. Focusable to jump to that title. */
+/**
+ * Position dot; the active one is a wide pill. While the spotlight moves on by
+ * itself the accent fills it as the time to the next title runs down.
+ */
 @Composable
-private fun Dot(active: Boolean, onClick: () -> Unit) {
+private fun Dot(active: Boolean, progress: () -> Float?) {
     val accent = LocalAccent.current.main
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
     val width by animateDpAsState(if (active) 34.dp else 12.dp, label = "dot")
     Box(
         Modifier
             .height(26.dp)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            Modifier
-                .then(if (focused) Modifier.dropShadow(PillShape, DropShadow(radius = 0.dp, spread = 4.dp, color = accent.copy(alpha = 0.35f))) else Modifier)
-                .width(width)
-                .height(12.dp)
-                .clip(PillShape)
-                .background(if (active) accent else Color(0x4DE8F4F7)),
-        )
-    }
+            .width(width)
+            // Drawn, not composed: the fill changes every frame.
+            .drawBehind {
+                val bar = Size(size.width, 12.dp.toPx())
+                val top = Offset(0f, (size.height - bar.height) / 2)
+                val radius = CornerRadius(bar.height / 2)
+                val filled = if (active) progress() else null
+                val track = when {
+                    !active -> Color(0x4DE8F4F7)
+                    filled != null -> accent.copy(alpha = 0.3f)
+                    else -> accent
+                }
+                drawRoundRect(track, top, bar, radius)
+                if (filled != null && filled > 0f) {
+                    // A plain bar cut to the pill: a narrow round rect of its own would bulge out.
+                    val pill = Path().apply { addRoundRect(RoundRect(Rect(top, bar), radius)) }
+                    clipPath(pill) { drawRect(accent, top, Size(bar.width * filled.coerceIn(0f, 1f), bar.height)) }
+                }
+            },
+    )
 }

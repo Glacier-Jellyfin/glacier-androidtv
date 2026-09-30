@@ -119,6 +119,16 @@ private sealed interface SettingRow {
         override val enabled: Boolean = true,
     ) : SettingRow
 
+    /** Options switched on and off each, any number of them. */
+    data class MultiChoice(
+        override val label: String,
+        override val sub: String,
+        val options: List<String>,
+        val selected: Set<Int>,
+        val onToggle: (Int) -> Unit,
+        override val enabled: Boolean = true,
+    ) : SettingRow
+
     data class Swatches(
         override val label: String,
         override val sub: String,
@@ -306,7 +316,8 @@ private fun SettingCard(row: SettingRow) {
         is SettingRow.Toggle -> OptionCard(row.label, row.sub, row.enabled, trailing = {
             ToggleSwitch(row.checked, row.onToggle, row.focus?.let { Modifier.focusRequester(it) } ?: Modifier, row.enabled)
         })
-        is SettingRow.Choice -> OptionCard(row.label, row.sub, row.enabled, below = { ChoicePills(row.options, row.selected, row.onSelect, row.enabled) })
+        is SettingRow.Choice -> OptionCard(row.label, row.sub, row.enabled, below = { ChoicePills(row.options, { it == row.selected }, row.onSelect, row.enabled) })
+        is SettingRow.MultiChoice -> OptionCard(row.label, row.sub, row.enabled, below = { ChoicePills(row.options, { it in row.selected }, row.onToggle, row.enabled, check = true) })
         is SettingRow.Swatches -> OptionCard(row.label, row.sub, row.enabled, below = { SwatchPicker(row.swatches, row.selected, row.onSelect) })
         is SettingRow.Update -> UpdateCard(row)
         is SettingRow.Value -> OptionCard(
@@ -396,22 +407,25 @@ private fun appearanceRows(state: SettingsUiState, viewModel: SettingsViewModel)
 private fun homeRows(state: SettingsUiState, viewModel: SettingsViewModel): List<SettingGroup> {
     val home = state.profile.home
     val sources = listOf(
-        Triple(SpotlightSource.ContinueWatching, R.string.settings_spot_continue, R.string.settings_spot_continue_sub),
-        Triple(SpotlightSource.RecentlyAdded, R.string.settings_spot_recent, R.string.settings_spot_recent_sub),
-        Triple(SpotlightSource.Favorites, R.string.settings_spot_favorites, R.string.settings_spot_favorites_sub),
-        Triple(SpotlightSource.Random, R.string.settings_spot_random, R.string.settings_spot_random_sub),
+        SpotlightSource.ContinueWatching to R.string.settings_spot_continue,
+        SpotlightSource.RecentlyAdded to R.string.settings_spot_recent,
+        SpotlightSource.Favorites to R.string.settings_spot_favorites,
+        SpotlightSource.Random to R.string.settings_spot_random,
     )
-    val source = sources.first { it.first == home.spotlightSource }
+    val on = home.spotlightSources.isNotEmpty()
     return listOf(
         SettingGroup(
             stringResource(R.string.settings_group_spotlight),
             listOf(
-                SettingRow.Choice(
+                SettingRow.MultiChoice(
                     stringResource(R.string.settings_spot_source),
-                    stringResource(source.third),
+                    stringResource(if (on) R.string.settings_spot_source_sub else R.string.settings_spot_source_off),
                     sources.map { stringResource(it.second) },
-                    sources.indexOf(source),
-                    onSelect = { i -> viewModel.updateHome { it.copy(spotlightSource = sources[i].first) } },
+                    sources.indices.filterTo(HashSet()) { sources[it].first in home.spotlightSources },
+                    onToggle = { i ->
+                        val source = sources[i].first
+                        viewModel.updateHome { it.copy(spotlightSources = if (source in it.spotlightSources) it.spotlightSources - source else it.spotlightSources + source) }
+                    },
                 ),
                 SettingRow.Choice(
                     stringResource(R.string.settings_spot_type),
@@ -419,6 +433,7 @@ private fun homeRows(state: SettingsUiState, viewModel: SettingsViewModel): List
                     listOf(R.string.settings_spot_all, R.string.settings_spot_movies, R.string.settings_spot_shows).map { stringResource(it) },
                     home.spotlightType.ordinal,
                     onSelect = { i -> viewModel.updateHome { it.copy(spotlightType = SpotlightType.entries[i]) } },
+                    enabled = on,
                 ),
                 SettingRow.Choice(
                     stringResource(R.string.settings_spot_count),
@@ -426,6 +441,7 @@ private fun homeRows(state: SettingsUiState, viewModel: SettingsViewModel): List
                     SpotlightCount.entries.map { it.count.toString() },
                     home.spotlightCount.ordinal,
                     onSelect = { i -> viewModel.updateHome { it.copy(spotlightCount = SpotlightCount.entries[i]) } },
+                    enabled = on,
                 ),
                 SettingRow.Choice(
                     stringResource(R.string.settings_spot_rotation),
@@ -433,13 +449,14 @@ private fun homeRows(state: SettingsUiState, viewModel: SettingsViewModel): List
                     SpotlightRotation.entries.map { if (it == SpotlightRotation.Off) stringResource(R.string.settings_off) else stringResource(R.string.settings_seconds, it.seconds) },
                     home.spotlightRotation.ordinal,
                     onSelect = { i -> viewModel.updateHome { it.copy(spotlightRotation = SpotlightRotation.entries[i]) } },
+                    enabled = on,
                 ),
                 SettingRow.Toggle(
                     stringResource(R.string.settings_spot_unwatched),
                     stringResource(R.string.settings_spot_unwatched_sub),
                     home.spotlightUnwatched,
                     onToggle = { viewModel.updateHome { it.copy(spotlightUnwatched = !it.spotlightUnwatched) } },
-                    enabled = home.spotlightSource != SpotlightSource.ContinueWatching,
+                    enabled = on,
                 ),
             ),
         ),

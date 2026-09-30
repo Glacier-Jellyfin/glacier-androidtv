@@ -24,6 +24,7 @@ import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.SortOrder
 import java.util.UUID
+import kotlin.random.Random
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -62,12 +63,15 @@ class HomeRepository @Inject constructor(
     }
 
     /**
-     * The spotlight as Settings › Home asks for it. "Continue watching" comes
-     * from [continueWatching]; the other sources ask the server. Only titles
-     * with a backdrop qualify. Nothing matching falls back to the newest titles
-     * of the type, as the design falls back to something rather than nothing.
+     * The spotlight as Settings › Home asks for it, see [spotlightPool]. "Continue
+     * watching" comes from [continueWatching]; the other sources ask the server.
+     * Only titles with a backdrop qualify. No source chosen means no spotlight;
+     * nothing matching falls back to the newest titles of the type, as the
+     * design falls back to something rather than nothing.
      */
     suspend fun spotlight(settings: HomeSettings, continueWatching: List<MediaItem>): List<MediaItem> = withContext(Dispatchers.IO) {
+        val sources = settings.spotlightSources
+        if (sources.isEmpty()) return@withContext emptyList()
         val count = settings.spotlightCount.count
         val session = requireSession()
         val mapper = MediaMapper(session.api)
@@ -86,13 +90,21 @@ class HomeRepository @Inject constructor(
                 limit = count,
             ).content.items.map(mapper::item).let { ageFilter.visible(it) }
         val unwatched = settings.spotlightUnwatched
-        val items = when (settings.spotlightSource) {
-            SpotlightSource.ContinueWatching -> continueWatching.filter { it.backdropUrl != null && settings.spotlightType.matches(it.kind) }
-            SpotlightSource.RecentlyAdded -> fromServer(ItemSortBy.DATE_CREATED, false, unwatched)
-            SpotlightSource.Favorites -> fromServer(ItemSortBy.DATE_CREATED, true, unwatched)
-            SpotlightSource.Random -> fromServer(ItemSortBy.RANDOM, false, unwatched)
+        val started = if (SpotlightSource.ContinueWatching in sources) {
+            continueWatching.filter { it.backdropUrl != null && settings.spotlightType.matches(it.kind) }
+        } else {
+            emptyList()
         }
-        items.ifEmpty { fromServer(ItemSortBy.DATE_CREATED, false, false) }.take(count)
+        val others = sources.mapNotNull { source ->
+            when (source) {
+                SpotlightSource.ContinueWatching -> null
+                SpotlightSource.RecentlyAdded -> async { fromServer(ItemSortBy.DATE_CREATED, false, unwatched) }
+                SpotlightSource.Favorites -> async { fromServer(ItemSortBy.DATE_CREATED, true, unwatched) }
+                SpotlightSource.Random -> async { fromServer(ItemSortBy.RANDOM, false, unwatched) }
+            }
+        }.awaitAll()
+        spotlightPool(started, others, count, Random.Default) { it.id }
+            .ifEmpty { fromServer(ItemSortBy.DATE_CREATED, false, false).take(count) }
     }
 
     suspend fun setFavorite(itemId: UUID, favorite: Boolean) {
@@ -198,6 +210,17 @@ class HomeRepository @Inject constructor(
         const val ROW_LIMIT = 16
         val FIELDS = listOf(ItemFields.OVERVIEW, ItemFields.GENRES, ItemFields.MEDIA_STREAMS)
     }
+}
+
+/**
+ * One spotlight from several sources: "continue watching" ([started]) first in
+ * its own order, then the titles of the [other] sources shuffled together,
+ * each title once, cut to [count].
+ */
+internal fun <T> spotlightPool(started: List<T>, other: List<List<T>>, count: Int, random: Random, id: (T) -> Any): List<T> {
+    val seen = started.mapTo(HashSet(), id)
+    val mixed = other.flatten().filter { seen.add(id(it)) }.shuffled(random)
+    return (started.distinctBy(id) + mixed).take(count)
 }
 
 /**

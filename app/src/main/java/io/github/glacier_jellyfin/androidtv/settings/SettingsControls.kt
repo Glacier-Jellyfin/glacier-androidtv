@@ -191,21 +191,26 @@ internal fun ToggleSwitch(checked: Boolean, onToggle: () -> Unit, modifier: Modi
     }
 }
 
-/** The options of a choice, wrapping onto more lines when needed. */
+/** The options of a choice, wrapping onto more lines when needed; [check] ticks the chosen ones (several may be). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun ChoicePills(options: List<String>, selected: Int, onSelect: (Int) -> Unit, enabled: Boolean = true) {
+internal fun ChoicePills(options: List<String>, selected: (Int) -> Boolean, onSelect: (Int) -> Unit, enabled: Boolean = true, check: Boolean = false) {
     val accent = LocalAccent.current.main
     FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         options.forEachIndexed { index, label ->
-            val active = index == selected
+            val active = selected(index)
             GlacierClickable(
                 onClick = { onSelect(index) },
                 shape = PillShape,
                 enabled = enabled,
                 unfocusedBorder = if (active) accent.copy(alpha = 0.45f) else Color.Transparent,
             ) { focused ->
-                Box(
+                val color = when {
+                    focused -> GlacierColors.Void
+                    active -> GlacierColors.Ice
+                    else -> GlacierColors.Mist
+                }
+                Row(
                     Modifier
                         .height(52.dp)
                         .clip(PillShape)
@@ -216,18 +221,12 @@ internal fun ChoicePills(options: List<String>, selected: Int, onSelect: (Int) -
                                 else -> GlacierColors.GlassFill
                             },
                         )
-                        .padding(horizontal = 24.dp),
-                    contentAlignment = Alignment.Center,
+                        .padding(start = if (check && active) 18.dp else 24.dp, end = 24.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Text(
-                        label,
-                        style = GlacierText.body(18, FontWeight.SemiBold),
-                        color = when {
-                            focused -> GlacierColors.Void
-                            active -> GlacierColors.Ice
-                            else -> GlacierColors.Mist
-                        },
-                    )
+                    if (check && active) Icon(GlacierIcons.Check, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+                    Text(label, style = GlacierText.body(18, FontWeight.SemiBold), color = color)
                 }
             }
         }
