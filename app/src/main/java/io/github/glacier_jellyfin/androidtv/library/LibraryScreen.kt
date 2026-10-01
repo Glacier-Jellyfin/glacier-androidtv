@@ -119,6 +119,11 @@ fun LibraryScreen(
     // Back from a detail page the screen is composed anew; focus goes back to the card the
     // user left from (the grid keeps its scroll), not to the nav on top.
     var lastFocusId by rememberSaveable { mutableStateOf<String?>(null) }
+    // Where the first row of cards sits with the grid at its top; the A–Z rail stays level with it.
+    var railTop by rememberSaveable { mutableIntStateOf(-1) }
+    LaunchedEffect(gridState) {
+        snapshotFlow { firstRowHome(gridState) }.collect { top -> if (top != null) railTop = top }
+    }
     val restoreFocus = remember { FocusRequester() }
     var focusedIndex by remember { mutableIntStateOf(-1) }
     var jumpTarget by remember { mutableStateOf<Int?>(null) }
@@ -262,7 +267,7 @@ fun LibraryScreen(
                             }
                         }
                         .padding(end = 22.dp)
-                        .offset { IntOffset(0, railTop(gridState, RAIL_TOP.dp.roundToPx())) },
+                        .offset { IntOffset(0, if (railTop >= 0) railTop else RAIL_TOP.dp.roundToPx()) },
                 )
             }
         }
@@ -526,13 +531,14 @@ private fun rememberGridPivotSpec(gridState: LazyGridState): BringIntoViewSpec {
 }
 
 /**
- * The design keeps the A–Z rail level with the first row of cards and lets it stick
- * [RAIL_TOP] from the top once that row scrolls up.
+ * The first row's top while the grid is scrolled all the way up, else null. The A–Z rail
+ * stays there and does not scroll with the grid; [RAIL_TOP] until it is known.
  */
-private fun railTop(gridState: LazyGridState, stickyTop: Int): Int {
+private fun firstRowHome(gridState: LazyGridState): Int? {
+    if (gridState.firstVisibleItemIndex != 0 || gridState.firstVisibleItemScrollOffset != 0) return null
     val info = gridState.layoutInfo
-    val firstRow = info.visibleItemsInfo.firstOrNull { it.index == HEADER_ITEMS } ?: return stickyTop
-    return maxOf(stickyTop, firstRow.offset.y - info.viewportStartOffset)
+    val firstRow = info.visibleItemsInfo.firstOrNull { it.index == HEADER_ITEMS } ?: return null
+    return firstRow.offset.y - info.viewportStartOffset
 }
 
 private fun letterOf(item: MediaItem): Char {
