@@ -48,10 +48,10 @@ data class TrailerRoute(val itemId: String)
 /**
  * The music player, queueing every song of an album, artist or playlist
  * ([sourceId]); [startTrackId] plays first, else the first song (a random
- * one with shuffle on).
+ * one with shuffle on). Without [sourceId] it shows what plays (mini player).
  */
 @Serializable
-data class MusicRoute(val sourceId: String, val startTrackId: String? = null)
+data class MusicRoute(val sourceId: String? = null, val startTrackId: String? = null)
 
 /** A cast member; [fromTitle] and [role] feed the breadcrumb ("Dracula · Count Dracula"). */
 @Serializable

@@ -6,6 +6,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
@@ -20,6 +21,9 @@ import io.github.peerless2012.ass.media.kt.withAssMkvSupport
 import io.github.peerless2012.ass.media.parser.AssSubtitleParserFactory
 import io.github.peerless2012.ass.media.type.AssRenderType
 import io.github.peerless2012.ass.media.widget.AssSubtitleView
+
+/** A song as the system shows it. */
+data class SongMetadata(val title: String, val artist: String?, val album: String?, val artworkUrl: String?)
 
 /** One stream to play: the URL the server handed out and the headers it needs. */
 data class StreamRequest(
@@ -117,12 +121,28 @@ object GlacierPlayer {
             .build()
     }
 
-    /** One song of the queue; [id] comes back as the player's media id. */
-    fun audioItem(id: String, url: String, isHls: Boolean): MediaItem =
+    /**
+     * One song of the queue; [id] comes back as the player's media id. [metadata]
+     * is what the system shows for it (media session, "Now playing").
+     */
+    fun audioItem(id: String, url: String, isHls: Boolean, metadata: SongMetadata? = null): MediaItem =
         MediaItem.Builder()
             .setMediaId(id)
             .setUri(url)
             .apply { if (isHls) setMimeType(MimeTypes.APPLICATION_M3U8) }
+            .apply {
+                if (metadata != null) {
+                    setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(metadata.title)
+                            .setArtist(metadata.artist)
+                            .setAlbumTitle(metadata.album)
+                            .setArtworkUri(metadata.artworkUrl?.let(Uri::parse))
+                            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                            .build(),
+                    )
+                }
+            }
             .build()
 
     private fun SideloadedSubtitle.toConfiguration() =

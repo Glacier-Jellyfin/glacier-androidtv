@@ -25,6 +25,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyle
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
+import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
@@ -222,6 +223,7 @@ class SettingsViewModel @Inject constructor(
                 NavTarget.Home -> _events.send(UiEvent.Navigate(HomeRoute, clearBackStack = true))
                 NavTarget.Search -> _events.send(UiEvent.Navigate(SearchRoute()))
                 is NavTarget.Library -> _events.send(UiEvent.Navigate(LibraryRoute(target.kind.name)))
+                NavTarget.NowPlaying -> _events.send(UiEvent.Navigate(MusicRoute()))
                 NavTarget.Profile -> {
                     val serverId = sessions.session.value?.server?.id ?: return@launch
                     sessions.leave()

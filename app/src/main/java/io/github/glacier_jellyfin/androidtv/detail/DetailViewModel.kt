@@ -23,6 +23,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelections
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
+import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PersonRoute
@@ -85,6 +86,7 @@ class DetailViewModel @Inject constructor(
     private val settings: SettingsRepository,
     private val parental: ParentalControl,
     private val ageFilter: AgeFilter,
+    private val musicPlayback: MusicController,
 ) : ViewModel() {
 
     private var itemId: UUID = UUID.fromString(savedStateHandle.toRoute<DetailRoute>().itemId)
@@ -166,6 +168,8 @@ class DetailViewModel @Inject constructor(
 
     private fun loadThemeSong() {
         if (themeSongLoaded || !settings.settings.value.playback.themeSongs) return
+        // Music the user chose wins over the theme song.
+        if (musicPlayback.isPlaying) return
         themeSongLoaded = true
         viewModelScope.launch {
             runCatching { music.themeSong(itemId)?.let(playback::audioSource) }

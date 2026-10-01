@@ -97,6 +97,7 @@ dependencies {
     implementation(project(":core:designsystem"))
     implementation(project(":core:data"))
     implementation(project(":core:player"))
+    implementation(libs.media3.session)
     implementation(project(":core:updater"))
 
     implementation(libs.androidx.core.ktx)

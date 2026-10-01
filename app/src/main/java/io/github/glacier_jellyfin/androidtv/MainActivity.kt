@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
@@ -34,11 +35,15 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
 import io.github.glacier_jellyfin.androidtv.core.designsystem.Accent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierBackground
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierTheme
+import io.github.glacier_jellyfin.androidtv.music.MusicController
+import io.github.glacier_jellyfin.androidtv.music.NowPlaying
 import io.github.glacier_jellyfin.androidtv.navigation.GlacierNavHost
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ServerListRoute
 import io.github.glacier_jellyfin.androidtv.ui.CardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
+import io.github.glacier_jellyfin.androidtv.ui.LocalMusicProgress
+import io.github.glacier_jellyfin.androidtv.ui.LocalNowPlaying
 import io.github.glacier_jellyfin.androidtv.ui.LocalUnlockedTitles
 import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
 import io.github.glacier_jellyfin.androidtv.ui.NavDirection
@@ -66,11 +71,15 @@ class StartViewModel @Inject constructor(
     settings: SettingsRepository,
     parental: ParentalControl,
     val updates: UpdateManager,
+    val music: MusicController,
 ) : ViewModel() {
     /** The signed-in profile's look; defaults on the setup and profile screens. */
     val appearance: StateFlow<AppearanceSettings> = settings.settings
         .map { it.appearance }
         .stateIn(viewModelScope, SharingStarted.Eagerly, settings.settings.value.appearance)
+
+    /** The song for the mini player. */
+    val nowPlaying: StateFlow<NowPlaying?> = music.nowPlaying
 
     /** Titles the PIN unlocked in this session; their cards drop the lock. */
     val unlockedTitles: StateFlow<Set<String>> = parental.unlockedItems
@@ -115,12 +124,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             val appearance by startViewModel.appearance.collectAsStateWithLifecycle()
             val unlockedTitles by startViewModel.unlockedTitles.collectAsStateWithLifecycle()
+            val nowPlaying by startViewModel.nowPlaying.collectAsStateWithLifecycle()
             GlacierTheme(accent = Accent.valueOf(appearance.accent.name), reduceMotion = appearance.reduceMotion) {
                 val toaster = remember { Toaster() }
                 CompositionLocalProvider(
                     LocalToaster provides toaster,
                     LocalCardSizes provides if (appearance.compact) CardSizes.Compact else CardSizes.Comfortable,
                     LocalUnlockedTitles provides unlockedTitles,
+                    LocalNowPlaying provides nowPlaying,
+                    LocalMusicProgress provides startViewModel.music.progress,
                 ) {
                     // Nothing reacts to keys while Android installs an update.
                     val update by startViewModel.updates.state.collectAsStateWithLifecycle()
@@ -133,6 +145,14 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                             update is UpdateState.Installing
+                        }.onKeyEvent { event ->
+                            // Media keys no screen used go to the music, wherever the user is.
+                            val code = event.nativeKeyEvent.keyCode
+                            when (event.type) {
+                                KeyEventType.KeyDown -> startViewModel.music.onMediaKey(code)
+                                KeyEventType.KeyUp -> startViewModel.music.ownsKey(code)
+                                else -> false
+                            }
                         },
                     ) {
                         val start by startViewModel.start.collectAsStateWithLifecycle()

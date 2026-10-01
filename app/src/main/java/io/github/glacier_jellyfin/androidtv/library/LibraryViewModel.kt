@@ -18,6 +18,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
+import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SettingsRoute
@@ -143,6 +144,7 @@ class LibraryViewModel @Inject constructor(
             }
             NavTarget.Search -> SearchRoute()
             NavTarget.Settings -> SettingsRoute
+            NavTarget.NowPlaying -> MusicRoute()
             is NavTarget.Library -> if (target.kind == _state.value.query.kind && route.libraryId == null && route.genreId == null) return else LibraryRoute(target.kind.name)
             NavTarget.Profile -> {
                 val serverId = sessions.session.value?.server?.id ?: return

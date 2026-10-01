@@ -51,7 +51,8 @@ val LocalToaster = staticCompositionLocalOf { Toaster() }
 
 /**
  * The design's toast outside the player: a card at the top right that
- * disappears after 2.2 s. Only the "notice" tone is used so far.
+ * disappears after 2.2 s, below the [MiniPlayer] while music is loaded. Only
+ * the "notice" tone is used so far.
  */
 @Composable
 fun BoxScope.ToastHost(toaster: Toaster) {
@@ -68,7 +69,8 @@ fun BoxScope.ToastHost(toaster: Toaster) {
         exit = fadeOut(),
         modifier = Modifier
             .align(Alignment.TopEnd)
-            .padding(top = 34.dp, end = 96.dp),
+            // Below the mini player while it shows (same corner).
+            .padding(top = if (LocalNowPlaying.current != null) (34 + MINI_PLAYER_HEIGHT + 12).dp else 34.dp, end = 96.dp),
     ) {
         val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
         Row(

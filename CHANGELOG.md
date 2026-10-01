@@ -19,6 +19,12 @@ renders the reference separately.
 ## [Unreleased]
 
 ### New
+- Music keeps playing while you browse Glacier or leave it; a mini player at
+  the top right shows the song and opens the full player. Music paused for ten
+  minutes ends on its own
+- The remote's media keys control the music from anywhere in the app
+- Videos and trailers pause the music, and theme songs stay silent while it
+  plays
 - Titles above the age limit show a lock on their card while they open with
   the PIN; it goes away once the title is unlocked
 

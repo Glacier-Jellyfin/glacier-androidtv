@@ -48,6 +48,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
+import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -126,6 +127,7 @@ class PlayerViewModel @Inject constructor(
     private val trackSelections: TrackSelections,
     private val settings: SettingsRepository,
     private val serverPreferences: ServerPreferencesRepository,
+    private val musicPlayback: MusicController,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<PlayerRoute>()
@@ -212,6 +214,8 @@ class PlayerViewModel @Inject constructor(
     }
 
     init {
+        // A video ends the music; it does not come back on its own afterwards.
+        musicPlayback.pause()
         viewModelScope.launch {
             settings.settings.collect { profile ->
                 policy = profile.playback.segmentPolicy

@@ -12,6 +12,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.SearchRepository
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
+import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SettingsRoute
@@ -99,6 +100,7 @@ class SearchViewModel @Inject constructor(
             NavTarget.Home -> viewModelScope.launch { _events.send(UiEvent.Navigate(HomeRoute, clearBackStack = true)) }
             NavTarget.Settings -> navigate(SettingsRoute)
             is NavTarget.Library -> navigate(LibraryRoute(target.kind.name))
+            NavTarget.NowPlaying -> navigate(MusicRoute())
             NavTarget.Profile -> {
                 val serverId = sessions.session.value?.server?.id ?: return
                 sessions.leave()

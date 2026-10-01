@@ -77,6 +77,8 @@
     <string name="nav_music">Musik</string>
     <string name="nav_settings">Einstellungen</string>
     <string name="nav_profile">Profil wechseln</string>
+    <string name="nav_now_playing">Läuft gerade: %1$s</string>
+    <string name="mini_player_paused">Pausiert</string>
 
     <!-- Startseite -->
     <string name="home_continue_watching">Weiter schauen</string>
@@ -255,7 +257,6 @@
     <string name="player_pause">Pause</string>
     <string name="player_rewind">10 Sekunden zurück</string>
     <string name="player_forward">30 Sekunden vor</string>
-    <string name="player_stop">Beenden</string>
     <string name="player_ends_at">Endet um %1$s</string>
     <string name="player_episode_title">F%1$d · %2$s</string>
     <string name="player_direct_play">Direct Play</string>

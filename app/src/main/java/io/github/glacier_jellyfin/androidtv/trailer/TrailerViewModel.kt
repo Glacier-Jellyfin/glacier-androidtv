@@ -23,6 +23,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepositor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
+import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.TrailerRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
@@ -88,6 +89,7 @@ class TrailerViewModel @Inject constructor(
     private val repository: DetailRepository,
     private val playback: PlaybackRepository,
     private val settings: SettingsRepository,
+    private val musicPlayback: MusicController,
 ) : ViewModel(), YouTubeListener {
 
     private val itemId = UUID.fromString(savedStateHandle.toRoute<TrailerRoute>().itemId)
@@ -142,6 +144,8 @@ class TrailerViewModel @Inject constructor(
     }
 
     init {
+        // A trailer ends the music; it does not come back on its own afterwards.
+        musicPlayback.pause()
         load()
     }
 

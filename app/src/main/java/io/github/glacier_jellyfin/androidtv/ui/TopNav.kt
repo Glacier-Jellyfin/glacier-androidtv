@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,8 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.shadow.Shadow
@@ -50,11 +51,15 @@ sealed interface NavTarget {
     data class Library(val kind: LibraryKind) : NavTarget
     data object Settings : NavTarget
     data object Profile : NavTarget
+    /** The full music player, opened from the [MiniPlayer]. */
+    data object NowPlaying : NavTarget
 }
 
 /**
  * The floating navigation pill (design: "TOP NAV PILL"): search, home, one
  * entry per library kind the server has, settings and the profile avatar.
+ * While music is loaded the [MiniPlayer] sits at the right edge of the same
+ * row; Right from the avatar goes there.
  */
 @Composable
 fun TopNav(
@@ -70,36 +75,70 @@ fun TopNav(
     down: FocusRequester? = null,
 ) {
     val activeFocus = remember { FocusRequester() }
+    val profileFocus = remember { FocusRequester() }
+    val miniFocus = remember { FocusRequester() }
+    val nowPlaying = LocalNowPlaying.current
     val targets = listOf(NavTarget.Search, NavTarget.Home) + kinds.map(NavTarget::Library) + listOf(NavTarget.Settings, NavTarget.Profile)
-    Row(
-        modifier = modifier
-            // Entering from below lands on the active entry, not the geometrically nearest one.
-            .focusProperties { onEnter = { activeFocus.requestFocus() } }
-            .focusGroup()
-            .dropShadow(PillShape, Shadow(radius = 40.dp, spread = (-14).dp, color = Color.Black.copy(alpha = 0.55f), offset = DpOffset(0.dp, 18.dp)))
-            .clip(PillShape)
-            .background(GlacierColors.Deep.copy(alpha = 0.72f))
-            .background(GlacierColors.GlassFill2)
-            .border(1.dp, GlacierColors.GlassBorder2, PillShape)
-            .padding(7.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        targets.forEach { target ->
-            NavItem(
-                target = target,
-                active = target == active,
-                userName = userName,
-                onClick = { onSelect(target) },
-                down = down,
-                modifier = if (target == active) Modifier.focusRequester(activeFocus) else Modifier,
+    Box(modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                // Entering from below lands on the active entry, not the geometrically nearest one.
+                .focusProperties { onEnter = { activeFocus.requestFocus() } }
+                .focusGroup()
+                .dropShadow(PillShape, Shadow(radius = 40.dp, spread = (-14).dp, color = Color.Black.copy(alpha = 0.55f), offset = DpOffset(0.dp, 18.dp)))
+                .clip(PillShape)
+                .background(GlacierColors.Deep.copy(alpha = 0.72f))
+                .background(GlacierColors.GlassFill2)
+                .border(1.dp, GlacierColors.GlassBorder2, PillShape)
+                .padding(7.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            targets.forEach { target ->
+                NavItem(
+                    target = target,
+                    active = target == active,
+                    userName = userName,
+                    onClick = { onSelect(target) },
+                    down = down,
+                    right = miniFocus.takeIf { target == NavTarget.Profile && nowPlaying != null },
+                    modifier = when (target) {
+                        active -> Modifier.focusRequester(activeFocus)
+                        NavTarget.Profile -> Modifier.focusRequester(profileFocus)
+                        else -> Modifier
+                    },
+                )
+            }
+        }
+        if (nowPlaying != null) {
+            MiniPlayer(
+                nowPlaying = nowPlaying,
+                onClick = { onSelect(NavTarget.NowPlaying) },
+                modifier = Modifier
+                    // Where the toast shows, which moves below it meanwhile.
+                    .align(Alignment.TopEnd)
+                    .padding(end = 96.dp)
+                    .focusRequester(miniFocus)
+                    .focusProperties {
+                        left = profileFocus
+                        if (down != null) this.down = down
+                    },
             )
         }
     }
 }
 
 @Composable
-private fun NavItem(target: NavTarget, active: Boolean, userName: String, onClick: () -> Unit, down: FocusRequester?, modifier: Modifier) {
+private fun NavItem(
+    target: NavTarget,
+    active: Boolean,
+    userName: String,
+    onClick: () -> Unit,
+    down: FocusRequester?,
+    right: FocusRequester?,
+    modifier: Modifier,
+) {
     val accent = LocalAccent.current
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -128,7 +167,10 @@ private fun NavItem(target: NavTarget, active: Boolean, userName: String, onClic
             .clip(PillShape)
             .background(background)
             .border(2.dp, border, PillShape)
-            .focusProperties { if (down != null) this.down = down }
+            .focusProperties {
+                if (down != null) this.down = down
+                if (right != null) this.right = right
+            }
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .padding(horizontal = if (iconOnly) 15.dp else 26.dp),
         contentAlignment = Alignment.Center,
@@ -157,6 +199,7 @@ private fun NavItem(target: NavTarget, active: Boolean, userName: String, onClic
                 ),
                 foreground,
             )
+            NavTarget.NowPlaying -> Unit
         }
     }
 }

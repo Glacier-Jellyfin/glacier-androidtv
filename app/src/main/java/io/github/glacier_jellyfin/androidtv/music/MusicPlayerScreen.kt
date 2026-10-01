@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -81,8 +80,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
@@ -123,10 +120,8 @@ fun MusicPlayerScreen(
 
     LaunchedEffect(viewModel) { viewModel.finished.collect { onBack() } }
     CollectEvents(viewModel.events, onNavigate = {})
-    BackHandler { viewModel.stop() }
-    // Leaving the app pauses: there is no playback in the background.
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.pause() }
-    // Awake while music plays; paused, the screensaver may come (and ends playback).
+    BackHandler { viewModel.close() }
+    // Awake while music plays here; paused, the screensaver may come.
     val view = LocalView.current
     DisposableEffect(view, state.playing) {
         view.keepScreenOn = state.playing
@@ -147,7 +142,7 @@ fun MusicPlayerScreen(
             .onPreviewKeyEvent { event ->
                 // Back closes on the first press, whatever has focus (see PlayerScreen).
                 if (event.key == Key.Back) {
-                    if (event.type == KeyEventType.KeyUp) viewModel.stop()
+                    if (event.type == KeyEventType.KeyUp) viewModel.close()
                     return@onPreviewKeyEvent true
                 }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
@@ -556,8 +551,6 @@ private fun Controls(
                 on = state.repeat != RepeatMode.Off,
             )
             MusicButton(GlacierIcons.Lyrics, stringResource(R.string.lyrics_title), viewModel::toggleLyrics, on = state.lyricsOn, label = stringResource(R.string.lyrics_title))
-            Spacer(Modifier.weight(1f))
-            MusicButton(GlacierIcons.Close, stringResource(R.string.player_stop), viewModel::stop)
         }
     }
 }
