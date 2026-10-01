@@ -13,12 +13,14 @@ import kotlin.concurrent.thread
  * phone or computer can download the log: `http://<address>:<port>/<token>`.
  * The random token keeps others on the network from guessing the address.
  */
-class LogServer(address: String, private val fileName: String, private val content: ByteArray) : Closeable {
+class LogServer(address: String, val fileName: String, private val content: ByteArray) : Closeable {
 
     private val socket = ServerSocket(0)
     private val token = ByteArray(TOKEN_BYTES).also(SecureRandom()::nextBytes).joinToString("") { "%02x".format(it) }
 
     val url = "http://$address:${socket.localPort}/$token"
+
+    val sizeBytes: Int get() = content.size
 
     init {
         thread(name = "log-server", isDaemon = true) { serve() }

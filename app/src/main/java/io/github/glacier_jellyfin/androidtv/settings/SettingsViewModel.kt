@@ -25,6 +25,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyle
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
 import io.github.glacier_jellyfin.androidtv.diagnostics.Diagnostics
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogServer
+import io.github.glacier_jellyfin.androidtv.diagnostics.LogShare
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
@@ -98,8 +99,8 @@ data class DiagnosticsState(
     val lastCrash: Long? = null,
     /** When detailed logging ends, null while it is off. */
     val verboseUntil: Long? = null,
-    /** The address the log can be downloaded from while its dialog is open. */
-    val shareUrl: String? = null,
+    /** The log on the local network while its page is open. */
+    val share: LogShare? = null,
 )
 
 /** Settings › System › Server; [version] is asked fresh from the server, the stored one until then. */
@@ -304,14 +305,14 @@ class SettingsViewModel @Inject constructor(
                 return@launch
             }
             logServer = server
-            _state.update { it.copy(diagnostics = it.diagnostics.copy(shareUrl = server.url, lastCrash = null)) }
+            _state.update { it.copy(diagnostics = it.diagnostics.copy(share = LogShare(server.url, server.fileName, server.sizeBytes), lastCrash = null)) }
         }
     }
 
     fun closeShare() {
         logServer?.close()
         logServer = null
-        _state.update { it.copy(diagnostics = it.diagnostics.copy(shareUrl = null)) }
+        _state.update { it.copy(diagnostics = it.diagnostics.copy(share = null)) }
     }
 
     override fun onCleared() {

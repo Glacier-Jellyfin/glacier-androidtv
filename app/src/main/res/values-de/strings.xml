@@ -680,7 +680,15 @@
     <string name="diag_share_sub">Zeigt einen QR-Code: auf Handy oder Computer im selben Netzwerk öffnen, um das Protokoll als Datei zu speichern</string>
     <string name="diag_share_button">Anzeigen</string>
     <string name="diag_share_title">Protokoll herunterladen</string>
-    <string name="diag_share_body">Scanne den Code oder öffne die Adresse im Browser eines Geräts im selben Netzwerk. Der Download funktioniert, solange dieses Fenster offen ist.</string>
+    <string name="diag_share_step_network">Verbinde Handy oder Computer mit demselben Netzwerk wie diesen Fernseher</string>
+    <string name="diag_share_step_scan">Scanne den Code mit der Kamera oder gib die Adresse im Browser ein</string>
+    <string name="diag_share_step_attach">Der Browser speichert das Protokoll als Textdatei: Hänge sie an deinen Fehlerbericht auf GitHub an</string>
+    <string name="diag_share_file">Datei</string>
+    <string name="diag_share_size">Größe</string>
+    <string name="diag_share_kb">%1$.0f kB</string>
+    <string name="diag_share_scan">Mit dem Handy scannen</string>
+    <string name="diag_share_or_open">oder im Browser öffnen</string>
+    <string name="diag_share_hint">Der Download funktioniert, solange diese Seite offen ist. Serveradressen, Namen, Passwörter und Zugangstoken sind aus dem Protokoll entfernt.</string>
     <string name="diag_share_no_network">Keine Netzwerkverbindung</string>
     <string name="diag_share_close">Schließen</string>
     <string name="diag_crash_notice">Glacier wurde unerwartet beendet. Protokoll senden: Einstellungen › System</string>

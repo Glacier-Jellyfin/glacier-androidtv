@@ -1,7 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.settings
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Column
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -26,7 +24,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusDirection
@@ -43,7 +40,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -78,14 +74,11 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UpNextChoice
 import io.github.glacier_jellyfin.androidtv.core.designsystem.Accent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
-import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.SubtitleBurnIn
 import io.github.glacier_jellyfin.androidtv.player.subtitleTypeface
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
-import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
-import io.github.glacier_jellyfin.androidtv.diagnostics.QrImage
+import io.github.glacier_jellyfin.androidtv.diagnostics.LogShareScreen
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
@@ -374,7 +367,7 @@ fun SettingsScreen(
         }
 
         pinPrompt?.let { PinDialog(it, onKey = viewModel.pin::key, onDismiss = viewModel.pin::dismiss) }
-        state.diagnostics.shareUrl?.let { LogShareDialog(it, onDismiss = viewModel::closeShare) }
+        state.diagnostics.share?.let { LogShareScreen(it, onClose = viewModel::closeShare) }
     }
 }
 
@@ -1077,8 +1070,8 @@ private fun diagnosticsGroup(diagnostics: DiagnosticsState, viewModel: SettingsV
     // Back on "Show" when the download dialog closes; otherwise focus would fall to the top bar.
     val shareFocus = remember { FocusRequester() }
     var shareOpened by remember { mutableStateOf(false) }
-    LaunchedEffect(diagnostics.shareUrl) {
-        if (diagnostics.shareUrl != null) {
+    LaunchedEffect(diagnostics.share) {
+        if (diagnostics.share != null) {
             shareOpened = true
         } else if (shareOpened) {
             shareOpened = false
@@ -1128,25 +1121,6 @@ private fun diagnosticsGroup(diagnostics: DiagnosticsState, viewModel: SettingsV
             ),
         ),
     )
-}
-
-/** The log on the local network: a QR code and the address, served while this is open. */
-@Composable
-private fun LogShareDialog(url: String, onDismiss: () -> Unit) {
-    ModalSheet(onDismiss = onDismiss, width = 720) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(R.string.diag_share_title), style = GlacierText.display(28), color = GlacierColors.Ice)
-            Text(stringResource(R.string.diag_share_body), style = GlacierText.body(19), color = GlacierColors.Mist, textAlign = TextAlign.Center)
-        }
-        QrImage(url, Modifier.size(300.dp).clip(RoundedCornerShape(GlacierShapes.RadiusMd)))
-        Text(url, style = GlacierText.mono(17), color = GlacierColors.Ice, textAlign = TextAlign.Center)
-        val close = remember { FocusRequester() }
-        PillButton(stringResource(R.string.diag_share_close), onClick = onDismiss, primary = true, modifier = Modifier.focusRequester(close))
-        LaunchedEffect(Unit) {
-            withFrameNanos { }
-            runCatching { close.requestFocus() }
-        }
-    }
 }
 
 /** The update card for each state of the updater (design `updRow()`). */
