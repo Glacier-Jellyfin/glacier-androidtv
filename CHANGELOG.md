@@ -43,8 +43,8 @@ renders the reference separately.
   the PIN; it goes away once the title is unlocked
 - Glacier keeps a log of errors and crashes. Settings › System › Diagnostics
   sends it to your Jellyfin server, where the admin finds it in the dashboard
-  under Logs, ready to attach to a bug report. Passwords and access tokens are
-  removed first. After a crash, the next start points you there
+  under Logs, ready to attach to a bug report. Server addresses, server and
+  user names, passwords and access tokens are removed first. After a crash, the next start points you there
 - Diagnostics can also show a QR code to download the log on a phone or
   computer on the same network, and turn on detailed logging (playback events
   and navigation) for hard-to-find problems; it turns itself off after 24 hours

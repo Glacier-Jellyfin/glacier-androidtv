@@ -668,7 +668,7 @@
     <string name="settings_ffmpeg_missing">Not included</string>
     <string name="settings_group_diagnostics">Diagnostics</string>
     <string name="diag_send">Send log to the server</string>
-    <string name="diag_send_sub">For bug reports: the server admin finds it in the Jellyfin dashboard under Logs. Passwords and access tokens are removed first.</string>
+    <string name="diag_send_sub">For bug reports: the server admin finds it in the Jellyfin dashboard under Logs. Server addresses, names, passwords and access tokens are removed first.</string>
     <string name="diag_send_crash_sub">Glacier closed unexpectedly on %1$s. Send the log so the error can be found.</string>
     <string name="diag_send_done_sub">Sent as %1$s. The server admin finds it in the Jellyfin dashboard under Logs.</string>
     <string name="diag_send_button">Send</string>

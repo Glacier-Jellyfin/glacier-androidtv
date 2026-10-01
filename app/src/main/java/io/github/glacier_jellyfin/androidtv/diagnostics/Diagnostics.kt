@@ -9,6 +9,7 @@ import android.os.Build
 import android.view.Display
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.glacier_jellyfin.androidtv.BuildConfig
+import io.github.glacier_jellyfin.androidtv.core.data.AccountRepository
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.player.FfmpegAudio
@@ -33,6 +34,7 @@ import kotlin.math.roundToInt
 class Diagnostics @Inject constructor(
     @ApplicationContext private val context: Context,
     private val sessions: SessionManager,
+    private val accounts: AccountRepository,
 ) {
 
     /**
@@ -72,7 +74,19 @@ class Diagnostics @Inject constructor(
             } ?: it.server.version
         }
         val header = header(version)
-        return header + "\n" + Log.read(maxBytes - header.encodeToByteArray().size - 1)
+        val budget = maxBytes - header.encodeToByteArray().size - 1
+        // Placeholders can be longer than what they replace, so cut again afterwards.
+        val log = Anonymizer.of(accounts.current()).apply(Log.read(budget))
+        return header + "\n" + newestPart(log, budget)
+    }
+
+    /** The end of [text] within [maxBytes], starting at a whole line. */
+    private fun newestPart(text: String, maxBytes: Int): String {
+        val bytes = text.encodeToByteArray()
+        if (bytes.size <= maxBytes) return text
+        val cut = bytes.size - maxBytes
+        val start = (cut until bytes.size).firstOrNull { bytes[it] == '\n'.code.toByte() }?.plus(1) ?: bytes.size
+        return bytes.copyOfRange(start, bytes.size).decodeToString()
     }
 
     /** The device's IPv4 address on its current network, e.g. "192.168.178.20". */
@@ -94,6 +108,7 @@ class Diagnostics @Inject constructor(
         appendLine("FFmpeg: ${FfmpegAudio.version() ?: "not included"}")
         appendLine("Server: Jellyfin ${serverVersion ?: "unknown"}")
         appendLine("Detailed logging: ${if (Log.verbose) "on" else "off"}")
+        appendLine("Anonymised: server addresses and names, user names, access tokens")
     }
 
     private fun display(): String {
