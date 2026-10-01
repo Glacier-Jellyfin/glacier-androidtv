@@ -86,6 +86,7 @@ import io.github.glacier_jellyfin.androidtv.ui.CardShape
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.FilterChip
 import io.github.glacier_jellyfin.androidtv.ui.GridCard
+import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
@@ -207,7 +208,7 @@ fun LibraryScreen(
                                 ItemKind.Artist -> CardShape.Round
                                 else -> CardShape.Poster
                             },
-                            watched = item.played && item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode),
+                            watched = item.played && item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode, ItemKind.MusicVideo),
                             count = item.childCount.takeIf { item.kind == ItemKind.Collection },
                             locked = item.showsLock(),
                             modifier = focus.onFocusChanged {
@@ -278,7 +279,7 @@ fun LibraryScreen(
 
         TopNav(
             active = NavTarget.Library(state.query.kind),
-            kinds = LibraryKind.entries,
+            kinds = LocalLibraryKinds.current,
             userName = state.userName,
             onSelect = viewModel::onNav,
             down = gridFocus,
@@ -294,6 +295,7 @@ private fun Header(state: LibraryState) {
             LibraryKind.Movies -> R.string.library_movies
             LibraryKind.Shows -> R.string.library_shows
             LibraryKind.Music -> R.string.library_music
+            LibraryKind.MusicVideos -> R.string.library_music_videos
         },
     )
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

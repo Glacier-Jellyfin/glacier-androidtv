@@ -14,7 +14,6 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemSortBy
-import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.SortOrder
 import java.util.UUID
 import javax.inject.Inject
@@ -157,7 +156,6 @@ class LibraryRepository @Inject constructor(
                 parentId = if (query.scope == LibraryScope.Playlists) null else query.libraryId,
                 recursive = true,
                 includeItemTypes = listOf(itemTypeFor(query)),
-                mediaTypes = if (query.scope == LibraryScope.Playlists) listOf(MediaType.AUDIO) else emptyList(),
                 genreIds = listOfNotNull(query.genreId),
                 maxOfficialRating = ages?.maxOfficialRating,
                 hasOfficialRating = ages?.hasOfficialRating,
@@ -189,6 +187,7 @@ class LibraryRepository @Inject constructor(
             LibraryKind.Movies -> BaseItemKind.MOVIE
             LibraryKind.Shows -> BaseItemKind.SERIES
             LibraryKind.Music -> BaseItemKind.MUSIC_ALBUM
+            LibraryKind.MusicVideos -> BaseItemKind.MUSIC_VIDEO
         }
 
     /** A secondary sort by name keeps the order stable between pages. */

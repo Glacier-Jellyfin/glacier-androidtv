@@ -29,6 +29,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.core.data.AccountRepository
 import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
+import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AppearanceSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
@@ -42,6 +44,7 @@ import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ServerListRoute
 import io.github.glacier_jellyfin.androidtv.ui.CardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
+import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.LocalMusicProgress
 import io.github.glacier_jellyfin.androidtv.ui.LocalNowPlaying
 import io.github.glacier_jellyfin.androidtv.ui.LocalUnlockedTitles
@@ -72,7 +75,11 @@ class StartViewModel @Inject constructor(
     parental: ParentalControl,
     val updates: UpdateManager,
     val music: MusicController,
+    home: HomeRepository,
 ) : ViewModel() {
+    /** Library kinds of the server, for every navigation bar. */
+    val libraryKinds: StateFlow<List<LibraryKind>> = home.kinds
+
     /** The signed-in profile's look; defaults on the setup and profile screens. */
     val appearance: StateFlow<AppearanceSettings> = settings.settings
         .map { it.appearance }
@@ -125,6 +132,7 @@ class MainActivity : ComponentActivity() {
             val appearance by startViewModel.appearance.collectAsStateWithLifecycle()
             val unlockedTitles by startViewModel.unlockedTitles.collectAsStateWithLifecycle()
             val nowPlaying by startViewModel.nowPlaying.collectAsStateWithLifecycle()
+            val libraryKinds by startViewModel.libraryKinds.collectAsStateWithLifecycle()
             GlacierTheme(accent = Accent.valueOf(appearance.accent.name), reduceMotion = appearance.reduceMotion) {
                 val toaster = remember { Toaster() }
                 CompositionLocalProvider(
@@ -132,6 +140,7 @@ class MainActivity : ComponentActivity() {
                     LocalCardSizes provides if (appearance.compact) CardSizes.Compact else CardSizes.Comfortable,
                     LocalUnlockedTitles provides unlockedTitles,
                     LocalNowPlaying provides nowPlaying,
+                    LocalLibraryKinds provides libraryKinds,
                     LocalMusicProgress provides startViewModel.music.progress,
                 ) {
                     // Nothing reacts to keys while Android installs an update.

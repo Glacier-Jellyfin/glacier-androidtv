@@ -70,6 +70,10 @@ data class DetailState(
     val themeSong: PlaybackSource? = null,
     /** Albums of an artist, newest first. */
     val artistAlbums: List<MediaItem> = emptyList(),
+    /** Music videos of an artist. */
+    val artistVideos: List<MediaItem> = emptyList(),
+    /** Videos of a playlist (its songs are in [musicTracks]). */
+    val playlistVideos: List<MediaItem> = emptyList(),
     val shuffle: Boolean = false,
     /** The title stays locked (PIN dialog dismissed, or hidden for this profile): leave the page. */
     val leave: Boolean = false,
@@ -139,12 +143,18 @@ class DetailViewModel @Inject constructor(
                     ItemKind.Episode -> loadSeasonOf(details)
                     ItemKind.Collection -> loadCollection(details)
                     ItemKind.Album -> _state.update { it.copy(musicTracks = music.albumTracks(itemId)) }
-                    ItemKind.Playlist -> _state.update { it.copy(musicTracks = music.playlistTracks(itemId)) }
-                    ItemKind.Artist -> _state.update { it.copy(artistAlbums = music.artistAlbums(itemId)) }
+                    ItemKind.Playlist -> {
+                        val videos = runCatching { repository.playlistVideos(itemId) }.getOrDefault(emptyList())
+                        _state.update { it.copy(musicTracks = music.playlistTracks(itemId), playlistVideos = videos) }
+                    }
+                    ItemKind.Artist -> {
+                        val videos = runCatching { repository.artistVideos(itemId) }.getOrDefault(emptyList())
+                        _state.update { it.copy(artistAlbums = music.artistAlbums(itemId), artistVideos = videos) }
+                    }
                     else -> Unit
                 }
                 if (details.item.kind == ItemKind.Movie || details.item.kind == ItemKind.Series) loadThemeSong()
-                val withSimilar = details.item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Album)
+                val withSimilar = details.item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Album, ItemKind.MusicVideo)
                 _state.update { it.copy(loading = false, similar = if (withSimilar) similarAsync.await() else emptyList()) }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -255,6 +265,14 @@ class DetailViewModel @Inject constructor(
         navigate(PlayerRoute(target.id.toString(), fromStart))
     }
 
+    /** A video of the page (an artist's music video, a playlist's video), the rest of them following it. */
+    fun playVideo(video: MediaItem) {
+        val item = _state.value.item ?: return
+        pin.openTitle(ageFilter, video.id, video.title, video.officialRating) {
+            navigate(PlayerRoute(video.id.toString(), queueOf = item.id.toString()))
+        }
+    }
+
     /** Album, artist or playlist in the music player, from [track] or from the start. */
     fun playMusic(track: MusicTrack? = null) {
         val item = _state.value.item ?: return
@@ -298,8 +316,8 @@ class DetailViewModel @Inject constructor(
     /** After songs went in or out: the songs and the item's counts. */
     private fun reloadPlaylist() {
         viewModelScope.launch {
-            runCatching { repository.details(itemId) to music.playlistTracks(itemId) }
-                .onSuccess { (details, tracks) -> _state.update { it.copy(details = details, musicTracks = tracks) } }
+            runCatching { Triple(repository.details(itemId), music.playlistTracks(itemId), repository.playlistVideos(itemId)) }
+                .onSuccess { (details, tracks, videos) -> _state.update { it.copy(details = details, musicTracks = tracks, playlistVideos = videos) } }
         }
     }
 

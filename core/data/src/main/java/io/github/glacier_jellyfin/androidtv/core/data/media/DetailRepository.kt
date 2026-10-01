@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
+import org.jellyfin.sdk.api.client.extensions.playlistApi
 import org.jellyfin.sdk.api.client.extensions.showApi
 import org.jellyfin.sdk.api.client.extensions.trickPlayApi
 import org.jellyfin.sdk.api.client.extensions.userDataApi
@@ -14,6 +15,7 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
+import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.MediaStreamType
 import org.jellyfin.sdk.model.api.PersonKind
 import org.jellyfin.sdk.model.api.SortOrder
@@ -146,6 +148,43 @@ class DetailRepository @Inject constructor(
             previous = items.getOrNull(index - 1)?.let(mapper::item),
             next = items.getOrNull(index + 1)?.let(mapper::item),
         )
+    }
+
+    /** An artist's music videos, newest first. */
+    suspend fun artistVideos(artistId: UUID): List<MediaItem> = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        val mapper = MediaMapper(session.api)
+        session.api.libraryApi.getItems(
+            userId = session.userId,
+            artistIds = listOf(artistId),
+            includeItemTypes = listOf(BaseItemKind.MUSIC_VIDEO),
+            recursive = true,
+            enableUserData = true,
+            sortBy = listOf(ItemSortBy.PRODUCTION_YEAR, ItemSortBy.SORT_NAME),
+            sortOrder = listOf(SortOrder.DESCENDING, SortOrder.ASCENDING),
+        ).content.items.map(mapper::item)
+    }
+
+    /** A playlist's videos in its order; songs are left out. */
+    suspend fun playlistVideos(playlistId: UUID): List<MediaItem> = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        val mapper = MediaMapper(session.api)
+        session.api.playlistApi.getPlaylistItems(playlistId = playlistId, userId = session.userId, enableUserData = true)
+            .content.items
+            .filter { it.mediaType == MediaType.VIDEO }
+            .map(mapper::item)
+            .let { ageFilter.screen(it) }
+    }
+
+    /** What the video player plays one after another: a playlist's videos, or an artist's music videos. */
+    suspend fun videoQueue(sourceId: UUID): List<MediaItem> =
+        if (details(sourceId).item.kind == ItemKind.Artist) artistVideos(sourceId) else playlistVideos(sourceId)
+
+    /** [id]'s neighbours in [queue] (see [videoQueue]). */
+    fun neighboursIn(queue: List<MediaItem>, id: UUID): EpisodeNeighbours {
+        val index = queue.indexOfFirst { it.id == id }
+        if (index < 0) return EpisodeNeighbours(null, null)
+        return EpisodeNeighbours(queue.getOrNull(index - 1), queue.getOrNull(index + 1))
     }
 
     suspend fun similar(id: UUID): List<MediaItem> = withContext(Dispatchers.IO) {

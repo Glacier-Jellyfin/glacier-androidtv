@@ -75,6 +75,7 @@
     <string name="nav_movies">Film</string>
     <string name="nav_shows">Serie</string>
     <string name="nav_music">Musik</string>
+    <string name="nav_music_videos">Videos</string>
     <string name="nav_settings">Einstellungen</string>
     <string name="nav_profile">Profil wechseln</string>
     <string name="nav_now_playing">Läuft gerade: %1$s</string>
@@ -117,6 +118,7 @@
     <string name="library_movies">Filme</string>
     <string name="library_shows">Serien</string>
     <string name="library_music">Musik</string>
+    <string name="library_music_videos">Musikvideos</string>
     <string name="scope_all">Alle</string>
     <string name="scope_collections">Sammlungen</string>
     <string name="scope_genres">Genres</string>
@@ -332,6 +334,7 @@
     <string name="repeat_all">Wiederholen: Alle Titel</string>
     <string name="repeat_one">Wiederholen: Aktueller Titel</string>
     <string name="music_tracks">Titel</string>
+    <string name="music_videos">Videos</string>
     <string name="music_albums">Alben</string>
     <string name="audio_bit_depth">%1$d Bit</string>
     <string name="audio_mono">Mono</string>

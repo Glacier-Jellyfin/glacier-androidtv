@@ -3,7 +3,7 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 import java.util.UUID
 
 /** Library types Glacier shows in v1; everything else is hidden. */
-enum class LibraryKind { Movies, Shows, Music }
+enum class LibraryKind { Movies, Shows, Music, MusicVideos }
 
 data class Library(
     val id: UUID,
@@ -13,7 +13,7 @@ data class Library(
     val imageUrl: String?,
 )
 
-enum class ItemKind { Movie, Series, Episode, Album, Collection, Genre, Artist, Playlist, Other }
+enum class ItemKind { Movie, Series, Episode, Album, Collection, Genre, Artist, Playlist, MusicVideo, Other }
 
 /** Resolution and dynamic range, as far as the server reports them. */
 data class VideoQuality(val uhd: Boolean, val hdr: HdrFormat?)

@@ -49,7 +49,6 @@ import io.github.glacier_jellyfin.androidtv.UiLocale
 import io.github.glacier_jellyfin.androidtv.core.data.AgeLimit
 import io.github.glacier_jellyfin.androidtv.core.data.Protection
 import io.github.glacier_jellyfin.androidtv.core.data.media.Languages
-import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentAction
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.UpNextMode
@@ -80,6 +79,7 @@ import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.SubtitleBurnI
 import io.github.glacier_jellyfin.androidtv.player.subtitleTypeface
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
+import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PinDialog
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
@@ -331,7 +331,7 @@ fun SettingsScreen(
 
         TopNav(
             active = NavTarget.Settings,
-            kinds = LibraryKind.entries,
+            kinds = LocalLibraryKinds.current,
             userName = state.userName,
             onSelect = viewModel::onNav,
             down = categoryFocus.getValue(state.category),

@@ -30,12 +30,18 @@ renders the reference separately.
   songs can be taken out again. Album, artist and playlist pages have the same
   options for all their songs
 - In the player, hold OK on a song of the queue to play it next or remove it
+- Music videos: a library of their own when the server has one, a row on the
+  artist page, and the video player plays them one after another
+- Playlists of videos play in the video player, one video after the other;
+  mixed playlists show their videos next to the songs
 - Titles above the age limit show a lock on their card while they open with
   the PIN; it goes away once the title is unlocked
 
 ### Improved
 - Coming back to an album or playlist puts the focus on the song you left
 - The German interface calls the queue "Warteschlange", apart from playlists
+- The navigation bar only offers the kinds of library the server has on every
+  screen, not just on the home screen
 
 ## [0.1.0-beta.4] - 2026-10-01
 

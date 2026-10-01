@@ -28,6 +28,7 @@ internal fun CollectionType?.toLibraryKind(): LibraryKind? = when (this) {
     CollectionType.MOVIES -> LibraryKind.Movies
     CollectionType.TVSHOWS -> LibraryKind.Shows
     CollectionType.MUSIC -> LibraryKind.Music
+    CollectionType.MUSICVIDEOS -> LibraryKind.MusicVideos
     else -> null
 }
 
@@ -43,6 +44,7 @@ internal class MediaMapper(private val api: ApiClient) {
             BaseItemKind.GENRE -> ItemKind.Genre
             BaseItemKind.MUSIC_ARTIST -> ItemKind.Artist
             BaseItemKind.PLAYLIST -> ItemKind.Playlist
+            BaseItemKind.MUSIC_VIDEO -> ItemKind.MusicVideo
             else -> ItemKind.Other
         }
         val runtimeTicks = dto.runTimeTicks

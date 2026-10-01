@@ -16,7 +16,6 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepositor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightSource
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.Library
-import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
@@ -48,9 +47,7 @@ data class HomeState(
     val spotlight: List<MediaItem> = emptyList(),
     val userName: String = "",
     val settings: HomeSettings = HomeSettings(),
-) {
-    val kinds: List<LibraryKind> get() = content?.libraries?.map { it.kind }?.distinct()?.sorted().orEmpty()
-}
+)
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(

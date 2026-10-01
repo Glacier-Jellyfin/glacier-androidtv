@@ -134,6 +134,9 @@ class PlayerViewModel @Inject constructor(
     /** Changes when playback moves on to another episode. */
     private var itemId = UUID.fromString(route.itemId)
     private var fromStart = route.fromStart
+    /** Playlist or artist whose videos play one after another; its list once loaded. */
+    private val queueOf = route.queueOf?.let(UUID::fromString)
+    private var queue: List<MediaItem>? = null
     private var policy = SegmentPolicy()
 
     private val _state = MutableStateFlow(PlayerUiState())
@@ -304,6 +307,21 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             val segments = playback.segments(id)
             if (id == itemId) _state.update { it.copy(segments = segments) }
+        }
+        val queueSource = queueOf
+        if (queueSource != null) {
+            viewModelScope.launch {
+                try {
+                    val list = queue ?: details.videoQueue(queueSource).also { queue = it }
+                    val neighbours = details.neighboursIn(list, id)
+                    if (id == itemId) _state.update { it.copy(previous = neighbours.previous, next = neighbours.next) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Loading the video queue failed", e)
+                }
+            }
+            return
         }
         val seriesId = item.seriesId ?: return
         if (item.item.kind != ItemKind.Episode) return

@@ -70,6 +70,7 @@ import io.github.glacier_jellyfin.androidtv.ui.PosterCard
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
+import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import io.github.glacier_jellyfin.androidtv.update.UpdateDialog
@@ -303,7 +304,7 @@ fun HomeScreen(
 
         TopNav(
             active = NavTarget.Home,
-            kinds = state.kinds,
+            kinds = LocalLibraryKinds.current,
             userName = state.userName,
             onSelect = viewModel::onNav,
             down = listFocus,

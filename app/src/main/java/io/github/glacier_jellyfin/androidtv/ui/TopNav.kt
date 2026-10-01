@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,6 +45,9 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
+
+/** The library kinds the server has (HomeRepository.kinds): one navigation entry each. */
+val LocalLibraryKinds = staticCompositionLocalOf { listOf(LibraryKind.Movies, LibraryKind.Shows, LibraryKind.Music) }
 
 sealed interface NavTarget {
     data object Search : NavTarget
@@ -195,6 +199,7 @@ private fun NavItem(
                         LibraryKind.Movies -> R.string.nav_movies
                         LibraryKind.Shows -> R.string.nav_shows
                         LibraryKind.Music -> R.string.nav_music
+                        LibraryKind.MusicVideos -> R.string.nav_music_videos
                     },
                 ),
                 foreground,

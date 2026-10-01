@@ -9,6 +9,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.showApi
@@ -34,6 +37,14 @@ class HomeRepository @Inject constructor(
     private val ageFilter: AgeFilter,
 ) {
 
+    private val _kinds = MutableStateFlow(DefaultKinds)
+
+    /**
+     * The library kinds the server has, in navigation order; known once the home
+     * screen loaded. Until then the usual three, without music videos.
+     */
+    val kinds: StateFlow<List<LibraryKind>> = _kinds.asStateFlow()
+
     /** Loads all home rows in parallel for the signed-in profile. */
     suspend fun load(): HomeContent = withContext(Dispatchers.IO) {
         val session = requireSession()
@@ -48,6 +59,7 @@ class HomeRepository @Inject constructor(
         }
 
         val libraries = librariesAsync.await()
+        _kinds.value = libraries.map { it.kind }.distinct().sorted()
         val excludes = excludesAsync.await()
         val latest = libraries
             .filterNot { it.id in excludes }
@@ -204,9 +216,11 @@ class HomeRepository @Inject constructor(
             LibraryKind.Movies -> BaseItemKind.MOVIE
             LibraryKind.Shows -> BaseItemKind.SERIES
             LibraryKind.Music -> BaseItemKind.MUSIC_ALBUM
+            LibraryKind.MusicVideos -> BaseItemKind.MUSIC_VIDEO
         }
 
     private companion object {
+        val DefaultKinds = listOf(LibraryKind.Movies, LibraryKind.Shows, LibraryKind.Music)
         const val ROW_LIMIT = 16
         val FIELDS = listOf(ItemFields.OVERVIEW, ItemFields.GENRES, ItemFields.MEDIA_STREAMS)
     }

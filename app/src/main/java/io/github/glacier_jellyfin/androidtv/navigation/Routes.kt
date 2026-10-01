@@ -39,8 +39,9 @@ data class LibraryRoute(
 @Serializable
 data class DetailRoute(val itemId: String, val themeArea: String? = null)
 
+/** The video player; with [queueOf] (a playlist, or an artist for its music videos) the next video follows. */
 @Serializable
-data class PlayerRoute(val itemId: String, val fromStart: Boolean = false)
+data class PlayerRoute(val itemId: String, val fromStart: Boolean = false, val queueOf: String? = null)
 
 @Serializable
 data class TrailerRoute(val itemId: String)

@@ -98,6 +98,9 @@ internal const val HEADER_REGION = 700
 
 private val MusicKinds = setOf(ItemKind.Album, ItemKind.Artist, ItemKind.Playlist)
 
+/** Titles with the film page: one video to play (or a show with its seasons). */
+private val VideoKinds = setOf(ItemKind.Movie, ItemKind.Series, ItemKind.MusicVideo)
+
 @Composable
 fun DetailScreen(
     onNavigate: (UiEvent.Navigate) -> Unit,
@@ -114,12 +117,9 @@ fun DetailScreen(
         when {
             details == null && state.failed -> ErrorState(onRetry = viewModel::load)
             details == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
-            details.item.kind == ItemKind.Movie || details.item.kind == ItemKind.Series -> MediaDetail(state, details, viewModel)
+            details.item.kind in VideoKinds -> MediaDetail(state, details, viewModel)
             details.item.kind == ItemKind.Episode -> EpisodeDetail(state, details, viewModel)
             details.item.kind == ItemKind.Collection -> CollectionDetail(state, details, viewModel)
-            // Playlists of videos only have no page yet; mixed ones list their songs.
-            details.item.kind == ItemKind.Playlist && !state.loading && state.musicTracks.isEmpty() && (details.item.childCount ?: 0) > 0 ->
-                ComingSoonScreen(details.item.title, onBack = onBack)
             details.item.kind in MusicKinds -> MusicDetail(state, details, viewModel)
             else -> ComingSoonScreen(details.item.title, onBack = onBack)
         }
@@ -169,7 +169,7 @@ private fun MediaDetail(state: DetailState, details: ItemDetails, viewModel: Det
                             )
                             SeenButton(item.played, onClick = viewModel::togglePlayed)
                             if (details.trailers.any) ActionButton(onClick = viewModel::playTrailer, label = stringResource(R.string.detail_trailer))
-                            if (item.kind == ItemKind.Movie) TrackChips(state, details, viewModel)
+                            if (item.kind == ItemKind.Movie || item.kind == ItemKind.MusicVideo) TrackChips(state, details, viewModel)
                         }
                     }
                     LaunchedEffect(item.id) {

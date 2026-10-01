@@ -52,6 +52,7 @@ import io.github.glacier_jellyfin.androidtv.music.MusicActionsSheet
 import io.github.glacier_jellyfin.androidtv.player.formatTime
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
 import io.github.glacier_jellyfin.androidtv.ui.CardShape
+import io.github.glacier_jellyfin.androidtv.ui.ContinueCard
 import io.github.glacier_jellyfin.androidtv.ui.FactsRow
 import io.github.glacier_jellyfin.androidtv.ui.GridCard
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
@@ -59,6 +60,7 @@ import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.audioFormatText
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
+import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import java.util.UUID
 
 private const val MUSIC_BACKDROP = 760
@@ -78,6 +80,8 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
     // What had focus, to land there again when the user comes back (from the player, say).
     var focusKey by rememberSaveable(item.id) { mutableStateOf<String?>(null) }
     val tracks = state.musicTracks
+    /** A playlist with videos and no songs: Play starts the videos. */
+    val videosOnly = item.kind == ItemKind.Playlist && tracks.isEmpty() && state.playlistVideos.isNotEmpty()
     val sheet by viewModel.musicActions.sheet.collectAsStateWithLifecycle()
     // Also once the options sheet closes, which takes the focus with it. The key is kept from when it
     // opened: on closing, focus falls on Play for a moment before this runs.
@@ -121,7 +125,8 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                         item.overview?.takeIf { it.isNotBlank() }?.let { Overview(it, maxWidth = 900) }
                         Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             ActionButton(
-                                onClick = { viewModel.playMusic() },
+                                // A playlist of videos only plays them in the video player.
+                                onClick = { if (videosOnly) viewModel.playVideo(state.playlistVideos.first()) else viewModel.playMusic() },
                                 label = stringResource(
                                     when (item.kind) {
                                         ItemKind.Artist -> R.string.music_play_discography
@@ -150,20 +155,23 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                     contentDescription = stringResource(if (item.played) R.string.action_mark_unheard else R.string.action_mark_heard),
                                 )
                             }
-                            ActionButton(
-                                onClick = viewModel::toggleShuffle,
-                                icon = GlacierIcons.Shuffle,
-                                on = state.shuffle,
-                                contentDescription = stringResource(if (state.shuffle) R.string.action_shuffle_off else R.string.action_shuffle),
-                            )
-                            ActionButton(
-                                onClick = viewModel::sourceOptions,
-                                icon = GlacierIcons.More,
-                                contentDescription = stringResource(R.string.music_options),
-                                modifier = Modifier
-                                    .focusRequester(moreFocus)
-                                    .onFocusChanged { if (it.isFocused) focusKey = MORE_KEY },
-                            )
+                            // Shuffle and the song options are about songs.
+                            if (!videosOnly) {
+                                ActionButton(
+                                    onClick = viewModel::toggleShuffle,
+                                    icon = GlacierIcons.Shuffle,
+                                    on = state.shuffle,
+                                    contentDescription = stringResource(if (state.shuffle) R.string.action_shuffle_off else R.string.action_shuffle),
+                                )
+                                ActionButton(
+                                    onClick = viewModel::sourceOptions,
+                                    icon = GlacierIcons.More,
+                                    contentDescription = stringResource(R.string.music_options),
+                                    modifier = Modifier
+                                        .focusRequester(moreFocus)
+                                        .onFocusChanged { if (it.isFocused) focusKey = MORE_KEY },
+                                )
+                            }
                         }
                     }
                 }
@@ -218,6 +226,29 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                     ).joinToString(" · "),
                                     onClick = { viewModel.openItem(album) },
                                     shape = CardShape.Square,
+                                )
+                            }
+                        }
+                    }
+                }
+                // An artist's music videos, a playlist's videos: each plays with the rest following.
+                val videos = if (item.kind == ItemKind.Artist) state.artistVideos else state.playlistVideos
+                if (videos.isNotEmpty()) {
+                    item(key = "videos") {
+                        MediaRow(
+                            title = stringResource(if (item.kind == ItemKind.Artist) R.string.library_music_videos else R.string.music_videos),
+                            bottomPadding = 120,
+                            modifier = Modifier.padding(top = if (tracks.isEmpty()) 34.dp else 0.dp),
+                        ) {
+                            items(videos, key = { it.id }) { video ->
+                                ContinueCard(
+                                    title = video.title,
+                                    subtitle = listOfNotNull(video.parentTitle, video.year?.toString(), video.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) })
+                                        .joinToString(" · "),
+                                    imageUrl = video.thumbUrl ?: video.posterUrl,
+                                    progress = video.progress,
+                                    onClick = { viewModel.playVideo(video) },
+                                    locked = video.showsLock(),
                                 )
                             }
                         }
@@ -302,7 +333,7 @@ private fun musicFacts(state: DetailState, item: MediaItem): List<String> {
             listOfNotNull(
                 item.year?.toString(),
                 listOfNotNull(
-                    tracks.size.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.count_titles, it, it) },
+                    (tracks.size + state.playlistVideos.size).takeIf { it > 0 }?.let { pluralStringResource(R.plurals.count_titles, it, it) },
                     minutes?.takeIf { it > 0 }?.let { runtimeText(it) },
                 ).joinToString(" · ").ifEmpty { null },
                 item.genres.firstOrNull(),
