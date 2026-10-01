@@ -77,7 +77,7 @@ class LibraryRepository @Inject constructor(
         val session = requireSession()
         val mapper = MediaMapper(session.api)
         val result = fetch(session, query, start = start, limit = limit)
-        LibraryPage(result.items.map(mapper::item), result.totalRecordCount)
+        LibraryPage(ageFilter.mark(result.items.map(mapper::item)), result.totalRecordCount)
     }
 
     /**

@@ -46,12 +46,23 @@ class AgeFilter @Inject constructor(
     val hides: Boolean
         get() = parental.lock.value.let { it.protection.restricts && !(it.protection.pinForLocked && it.hasPin) }
 
-    /** [items] without the titles above the limit when [hides]; unchanged otherwise. */
-    suspend fun visible(items: List<MediaItem>): List<MediaItem> {
-        if (!hides || items.none { it.kind in Checked }) return items
+    /**
+     * [items] for a list: the titles above the limit are left out while [hides],
+     * otherwise they stay and are marked [MediaItem.ageLocked].
+     */
+    suspend fun screen(items: List<MediaItem>): List<MediaItem> {
+        if (!parental.lock.value.protection.restricts || items.none { it.kind in Checked }) return items
         val blocked = blocked(items.filter { it.kind in Checked }.map { it.id })
-        return items.filterNot { it.id in blocked }
+        return if (hides) items.filterNot { it.id in blocked } else items.markLocked(blocked)
     }
+
+    /** Marks the titles that open with the PIN; for pages the server already filtered while [hides]. */
+    suspend fun mark(items: List<MediaItem>): List<MediaItem> {
+        if (hides || !parental.lock.value.protection.restricts || items.none { it.kind in Checked }) return items
+        return items.markLocked(blocked(items.filter { it.kind in Checked }.map { it.id }))
+    }
+
+    private fun List<MediaItem>.markLocked(blocked: Set<UUID>) = map { if (it.id in blocked) it.copy(ageLocked = true) else it }
 
     /** Filters for a paged server query; null when nothing is hidden. */
     suspend fun limits(): AgeLimits? {

@@ -51,13 +51,13 @@ class HomeRepository @Inject constructor(
         val excludes = excludesAsync.await()
         val latest = libraries
             .filterNot { it.id in excludes }
-            .map { library -> async { library to ageFilter.visible(latest(session, userId, library).map(mapper::item)) } }
+            .map { library -> async { library to ageFilter.screen(latest(session, userId, library).map(mapper::item)) } }
             .awaitAll()
             .filter { (_, items) -> items.isNotEmpty() }
 
         HomeContent(
             libraries = libraries,
-            continueWatching = ageFilter.visible(mergeContinueWatching(resumeAsync.await(), nextUpAsync.await()).map(mapper::item)),
+            continueWatching = ageFilter.screen(mergeContinueWatching(resumeAsync.await(), nextUpAsync.await()).map(mapper::item)),
             latest = latest,
         )
     }
@@ -88,7 +88,7 @@ class HomeRepository @Inject constructor(
                 fields = FIELDS,
                 enableUserData = true,
                 limit = count,
-            ).content.items.map(mapper::item).let { ageFilter.visible(it) }
+            ).content.items.map(mapper::item).let { ageFilter.screen(it) }
         val unwatched = settings.spotlightUnwatched
         val started = if (SpotlightSource.ContinueWatching in sources) {
             continueWatching.filter { it.backdropUrl != null && settings.spotlightType.matches(it.kind) }

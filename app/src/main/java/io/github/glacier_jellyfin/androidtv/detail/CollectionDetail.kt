@@ -65,6 +65,7 @@ import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 import io.github.glacier_jellyfin.androidtv.ui.ratingText
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
+import io.github.glacier_jellyfin.androidtv.ui.showsLock
 
 private const val COLLECTION_BACKDROP = 740
 private const val TITLE_CLAMP = 22
@@ -243,5 +244,6 @@ private fun CollectionCard(item: MediaItem, onClick: () -> Unit) {
         caption = listOfNotNull(item.year?.toString(), item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }).joinToString(" · "),
         onClick = onClick,
         watched = item.played,
+        locked = item.showsLock(),
     )
 }

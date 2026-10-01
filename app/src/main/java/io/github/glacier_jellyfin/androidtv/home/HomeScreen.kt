@@ -71,6 +71,7 @@ import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
 import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
+import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import io.github.glacier_jellyfin.androidtv.update.UpdateDialog
 import io.github.glacier_jellyfin.androidtv.update.UpdateViewModel
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateCandidate
@@ -259,6 +260,7 @@ fun HomeScreen(
                                             progress = item.progress,
                                             onClick = { viewModel.openContinueWatching(item) },
                                             modifier = Modifier.remembered("continue-${item.id}"),
+                                            locked = item.showsLock(),
                                         )
                                     }
                                 }
@@ -358,6 +360,7 @@ private fun PosterFor(item: MediaItem, onClick: () -> Unit, modifier: Modifier) 
             caption = listOfNotNull(item.year?.toString(), item.genres.firstOrNull()).joinToString(" · "),
             title = item.title,
             badge = item.unwatchedCount,
+            locked = item.showsLock(),
             onClick = onClick,
             modifier = modifier,
         )

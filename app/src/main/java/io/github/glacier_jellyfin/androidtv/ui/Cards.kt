@@ -124,7 +124,15 @@ private const val ARTWORK_RETRY_DELAY_MS = 800L
 
 /** "Continue watching": 16:9 still, progress bar, play button on focus, title and time left. */
 @Composable
-fun ContinueCard(title: String, subtitle: String, imageUrl: String?, progress: Float?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun ContinueCard(
+    title: String,
+    subtitle: String,
+    imageUrl: String?,
+    progress: Float?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    locked: Boolean = false,
+) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     val sizes = LocalCardSizes.current
@@ -143,6 +151,7 @@ fun ContinueCard(title: String, subtitle: String, imageUrl: String?, progress: F
                     .height(70.dp)
                     .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xD905090F)))),
             )
+            if (locked) LockBadge(Modifier.align(Alignment.TopStart))
             if (progress != null) {
                 ProgressBar(
                     progress = progress,
@@ -193,6 +202,7 @@ fun PosterCard(
     square: Boolean = false,
     title: String? = null,
     badge: Int? = null,
+    locked: Boolean = false,
 ) {
     val accent = LocalAccent.current.main
     val shape: Shape = RoundedCornerShape(if (square) GlacierShapes.RadiusMd else GlacierShapes.RadiusLg)
@@ -213,6 +223,7 @@ fun PosterCard(
                     .fillMaxSize()
                     .background(Brush.linearGradient(0f to Color(0x1AE8F4F7), 0.42f to Color.Transparent, start = Offset(Float.POSITIVE_INFINITY, 0f), end = Offset(0f, Float.POSITIVE_INFINITY))),
             )
+            if (locked) LockBadge(Modifier.align(Alignment.TopStart))
             if (badge != null) {
                 Box(
                     Modifier
@@ -288,7 +299,8 @@ enum class CardShape { Poster, Square, Round }
 
 /**
  * Library grid tile (design: `libGrid`): artwork, title and one caption line,
- * plus a watched check or a count badge (titles in a collection).
+ * plus a watched check or a count badge (titles in a collection), and a
+ * lock while the title is above the age limit.
  */
 @Composable
 fun GridCard(
@@ -300,6 +312,7 @@ fun GridCard(
     shape: CardShape = CardShape.Poster,
     watched: Boolean = false,
     count: Int? = null,
+    locked: Boolean = false,
 ) {
     val accent = LocalAccent.current.main
     val outline: Shape = when (shape) {
@@ -334,6 +347,7 @@ fun GridCard(
                     .fillMaxSize()
                     .background(Brush.linearGradient(0f to Color(0x1AE8F4F7), 0.42f to Color.Transparent, start = Offset(Float.POSITIVE_INFINITY, 0f), end = Offset(0f, Float.POSITIVE_INFINITY))),
             )
+            if (locked) LockBadge(Modifier.align(Alignment.TopStart))
             when {
                 count != null -> Badge(count.toString(), accent, Modifier.align(Alignment.TopEnd))
                 watched -> Box(

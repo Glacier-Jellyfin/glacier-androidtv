@@ -27,6 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.core.data.AccountRepository
+import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AppearanceSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
@@ -38,6 +39,7 @@ import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ServerListRoute
 import io.github.glacier_jellyfin.androidtv.ui.CardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
+import io.github.glacier_jellyfin.androidtv.ui.LocalUnlockedTitles
 import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
 import io.github.glacier_jellyfin.androidtv.ui.NavDirection
 import io.github.glacier_jellyfin.androidtv.ui.ToastHost
@@ -62,12 +64,16 @@ import javax.inject.Inject
 class StartViewModel @Inject constructor(
     accounts: AccountRepository,
     settings: SettingsRepository,
+    parental: ParentalControl,
     val updates: UpdateManager,
 ) : ViewModel() {
     /** The signed-in profile's look; defaults on the setup and profile screens. */
     val appearance: StateFlow<AppearanceSettings> = settings.settings
         .map { it.appearance }
         .stateIn(viewModelScope, SharingStarted.Eagerly, settings.settings.value.appearance)
+
+    /** Titles the PIN unlocked in this session; their cards drop the lock. */
+    val unlockedTitles: StateFlow<Set<String>> = parental.unlockedItems
 
     /** The signed-in profile's interface language; null while no one is signed in, which keeps the last one. */
     val uiLanguage: Flow<UiLanguage?> = settings.active.map { it?.uiLanguage }
@@ -108,11 +114,13 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             val appearance by startViewModel.appearance.collectAsStateWithLifecycle()
+            val unlockedTitles by startViewModel.unlockedTitles.collectAsStateWithLifecycle()
             GlacierTheme(accent = Accent.valueOf(appearance.accent.name), reduceMotion = appearance.reduceMotion) {
                 val toaster = remember { Toaster() }
                 CompositionLocalProvider(
                     LocalToaster provides toaster,
                     LocalCardSizes provides if (appearance.compact) CardSizes.Compact else CardSizes.Comfortable,
+                    LocalUnlockedTitles provides unlockedTitles,
                 ) {
                     // Nothing reacts to keys while Android installs an update.
                     val update by startViewModel.updates.state.collectAsStateWithLifecycle()

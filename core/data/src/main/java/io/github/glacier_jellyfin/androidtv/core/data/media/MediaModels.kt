@@ -57,6 +57,8 @@ data class MediaItem(
     val showThumbUrl: String? = thumbUrl,
     /** Full-screen backdrop for the spotlight. */
     val backdropUrl: String?,
+    /** Above the profile's age limit: opens only with the PIN (set by [AgeFilter]). */
+    val ageLocked: Boolean = false,
 )
 
 /** Everything the home screen shows, loaded in one go. */

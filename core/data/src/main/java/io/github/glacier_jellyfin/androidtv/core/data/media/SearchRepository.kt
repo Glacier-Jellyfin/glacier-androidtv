@@ -45,7 +45,7 @@ class SearchRepository @Inject constructor(
                     .content.items.map { it.id }
                 if (genres.isEmpty()) emptyList() else items(session) { copy(genreIds = genres) }
             }
-            ageFilter.visible(mergeResults(titles.await(), byPerson.await(), byGenre.await(), limit = RESULT_LIMIT) { it.id }.map(mapper::item))
+            ageFilter.screen(mergeResults(titles.await(), byPerson.await(), byGenre.await(), limit = RESULT_LIMIT) { it.id }.map(mapper::item))
         }
     }
 
@@ -57,7 +57,7 @@ class SearchRepository @Inject constructor(
             userId = session.userId,
             type = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
             limit = SUGGESTION_LIMIT,
-        ).content.items.map(mapper::item).let { ageFilter.visible(it) }
+        ).content.items.map(mapper::item).let { ageFilter.screen(it) }
     }
 
     private data class ItemFilter(

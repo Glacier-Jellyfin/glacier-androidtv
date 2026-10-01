@@ -90,6 +90,7 @@ import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -208,6 +209,7 @@ fun LibraryScreen(
                             },
                             watched = item.played && item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode),
                             count = item.childCount.takeIf { item.kind == ItemKind.Collection },
+                            locked = item.showsLock(),
                             modifier = focus.onFocusChanged {
                                 if (it.isFocused) {
                                     focusedIndex = index

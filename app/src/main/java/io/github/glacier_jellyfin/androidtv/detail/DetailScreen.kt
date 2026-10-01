@@ -85,6 +85,7 @@ import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.qualityText
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
+import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import java.time.format.FormatStyle
@@ -209,6 +210,7 @@ private fun MediaDetail(state: DetailState, details: ItemDetails, viewModel: Det
                                     caption = similar.year?.toString(),
                                     onClick = { viewModel.openItem(similar) },
                                     watched = similar.played,
+                                    locked = similar.showsLock(),
                                 )
                             }
                         }

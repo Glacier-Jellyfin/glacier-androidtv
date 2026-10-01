@@ -18,6 +18,10 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### New
+- Titles above the age limit show a lock on their card while they open with
+  the PIN; it goes away once the title is unlocked
+
 ## [0.1.0-beta.4] - 2026-10-01
 
 ### Improved

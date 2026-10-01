@@ -120,7 +120,7 @@ class DetailRepository @Inject constructor(
             seasonId = seasonId,
             fields = listOf(ItemFields.OVERVIEW, ItemFields.MEDIA_STREAMS),
             enableUserData = true,
-        ).content.items.map(mapper::item).let { ageFilter.visible(it) }
+        ).content.items.map(mapper::item).let { ageFilter.screen(it) }
     }
 
     /** The episode to play for a show: in progress, else the next unwatched one. */
@@ -152,7 +152,7 @@ class DetailRepository @Inject constructor(
         val session = requireSession()
         val mapper = MediaMapper(session.api)
         session.api.libraryApi.getSimilarItems(itemId = id, userId = session.userId, limit = SIMILAR_LIMIT)
-            .content.items.map(mapper::item).let { ageFilter.visible(it) }
+            .content.items.map(mapper::item).let { ageFilter.screen(it) }
     }
 
     /** Movies of a Jellyfin collection in release order (design: "chronological"). */
@@ -166,7 +166,7 @@ class DetailRepository @Inject constructor(
             enableUserData = true,
             sortBy = listOf(ItemSortBy.PRODUCTION_YEAR, ItemSortBy.PREMIERE_DATE, ItemSortBy.SORT_NAME),
             sortOrder = listOf(SortOrder.ASCENDING),
-        ).content.items.map(mapper::item).let { ageFilter.visible(it) }
+        ).content.items.map(mapper::item).let { ageFilter.screen(it) }
     }
 
     suspend fun person(id: UUID): PersonDetails = withContext(Dispatchers.IO) {
@@ -184,7 +184,10 @@ class DetailRepository @Inject constructor(
             sortOrder = listOf(SortOrder.DESCENDING),
         ).content.items.map { item ->
             Credit(mapper.item(item), item.people?.firstOrNull { it.id == id }?.role?.takeIf { it.isNotBlank() })
-        }.let { credits -> ageFilter.visible(credits.map { it.item }).let { kept -> credits.filter { it.item in kept } } }
+        }.let { credits ->
+            val kept = ageFilter.screen(credits.map { it.item }).associateBy { it.id }
+            credits.mapNotNull { credit -> kept[credit.item.id]?.let { credit.copy(item = it) } }
+        }
         PersonDetails(
             id = dto.id,
             name = dto.name.orEmpty(),

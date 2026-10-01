@@ -73,6 +73,7 @@ import io.github.glacier_jellyfin.androidtv.ui.MediaRow
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
+import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -245,6 +246,7 @@ fun PersonScreen(
                                                 title = credit.item.title,
                                                 caption = listOfNotNull(credit.role, credit.item.year?.toString()).joinToString(" · "),
                                                 onClick = { viewModel.open(credit) },
+                                                locked = credit.item.showsLock(),
                                             )
                                             KindPill(if (credit.item.kind == ItemKind.Series) R.string.kind_show else R.string.kind_movie)
                                         }
