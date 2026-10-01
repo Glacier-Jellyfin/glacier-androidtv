@@ -6,6 +6,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -202,7 +204,8 @@ fun TrackPanel(
 ) {
     BackHandler(onBack = onDismiss)
     val focus = remember { FocusRequester() }
-    Box(Modifier.fillMaxSize().background(Color(0xA805090F)), contentAlignment = Alignment.Center) {
+    // A long track list keeps a margin to the screen edges and scrolls inside the sheet.
+    Box(Modifier.fillMaxSize().background(Color(0xA805090F)).padding(vertical = 54.dp), contentAlignment = Alignment.Center) {
         val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
         Column(
             Modifier
@@ -219,7 +222,11 @@ fun TrackPanel(
                 Text(title, style = GlacierText.display(27), color = GlacierColors.Ice)
                 Text(subtitle, style = GlacierText.body(17), color = GlacierColors.Mist)
             }
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                // The focused option grows by 2 %; the vertical padding keeps it from being clipped by the scroll area.
+                Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 options.forEachIndexed { index, row ->
                     TrackOption(
                         row = row,
