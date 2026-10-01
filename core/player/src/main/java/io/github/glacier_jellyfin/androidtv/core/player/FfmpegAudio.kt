@@ -1,6 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.core.player
 
-import android.util.Log
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi

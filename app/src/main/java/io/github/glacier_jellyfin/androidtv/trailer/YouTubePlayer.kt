@@ -6,7 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient

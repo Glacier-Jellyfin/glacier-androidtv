@@ -2,7 +2,7 @@ package io.github.glacier_jellyfin.androidtv.music
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import android.view.KeyEvent
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player

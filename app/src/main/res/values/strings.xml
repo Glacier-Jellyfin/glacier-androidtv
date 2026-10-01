@@ -666,6 +666,20 @@
     <string name="settings_ffmpeg">FFmpeg audio decoder</string>
     <string name="settings_ffmpeg_sub">Plays DTS, TrueHD and other audio the device cannot decode itself</string>
     <string name="settings_ffmpeg_missing">Not included</string>
+    <string name="settings_group_diagnostics">Diagnostics</string>
+    <string name="diag_send">Send log to the server</string>
+    <string name="diag_send_sub">For bug reports: the server admin finds it in the Jellyfin dashboard under Logs. Passwords and access tokens are removed first.</string>
+    <string name="diag_send_crash_sub">Glacier closed unexpectedly on %1$s. Send the log so the error can be found.</string>
+    <string name="diag_send_done_sub">Sent as %1$s. The server admin finds it in the Jellyfin dashboard under Logs.</string>
+    <string name="diag_send_button">Send</string>
+    <string name="diag_sending">Sending…</string>
+    <string name="diag_send_failed">The log could not be sent</string>
+    <string name="diag_send_forbidden">The server does not accept client logs</string>
+    <string name="diag_clear">Delete log</string>
+    <string name="diag_clear_sub">Deletes the log stored on this device</string>
+    <string name="diag_clear_button">Delete</string>
+    <string name="diag_cleared">Log deleted</string>
+    <string name="diag_crash_notice">Glacier closed unexpectedly. Send the log: Settings › System</string>
     <string name="settings_unknown">Unknown</string>
 
     <!-- Update dialog -->

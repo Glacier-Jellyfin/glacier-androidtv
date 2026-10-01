@@ -1,6 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.detail
 
-import android.util.Log
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

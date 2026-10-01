@@ -20,6 +20,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:log"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)

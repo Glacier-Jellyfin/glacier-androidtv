@@ -99,6 +99,7 @@ dependencies {
     implementation(project(":core:player"))
     implementation(libs.media3.session)
     implementation(project(":core:updater"))
+    implementation(project(":core:log"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

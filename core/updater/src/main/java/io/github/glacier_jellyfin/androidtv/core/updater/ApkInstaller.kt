@@ -7,7 +7,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageInstaller
 import android.os.Build
-import android.util.Log
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.core.content.ContextCompat
 import java.io.File
 

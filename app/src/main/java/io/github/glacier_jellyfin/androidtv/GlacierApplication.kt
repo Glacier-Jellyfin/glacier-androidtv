@@ -1,11 +1,13 @@
 package io.github.glacier_jellyfin.androidtv
 
 import android.app.Application
+import android.os.Build
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.svg.SvgDecoder
 import dagger.hilt.android.HiltAndroidApp
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 
 @HiltAndroidApp
 class GlacierApplication : Application(), SingletonImageLoader.Factory {
@@ -15,6 +17,13 @@ class GlacierApplication : Application(), SingletonImageLoader.Factory {
         ImageLoader.Builder(context)
             .components { add(SvgDecoder.Factory()) }
             .build()
+
+    override fun onCreate() {
+        // First, so crashes while the app starts are recorded too.
+        Log.install(this)
+        super.onCreate()
+        Log.i("Glacier", "Started ${BuildConfig.VERSION_NAME} (${BuildConfig.BUILD_TYPE}) on ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE}")
+    }
 
     init {
         // The Jellyfin SDK logs through kotlin-logging, which otherwise expects

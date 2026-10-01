@@ -1,6 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.core.data.settings
 
-import android.util.Log
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.Languages

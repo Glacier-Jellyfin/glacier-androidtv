@@ -3,7 +3,7 @@ package io.github.glacier_jellyfin.androidtv.update
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.util.Log
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.MainActivity
 
 /**

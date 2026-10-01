@@ -1,7 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.core.updater
 
 import android.content.Context
-import android.util.Log
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException

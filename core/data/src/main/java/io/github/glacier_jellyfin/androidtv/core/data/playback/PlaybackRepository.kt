@@ -1,6 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.core.data.playback
 
-import android.util.Log
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
@@ -157,6 +157,8 @@ class PlaybackRepository @Inject constructor(
                 if (source.supportsDirectStream) PlaybackMethod.DirectStream else PlaybackMethod.Transcode
             else -> error("Server offered neither direct play nor a transcode")
         }
+        val reasons = source.transcodingUrl?.takeIf { method != PlaybackMethod.DirectPlay }?.let { TRANSCODE_REASONS.find(it)?.groupValues?.get(1) }
+        Log.i(TAG, "Playing $itemId: $method, container ${source.container}, ${source.bitrate} bit/s" + reasons?.let { ", because $it" }.orEmpty())
         PlaybackSource(
             itemId = itemId,
             mediaSourceId = source.id,
@@ -335,5 +337,8 @@ class PlaybackRepository @Inject constructor(
 
         /** Bitrate "Auto": the highest step the design offers (120 Mbit/s). */
         const val AUTO_BITRATE = 120_000_000
+
+        /** The server's reasons in a transcode URL, e.g. "VideoCodecNotSupported,AudioChannelsNotSupported". */
+        val TRANSCODE_REASONS = Regex("[?&]TranscodeReasons=([^&]+)")
     }
 }

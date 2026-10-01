@@ -660,6 +660,20 @@
     <string name="settings_ffmpeg">FFmpeg-Audiodecoder</string>
     <string name="settings_ffmpeg_sub">Spielt DTS, TrueHD und anderen Ton ab, den das Gerät selbst nicht decodieren kann</string>
     <string name="settings_ffmpeg_missing">Nicht enthalten</string>
+    <string name="settings_group_diagnostics">Diagnose</string>
+    <string name="diag_send">Protokoll an den Server senden</string>
+    <string name="diag_send_sub">Für Fehlerberichte: Der Server-Admin findet es im Jellyfin-Dashboard unter Protokolle. Passwörter und Zugangstoken werden vorher entfernt.</string>
+    <string name="diag_send_crash_sub">Glacier wurde am %1$s unerwartet beendet. Sende das Protokoll, damit der Fehler gefunden werden kann.</string>
+    <string name="diag_send_done_sub">Gesendet als %1$s. Der Server-Admin findet es im Jellyfin-Dashboard unter Protokolle.</string>
+    <string name="diag_send_button">Senden</string>
+    <string name="diag_sending">Wird gesendet …</string>
+    <string name="diag_send_failed">Das Protokoll konnte nicht gesendet werden</string>
+    <string name="diag_send_forbidden">Der Server nimmt keine Client-Protokolle an</string>
+    <string name="diag_clear">Protokoll löschen</string>
+    <string name="diag_clear_sub">Löscht das auf diesem Gerät gespeicherte Protokoll</string>
+    <string name="diag_clear_button">Löschen</string>
+    <string name="diag_cleared">Protokoll gelöscht</string>
+    <string name="diag_crash_notice">Glacier wurde unerwartet beendet. Protokoll senden: Einstellungen › System</string>
     <string name="settings_unknown">Unbekannt</string>
 
     <!-- Update dialog -->

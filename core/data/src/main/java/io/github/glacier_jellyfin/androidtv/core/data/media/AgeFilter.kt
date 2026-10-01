@@ -1,6 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
-import android.util.Log
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
 import io.github.glacier_jellyfin.androidtv.core.data.Protection
 import io.github.glacier_jellyfin.androidtv.core.data.Session

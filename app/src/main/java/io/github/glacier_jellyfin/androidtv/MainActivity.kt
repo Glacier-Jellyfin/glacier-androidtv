@@ -23,6 +23,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
@@ -43,6 +44,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
 import io.github.glacier_jellyfin.androidtv.core.designsystem.Accent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierBackground
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierTheme
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateManager
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
 import io.github.glacier_jellyfin.androidtv.core.updater.pending
@@ -67,6 +69,7 @@ import io.github.glacier_jellyfin.androidtv.ui.Toaster
 import io.github.glacier_jellyfin.androidtv.update.InstallingOverlay
 import io.github.glacier_jellyfin.androidtv.update.text
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -77,6 +80,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Picks the first screen: "Who's watching?" for the last server, otherwise setup. */
 @HiltViewModel
@@ -208,6 +212,7 @@ class MainActivity : ComponentActivity() {
                         val start by startViewModel.start.collectAsStateWithLifecycle()
                         start?.let { GlacierNavHost(rememberNavController(), startDestination = it) }
                         UpdateLayer(startViewModel.updates, toaster)
+                        CrashNotice(toaster)
                         ToastHost(toaster)
                         NowPlayingSaver(saverOn, nowPlaying, startViewModel.music.progress)
                     }
@@ -224,4 +229,13 @@ private fun UpdateLayer(updates: UpdateManager, toaster: Toaster) {
     LaunchedEffect(updates) { updates.notices.collect { toaster.show(it.text(context)) } }
     val state by updates.state.collectAsStateWithLifecycle()
     (state as? UpdateState.Installing)?.let { InstallingOverlay(it.candidate.version) }
+}
+
+/** After a crash, the next start points to sending the log (Settings › System › Diagnostics). */
+@Composable
+private fun CrashNotice(toaster: Toaster) {
+    val resources = LocalResources.current
+    LaunchedEffect(Unit) {
+        if (withContext(Dispatchers.IO) { Log.takeCrashNotice() }) toaster.show(resources.getString(R.string.diag_crash_notice))
+    }
 }

@@ -1,6 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.settings
 
-import android.util.Log
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,6 +23,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferences
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyle
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
+import io.github.glacier_jellyfin.androidtv.diagnostics.Diagnostics
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
@@ -39,6 +40,7 @@ import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import org.jellyfin.sdk.api.client.extensions.systemApi
+import org.jellyfin.sdk.api.client.exception.InvalidStatusException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,6 +48,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /** Settings categories in the design's order. */
@@ -83,7 +86,11 @@ data class SettingsUiState(
     val serverSummary: ServerSummary? = null,
     /** FFmpeg's version, null when this build has no FFmpeg decoder. */
     val ffmpegVersion: String? = null,
+    val diagnostics: DiagnosticsState = DiagnosticsState(),
 )
+
+/** Settings › System › Diagnostics: [sentAs] is the file name the server gave the log just sent. */
+data class DiagnosticsState(val sending: Boolean = false, val sentAs: String? = null, val lastCrash: Long? = null)
 
 /** Settings › System › Server; [version] is asked fresh from the server, the stored one until then. */
 data class ServerSummary(val name: String, val address: String, val version: String?)
@@ -95,6 +102,7 @@ class SettingsViewModel @Inject constructor(
     private val serverPreferences: ServerPreferencesRepository,
     private val library: LibraryRepository,
     private val parental: ParentalControl,
+    private val diagnostics: Diagnostics,
     val updates: UpdateManager,
 ) : ViewModel() {
 
@@ -126,6 +134,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { updates.autoCheck.collect { on -> _state.update { it.copy(autoUpdate = on) } } }
         viewModelScope.launch { loadServerSummary() }
         viewModelScope.launch(Dispatchers.Default) { FfmpegAudio.version()?.let { version -> _state.update { it.copy(ffmpegVersion = version) } } }
+        viewModelScope.launch(Dispatchers.IO) { Log.lastCrash()?.let { crash -> _state.update { it.copy(diagnostics = it.diagnostics.copy(lastCrash = crash)) } } }
     }
 
     fun selectCategory(category: SettingsCategory) = _state.update { it.copy(category = category) }
@@ -230,6 +239,33 @@ class SettingsViewModel @Inject constructor(
                     _events.send(UiEvent.Navigate(ProfilesRoute(serverId), clearBackStack = true))
                 }
             }
+        }
+    }
+
+    fun sendLog() {
+        if (_state.value.diagnostics.sending) return
+        _state.update { it.copy(diagnostics = it.diagnostics.copy(sending = true)) }
+        viewModelScope.launch {
+            try {
+                val fileName = diagnostics.sendToServer()
+                _state.update { it.copy(diagnostics = DiagnosticsState(sentAs = fileName)) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Sending the log failed", e)
+                _state.update { it.copy(diagnostics = it.diagnostics.copy(sending = false)) }
+                // The server answers 403 when its admin turned client log uploads off.
+                val forbidden = (e as? InvalidStatusException)?.status == 403
+                _events.send(UiEvent.Toast(if (forbidden) R.string.diag_send_forbidden else R.string.diag_send_failed))
+            }
+        }
+    }
+
+    fun clearLog() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { Log.clear() }
+            _state.update { it.copy(diagnostics = DiagnosticsState()) }
+            _events.send(UiEvent.Toast(R.string.diag_cleared))
         }
     }
 

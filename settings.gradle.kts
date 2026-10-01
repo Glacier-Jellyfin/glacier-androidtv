@@ -24,4 +24,5 @@ include(
     ":core:player",
     ":core:ffmpeg",
     ":core:updater",
+    ":core:log",
 )

@@ -1,6 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.core.data
 
-import android.util.Log
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.Authenticator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

@@ -41,6 +41,10 @@ renders the reference separately.
   screen with the cover takes over; any key brings the app back
 - Titles above the age limit show a lock on their card while they open with
   the PIN; it goes away once the title is unlocked
+- Glacier keeps a log of errors and crashes. Settings › System › Diagnostics
+  sends it to your Jellyfin server, where the admin finds it in the dashboard
+  under Logs, ready to attach to a bug report. Passwords and access tokens are
+  removed first. After a crash, the next start points you there
 
 ### Improved
 - Coming back to an album or playlist puts the focus on the song you left

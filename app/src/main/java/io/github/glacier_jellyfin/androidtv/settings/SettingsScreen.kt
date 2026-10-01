@@ -1046,6 +1046,7 @@ private fun systemRows(state: SettingsUiState, viewModel: SettingsViewModel): Li
                 ),
             ),
         ),
+        diagnosticsGroup(state.diagnostics, viewModel),
         SettingGroup(
             stringResource(R.string.settings_group_about),
             listOf(
@@ -1056,6 +1057,38 @@ private fun systemRows(state: SettingsUiState, viewModel: SettingsViewModel): Li
                     stringResource(R.string.settings_ffmpeg_sub),
                     state.ffmpegVersion ?: stringResource(R.string.settings_ffmpeg_missing),
                 ),
+            ),
+        ),
+    )
+}
+
+/** Sending the app log to the server for bug reports, and deleting it. */
+@Composable
+private fun diagnosticsGroup(diagnostics: DiagnosticsState, viewModel: SettingsViewModel): SettingGroup {
+    val sub = when {
+        diagnostics.sentAs != null -> stringResource(R.string.diag_send_done_sub, diagnostics.sentAs)
+        diagnostics.lastCrash != null -> stringResource(
+            R.string.diag_send_crash_sub,
+            DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(diagnostics.lastCrash)),
+        )
+        else -> stringResource(R.string.diag_send_sub)
+    }
+    return SettingGroup(
+        stringResource(R.string.settings_group_diagnostics),
+        listOf(
+            // Stays enabled while sending: a disabled button would lose the focus.
+            SettingRow.Action(
+                stringResource(R.string.diag_send),
+                sub,
+                stringResource(if (diagnostics.sending) R.string.diag_sending else R.string.diag_send_button),
+                onClick = viewModel::sendLog,
+                primary = diagnostics.lastCrash != null,
+            ),
+            SettingRow.Action(
+                stringResource(R.string.diag_clear),
+                stringResource(R.string.diag_clear_sub),
+                stringResource(R.string.diag_clear_button),
+                onClick = viewModel::clearLog,
             ),
         ),
     )

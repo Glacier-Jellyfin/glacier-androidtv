@@ -40,4 +40,5 @@ body:
     id: logs
     attributes:
       label: Logs
+      description: In Glacier, open Settings › System › Diagnostics and choose Send. The log then appears in the Jellyfin dashboard under Logs (file name starting with upload_Glacier); attach that file or paste its contents.
       render: text

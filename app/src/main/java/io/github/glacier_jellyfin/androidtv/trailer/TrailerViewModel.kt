@@ -1,7 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.trailer
 
 import android.content.Context
-import android.util.Log
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

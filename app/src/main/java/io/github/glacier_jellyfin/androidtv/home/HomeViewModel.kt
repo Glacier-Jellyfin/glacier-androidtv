@@ -1,6 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.home
 
-import android.util.Log
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
