@@ -18,6 +18,8 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.1.0-beta.4] - 2026-10-01
+
 ### Improved
 - The launcher tile shows the Glacier logo with its name
 
