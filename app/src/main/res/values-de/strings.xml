@@ -559,8 +559,8 @@
     <string name="settings_group_pin">PIN</string>
     <string name="settings_pin_profile">PIN beim Profilwechsel</string>
     <string name="settings_pin_profile_sub">Vierstellige PIN, bevor dieses Profil geöffnet wird</string>
-    <string name="settings_pin_locked">PIN für gesperrte Inhalte</string>
-    <string name="settings_pin_locked_sub">Titel über der Altersfreigabe lassen sich mit PIN einmalig freischalten</string>
+    <string name="settings_pin_locked">Gesperrte Titel mit PIN zeigen</string>
+    <string name="settings_pin_locked_sub">An: sichtbar mit Schloss, öffnen sich mit PIN · Aus: ganz ausgeblendet</string>
     <string name="settings_pin_settings">PIN für Einstellungen</string>
     <string name="settings_pin_settings_sub">Schützt Jugendschutz, PIN und Konto vor Änderungen</string>
     <string name="settings_pin_change">PIN ändern</string>

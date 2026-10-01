@@ -565,8 +565,8 @@
     <string name="settings_group_pin">PIN</string>
     <string name="settings_pin_profile">PIN on profile switch</string>
     <string name="settings_pin_profile_sub">Four-digit PIN before this profile opens</string>
-    <string name="settings_pin_locked">PIN for locked titles</string>
-    <string name="settings_pin_locked_sub">Titles above the age rating can be unlocked once with the PIN</string>
+    <string name="settings_pin_locked">Show locked titles with PIN</string>
+    <string name="settings_pin_locked_sub">On: visible with a lock, they open with the PIN · Off: hidden completely</string>
     <string name="settings_pin_settings">PIN for settings</string>
     <string name="settings_pin_settings_sub">Protects parental control, PIN and account from changes</string>
     <string name="settings_pin_change">Change PIN</string>
