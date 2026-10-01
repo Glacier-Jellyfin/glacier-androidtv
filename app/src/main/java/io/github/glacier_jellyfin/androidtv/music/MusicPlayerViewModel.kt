@@ -2,13 +2,16 @@ package io.github.glacier_jellyfin.androidtv.music
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.glacier_jellyfin.androidtv.core.data.media.MusicRepository
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.receiveAsFlow
 import java.util.UUID
 import javax.inject.Inject
@@ -21,11 +24,16 @@ import javax.inject.Inject
 class MusicPlayerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val controller: MusicController,
+    music: MusicRepository,
 ) : ViewModel() {
 
     val state: StateFlow<MusicUiState> = controller.state
     val progress: StateFlow<MusicProgress> = controller.progress
-    val events: Flow<UiEvent> = controller.events
+
+    private val notes = Channel<UiEvent>(Channel.BUFFERED)
+    val events: Flow<UiEvent> = merge(controller.events, notes.receiveAsFlow())
+
+    val musicActions = MusicActions(viewModelScope, controller, music, toast = { notes.send(it) })
 
     /** Fires when the screen should close. */
     private val _finished = Channel<Unit>(Channel.CONFLATED)
@@ -57,6 +65,25 @@ class MusicPlayerViewModel @Inject constructor(
     fun toggleShuffle() = controller.toggleShuffle()
     fun cycleRepeat() = controller.cycleRepeat()
     fun toggleLyrics() = controller.toggleLyrics()
+
+    /** Options for a song of the queue (hold OK, or the menu key). */
+    fun queueOptions(index: Int) {
+        val current = state.value
+        val track = current.queue.getOrNull(index)?.track ?: return
+        val playing = index == current.index
+        musicActions.open(
+            MusicTarget(
+                title = track.title,
+                subtitle = listOfNotNull(track.artist, track.album).joinToString(" · ").ifEmpty { null },
+                tracks = { listOf(track) },
+                queueIndex = index.takeUnless { playing },
+                playing = playing,
+            ),
+        )
+    }
+
+    /** Options for the song that plays (the menu key outside the queue). */
+    fun currentOptions() = queueOptions(state.value.index)
 
     /** Back: the screen goes, the music stays. Once only (newer Android delivers Back twice). */
     fun close() {

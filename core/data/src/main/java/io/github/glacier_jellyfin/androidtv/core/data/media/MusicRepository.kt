@@ -12,6 +12,7 @@ import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.lyricApi
 import org.jellyfin.sdk.api.client.extensions.playlistApi
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.sdk.model.api.CreatePlaylistDto
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.MediaType
@@ -74,6 +75,45 @@ class MusicRepository @Inject constructor(
         ).content.items
             .filter { it.type == BaseItemKind.AUDIO || it.mediaType == MediaType.AUDIO }
             .map(mapper::track)
+    }
+
+    /** The user's music playlists, by name. */
+    suspend fun playlists(): List<MediaItem> = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        val mapper = MediaMapper(session.api)
+        session.api.libraryApi.getItems(
+            userId = session.userId,
+            includeItemTypes = listOf(BaseItemKind.PLAYLIST),
+            mediaTypes = listOf(MediaType.AUDIO),
+            recursive = true,
+            fields = listOf(ItemFields.CHILD_COUNT),
+            sortBy = listOf(ItemSortBy.SORT_NAME),
+        ).content.items.map(mapper::item)
+    }
+
+    /** Adds [trackIds] at the end of the playlist. */
+    suspend fun addToPlaylist(playlistId: UUID, trackIds: List<UUID>) {
+        withContext(Dispatchers.IO) {
+            val session = requireSession()
+            session.api.playlistApi.addItemToPlaylist(playlistId = playlistId, ids = trackIds, userId = session.userId)
+        }
+    }
+
+    /** A new music playlist of the user's, holding [trackIds]. */
+    suspend fun createPlaylist(name: String, trackIds: List<UUID>) {
+        withContext(Dispatchers.IO) {
+            val session = requireSession()
+            session.api.playlistApi.createPlaylist(
+                CreatePlaylistDto(name = name, ids = trackIds, userId = session.userId, mediaType = MediaType.AUDIO, users = emptyList(), isPublic = false),
+            )
+        }
+    }
+
+    /** Removes entries ([MusicTrack.playlistItemId]) from the playlist. */
+    suspend fun removeFromPlaylist(playlistId: UUID, entryIds: List<String>) {
+        withContext(Dispatchers.IO) {
+            requireSession().api.playlistApi.removeItemFromPlaylist(playlistId = playlistId.toString(), entryIds = entryIds)
+        }
     }
 
     /** Null when the song has no lyrics. */

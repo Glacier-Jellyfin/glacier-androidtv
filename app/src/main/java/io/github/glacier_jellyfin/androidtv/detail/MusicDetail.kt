@@ -29,11 +29,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
@@ -46,6 +48,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
+import io.github.glacier_jellyfin.androidtv.music.MusicActionsSheet
 import io.github.glacier_jellyfin.androidtv.player.formatTime
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
 import io.github.glacier_jellyfin.androidtv.ui.CardShape
@@ -56,8 +59,12 @@ import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.audioFormatText
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
+import java.util.UUID
 
 private const val MUSIC_BACKDROP = 760
+
+/** Focus key of the options button (the others are song ids, or null for Play). */
+private const val MORE_KEY = "more"
 
 /** Album, artist and playlist pages (design: `det.isAlbum`, `isArtist`, `isPlaylist`). */
 @OptIn(ExperimentalFoundationApi::class)
@@ -66,8 +73,30 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
     val item = details.item
     val listState = rememberLazyListState()
     val playFocus = remember { FocusRequester() }
-    var initialFocusDone by rememberSaveable(item.id) { mutableStateOf(false) }
+    val moreFocus = remember { FocusRequester() }
+    val trackFocus = remember { mutableMapOf<UUID, FocusRequester>() }
+    // What had focus, to land there again when the user comes back (from the player, say).
+    var focusKey by rememberSaveable(item.id) { mutableStateOf<String?>(null) }
     val tracks = state.musicTracks
+    val sheet by viewModel.musicActions.sheet.collectAsStateWithLifecycle()
+    // Also once the options sheet closes, which takes the focus with it. The key is kept from when it
+    // opened: on closing, focus falls on Play for a moment before this runs.
+    var keyAtSheet by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(item.id, sheet == null) {
+        if (sheet != null) {
+            keyAtSheet = focusKey
+            return@LaunchedEffect
+        }
+        withFrameNanos { }
+        val key = keyAtSheet ?: focusKey
+        keyAtSheet = null
+        val requester = when (key) {
+            null -> playFocus
+            MORE_KEY -> moreFocus
+            else -> trackFocus.entries.firstOrNull { it.key.toString() == key }?.value ?: playFocus
+        }
+        runCatching { requester.requestFocus() }
+    }
 
     Box(Modifier.fillMaxSize()) {
         ScrollingBackdrop(item.backdropUrl ?: item.posterUrl, MUSIC_BACKDROP, listState)
@@ -102,7 +131,9 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                 ),
                                 icon = GlacierIcons.Play,
                                 primary = true,
-                                modifier = Modifier.focusRequester(playFocus),
+                                modifier = Modifier
+                                    .focusRequester(playFocus)
+                                    .onFocusChanged { if (it.isFocused) focusKey = null },
                             )
                             ActionButton(
                                 onClick = viewModel::toggleFavorite,
@@ -125,23 +156,27 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                 on = state.shuffle,
                                 contentDescription = stringResource(if (state.shuffle) R.string.action_shuffle_off else R.string.action_shuffle),
                             )
-                        }
-                    }
-                    LaunchedEffect(item.id) {
-                        if (!initialFocusDone) {
-                            withFrameNanos { }
-                            initialFocusDone = runCatching { playFocus.requestFocus() }.isSuccess
+                            ActionButton(
+                                onClick = viewModel::sourceOptions,
+                                icon = GlacierIcons.More,
+                                contentDescription = stringResource(R.string.music_options),
+                                modifier = Modifier
+                                    .focusRequester(moreFocus)
+                                    .onFocusChanged { if (it.isFocused) focusKey = MORE_KEY },
+                            )
                         }
                     }
                 }
                 if (tracks.isNotEmpty()) {
                     item(key = "tracks-title") {
-                        Text(
-                            stringResource(R.string.music_tracks),
-                            style = GlacierText.display(28),
-                            color = GlacierColors.Ice,
-                            modifier = Modifier.padding(start = PageEdge.dp, top = 34.dp, bottom = 20.dp),
-                        )
+                        Row(
+                            Modifier.padding(start = PageEdge.dp, end = PageEdge.dp, top = 34.dp, bottom = 20.dp),
+                            verticalAlignment = Alignment.Bottom,
+                            horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        ) {
+                            Text(stringResource(R.string.music_tracks), style = GlacierText.display(28), color = GlacierColors.Ice)
+                            Text(stringResource(R.string.music_options_hint), style = GlacierText.body(17), color = GlacierColors.Mist, modifier = Modifier.padding(bottom = 4.dp))
+                        }
                     }
                     // Two columns, filled row by row as in the design's grid.
                     val playlist = item.kind == ItemKind.Playlist
@@ -151,8 +186,19 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                             horizontalArrangement = Arrangement.spacedBy(30.dp),
                         ) {
                             pair.forEach { track ->
+                                val focus = remember(track.id) { FocusRequester() }.also { trackFocus[track.id] = it }
                                 val number = if (playlist) tracks.indexOf(track) + 1 else track.number
-                                TrackRow(track, number, withArtist = playlist, onClick = { viewModel.playMusic(track) }, modifier = Modifier.weight(1f))
+                                TrackRow(
+                                    track = track,
+                                    number = number,
+                                    withArtist = playlist,
+                                    onClick = { viewModel.playMusic(track) },
+                                    onOptions = { viewModel.trackOptions(track) },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .focusRequester(focus)
+                                        .onFocusChanged { if (it.isFocused) focusKey = track.id.toString() },
+                                )
                             }
                             if (pair.size == 1) Box(Modifier.weight(1f))
                         }
@@ -194,15 +240,16 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                 }
             }
         }
+        MusicActionsSheet(viewModel.musicActions)
     }
 }
 
-/** A song in the two-column list: number, title (with artist in playlists), length. */
+/** A song in the two-column list: number, title (with artist in playlists), length. Holding OK opens its options. */
 @Composable
-private fun TrackRow(track: MusicTrack, number: Int?, withArtist: Boolean, onClick: () -> Unit, modifier: Modifier) {
+private fun TrackRow(track: MusicTrack, number: Int?, withArtist: Boolean, onClick: () -> Unit, onOptions: () -> Unit, modifier: Modifier) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
-    GlacierClickable(onClick = onClick, shape = shape, modifier = modifier) { focused ->
+    GlacierClickable(onClick = onClick, onLongClick = onOptions, shape = shape, modifier = modifier) { focused ->
         Row(
             Modifier
                 .fillMaxWidth()

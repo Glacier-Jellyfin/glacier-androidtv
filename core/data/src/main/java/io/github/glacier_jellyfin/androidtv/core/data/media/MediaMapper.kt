@@ -98,6 +98,7 @@ internal class MediaMapper(private val api: ApiClient) {
             largeCoverUrl = cover(dto, ImageWidth.COVER_LARGE),
             format = audio?.let { AudioFormat(it.codec, it.sampleRate, it.bitDepth, it.channels) },
             isFavorite = dto.userData?.isFavorite ?: false,
+            playlistItemId = dto.playlistItemId,
         )
     }
 

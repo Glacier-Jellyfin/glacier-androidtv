@@ -23,9 +23,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,6 +62,22 @@ val LocalMusicProgress = staticCompositionLocalOf<StateFlow<MusicProgress>?> { n
 /** Height of the [MiniPlayer]; toasts move below it while it shows. */
 const val MINI_PLAYER_HEIGHT = 84
 
+/** Whether a [MiniPlayer] is on screen; pages without the top navigation show none. */
+object MiniPlayerOnScreen {
+    var count by mutableIntStateOf(0)
+        private set
+
+    val shown: Boolean get() = count > 0
+
+    internal fun enter() {
+        count++
+    }
+
+    internal fun leave() {
+        count--
+    }
+}
+
 /**
  * The mini player at the top right, laid out like the toast: cover, title,
  * artist and a progress line along the bottom edge. OK opens the full player.
@@ -71,6 +90,10 @@ fun MiniPlayer(nowPlaying: NowPlaying, onClick: () -> Unit, modifier: Modifier =
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     val track = nowPlaying.track
     val label = stringResource(R.string.nav_now_playing, track.title)
+    DisposableEffect(Unit) {
+        MiniPlayerOnScreen.enter()
+        onDispose { MiniPlayerOnScreen.leave() }
+    }
     Box(
         modifier
             .semantics { contentDescription = label }

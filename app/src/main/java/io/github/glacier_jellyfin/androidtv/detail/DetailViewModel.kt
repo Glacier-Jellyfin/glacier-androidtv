@@ -23,7 +23,9 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelections
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
+import io.github.glacier_jellyfin.androidtv.music.MusicActions
 import io.github.glacier_jellyfin.androidtv.music.MusicController
+import io.github.glacier_jellyfin.androidtv.music.MusicTarget
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PersonRoute
@@ -102,6 +104,14 @@ class DetailViewModel @Inject constructor(
     val events = _events.receiveAsFlow()
 
     val pin = PinGate(viewModelScope, parental) { _events.send(it) }
+
+    val musicActions = MusicActions(
+        scope = viewModelScope,
+        controller = musicPlayback,
+        music = music,
+        toast = { _events.send(it) },
+        onPlaylistChanged = { id -> if (id == itemId && _state.value.item?.kind == ItemKind.Playlist) reloadPlaylist() },
+    )
 
     init {
         load()
@@ -249,6 +259,48 @@ class DetailViewModel @Inject constructor(
     fun playMusic(track: MusicTrack? = null) {
         val item = _state.value.item ?: return
         navigate(MusicRoute(item.id.toString(), track?.id?.toString()))
+    }
+
+    /** Options for one song of the page (hold OK, or the menu key). */
+    fun trackOptions(track: MusicTrack) {
+        val item = _state.value.item ?: return
+        val entry = track.playlistItemId.takeIf { item.kind == ItemKind.Playlist }
+        musicActions.open(
+            MusicTarget(
+                title = track.title,
+                subtitle = listOfNotNull(track.artist, track.album).joinToString(" · ").ifEmpty { null },
+                tracks = { listOf(track) },
+                playlistId = item.id.takeIf { entry != null },
+                playlistEntryIds = listOfNotNull(entry),
+            ),
+        )
+    }
+
+    /** Options for every song of the album, artist or playlist. */
+    fun sourceOptions() {
+        val item = _state.value.item ?: return
+        musicActions.open(
+            MusicTarget(
+                title = item.title,
+                subtitle = item.parentTitle,
+                tracks = {
+                    val state = _state.value
+                    when (item.kind) {
+                        ItemKind.Artist -> music.tracksOf(state.artistAlbums.ifEmpty { music.artistAlbums(item.id) })
+                        ItemKind.Playlist -> state.musicTracks.ifEmpty { music.playlistTracks(item.id) }
+                        else -> state.musicTracks.ifEmpty { music.albumTracks(item.id) }
+                    }
+                },
+            ),
+        )
+    }
+
+    /** After songs went in or out: the songs and the item's counts. */
+    private fun reloadPlaylist() {
+        viewModelScope.launch {
+            runCatching { repository.details(itemId) to music.playlistTracks(itemId) }
+                .onSuccess { (details, tracks) -> _state.update { it.copy(details = details, musicTracks = tracks) } }
+        }
     }
 
     fun toggleShuffle() {

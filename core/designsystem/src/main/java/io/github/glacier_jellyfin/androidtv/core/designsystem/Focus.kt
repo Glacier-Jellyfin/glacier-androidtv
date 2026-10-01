@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
@@ -25,6 +26,11 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.shadow.Shadow
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 
@@ -38,6 +44,7 @@ const val FocusScale = 1.07f
  *
  * [content] receives the focus state so labels can switch to the accent colour.
  * Text fields pass [scaleOnFocus] = false: the design only rings them.
+ * [onLongClick] (holding OK, or the remote's menu key) opens options.
  */
 @Composable
 fun GlacierClickable(
@@ -49,6 +56,7 @@ fun GlacierClickable(
     borderWidth: Int = 2,
     contentAlignment: Alignment = Alignment.TopStart,
     scaleOnFocus: Boolean = true,
+    onLongClick: (() -> Unit)? = null,
     content: @Composable BoxScope.(focused: Boolean) -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -57,7 +65,15 @@ fun GlacierClickable(
         modifier = modifier
             .focusScale(focused && scaleOnFocus)
             .focusFrame(focused, shape, unfocusedBorder, borderWidth)
-            .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick),
+            .then(
+                if (onLongClick == null) {
+                    Modifier.clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
+                } else {
+                    Modifier
+                        .onMenuKey(onLongClick)
+                        .combinedClickable(interactionSource = interaction, indication = null, enabled = enabled, onLongClick = onLongClick, onClick = onClick)
+                },
+            ),
         contentAlignment = contentAlignment,
     ) {
         content(focused)
@@ -121,3 +137,10 @@ private fun Modifier.focusRing(shape: Shape, accent: Color): Modifier = this
         }
         drawContent()
     }
+
+/** The remote's menu key, the other way to a long press's options. */
+fun Modifier.onMenuKey(action: () -> Unit): Modifier = onKeyEvent { event ->
+    if (event.key != Key.Menu) return@onKeyEvent false
+    if (event.type == KeyEventType.KeyUp) action()
+    true
+}

@@ -15,6 +15,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -98,6 +99,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
+import io.github.glacier_jellyfin.androidtv.core.designsystem.onMenuKey
 import io.github.glacier_jellyfin.androidtv.player.formatTime
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
@@ -128,9 +130,11 @@ fun MusicPlayerScreen(
         onDispose { view.keepScreenOn = false }
     }
 
+    val sheet by viewModel.musicActions.sheet.collectAsStateWithLifecycle()
     val playFocus = remember { FocusRequester() }
-    LaunchedEffect(state.loading, state.failed) {
-        if (state.loading || state.failed) return@LaunchedEffect
+    // Also when the options sheet closes: its focus goes with it.
+    LaunchedEffect(state.loading, state.failed, sheet == null) {
+        if (state.loading || state.failed || sheet != null) return@LaunchedEffect
         withFrameNanos { }
         runCatching { playFocus.requestFocus() }
     }
@@ -140,8 +144,9 @@ fun MusicPlayerScreen(
             .fillMaxSize()
             .background(GlacierColors.Void)
             .onPreviewKeyEvent { event ->
-                // Back closes on the first press, whatever has focus (see PlayerScreen).
+                // Back closes on the first press, whatever has focus (see PlayerScreen); an open options sheet first.
                 if (event.key == Key.Back) {
+                    if (sheet != null) return@onPreviewKeyEvent false
                     if (event.type == KeyEventType.KeyUp) viewModel.close()
                     return@onPreviewKeyEvent true
                 }
@@ -154,6 +159,12 @@ fun MusicPlayerScreen(
                     Key.MediaFastForward -> viewModel.seekBy(state.seekForwardMs)
                     else -> return@onPreviewKeyEvent false
                 }
+                true
+            }
+            // The menu key on anything but a queue row: options for the song that plays.
+            .onKeyEvent { event ->
+                if (event.key != Key.Menu) return@onKeyEvent false
+                if (event.type == KeyEventType.KeyUp) viewModel.currentOptions()
                 true
             },
     ) {
@@ -184,6 +195,7 @@ fun MusicPlayerScreen(
                 state = state,
                 progress = progress,
                 onPick = viewModel::playAt,
+                onOptions = viewModel::queueOptions,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(end = 96.dp, top = 170.dp, bottom = 90.dp)
@@ -223,6 +235,7 @@ fun MusicPlayerScreen(
                 runCatching { retryFocus.requestFocus() }
             }
         }
+        MusicActionsSheet(viewModel.musicActions)
     }
 }
 
@@ -252,6 +265,7 @@ private fun TopBar(state: MusicUiState, track: MusicTrack, modifier: Modifier) {
                 when (state.sourceKind) {
                     ItemKind.Artist -> R.string.music_artist
                     ItemKind.Playlist -> R.string.music_playlist
+                    null -> R.string.music_queue
                     else -> R.string.music_album
                 },
             )
@@ -648,7 +662,7 @@ private fun MusicButton(
 
 /** "Wiedergabeliste": the queue, the current song marked, played ones faded. */
 @Composable
-private fun QueuePanel(state: MusicUiState, progress: MusicProgress, onPick: (Int) -> Unit, modifier: Modifier) {
+private fun QueuePanel(state: MusicUiState, progress: MusicProgress, onPick: (Int) -> Unit, onOptions: (Int) -> Unit, modifier: Modifier) {
     val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
     val listState = rememberLazyListState()
     val currentFocus = remember { FocusRequester() }
@@ -694,6 +708,7 @@ private fun QueuePanel(state: MusicUiState, progress: MusicProgress, onPick: (In
                     played = i < state.index,
                     playing = state.playing,
                     onClick = { onPick(i) },
+                    onOptions = { onOptions(i) },
                     modifier = if (i == state.index) Modifier.focusRequester(currentFocus) else Modifier,
                 )
             }
@@ -702,7 +717,16 @@ private fun QueuePanel(state: MusicUiState, progress: MusicProgress, onPick: (In
 }
 
 @Composable
-private fun QueueRow(number: Int, track: MusicTrack, current: Boolean, played: Boolean, playing: Boolean, onClick: () -> Unit, modifier: Modifier) {
+private fun QueueRow(
+    number: Int,
+    track: MusicTrack,
+    current: Boolean,
+    played: Boolean,
+    playing: Boolean,
+    onClick: () -> Unit,
+    onOptions: () -> Unit,
+    modifier: Modifier,
+) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -722,7 +746,9 @@ private fun QueueRow(number: Int, track: MusicTrack, current: Boolean, played: B
                 },
             )
             .border(2.dp, if (focused) accent else Color.Transparent, shape)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            // Holding OK (or the menu key) opens the song's options.
+            .onMenuKey(onOptions)
+            .combinedClickable(interactionSource = interaction, indication = null, onLongClick = onOptions, onClick = onClick)
             .padding(horizontal = 16.dp)
             .alpha(if (played) 0.55f else 1f),
         verticalAlignment = Alignment.CenterVertically,

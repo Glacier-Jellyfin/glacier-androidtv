@@ -28,6 +28,8 @@ data class MusicTrack(
     val largeCoverUrl: String?,
     val format: AudioFormat?,
     val isFavorite: Boolean,
+    /** This song's entry in the playlist it was loaded from; removing it from the playlist takes this id. */
+    val playlistItemId: String? = null,
 )
 
 /**

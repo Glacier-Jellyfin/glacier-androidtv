@@ -134,6 +134,8 @@ class MusicController @Inject constructor(
     /** The source's songs in their own order, to return to when shuffle goes off. */
     private var sourceOrder: List<QueueEntry> = emptyList()
     private var sources: Map<Int, PlaybackSource> = emptyMap()
+    /** Key for the next song added to the queue ([QueueEntry.key]). */
+    private var nextKey = 0
     /** The song reported to the server as playing, and where it last was. */
     private var reported: PlaybackSource? = null
     private var lastPositionMs = 0L
@@ -252,6 +254,7 @@ class MusicController @Inject constructor(
                 }
                 if (tracks.isEmpty()) error("Nothing to play in ${source.kind}")
                 sourceOrder = tracks.mapIndexed { i, track -> QueueEntry(i, track) }
+                nextKey = tracks.size
                 sources = sourceOrder.associate { it.key to playback.audioSource(it.track) }
                 val start = startTrackId?.let { id -> tracks.indexOfFirst { it.id.toString() == id }.takeIf { it >= 0 } }
                 val order = MusicQueue.start(sourceOrder, start, shuffleSwitch.on.value)
@@ -376,6 +379,67 @@ class MusicController @Inject constructor(
         val p = activePlayer ?: return
         p.seekTo(index, 0)
         p.play()
+    }
+
+    /** Songs right after the current one; with no music loaded they start playing. */
+    fun playNext(tracks: List<MusicTrack>) = insert(tracks, next = true)
+
+    /** Songs at the end of the queue; with no music loaded they start playing. */
+    fun addToQueue(tracks: List<MusicTrack>) = insert(tracks, next = false)
+
+    private fun insert(tracks: List<MusicTrack>, next: Boolean) {
+        if (tracks.isEmpty()) return
+        val entries = tracks.map { QueueEntry(nextKey++, it) }
+        sources = sources + entries.associate { it.key to playback.audioSource(it.track) }
+        val p = activePlayer
+        if (p == null) {
+            loadJob?.cancel()
+            request = null
+            sourceOrder = entries
+            _state.update { it.copy(loading = true, failed = false, sourceKind = null, sourceTitle = "", queue = entries, index = 0) }
+            startPlayer(QueueOrder(entries, 0))
+            return
+        }
+        val current = _state.value
+        val at = if (next) (current.index + 1).coerceAtMost(current.queue.size) else current.queue.size
+        p.addMediaItems(at, entries.map(::mediaItem))
+        // The source order (for shuffle off) takes them at the same place relative to the current song.
+        val orderAt = if (next) {
+            sourceOrder.indexOf(current.queue.getOrNull(current.index)).let { if (it < 0) sourceOrder.size else it + 1 }
+        } else {
+            sourceOrder.size
+        }
+        sourceOrder = sourceOrder.take(orderAt) + entries + sourceOrder.drop(orderAt)
+        _state.update { it.copy(queue = it.queue.take(at) + entries + it.queue.drop(at)) }
+        // A queue that had run out goes on with the new songs.
+        if (ended) {
+            p.seekTo(at, 0)
+            p.play()
+        }
+    }
+
+    /** Takes a song out of the queue; the one playing stays. */
+    fun removeAt(index: Int) {
+        val p = activePlayer ?: return
+        val current = _state.value
+        if (index == current.index || index !in current.queue.indices) return
+        val entry = current.queue[index]
+        p.removeMediaItem(index)
+        sourceOrder = sourceOrder - entry
+        _state.update { it.copy(queue = it.queue.filterIndexed { i, _ -> i != index }, index = p.currentMediaItemIndex) }
+    }
+
+    /** Moves a queued song to right after the current one. */
+    fun moveNext(index: Int) {
+        val p = activePlayer ?: return
+        val current = _state.value
+        if (index == current.index || index !in current.queue.indices) return
+        // Taking out a song before the current one shifts the current one up.
+        val target = if (index < current.index) current.index else current.index + 1
+        if (target == index) return
+        p.moveMediaItem(index, target)
+        val queue = current.queue.toMutableList().apply { add(target, removeAt(index)) }
+        _state.update { it.copy(queue = queue, index = p.currentMediaItemIndex) }
     }
 
     fun toggleShuffle() {

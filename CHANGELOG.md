@@ -25,8 +25,17 @@ renders the reference separately.
 - The remote's media keys control the music from anywhere in the app
 - Videos and trailers pause the music, and theme songs stay silent while it
   plays
+- Hold OK (or press the menu key) on a song for its options: play it next, add
+  it to the queue, or add it to a playlist, also a new one; on playlist pages
+  songs can be taken out again. Album, artist and playlist pages have the same
+  options for all their songs
+- In the player, hold OK on a song of the queue to play it next or remove it
 - Titles above the age limit show a lock on their card while they open with
   the PIN; it goes away once the title is unlocked
+
+### Improved
+- Coming back to an album or playlist puts the focus on the song you left
+- The German interface calls the queue "Warteschlange", apart from playlists
 
 ## [0.1.0-beta.4] - 2026-10-01
 
