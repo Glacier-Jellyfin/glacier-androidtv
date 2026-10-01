@@ -28,8 +28,8 @@ data class AppVersion(
 
     override fun toString(): String = "$major.$minor.$patch" + (beta?.let { "-beta.$it" } ?: "")
 
-    /** For people: "1.4.0" or "1.4.0 Beta 2". */
-    val displayName: String get() = "$major.$minor.$patch" + (beta?.let { " Beta $it" } ?: "")
+    /** For people: "1.4.0" or "1.4.0 Beta 2" ("Beta 2" never split across lines). */
+    val displayName: String get() = "$major.$minor.$patch" + (beta?.let { " Beta $it" } ?: "")
 
     companion object {
         private const val STABLE_SUFFIX = 99

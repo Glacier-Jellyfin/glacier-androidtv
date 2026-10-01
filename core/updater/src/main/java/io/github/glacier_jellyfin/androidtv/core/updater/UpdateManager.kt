@@ -43,6 +43,14 @@ sealed interface UpdateState {
     data class Failed(val error: UpdateError, val candidate: UpdateCandidate?) : UpdateState
 }
 
+/** A newer version is known and not installed yet: the dot on the settings gear and the System category. */
+val UpdateState.pending: Boolean
+    get() = when (this) {
+        is UpdateState.Available, is UpdateState.Downloading, is UpdateState.Ready, is UpdateState.Installing -> true
+        is UpdateState.Failed -> candidate != null
+        else -> false
+    }
+
 /** Notices for the user outside the settings screen. */
 sealed interface UpdateNotice {
     data class Downloaded(val version: AppVersion) : UpdateNotice
@@ -52,7 +60,7 @@ sealed interface UpdateNotice {
 
 /**
  * Glacier's self-updater (docs/RELEASING.md): looks for a newer GitHub release
- * of the chosen channel at start, at most once a day, downloads it only when
+ * of the chosen channel at every start, downloads it only when
  * the user asks, checks it and hands it to Android's installer.
  *
  * Channel and automatic checks apply to the whole device, not per profile.
@@ -96,20 +104,15 @@ class UpdateManager @Inject constructor(
     private var job: Job? = null
     private var installAfterDownload = false
 
-    /** Once per app start: the last result of today, or a fresh check if the last one is older. */
+    /** Once per app start: a fresh check; the last result stands in until it answers or if it fails. */
     fun start() {
         if (started || installed == null) return
         started = true
         val cached = cachedCandidate()
         if (cached == null) downloader.clear()
         if (!_autoCheck.value) return
-        val lastCheck = prefs.getLong(KEY_LAST_CHECK, 0)
-        if (System.currentTimeMillis() - lastCheck < CHECK_INTERVAL_MS) {
-            _state.value = cached?.let(UpdateState::Available) ?: UpdateState.Current(lastCheck)
-            cached?.let(::offer)
-        } else {
-            check(automatic = true)
-        }
+        cached?.let { _state.value = UpdateState.Available(it) }
+        check(automatic = true)
     }
 
     /** "Check for updates"; also runs after a channel switch. */
@@ -239,7 +242,7 @@ class UpdateManager @Inject constructor(
         if (prefs.getString(KEY_PROMPTED, null) != candidate.version.toString()) _prompt.update { candidate }
     }
 
-    /** Today's result, if it is still newer than what runs and belongs to the current channel. */
+    /** The last check's result, if it is still newer than what runs and belongs to the current channel. */
     private fun cachedCandidate(): UpdateCandidate? {
         val text = prefs.getString(KEY_CANDIDATE, null) ?: return null
         if (prefs.getString(KEY_CANDIDATE_CHANNEL, null) != _channel.value.name) return null
@@ -250,7 +253,6 @@ class UpdateManager @Inject constructor(
 
     private companion object {
         const val TAG = "UpdateManager"
-        const val CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000L
         const val KEY_CHANNEL = "channel"
         const val KEY_AUTO = "auto_check"
         const val KEY_LAST_CHECK = "last_check"

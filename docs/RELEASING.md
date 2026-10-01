@@ -58,11 +58,10 @@ Add these repository secrets (Settings › Secrets and variables › Actions):
 
 ## How the app updates itself
 
-1. On start, at most once a day, the app reads
+1. On every start the app reads
    `https://api.github.com/repos/Glacier-Jellyfin/glacier-androidtv/releases`
-   (Settings › System can switch this off and check by hand). The result is
-   kept until the next check, so an update found in the morning is still
-   offered in the evening.
+   (Settings › System can switch this off and check by hand). The last result
+   stands in while the check runs and when it fails (offline start).
 2. It picks the newest release its channel allows: Stable ignores
    pre-releases, Beta considers all. A release is skipped when its tag does not
    parse, when the pre-release flag disagrees with the tag, or when the APK
@@ -102,5 +101,4 @@ adb shell "run-as $pkg mkdir -p files/updtest && run-as $pkg cp /data/local/tmp/
 `releases.json` has the shape of the GitHub API response: `tag_name`,
 `prerelease`, `published_at`, `body` and `assets` with `name`,
 `browser_download_url` (here a `file://` address in `files/updtest/`),
-`size` and `digest` (`sha256:<hex>`). Deleting `shared_prefs/updater.xml`
-(with `run-as`) makes the app check again at the next start.
+`size` and `digest` (`sha256:<hex>`). The app checks again at every start.

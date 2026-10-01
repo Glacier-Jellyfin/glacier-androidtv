@@ -48,6 +48,13 @@ renders the reference separately.
 - The German interface calls the queue "Warteschlange", apart from playlists
 - The navigation bar only offers the kinds of library the server has on every
   screen, not just on the home screen
+- Glacier looks for updates every time it starts, not just once a day
+- The update dialog puts "Beta" and its number on a line of their own
+
+### Fixed
+- A dot on the settings gear in the navigation bar now shows that an update
+  is waiting, and the dot on System stays while it downloads or after a failed
+  attempt
 
 ## [0.1.0-beta.4] - 2026-10-01
 

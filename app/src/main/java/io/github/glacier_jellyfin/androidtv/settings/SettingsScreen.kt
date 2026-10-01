@@ -94,6 +94,7 @@ import io.github.glacier_jellyfin.androidtv.core.updater.ReleaseNotes
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateCandidate
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateChannel
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
+import io.github.glacier_jellyfin.androidtv.core.updater.pending
 import io.github.glacier_jellyfin.androidtv.update.megabytes
 import io.github.glacier_jellyfin.androidtv.update.message
 import io.github.glacier_jellyfin.androidtv.update.publishedDate
@@ -285,7 +286,7 @@ fun SettingsScreen(
                     CategoryPill(
                         label = stringResource(category.label),
                         active = category == state.category,
-                        dot = category == SettingsCategory.System && state.update.let { it is UpdateState.Available || it is UpdateState.Ready },
+                        dot = category == SettingsCategory.System && state.update.pending,
                         onFocused = { viewModel.selectCategory(category) },
                         modifier = Modifier.focusRequester(categoryFocus.getValue(category)),
                     )

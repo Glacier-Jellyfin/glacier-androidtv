@@ -648,7 +648,7 @@
     <string name="update_channel_stable_sub">Nur getestete, stabile Versionen · empfohlen</string>
     <string name="update_channel_beta_sub">Vorabversionen mit neuen Funktionen · können instabil sein</string>
     <string name="update_auto">Automatisch nach Updates suchen</string>
-    <string name="update_auto_sub">Prüft beim Start der App, höchstens einmal am Tag, und zeigt auf der Startseite einen Hinweis, wenn eine neue Version bereitsteht</string>
+    <string name="update_auto_sub">Prüft bei jedem Start der App und zeigt auf der Startseite einen Hinweis, wenn eine neue Version bereitsteht</string>
     <string name="settings_device_name">Gerätename</string>
     <string name="settings_device_sub">Android %1$s · %2$d×%3$d @ %4$d Hz</string>
     <string name="settings_server_address">Serveradresse</string>

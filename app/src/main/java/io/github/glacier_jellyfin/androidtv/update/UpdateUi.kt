@@ -117,7 +117,8 @@ fun UpdateDialog(candidate: UpdateCandidate, installed: AppVersion, onNow: () ->
                             style = GlacierText.label(18, 0.08),
                             color = accent,
                         )
-                        Text(stringResource(R.string.update_title, candidate.version.displayName), style = GlacierText.display(76), color = GlacierColors.Ice)
+                        // "Beta 5" gets a line of its own instead of wrapping wherever the width ends.
+                        Text(stringResource(R.string.update_title, candidate.version.displayName.replace(" Beta", "\nBeta")), style = GlacierText.display(76), color = GlacierColors.Ice)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                         VersionChip(installed.toString(), highlight = false)

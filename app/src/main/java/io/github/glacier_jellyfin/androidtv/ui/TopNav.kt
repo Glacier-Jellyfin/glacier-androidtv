@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -48,6 +49,9 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
 
 /** The library kinds the server has (HomeRepository.kinds): one navigation entry each. */
 val LocalLibraryKinds = staticCompositionLocalOf { listOf(LibraryKind.Movies, LibraryKind.Shows, LibraryKind.Music) }
+
+/** A newer app version is known (UpdateManager): the settings gear carries a dot. */
+val LocalUpdatePending = staticCompositionLocalOf { false }
 
 sealed interface NavTarget {
     data object Search : NavTarget
@@ -181,7 +185,20 @@ private fun NavItem(
     ) {
         when (target) {
             NavTarget.Search -> Icon(GlacierIcons.Search, stringResource(R.string.nav_search), tint = foreground, modifier = Modifier.size(22.dp))
-            NavTarget.Settings -> Icon(GlacierIcons.Settings, stringResource(R.string.nav_settings), tint = foreground, modifier = Modifier.size(22.dp))
+            NavTarget.Settings -> Box {
+                Icon(GlacierIcons.Settings, stringResource(R.string.nav_settings), tint = foreground, modifier = Modifier.size(22.dp))
+                if (LocalUpdatePending.current) {
+                    Box(
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 4.dp, y = (-5).dp)
+                            .size(11.dp)
+                            .clip(CircleShape)
+                            .background(accent.main)
+                            .border(2.dp, GlacierColors.Void, CircleShape),
+                    )
+                }
+            }
             NavTarget.Profile -> Box(
                 Modifier
                     .semantics { contentDescription = profileLabel }

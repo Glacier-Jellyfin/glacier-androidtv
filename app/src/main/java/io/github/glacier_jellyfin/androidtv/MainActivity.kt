@@ -45,6 +45,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierBackground
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierTheme
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateManager
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
+import io.github.glacier_jellyfin.androidtv.core.updater.pending
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.music.NowPlaying
 import io.github.glacier_jellyfin.androidtv.navigation.GlacierNavHost
@@ -57,6 +58,7 @@ import io.github.glacier_jellyfin.androidtv.ui.LocalMusicProgress
 import io.github.glacier_jellyfin.androidtv.ui.LocalNowPlaying
 import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
 import io.github.glacier_jellyfin.androidtv.ui.LocalUnlockedTitles
+import io.github.glacier_jellyfin.androidtv.ui.LocalUpdatePending
 import io.github.glacier_jellyfin.androidtv.ui.NavDirection
 import io.github.glacier_jellyfin.androidtv.ui.NowPlayingSaver
 import io.github.glacier_jellyfin.androidtv.ui.SAVER_IDLE_MS
@@ -142,6 +144,7 @@ class MainActivity : ComponentActivity() {
             val unlockedTitles by startViewModel.unlockedTitles.collectAsStateWithLifecycle()
             val nowPlaying by startViewModel.nowPlaying.collectAsStateWithLifecycle()
             val libraryKinds by startViewModel.libraryKinds.collectAsStateWithLifecycle()
+            val update by startViewModel.updates.state.collectAsStateWithLifecycle()
             GlacierTheme(accent = Accent.valueOf(appearance.accent.name), reduceMotion = appearance.reduceMotion) {
                 val toaster = remember { Toaster() }
                 CompositionLocalProvider(
@@ -150,10 +153,9 @@ class MainActivity : ComponentActivity() {
                     LocalUnlockedTitles provides unlockedTitles,
                     LocalNowPlaying provides nowPlaying,
                     LocalLibraryKinds provides libraryKinds,
+                    LocalUpdatePending provides update.pending,
                     LocalMusicProgress provides startViewModel.music.progress,
                 ) {
-                    // Nothing reacts to keys while Android installs an update.
-                    val update by startViewModel.updates.state.collectAsStateWithLifecycle()
                     // While music plays the screen stays on; idle, the now-playing saver takes over.
                     val musicPlaying = nowPlaying?.playing == true
                     val view = LocalView.current
@@ -191,6 +193,7 @@ class MainActivity : ComponentActivity() {
                                     Key.DirectionLeft, Key.DirectionRight -> NavDirection.vertical = false
                                 }
                             }
+                            // Nothing reacts to keys while Android installs an update.
                             update is UpdateState.Installing
                         }.onKeyEvent { event ->
                             // Media keys no screen used go to the music, wherever the user is.
