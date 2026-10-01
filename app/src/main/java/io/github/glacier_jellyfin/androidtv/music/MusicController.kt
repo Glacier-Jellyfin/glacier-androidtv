@@ -83,6 +83,12 @@ data class MusicUiState(
 /** Position data, kept apart from [MusicUiState] so ticking only redraws what moves. */
 data class MusicProgress(val positionMs: Long = 0, val durationMs: Long = 0)
 
+/** How to load a queue again ([MusicController.retry]): its songs, and the one to start with. */
+private class QueueRequest(val startTrackId: String?, val load: suspend () -> LoadedQueue)
+
+/** A loaded queue: what it was made from ([ItemKind.Other] for an instant mix, null for loose songs), its title and songs. */
+private data class LoadedQueue(val kind: ItemKind?, val title: String, val tracks: List<MusicTrack>)
+
 /** The song in the mini player. */
 data class NowPlaying(val track: MusicTrack, val playing: Boolean)
 
@@ -129,7 +135,7 @@ class MusicController @Inject constructor(
 
     private val activePlayer: ExoPlayer? get() = _player.value
     /** What the queue was made from, for [retry]. */
-    private var request: Pair<UUID, String?>? = null
+    private var request: QueueRequest? = null
     private var loadJob: Job? = null
     /** The source's songs in their own order, to return to when shuffle goes off. */
     private var sourceOrder: List<QueueEntry> = emptyList()
@@ -218,7 +224,9 @@ class MusicController @Inject constructor(
     init {
         scope.launch {
             settings.settings.collect { profile ->
-                _state.update { it.copy(seekBackMs = profile.playback.seekBack.ms, seekForwardMs = profile.playback.seekForward.ms) }
+                _state.update {
+                    it.copy(seekBackMs = profile.playback.seekBack.ms, seekForwardMs = profile.playback.seekForward.ms, lyricsOn = profile.music.lyrics)
+                }
             }
         }
         // Another profile does not inherit the music.
@@ -229,7 +237,24 @@ class MusicController @Inject constructor(
 
     /** Plays the songs of an album, artist or playlist, from [startTrackId] if given. */
     fun play(sourceId: UUID, startTrackId: String?) {
-        request = sourceId to startTrackId
+        request = QueueRequest(startTrackId) {
+            val source = details.details(sourceId).item
+            val tracks = when (source.kind) {
+                ItemKind.Artist -> music.tracksOf(music.artistAlbums(sourceId))
+                ItemKind.Playlist -> music.playlistTracks(sourceId)
+                else -> music.albumTracks(sourceId)
+            }
+            LoadedQueue(source.kind, source.title, tracks)
+        }
+        load()
+    }
+
+    /**
+     * Songs from elsewhere in place of the queue: an instant mix ([kind] Other, see
+     * MusicRepository.instantMix) or the favorite songs (null, a plain queue).
+     */
+    fun playTracks(kind: ItemKind?, title: String, tracks: List<MusicTrack>, startTrackId: String? = null) {
+        request = QueueRequest(startTrackId) { LoadedQueue(kind, title, tracks) }
         load()
     }
 
@@ -239,27 +264,22 @@ class MusicController @Inject constructor(
     }
 
     private fun load() {
-        val (sourceId, startTrackId) = request ?: return
+        val request = request ?: return
         loadJob?.cancel()
         activePlayer?.pause()
         reportCurrentStopped(null)
         _state.update { it.copy(loading = true, failed = false) }
         loadJob = scope.launch {
             try {
-                val source = details.details(sourceId).item
-                val tracks = when (source.kind) {
-                    ItemKind.Artist -> music.tracksOf(music.artistAlbums(sourceId))
-                    ItemKind.Playlist -> music.playlistTracks(sourceId)
-                    else -> music.albumTracks(sourceId)
-                }
-                if (tracks.isEmpty()) error("Nothing to play in ${source.kind}")
+                val (kind, title, tracks) = request.load()
+                if (tracks.isEmpty()) error("Nothing to play in $kind")
                 sourceOrder = tracks.mapIndexed { i, track -> QueueEntry(i, track) }
                 nextKey = tracks.size
                 sources = sourceOrder.associate { it.key to playback.audioSource(it.track) }
-                val start = startTrackId?.let { id -> tracks.indexOfFirst { it.id.toString() == id }.takeIf { it >= 0 } }
+                val start = request.startTrackId?.let { id -> tracks.indexOfFirst { it.id.toString() == id }.takeIf { it >= 0 } }
                 val order = MusicQueue.start(sourceOrder, start, shuffleSwitch.on.value)
                 _state.update {
-                    it.copy(sourceKind = source.kind, sourceTitle = source.title, queue = order.items, index = order.index, shuffle = shuffleSwitch.on.value)
+                    it.copy(sourceKind = kind, sourceTitle = title, queue = order.items, index = order.index, shuffle = shuffleSwitch.on.value)
                 }
                 startPlayer(order)
             } catch (e: CancellationException) {
@@ -486,7 +506,37 @@ class MusicController @Inject constructor(
         )
     }
 
-    fun toggleLyrics() = _state.update { it.copy(lyricsOn = !it.lyricsOn) }
+    /** The heart in the player: the song that plays becomes a favorite, or stops being one. */
+    fun toggleFavorite() {
+        val track = _state.value.current ?: return
+        val favorite = !track.isFavorite
+        setFavorite(track.id, favorite)
+        scope.launch {
+            try {
+                details.setFavorite(track.id, favorite)
+                toast(if (favorite) R.string.music_favorite_added else R.string.music_favorite_removed)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Changing the favorite failed", e)
+                setFavorite(track.id, !favorite)
+            }
+        }
+    }
+
+    /** Every entry of the song in the queue (a playlist may hold it twice). */
+    private fun setFavorite(trackId: UUID, favorite: Boolean) {
+        val change = { entry: QueueEntry -> if (entry.track.id == trackId) entry.copy(track = entry.track.copy(isFavorite = favorite)) else entry }
+        sourceOrder = sourceOrder.map(change)
+        _state.update { it.copy(queue = it.queue.map(change)) }
+    }
+
+    /** Kept for the profile; the settings flow brings it back into the state. */
+    fun toggleLyrics() {
+        val on = !_state.value.lyricsOn
+        _state.update { it.copy(lyricsOn = on) }
+        shuffleSwitch.setLyrics(on)
+    }
 
     /**
      * A media key no screen used ([keyCode] of android.view.KeyEvent): it

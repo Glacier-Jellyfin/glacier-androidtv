@@ -2,13 +2,19 @@ package io.github.glacier_jellyfin.androidtv
 
 import android.content.Context
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -17,13 +23,13 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewModelScope
-import androidx.activity.viewModels
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -37,6 +43,8 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
 import io.github.glacier_jellyfin.androidtv.core.designsystem.Accent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierBackground
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierTheme
+import io.github.glacier_jellyfin.androidtv.core.updater.UpdateManager
+import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.music.NowPlaying
 import io.github.glacier_jellyfin.androidtv.navigation.GlacierNavHost
@@ -47,15 +55,17 @@ import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.LocalMusicProgress
 import io.github.glacier_jellyfin.androidtv.ui.LocalNowPlaying
-import io.github.glacier_jellyfin.androidtv.ui.LocalUnlockedTitles
 import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
+import io.github.glacier_jellyfin.androidtv.ui.LocalUnlockedTitles
 import io.github.glacier_jellyfin.androidtv.ui.NavDirection
+import io.github.glacier_jellyfin.androidtv.ui.NowPlayingSaver
+import io.github.glacier_jellyfin.androidtv.ui.SAVER_IDLE_MS
 import io.github.glacier_jellyfin.androidtv.ui.ToastHost
 import io.github.glacier_jellyfin.androidtv.ui.Toaster
 import io.github.glacier_jellyfin.androidtv.update.InstallingOverlay
 import io.github.glacier_jellyfin.androidtv.update.text
-import io.github.glacier_jellyfin.androidtv.core.updater.UpdateManager
-import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
+import javax.inject.Inject
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -65,7 +75,6 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /** Picks the first screen: "Who's watching?" for the last server, otherwise setup. */
 @HiltViewModel
@@ -145,8 +154,37 @@ class MainActivity : ComponentActivity() {
                 ) {
                     // Nothing reacts to keys while Android installs an update.
                     val update by startViewModel.updates.state.collectAsStateWithLifecycle()
+                    // While music plays the screen stays on; idle, the now-playing saver takes over.
+                    val musicPlaying = nowPlaying?.playing == true
+                    val view = LocalView.current
+                    DisposableEffect(view, musicPlaying) {
+                        view.keepScreenOn = musicPlaying
+                        onDispose { view.keepScreenOn = false }
+                    }
+                    var lastInput by remember { mutableLongStateOf(SystemClock.uptimeMillis()) }
+                    var saverOn by remember { mutableStateOf(false) }
+                    var swallowKeyUp by remember { mutableStateOf(false) }
+                    LaunchedEffect(musicPlaying, lastInput) {
+                        if (!musicPlaying) {
+                            saverOn = false
+                            return@LaunchedEffect
+                        }
+                        delay(SAVER_IDLE_MS - (SystemClock.uptimeMillis() - lastInput))
+                        saverOn = true
+                    }
                     GlacierBackground(
                         Modifier.onPreviewKeyEvent { event ->
+                            lastInput = SystemClock.uptimeMillis()
+                            // The key that ends the saver does nothing else; media keys still reach the music.
+                            if (saverOn && event.type == KeyEventType.KeyDown && !startViewModel.music.ownsKey(event.nativeKeyEvent.keyCode)) {
+                                saverOn = false
+                                swallowKeyUp = true
+                                return@onPreviewKeyEvent true
+                            }
+                            if (swallowKeyUp && event.type == KeyEventType.KeyUp) {
+                                swallowKeyUp = false
+                                return@onPreviewKeyEvent true
+                            }
                             if (event.type == KeyEventType.KeyDown) {
                                 when (event.key) {
                                     Key.DirectionUp, Key.DirectionDown -> NavDirection.vertical = true
@@ -168,6 +206,7 @@ class MainActivity : ComponentActivity() {
                         start?.let { GlacierNavHost(rememberNavController(), startDestination = it) }
                         UpdateLayer(startViewModel.updates, toaster)
                         ToastHost(toaster)
+                        NowPlayingSaver(saverOn, nowPlaying, startViewModel.music.progress)
                     }
                 }
             }

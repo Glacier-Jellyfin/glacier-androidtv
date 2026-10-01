@@ -17,6 +17,8 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightSource
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.Library
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
+import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
+import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
@@ -57,6 +59,7 @@ class HomeViewModel @Inject constructor(
     private val parental: ParentalControl,
     private val ageFilter: AgeFilter,
     playback: PlaybackRepository,
+    private val music: MusicController,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -164,6 +167,13 @@ class HomeViewModel @Inject constructor(
     ) { navigate(PlayerRoute(item.id.toString())) }
 
     fun openDetails(item: MediaItem) = navigate(DetailRoute(item.id.toString()))
+
+    /** A favorite song: all of them play, from this one, and the player opens; [title] names the queue. */
+    fun playFavorite(track: MusicTrack, title: String) {
+        val favorites = _state.value.content?.favoriteSongs ?: return
+        music.playTracks(kind = null, title = title, tracks = favorites, startTrackId = track.id.toString())
+        navigate(MusicRoute())
+    }
 
     /** Design: episodes open their episode page, movies start playing. */
     fun openContinueWatching(item: MediaItem) =

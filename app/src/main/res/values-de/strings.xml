@@ -83,6 +83,8 @@
 
     <!-- Startseite -->
     <string name="home_continue_watching">Weiter schauen</string>
+    <string name="home_recent_albums">Zuletzt gehört</string>
+    <string name="home_favorite_songs">Lieblingssongs</string>
     <string name="home_new_in">Neu in %1$s</string>
     <string name="home_my_media">Meine Medien</string>
     <plurals name="count_titles">
@@ -370,6 +372,12 @@
     <string name="music_playlist_created">Wiedergabeliste %1$s erstellt</string>
     <string name="music_removed_from_playlist">Aus der Wiedergabeliste entfernt</string>
     <string name="music_playlist_failed">Die Wiedergabeliste ließ sich nicht ändern</string>
+    <string name="music_favorite_added">Zu den Lieblingssongs hinzugefügt</string>
+    <string name="music_favorite_removed">Aus den Lieblingssongs entfernt</string>
+    <string name="music_options_mix">Ähnliche Musik</string>
+    <string name="music_mix_started">Mix gestartet</string>
+    <string name="music_mix">Mix</string>
+    <string name="music_mix_failed">Dafür gibt es keinen Mix</string>
     <string name="lyrics_title">Songtext</string>
     <string name="lyrics_synced">Songtext · synchronisiert</string>
     <string name="lyrics_instrumental">Instrumental</string>

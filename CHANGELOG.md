@@ -34,11 +34,17 @@ renders the reference separately.
   artist page, and the video player plays them one after another
 - Playlists of videos play in the video player, one video after the other;
   mixed playlists show their videos next to the songs
+- Instant mix: songs like a song, album, artist or playlist, from its options
+- A heart in the music player marks the song that plays as a favorite
+- The home screen shows the albums played last and your favorite songs
+- While music plays and the remote rests for three minutes, a now-playing
+  screen with the cover takes over; any key brings the app back
 - Titles above the age limit show a lock on their card while they open with
   the PIN; it goes away once the title is unlocked
 
 ### Improved
 - Coming back to an album or playlist puts the focus on the song you left
+- Shuffle and lyrics in the music player are remembered per profile
 - The German interface calls the queue "Warteschlange", apart from playlists
 - The navigation bar only offers the kinds of library the server has on every
   screen, not just on the home screen

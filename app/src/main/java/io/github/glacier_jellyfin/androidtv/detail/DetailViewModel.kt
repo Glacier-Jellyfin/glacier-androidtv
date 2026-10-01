@@ -288,6 +288,7 @@ class DetailViewModel @Inject constructor(
                 title = track.title,
                 subtitle = listOfNotNull(track.artist, track.album).joinToString(" · ").ifEmpty { null },
                 tracks = { listOf(track) },
+                mixFrom = track.id,
                 playlistId = item.id.takeIf { entry != null },
                 playlistEntryIds = listOfNotNull(entry),
             ),
@@ -301,6 +302,7 @@ class DetailViewModel @Inject constructor(
             MusicTarget(
                 title = item.title,
                 subtitle = item.parentTitle,
+                mixFrom = item.id,
                 tracks = {
                     val state = _state.value
                     when (item.kind) {

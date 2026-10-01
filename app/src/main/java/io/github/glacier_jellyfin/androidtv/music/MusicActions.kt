@@ -2,6 +2,7 @@ package io.github.glacier_jellyfin.androidtv.music
 
 import android.util.Log
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
@@ -27,6 +28,8 @@ class MusicTarget(
     val queueIndex: Int? = null,
     /** The song that plays: only adding it to a playlist makes sense. */
     val playing: Boolean = false,
+    /** Song, album, artist or playlist an instant mix can start from. */
+    val mixFrom: UUID? = null,
     /** The playlist page it is on: offers taking it out of the playlist. */
     val playlistId: UUID? = null,
     val playlistEntryIds: List<String> = emptyList(),
@@ -83,6 +86,29 @@ class MusicActions(
     fun playNext() = withTracks(R.string.music_plays_next) { controller.playNext(it) }
 
     fun addToQueue() = withTracks(R.string.music_added_to_queue) { controller.addToQueue(it) }
+
+    /** Songs like the target, from the server, in place of the queue. */
+    fun playMix() {
+        val target = _sheet.value?.target ?: return
+        val from = target.mixFrom ?: return
+        dismiss()
+        scope.launch {
+            val tracks = try {
+                music.instantMix(from)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Loading the instant mix failed", e)
+                emptyList()
+            }
+            if (tracks.isEmpty()) {
+                toast(UiEvent.Toast(R.string.music_mix_failed))
+                return@launch
+            }
+            controller.playTracks(ItemKind.Other, target.title, tracks)
+            toast(UiEvent.Toast(R.string.music_mix_started))
+        }
+    }
 
     fun moveNext() {
         val index = _sheet.value?.target?.queueIndex ?: return

@@ -279,6 +279,32 @@ fun HomeScreen(
                                 }
                             }
                         }
+                        if (content.recentAlbums.isNotEmpty()) {
+                            item(key = "recent-albums") {
+                                MediaRow(title = stringResource(R.string.home_recent_albums)) {
+                                    items(content.recentAlbums, key = { it.id }) { album ->
+                                        PosterFor(album, onClick = { viewModel.openDetails(album) }, modifier = Modifier.remembered("recent-${album.id}"))
+                                    }
+                                }
+                            }
+                        }
+                        if (content.favoriteSongs.isNotEmpty()) {
+                            item(key = "favorite-songs") {
+                                val favoritesTitle = stringResource(R.string.home_favorite_songs)
+                                MediaRow(title = favoritesTitle) {
+                                    items(content.favoriteSongs, key = { it.id }) { track ->
+                                        PosterCard(
+                                            imageUrl = track.coverUrl,
+                                            caption = track.artist.orEmpty(),
+                                            title = track.title,
+                                            square = true,
+                                            onClick = { viewModel.playFavorite(track, favoritesTitle) },
+                                            modifier = Modifier.remembered("favorite-${track.id}"),
+                                        )
+                                    }
+                                }
+                            }
+                        }
                         if (content.libraries.isNotEmpty()) {
                             item(key = "libraries") {
                                 MediaRow(title = stringResource(R.string.home_my_media), bottomPadding = 90) {

@@ -88,6 +88,8 @@
 
     <!-- Home -->
     <string name="home_continue_watching">Continue watching</string>
+    <string name="home_recent_albums">Recently played</string>
+    <string name="home_favorite_songs">Favorite songs</string>
     <string name="home_new_in">New in %1$s</string>
     <string name="home_my_media">My media</string>
     <plurals name="count_titles">
@@ -376,6 +378,12 @@
     <string name="music_playlist_created">Playlist %1$s created</string>
     <string name="music_removed_from_playlist">Removed from the playlist</string>
     <string name="music_playlist_failed">The playlist could not be changed</string>
+    <string name="music_favorite_added">Added to your favorite songs</string>
+    <string name="music_favorite_removed">Removed from your favorite songs</string>
+    <string name="music_options_mix">Instant mix</string>
+    <string name="music_mix_started">Mix started</string>
+    <string name="music_mix">Mix</string>
+    <string name="music_mix_failed">No mix for this one</string>
     <string name="lyrics_title">Lyrics</string>
     <string name="lyrics_synced">Lyrics · synced</string>
     <string name="lyrics_instrumental">Instrumental</string>

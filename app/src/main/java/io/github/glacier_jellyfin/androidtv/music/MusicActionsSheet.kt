@@ -99,6 +99,9 @@ private fun Menu(sheet: MusicSheet.Menu, actions: MusicActions) {
             fillWidth = true,
             modifier = if (target.playing) Modifier.focusRequester(first) else Modifier,
         )
+        if (target.mixFrom != null) {
+            PillButton(stringResource(R.string.music_options_mix), onClick = actions::playMix, icon = GlacierIcons.Shuffle, fillWidth = true)
+        }
         if (target.playlistId != null) {
             PillButton(stringResource(R.string.music_options_remove_playlist), onClick = actions::removeFromPlaylist, icon = GlacierIcons.Close, fillWidth = true)
         }

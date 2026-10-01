@@ -22,6 +22,15 @@ data class ProfileSettings(
     val uiLanguage: UiLanguage = UiLanguage.System,
     /** Tracks of the last title played, for "use the tracks of the last title". */
     val lastTracks: LastTracks = LastTracks(),
+    /** The music player's switches, kept from one time to the next. */
+    val music: MusicSettings = MusicSettings(),
+)
+
+/** Shuffle (music pages and player share it) and lyrics in the player. */
+@Serializable
+data class MusicSettings(
+    val shuffle: Boolean = false,
+    val lyrics: Boolean = false,
 )
 
 /** Language of Glacier's own texts (Settings › Account); [System] follows Android. */

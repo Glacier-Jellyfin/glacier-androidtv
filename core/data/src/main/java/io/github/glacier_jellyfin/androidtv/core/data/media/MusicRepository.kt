@@ -8,6 +8,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.exception.InvalidStatusException
+import org.jellyfin.sdk.api.client.extensions.instantMixApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.lyricApi
 import org.jellyfin.sdk.api.client.extensions.playlistApi
@@ -74,6 +75,16 @@ class MusicRepository @Inject constructor(
             enableUserData = true,
         ).content.items
             .filter { it.type == BaseItemKind.AUDIO || it.mediaType == MediaType.AUDIO }
+            .map(mapper::track)
+    }
+
+    /** Songs like [itemId] (a song, album, artist or playlist), picked by the server. */
+    suspend fun instantMix(itemId: UUID): List<MusicTrack> = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        val mapper = MediaMapper(session.api)
+        session.api.instantMixApi.getInstantMixFromItem(itemId = itemId, userId = session.userId, limit = MIX_LIMIT, fields = TRACK_FIELDS)
+            .content.items
+            .filter { it.type == BaseItemKind.AUDIO }
             .map(mapper::track)
     }
 
@@ -147,6 +158,7 @@ class MusicRepository @Inject constructor(
     private companion object {
         const val TICKS_PER_MS = 10_000L
         const val HTTP_NOT_FOUND = 404
+        const val MIX_LIMIT = 100
         val TRACK_FIELDS = listOf(ItemFields.MEDIA_STREAMS)
     }
 }

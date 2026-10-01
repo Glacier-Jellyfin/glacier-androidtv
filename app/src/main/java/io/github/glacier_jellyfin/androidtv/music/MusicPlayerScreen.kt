@@ -38,7 +38,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,7 +70,6 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -123,12 +121,6 @@ fun MusicPlayerScreen(
     LaunchedEffect(viewModel) { viewModel.finished.collect { onBack() } }
     CollectEvents(viewModel.events, onNavigate = {})
     BackHandler { viewModel.close() }
-    // Awake while music plays here; paused, the screensaver may come.
-    val view = LocalView.current
-    DisposableEffect(view, state.playing) {
-        view.keepScreenOn = state.playing
-        onDispose { view.keepScreenOn = false }
-    }
 
     val sheet by viewModel.musicActions.sheet.collectAsStateWithLifecycle()
     val playFocus = remember { FocusRequester() }
@@ -266,6 +258,7 @@ private fun TopBar(state: MusicUiState, track: MusicTrack, modifier: Modifier) {
                     ItemKind.Artist -> R.string.music_artist
                     ItemKind.Playlist -> R.string.music_playlist
                     null -> R.string.music_queue
+                    ItemKind.Other -> R.string.music_mix
                     else -> R.string.music_album
                 },
             )
@@ -565,6 +558,13 @@ private fun Controls(
                 on = state.repeat != RepeatMode.Off,
             )
             MusicButton(GlacierIcons.Lyrics, stringResource(R.string.lyrics_title), viewModel::toggleLyrics, on = state.lyricsOn, label = stringResource(R.string.lyrics_title))
+            val favorite = state.current?.isFavorite == true
+            MusicButton(
+                if (favorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
+                stringResource(if (favorite) R.string.action_unfavorite else R.string.action_favorite),
+                viewModel::toggleFavorite,
+                on = favorite,
+            )
         }
     }
 }

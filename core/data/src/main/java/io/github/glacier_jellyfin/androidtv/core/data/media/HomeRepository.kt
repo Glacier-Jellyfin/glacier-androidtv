@@ -67,12 +67,48 @@ class HomeRepository @Inject constructor(
             .awaitAll()
             .filter { (_, items) -> items.isNotEmpty() }
 
+        val hasMusic = libraries.any { it.kind == LibraryKind.Music }
+        val recentAlbums = if (hasMusic) runCatching { recentAlbums(session, mapper) }.getOrDefault(emptyList()) else emptyList()
+        val favoriteSongs = if (hasMusic) runCatching { favoriteSongs(session, mapper) }.getOrDefault(emptyList()) else emptyList()
+
         HomeContent(
             libraries = libraries,
             continueWatching = ageFilter.screen(mergeContinueWatching(resumeAsync.await(), nextUpAsync.await()).map(mapper::item)),
             latest = latest,
+            recentAlbums = recentAlbums,
+            favoriteSongs = favoriteSongs,
         )
     }
+
+    /** Albums of the songs played last: the server keeps the play date on songs, not on albums. */
+    private suspend fun recentAlbums(session: Session, mapper: MediaMapper): List<MediaItem> {
+        val albumIds = session.api.libraryApi.getItems(
+            userId = session.userId,
+            includeItemTypes = listOf(BaseItemKind.AUDIO),
+            recursive = true,
+            filters = listOf(ItemFilter.IS_PLAYED),
+            sortBy = listOf(ItemSortBy.DATE_PLAYED),
+            sortOrder = listOf(SortOrder.DESCENDING),
+            limit = RECENT_SONGS,
+            enableImages = false,
+        ).content.items.mapNotNull { it.albumId }.distinct().take(ROW_LIMIT)
+        if (albumIds.isEmpty()) return emptyList()
+        val albums = session.api.libraryApi.getItems(userId = session.userId, ids = albumIds, enableUserData = true)
+            .content.items.associateBy { it.id }
+        return albumIds.mapNotNull { albums[it] }.map(mapper::item)
+    }
+
+    private suspend fun favoriteSongs(session: Session, mapper: MediaMapper): List<MusicTrack> =
+        session.api.libraryApi.getItems(
+            userId = session.userId,
+            includeItemTypes = listOf(BaseItemKind.AUDIO),
+            recursive = true,
+            isFavorite = true,
+            sortBy = listOf(ItemSortBy.SORT_NAME),
+            fields = listOf(ItemFields.MEDIA_STREAMS),
+            enableUserData = true,
+            limit = FAVORITE_SONGS,
+        ).content.items.map(mapper::track)
 
     /**
      * The spotlight as Settings › Home asks for it, see [spotlightPool]. "Continue
@@ -222,6 +258,8 @@ class HomeRepository @Inject constructor(
     private companion object {
         val DefaultKinds = listOf(LibraryKind.Movies, LibraryKind.Shows, LibraryKind.Music)
         const val ROW_LIMIT = 16
+        const val RECENT_SONGS = 200
+        const val FAVORITE_SONGS = 100
         val FIELDS = listOf(ItemFields.OVERVIEW, ItemFields.GENRES, ItemFields.MEDIA_STREAMS)
     }
 }

@@ -66,4 +66,7 @@ data class HomeContent(
     val libraries: List<Library>,
     val continueWatching: List<MediaItem>,
     val latest: List<Pair<Library, List<MediaItem>>>,
+    /** Albums of the songs heard last, newest first. */
+    val recentAlbums: List<MediaItem> = emptyList(),
+    val favoriteSongs: List<MusicTrack> = emptyList(),
 )

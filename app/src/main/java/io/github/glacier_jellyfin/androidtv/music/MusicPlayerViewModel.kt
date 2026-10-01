@@ -65,6 +65,7 @@ class MusicPlayerViewModel @Inject constructor(
     fun toggleShuffle() = controller.toggleShuffle()
     fun cycleRepeat() = controller.cycleRepeat()
     fun toggleLyrics() = controller.toggleLyrics()
+    fun toggleFavorite() = controller.toggleFavorite()
 
     /** Options for a song of the queue (hold OK, or the menu key). */
     fun queueOptions(index: Int) {
@@ -78,6 +79,7 @@ class MusicPlayerViewModel @Inject constructor(
                 tracks = { listOf(track) },
                 queueIndex = index.takeUnless { playing },
                 playing = playing,
+                mixFrom = track.id,
             ),
         )
     }
