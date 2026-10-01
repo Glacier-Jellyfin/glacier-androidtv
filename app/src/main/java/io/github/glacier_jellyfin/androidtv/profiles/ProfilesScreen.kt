@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -51,6 +52,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PinDots
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinPad
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
+import io.github.glacier_jellyfin.androidtv.ui.TvPlatform
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 
 @Composable
@@ -59,6 +61,8 @@ fun ProfilesScreen(
     viewModel: ProfilesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val platform = remember { TvPlatform.of(context) }
     CollectEvents(viewModel.events, onNavigate)
 
     val firstFocus = remember { FocusRequester() }
@@ -79,7 +83,7 @@ fun ProfilesScreen(
                     style = GlacierText.body(26, FontWeight.Bold).copy(letterSpacing = 0.34.em),
                     color = GlacierColors.Ice,
                 )
-                Text(stringResource(R.string.profiles_subtitle), style = GlacierText.body(19), color = GlacierColors.Mist)
+                Text(stringResource(platform.label), style = GlacierText.body(19), color = GlacierColors.Mist)
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(36.dp)) {
                 Text(stringResource(R.string.profiles_title), style = GlacierText.display(38), color = GlacierColors.Ice)

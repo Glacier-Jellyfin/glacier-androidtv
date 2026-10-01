@@ -47,7 +47,9 @@
 
     <!-- Profiles -->
     <string name="profiles_title">Who’s watching?</string>
-    <string name="profiles_subtitle" translatable="false">Android TV</string>
+    <string name="platform_android_tv" translatable="false">Android TV</string>
+    <string name="platform_google_tv" translatable="false">Google TV</string>
+    <string name="platform_fire_tv" translatable="false">Fire TV</string>
     <string name="profiles_other_user">Other user</string>
     <string name="profiles_server_line">%1$s · Jellyfin %2$s · Glacier %3$s</string>
     <string name="profiles_offline">Server not reachable · showing profiles known on this device</string>
