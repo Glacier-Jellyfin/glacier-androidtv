@@ -120,6 +120,7 @@ class DetailViewModel @Inject constructor(
     init {
         load()
         viewModelScope.launch { shuffle.on.collect { on -> _state.update { it.copy(shuffle = on) } } }
+        viewModelScope.launch { playback.stopped.collect { refresh() } }
     }
 
     fun load() {
@@ -161,6 +162,36 @@ class DetailViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.w(TAG, "Loading details failed", e)
                 _state.update { it.copy(loading = false, failed = true) }
+            }
+        }
+    }
+
+    /**
+     * After playback stopped: watched state, resume point, episodes and next episode follow,
+     * quietly, without the loading state and with the chosen season kept.
+     */
+    private fun refresh() {
+        if (_state.value.details == null) return
+        viewModelScope.launch {
+            try {
+                val details = repository.details(itemId)
+                _state.update { it.copy(details = details) }
+                when (details.item.kind) {
+                    ItemKind.Series -> {
+                        val seasons = repository.seasons(details.item.id)
+                        val next = runCatching { repository.nextEpisode(details.item.id) }.getOrNull()
+                        _state.update { it.copy(seasons = seasons, nextEpisode = next) }
+                        val season = seasons.firstOrNull { it.id == _state.value.season?.id }
+                        season?.let { selectSeason(it, details.item.id) }
+                    }
+                    ItemKind.Episode -> loadSeasonOf(details)
+                    ItemKind.Collection -> loadCollection(details)
+                    else -> Unit
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Refreshing details failed", e)
             }
         }
     }
