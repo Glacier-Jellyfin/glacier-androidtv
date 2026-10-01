@@ -69,6 +69,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
+import io.github.glacier_jellyfin.androidtv.ui.MarqueeText
 import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 
 /**
@@ -345,13 +346,7 @@ fun EpisodeCard(
             }
         }
         Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                episode.title,
-                style = GlacierText.body(19, FontWeight.SemiBold),
-                color = if (focused) accent.main else GlacierColors.Ice,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            MarqueeText(episode.title, style = GlacierText.body(19, FontWeight.SemiBold), color = if (focused) accent.main else GlacierColors.Ice, active = focused)
             Text(
                 episode.overview.orEmpty(),
                 style = GlacierText.body(16).copy(lineHeight = 24.sp),

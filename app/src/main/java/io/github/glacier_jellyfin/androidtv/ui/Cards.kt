@@ -177,13 +177,7 @@ fun ContinueCard(
             }
         }
         Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(
-                title,
-                style = GlacierText.body(19, FontWeight.SemiBold),
-                color = if (focused) accent else GlacierColors.Ice,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            MarqueeText(title, style = GlacierText.body(19, FontWeight.SemiBold), color = if (focused) accent else GlacierColors.Ice, active = focused)
             Text(subtitle, style = GlacierText.body(16), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -242,10 +236,10 @@ fun PosterCard(
         }
         Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (title != null) {
-                Text(title, style = GlacierText.display(20), color = if (focused) accent else GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                MarqueeText(title, style = GlacierText.display(20), color = if (focused) accent else GlacierColors.Ice, active = focused)
                 Text(caption, style = GlacierText.body(16), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
             } else {
-                Text(caption, style = GlacierText.body(18), color = if (focused) accent else GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                MarqueeText(caption, style = GlacierText.body(18), color = if (focused) accent else GlacierColors.Ice, active = focused)
             }
         }
     }
@@ -364,7 +358,7 @@ fun GridCard(
             }
         }
         Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(title, style = GlacierText.display(20), color = if (focused) accent else GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            MarqueeText(title, style = GlacierText.display(20), color = if (focused) accent else GlacierColors.Ice, active = focused)
             if (caption != null) Text(caption, style = GlacierText.body(16), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
