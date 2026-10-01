@@ -212,6 +212,9 @@ h2.title { margin: 0 0 16px; font-size: clamp(26px, 6vw, 42px); font-weight: 700
 }
 .showcase-media img { display: block; width: 100%; height: auto; }
 
+/* Two screenshots in one showcase, stacked */
+.media-stack { display: grid; gap: 20px; }
+
 @media (max-width: 900px) {
   .showcase, .showcase.reverse { grid-template-columns: 1fr; gap: 32px; }
   .showcase.reverse .showcase-media, .showcase.reverse .showcase-copy { order: initial; }
