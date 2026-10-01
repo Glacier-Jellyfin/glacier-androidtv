@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.detail.DetailScreen
 import io.github.glacier_jellyfin.androidtv.detail.PersonScreen
 import io.github.glacier_jellyfin.androidtv.player.PlayerScreen
@@ -26,9 +27,12 @@ import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 /** Screens without arguments; navigating to one that is already on top does nothing. */
 private val SingleScreens = setOf(ServerListRoute, ServerAddressRoute, HomeRoute, SettingsRoute)
 
+private const val TAG = "Navigation"
+
 @Composable
 fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
     val navigate: (UiEvent.Navigate) -> Unit = { event ->
+        Log.d(TAG, "Open ${event.route}")
         val current = navController.currentDestination?.id
         navController.navigate(event.route) {
             when {
@@ -40,7 +44,10 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
             launchSingleTop = event.route in SingleScreens
         }
     }
-    val back: () -> Unit = { navController.popBackStack() }
+    val back: () -> Unit = {
+        Log.d(TAG, "Back")
+        navController.popBackStack()
+    }
     NavHost(
         navController = navController,
         startDestination = startDestination,

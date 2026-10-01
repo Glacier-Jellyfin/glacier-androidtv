@@ -8,6 +8,7 @@ import coil3.SingletonImageLoader
 import coil3.svg.SvgDecoder
 import dagger.hilt.android.HiltAndroidApp
 import io.github.glacier_jellyfin.androidtv.core.log.Log
+import io.github.glacier_jellyfin.androidtv.core.player.Media3Logs
 
 @HiltAndroidApp
 class GlacierApplication : Application(), SingletonImageLoader.Factory {
@@ -21,6 +22,7 @@ class GlacierApplication : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         // First, so crashes while the app starts are recorded too.
         Log.install(this)
+        Media3Logs.install()
         super.onCreate()
         Log.i("Glacier", "Started ${BuildConfig.VERSION_NAME} (${BuildConfig.BUILD_TYPE}) on ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE}")
     }

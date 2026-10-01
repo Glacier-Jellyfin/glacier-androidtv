@@ -679,6 +679,16 @@
     <string name="diag_clear_sub">Deletes the log stored on this device</string>
     <string name="diag_clear_button">Delete</string>
     <string name="diag_cleared">Log deleted</string>
+    <string name="diag_verbose">Detailed logging</string>
+    <string name="diag_verbose_sub">Also records playback events and navigation, for hard-to-find problems. Turns itself off after 24 hours.</string>
+    <string name="diag_verbose_on_sub">On until %1$s. Applies to playback started from now on.</string>
+    <string name="diag_share">Download log on the network</string>
+    <string name="diag_share_sub">Shows a QR code: open it on a phone or computer on the same network to save the log as a file</string>
+    <string name="diag_share_button">Show</string>
+    <string name="diag_share_title">Download log</string>
+    <string name="diag_share_body">Scan the code or open the address in a browser on a device on the same network. The download works while this window is open.</string>
+    <string name="diag_share_no_network">No network connection</string>
+    <string name="diag_share_close">Close</string>
     <string name="diag_crash_notice">Glacier closed unexpectedly. Send the log: Settings › System</string>
     <string name="settings_unknown">Unknown</string>
 

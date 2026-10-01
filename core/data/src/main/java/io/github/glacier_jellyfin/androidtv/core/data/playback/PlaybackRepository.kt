@@ -24,6 +24,7 @@ import org.jellyfin.sdk.api.client.extensions.sessionApi
 import org.jellyfin.sdk.api.client.extensions.userDataApi
 import org.jellyfin.sdk.api.client.extensions.videoApi
 import org.jellyfin.sdk.api.client.util.AuthorizationHeaderBuilder
+import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaStreamProtocol
 import org.jellyfin.sdk.model.api.MediaSegmentType
 import org.jellyfin.sdk.model.api.MediaStreamType
@@ -159,6 +160,7 @@ class PlaybackRepository @Inject constructor(
         }
         val reasons = source.transcodingUrl?.takeIf { method != PlaybackMethod.DirectPlay }?.let { TRANSCODE_REASONS.find(it)?.groupValues?.get(1) }
         Log.i(TAG, "Playing $itemId: $method, container ${source.container}, ${source.bitrate} bit/s" + reasons?.let { ", because $it" }.orEmpty())
+        if (Log.verbose) Log.d(TAG, "Streams of $itemId: " + streams.joinToString { it.describe() })
         PlaybackSource(
             itemId = itemId,
             mediaSourceId = source.id,
@@ -330,6 +332,18 @@ class PlaybackRepository @Inject constructor(
     private fun requireSession(): Session = checkNotNull(sessions.session.value) { "No profile is signed in" }
 
     private val Session.userId: UUID get() = UUID.fromString(user.userId)
+
+    /** "video hevc Main 10 DOVI_WITH_HDR10 3840x2160", "audio truehd 8ch ger", for the detailed log. */
+    private fun MediaStream.describe(): String = listOfNotNull(
+        type.name.lowercase(),
+        codec,
+        profile,
+        videoRangeType?.name,
+        width?.let { "${it}x$height" },
+        channels?.let { "${it}ch" },
+        language,
+        "external".takeIf { isExternal },
+    ).joinToString(" ")
 
     private companion object {
         const val TAG = "Playback"

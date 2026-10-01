@@ -673,6 +673,16 @@
     <string name="diag_clear_sub">Löscht das auf diesem Gerät gespeicherte Protokoll</string>
     <string name="diag_clear_button">Löschen</string>
     <string name="diag_cleared">Protokoll gelöscht</string>
+    <string name="diag_verbose">Ausführliche Protokollierung</string>
+    <string name="diag_verbose_sub">Zeichnet zusätzlich Wiedergabe-Ereignisse und Navigation auf, für schwer zu findende Fehler. Schaltet sich nach 24 Stunden selbst ab.</string>
+    <string name="diag_verbose_on_sub">An bis %1$s. Gilt für Wiedergaben, die ab jetzt starten.</string>
+    <string name="diag_share">Protokoll im Netzwerk herunterladen</string>
+    <string name="diag_share_sub">Zeigt einen QR-Code: auf Handy oder Computer im selben Netzwerk öffnen, um das Protokoll als Datei zu speichern</string>
+    <string name="diag_share_button">Anzeigen</string>
+    <string name="diag_share_title">Protokoll herunterladen</string>
+    <string name="diag_share_body">Scanne den Code oder öffne die Adresse im Browser eines Geräts im selben Netzwerk. Der Download funktioniert, solange dieses Fenster offen ist.</string>
+    <string name="diag_share_no_network">Keine Netzwerkverbindung</string>
+    <string name="diag_share_close">Schließen</string>
     <string name="diag_crash_notice">Glacier wurde unerwartet beendet. Protokoll senden: Einstellungen › System</string>
     <string name="settings_unknown">Unbekannt</string>
 

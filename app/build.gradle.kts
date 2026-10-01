@@ -115,6 +115,8 @@ dependencies {
     implementation(libs.coil.network.okhttp)
     // Language flags (assets/flags) are SVGs.
     implementation(libs.coil.svg)
+    // The QR code for downloading the log (Settings › System › Diagnostics).
+    implementation(libs.qrcodegen)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

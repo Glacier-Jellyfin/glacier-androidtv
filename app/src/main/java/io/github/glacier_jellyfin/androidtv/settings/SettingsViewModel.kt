@@ -24,6 +24,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepositor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyle
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
 import io.github.glacier_jellyfin.androidtv.diagnostics.Diagnostics
+import io.github.glacier_jellyfin.androidtv.diagnostics.LogServer
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
@@ -39,6 +40,7 @@ import io.github.glacier_jellyfin.androidtv.core.updater.UpdateManager
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import org.jellyfin.sdk.api.client.extensions.systemApi
 import org.jellyfin.sdk.api.client.exception.InvalidStatusException
 import kotlinx.coroutines.channels.Channel
@@ -90,7 +92,15 @@ data class SettingsUiState(
 )
 
 /** Settings › System › Diagnostics: [sentAs] is the file name the server gave the log just sent. */
-data class DiagnosticsState(val sending: Boolean = false, val sentAs: String? = null, val lastCrash: Long? = null)
+data class DiagnosticsState(
+    val sending: Boolean = false,
+    val sentAs: String? = null,
+    val lastCrash: Long? = null,
+    /** When detailed logging ends, null while it is off. */
+    val verboseUntil: Long? = null,
+    /** The address the log can be downloaded from while its dialog is open. */
+    val shareUrl: String? = null,
+)
 
 /** Settings › System › Server; [version] is asked fresh from the server, the stored one until then. */
 data class ServerSummary(val name: String, val address: String, val version: String?)
@@ -135,6 +145,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { loadServerSummary() }
         viewModelScope.launch(Dispatchers.Default) { FfmpegAudio.version()?.let { version -> _state.update { it.copy(ffmpegVersion = version) } } }
         viewModelScope.launch(Dispatchers.IO) { Log.lastCrash()?.let { crash -> _state.update { it.copy(diagnostics = it.diagnostics.copy(lastCrash = crash)) } } }
+        _state.update { it.copy(diagnostics = it.diagnostics.copy(verboseUntil = Log.verboseUntil())) }
     }
 
     fun selectCategory(category: SettingsCategory) = _state.update { it.copy(category = category) }
@@ -248,7 +259,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val fileName = diagnostics.sendToServer()
-                _state.update { it.copy(diagnostics = DiagnosticsState(sentAs = fileName)) }
+                _state.update { it.copy(diagnostics = it.diagnostics.copy(sending = false, sentAs = fileName, lastCrash = null)) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -264,9 +275,47 @@ class SettingsViewModel @Inject constructor(
     fun clearLog() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) { Log.clear() }
-            _state.update { it.copy(diagnostics = DiagnosticsState()) }
+            _state.update { it.copy(diagnostics = DiagnosticsState(verboseUntil = Log.verboseUntil())) }
             _events.send(UiEvent.Toast(R.string.diag_cleared))
         }
+    }
+
+    fun toggleVerbose() {
+        Log.setVerbose(_state.value.diagnostics.verboseUntil == null)
+        _state.update { it.copy(diagnostics = it.diagnostics.copy(verboseUntil = Log.verboseUntil())) }
+    }
+
+    private var logServer: LogServer? = null
+    private var opening: Job? = null
+
+    fun shareLog() {
+        if (logServer != null || opening?.isActive == true) return
+        opening = viewModelScope.launch {
+            val server = try {
+                diagnostics.shareOnNetwork()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Offering the log on the network failed", e)
+                null
+            }
+            if (server == null) {
+                _events.send(UiEvent.Toast(R.string.diag_share_no_network))
+                return@launch
+            }
+            logServer = server
+            _state.update { it.copy(diagnostics = it.diagnostics.copy(shareUrl = server.url, lastCrash = null)) }
+        }
+    }
+
+    fun closeShare() {
+        logServer?.close()
+        logServer = null
+        _state.update { it.copy(diagnostics = it.diagnostics.copy(shareUrl = null)) }
+    }
+
+    override fun onCleared() {
+        logServer?.close()
     }
 
     private suspend fun loadServerSummary() {

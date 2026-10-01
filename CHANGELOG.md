@@ -45,6 +45,9 @@ renders the reference separately.
   sends it to your Jellyfin server, where the admin finds it in the dashboard
   under Logs, ready to attach to a bug report. Passwords and access tokens are
   removed first. After a crash, the next start points you there
+- Diagnostics can also show a QR code to download the log on a phone or
+  computer on the same network, and turn on detailed logging (playback events
+  and navigation) for hard-to-find problems; it turns itself off after 24 hours
 
 ### Improved
 - Coming back to an album or playlist puts the focus on the song you left

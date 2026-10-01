@@ -40,5 +40,5 @@ body:
     id: logs
     attributes:
       label: Logs
-      description: In Glacier, open Settings › System › Diagnostics and choose Send. The log then appears in the Jellyfin dashboard under Logs (file name starting with upload_Glacier); attach that file or paste its contents.
+      description: In Glacier, open Settings › System › Diagnostics and choose Send. The log then appears in the Jellyfin dashboard under Logs (file name starting with upload_Glacier); attach that file or paste its contents. Without access to the dashboard, choose "Download log on the network" instead and open the QR code on your phone or computer. For playback problems, turn on "Detailed logging" there first and reproduce the problem.
       render: text

@@ -85,6 +85,7 @@ object GlacierPlayer {
                 /* handleAudioFocus = */ true,
             )
             .build()
+        Media3Logs.attach(player)
         player.apply {
                 setMediaItem(
                     MediaItem.Builder()
@@ -119,6 +120,7 @@ object GlacierPlayer {
                 /* handleAudioFocus = */ true,
             )
             .build()
+            .also(Media3Logs::attach)
     }
 
     /**
