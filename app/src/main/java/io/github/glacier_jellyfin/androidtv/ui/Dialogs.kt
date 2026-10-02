@@ -20,7 +20,11 @@ import androidx.compose.ui.unit.dp
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 
-/** The design's modal sheet (PIN entry): dimmed backdrop, raised card in the centre. */
+/**
+ * The design's modal sheet (PIN entry): dimmed backdrop, raised card in the centre.
+ * Every dialog puts a line of text between its title and its buttons, never just a
+ * title over buttons.
+ */
 @Composable
 fun ModalSheet(
     onDismiss: () -> Unit,

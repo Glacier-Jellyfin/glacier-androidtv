@@ -435,6 +435,9 @@
     <string name="music_choose_playlist">Add to playlist</string>
     <string name="music_new_playlist">New playlist</string>
     <string name="music_no_playlists">No playlists yet</string>
+    <string name="music_menu_body">Choose what should happen with it.</string>
+    <string name="music_choose_playlist_body">The songs are added to the end of the playlist you choose.</string>
+    <string name="music_new_playlist_body">Give the new playlist a name; the songs go into it right away.</string>
     <string name="music_playlist_name">Name</string>
     <string name="music_playlist_name_hint">My playlist</string>
     <string name="music_playlist_create">Create</string>

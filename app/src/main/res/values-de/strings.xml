@@ -429,6 +429,9 @@
     <string name="music_choose_playlist">Zur Wiedergabeliste hinzufügen</string>
     <string name="music_new_playlist">Neue Wiedergabeliste</string>
     <string name="music_no_playlists">Noch keine Wiedergabelisten</string>
+    <string name="music_menu_body">Wähle, was damit geschehen soll.</string>
+    <string name="music_choose_playlist_body">Die Titel kommen ans Ende der gewählten Wiedergabeliste.</string>
+    <string name="music_new_playlist_body">Gib der neuen Wiedergabeliste einen Namen – die Titel kommen gleich hinein.</string>
     <string name="music_playlist_name">Name</string>
     <string name="music_playlist_name_hint">Meine Liste</string>
     <string name="music_playlist_create">Erstellen</string>
