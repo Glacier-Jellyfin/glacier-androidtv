@@ -32,6 +32,16 @@ class SegmentPolicyTest {
     }
 
     @Test
+    fun `up next waits for the last of several credits`() {
+        val segments = listOf(
+            intro,
+            MediaSegment(SegmentKind.Outro, 1_290_000, 1_350_000),
+            MediaSegment(SegmentKind.Outro, 1_380_000, 1_420_000),
+        )
+        assertEquals(1_380_000L, policy.upNextAtMs(segments, 1_425_000))
+    }
+
+    @Test
     fun `up next without an outro falls back to 30 seconds before the end`() {
         assertEquals(2_802_000L, policy.upNextAtMs(listOf(intro), 2_832_000))
     }

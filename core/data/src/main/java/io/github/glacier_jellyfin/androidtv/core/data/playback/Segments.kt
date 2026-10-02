@@ -36,7 +36,10 @@ enum class SegmentAction { None, Ask, Skip }
 /** When the "Up next" card appears. */
 sealed interface UpNextMode {
     data object Off : UpNextMode
-    /** When the credits start; without an outro segment [FALLBACK_MS] before the end. */
+    /**
+     * When the last credits start (episodes with a scene between two credits have two outro segments);
+     * without an outro segment [FALLBACK_MS] before the end.
+     */
     data object WithCredits : UpNextMode
     data class Before(val ms: Long) : UpNextMode
 
@@ -75,7 +78,7 @@ data class SegmentPolicy(
         if (durationMs <= 0) return null
         return when (val mode = upNext) {
             UpNextMode.Off -> null
-            UpNextMode.WithCredits -> segments.firstOrNull { it.kind == SegmentKind.Outro }?.startMs
+            UpNextMode.WithCredits -> segments.lastOrNull { it.kind == SegmentKind.Outro }?.startMs
                 ?: (durationMs - UpNextMode.FALLBACK_MS)
             is UpNextMode.Before -> durationMs - mode.ms
         }?.coerceAtLeast(0)

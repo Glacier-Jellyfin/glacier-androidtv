@@ -27,6 +27,8 @@ renders the reference separately.
 - 4K TVs that run their interface in 1080p, such as Sony's, now show their
   real resolution in the player's info sheet, in Settings › System and in the
   diagnostics log
+- Episodes with two credits, such as a scene between them, offer the next
+  episode only with the last credits; the first ones show the skip button
 
 ## [0.1.0-beta.5] - 2026-10-02
 
