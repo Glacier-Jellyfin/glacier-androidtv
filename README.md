@@ -8,22 +8,40 @@
   A Jellyfin client for Android TV, Google TV and Fire TV.
 </p>
 
+<p align="center">
+  <a href="https://glacier-jellyfin.github.io/glacier-androidtv/">Website</a> ·
+  <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest">Download</a> ·
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
+
+<p align="center">
+  <img src="website/assets/screenshots/home.jpg" width="800" alt="Glacier home screen">
+</p>
+
 > [!NOTE]
-> Glacier is in early development. There is no packaged release yet; build it
-> yourself (see [Building](#building)) or follow the project for the first one.
+> Glacier is in early development and released as public betas. Expect rough
+> edges, and please [report what you find](https://github.com/Glacier-Jellyfin/glacier-androidtv/issues).
 
 ## Features
 
-- Movies, shows and music from your Jellyfin server, with search and an
-  A–Z rail for large libraries
-- Multiple servers and users, server discovery, Quick Connect
-- Profile and parental-control PINs, stored only on the device
-- Media segments: skip intros, recaps, previews and credits
-- Trickplay previews while seeking, chapters, "next episode"
-- Extended audio codec support (DTS, TrueHD and more) for more direct playback
-- Local and YouTube trailers
+- Movies, shows and music from your Jellyfin server, with search, sorting and
+  filters, collections and an A–Z rail for large libraries
+- Multiple servers and profiles, server discovery, Quick Connect; a start
+  profile can open by itself
+- Parental controls: age limits and PINs for profiles, titles and settings,
+  stored only on the device
+- A player made for watching: skip intros, recaps and credits, trickplay
+  previews while seeking, chapters and "next episode" with a countdown
+- Extended audio codec support via FFmpeg (DTS, TrueHD and more) for more
+  direct playback
+- Music that keeps playing while you browse, with a mini player, queue,
+  playlists, lyrics, instant mix and music videos
+- Local and YouTube trailers, and theme songs on detail pages
 - Audio and subtitle preferences synced with your Jellyfin account
-- English and German user interface, with theme songs and accent colours
+- Android TV home screen: "Watch next" and three optional channels (not on
+  Fire TV)
+- English and German user interface, accent colours and a compact layout
+- Diagnostics that send a cleaned error log to your server for bug reports
 - Built-in updates from GitHub releases, with a Stable and a Beta channel
 
 ## Requirements
@@ -35,15 +53,12 @@
 
 ## Installation
 
-Glacier will be distributed only through
-[GitHub releases](https://github.com/Glacier-Jellyfin/glacier-androidtv/releases) —
-no release has been published yet. Once one exists, download
-`glacier-androidtv-<version>.apk` and sideload it, for example with
-[Downloader](https://www.aftvnews.com/downloader/). Once installed, Glacier
-keeps itself up to date; Android asks once for permission to install updates
-from Glacier.
-
-Until then, build it yourself; see [Building](#building) below.
+Glacier is distributed only through
+[GitHub releases](https://github.com/Glacier-Jellyfin/glacier-androidtv/releases).
+Download `glacier-androidtv-<version>.apk` from the latest release and sideload
+it, for example with [Downloader](https://www.aftvnews.com/downloader/). Once
+installed, Glacier keeps itself up to date; Android asks once for permission to
+install updates from Glacier.
 
 ## Building
 
