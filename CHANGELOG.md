@@ -18,6 +18,8 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.1.0-beta.5] - 2026-10-02
+
 ### New
 - Music keeps playing while you browse Glacier or leave it; a mini player at
   the top right shows the song and opens the full player. Music paused for ten
