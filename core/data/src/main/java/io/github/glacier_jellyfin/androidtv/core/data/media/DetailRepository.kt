@@ -51,6 +51,12 @@ class DetailRepository @Inject constructor(
             episodeCount = dto.recursiveItemCount.takeIf { dto.type == BaseItemKind.SERIES },
             chapters = chapters(session, dto),
             trickplay = trickplay(session, dto),
+            tagline = dto.taglines?.firstOrNull { it.isNotBlank() }?.trim(),
+            directors = dto.people.orEmpty()
+                .filter { it.type == PersonKind.DIRECTOR }
+                .mapNotNull { it.name?.takeIf(String::isNotBlank) }
+                .distinct(),
+            studios = dto.studios.orEmpty().mapNotNull { it.name?.takeIf(String::isNotBlank) },
         )
     }
 

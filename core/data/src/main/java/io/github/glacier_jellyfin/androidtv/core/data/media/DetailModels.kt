@@ -32,6 +32,11 @@ data class ItemDetails(
     val episodeCount: Int?,
     val chapters: List<Chapter> = emptyList(),
     val trickplay: Trickplay? = null,
+    /** The first of the title's taglines. */
+    val tagline: String? = null,
+    val directors: List<String> = emptyList(),
+    /** Studios of a film, networks of a show. */
+    val studios: List<String> = emptyList(),
 )
 
 data class EpisodeNeighbours(val previous: MediaItem?, val next: MediaItem?)

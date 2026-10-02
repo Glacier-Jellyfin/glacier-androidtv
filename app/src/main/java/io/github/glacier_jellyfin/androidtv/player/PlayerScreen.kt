@@ -291,7 +291,7 @@ fun PlayerScreen(
         }
 
         state.trackPanel?.let { PlayerTrackPanel(state, it, viewModel) }
-        if (state.infoOpen) InfoPanel(state, progress, onDismiss = viewModel::closeInfo)
+        if (state.infoOpen) InfoPanel(state, progress, transcodeStatus = viewModel::transcodeStatus, onDismiss = viewModel::closeInfo)
         if (state.chaptersOpen) {
             ChapterSheet(
                 chapters = state.chapters,

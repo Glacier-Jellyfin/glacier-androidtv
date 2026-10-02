@@ -10,6 +10,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.common.util.UnstableApi
 import androidx.annotation.OptIn
 import androidx.navigation.toRoute
@@ -45,6 +46,8 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackMethod
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackPosition
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
+import io.github.glacier_jellyfin.androidtv.core.data.playback.SourceFile
+import io.github.glacier_jellyfin.androidtv.core.data.playback.TranscodeStatus
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
@@ -88,6 +91,10 @@ data class PlayerUiState(
     /** Decoders Media3 picked, for the info sheet ("c2.android.hevc.decoder", "ffmpegLib"). */
     val videoDecoder: String? = null,
     val audioDecoder: String? = null,
+    /** What reaches the audio output: PCM or a passthrough bitstream. */
+    val audioOutput: AudioOutput? = null,
+    /** The file on the server, for the info sheet. */
+    val file: SourceFile? = null,
     /** Headers for authenticated images (trickplay tiles). */
     val imageHeaders: Map<String, String> = emptyMap(),
     val segments: List<MediaSegment> = emptyList(),
@@ -172,6 +179,11 @@ class PlayerViewModel @Inject constructor(
         @OptIn(UnstableApi::class)
         override fun onAudioDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
             _state.update { it.copy(audioDecoder = decoderName) }
+        }
+
+        @OptIn(UnstableApi::class)
+        override fun onAudioTrackInitialized(eventTime: AnalyticsListener.EventTime, audioTrackConfig: AudioSink.AudioTrackConfig) {
+            _state.update { it.copy(audioOutput = audioOutput(audioTrackConfig)) }
         }
     }
 
@@ -289,6 +301,7 @@ class PlayerViewModel @Inject constructor(
                         audioIndex = opened.audioIndex,
                         subtitleIndex = opened.subtitleIndex,
                         imageHeaders = opened.headers,
+                        file = opened.file,
                     )
                 }
                 startTicker()
@@ -406,6 +419,10 @@ class PlayerViewModel @Inject constructor(
     fun openInfo() = _state.update { it.copy(infoOpen = true, chaptersOpen = false, trackPanel = null) }
 
     fun closeInfo() = _state.update { it.copy(infoOpen = false) }
+
+    /** The server's transcoder for what plays now; null for direct play or when the server does not say. */
+    suspend fun transcodeStatus(): TranscodeStatus? =
+        source?.takeIf { it.method != PlaybackMethod.DirectPlay }?.let { playback.transcodeStatus(it) }
 
     fun playChapter(chapter: Chapter) {
         seekTo(chapter.startMs)
@@ -581,7 +598,7 @@ class PlayerViewModel @Inject constructor(
             it.removeListener(listener)
             it.release()
         }
-        _state.update { it.copy(player = null, playback = null, videoDecoder = null, audioDecoder = null) }
+        _state.update { it.copy(player = null, playback = null, videoDecoder = null, audioDecoder = null, audioOutput = null) }
         started = false
     }
 

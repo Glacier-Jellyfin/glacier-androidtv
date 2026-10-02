@@ -24,6 +24,7 @@ import org.jellyfin.sdk.api.client.extensions.sessionApi
 import org.jellyfin.sdk.api.client.extensions.userDataApi
 import org.jellyfin.sdk.api.client.extensions.videoApi
 import org.jellyfin.sdk.api.client.util.AuthorizationHeaderBuilder
+import org.jellyfin.sdk.model.api.HardwareAccelerationType
 import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaStreamProtocol
 import org.jellyfin.sdk.model.api.MediaSegmentType
@@ -76,6 +77,8 @@ data class PlaybackSource(
     val subtitleIndex: Int?,
     val audioTracks: List<Track>,
     val subtitles: List<PlaybackSubtitle>,
+    /** The file as the server stores it; null for music. */
+    val file: SourceFile? = null,
 ) {
     /** Direct play keeps every audio track in the file; a transcode carries only the chosen one. */
     val allAudioInStream: Boolean get() = method == PlaybackMethod.DirectPlay
@@ -86,6 +89,56 @@ data class PlaybackSource(
     fun subtitleOrdinal(index: Int): Int? =
         embeddedOrdinal(index, subtitles.filter { it.delivery == SubtitleDelivery.Embedded }.map { it.track.index })
 }
+
+/** The file on the server, for the player's info sheet. */
+data class SourceFile(
+    val container: String?,
+    val sizeBytes: Long?,
+    val bitrate: Int?,
+    /** What the server sends instead of the file ("HLS · MP4"); null for direct play. */
+    val streamContainer: String?,
+    val video: SourceVideo?,
+    val audio: List<SourceAudio>,
+    /** Why the server does not send the file as it is, e.g. "AudioCodecNotSupported". */
+    val transcodeReasons: List<String>,
+)
+
+data class SourceVideo(
+    /** The server's codec name: "hevc", "h264", "av1". */
+    val codec: String?,
+    val profile: String?,
+    val width: Int?,
+    val height: Int?,
+    val bitDepth: Int?,
+    val frameRate: Float?,
+    /** "SDR", "HDR10", "DOVIWithHDR10", "HLG", … */
+    val rangeType: String?,
+    val dolbyVisionProfile: Int?,
+)
+
+data class SourceAudio(
+    val index: Int,
+    /** The server's codec name: "dts", "truehd", "eac3". */
+    val codec: String?,
+    /** "DTS-HD MA", "LC", … */
+    val profile: String?,
+    val channels: Int?,
+    val sampleRate: Int?,
+    val bitrate: Int?,
+)
+
+/** What the server's transcoder is doing for this device right now. */
+data class TranscodeStatus(
+    /** Frames per second the transcoder produces. */
+    val framerate: Float?,
+    /** How much of the title is transcoded, 0–100. */
+    val completion: Double?,
+    /** "Intel QSV", "NVIDIA NVENC"; null for software. */
+    val hardware: String?,
+    val videoDirect: Boolean,
+    val audioDirect: Boolean,
+    val reasons: List<String>,
+)
 
 /** Position of [index] in the sorted [indices], or null when it is not among them. */
 internal fun embeddedOrdinal(index: Int, indices: List<Int>): Int? = indices.sorted().indexOf(index).takeIf { it >= 0 }
@@ -184,6 +237,61 @@ class PlaybackRepository @Inject constructor(
                 val url = stream.deliveryUrl?.let { if (it.startsWith("http")) it else baseUrl + it }
                 if (delivery == SubtitleDelivery.External && url == null) null else PlaybackSubtitle(stream.toTrack(), delivery, url)
             },
+            file = SourceFile(
+                container = source.container,
+                sizeBytes = source.size,
+                bitrate = source.bitrate,
+                streamContainer = source.transcodingContainer?.uppercase()?.takeIf { method != PlaybackMethod.DirectPlay }?.let {
+                    if (source.transcodingSubProtocol == MediaStreamProtocol.HLS) "HLS · $it" else it
+                },
+                video = streams.firstOrNull { it.type == MediaStreamType.VIDEO }?.let {
+                    SourceVideo(
+                        codec = it.codec,
+                        profile = it.profile,
+                        width = it.width,
+                        height = it.height,
+                        bitDepth = it.bitDepth,
+                        frameRate = it.realFrameRate ?: it.averageFrameRate,
+                        rangeType = it.videoRangeType?.serialName,
+                        dolbyVisionProfile = it.dvProfile,
+                    )
+                },
+                audio = streams.filter { it.type == MediaStreamType.AUDIO && !it.isExternal }.map {
+                    SourceAudio(it.index, it.codec, it.profile, it.channels, it.sampleRate, it.bitRate)
+                },
+                transcodeReasons = reasons?.split(',')?.filter { it.isNotBlank() }.orEmpty(),
+            ),
+        )
+    }
+
+    /**
+     * The transcoder's state for [source], from this device's session on the server; null
+     * for direct play, when the server does not say, or when this account may not see sessions.
+     */
+    suspend fun transcodeStatus(source: PlaybackSource): TranscodeStatus? = withContext(Dispatchers.IO) {
+        val api = sessions.session.value?.api ?: return@withContext null
+        val info = runCatching { api.sessionApi.getSessions(deviceId = api.deviceInfo.id).content }
+            .onFailure { Log.w(TAG, "Loading the transcode status failed", it) }
+            .getOrNull()
+            ?.firstOrNull { it.nowPlayingItem?.id == source.itemId }
+            ?.transcodingInfo
+            ?: return@withContext null
+        TranscodeStatus(
+            framerate = info.framerate?.takeIf { it > 0 },
+            completion = info.completionPercentage,
+            hardware = when (info.hardwareAccelerationType) {
+                HardwareAccelerationType.AMF -> "AMD AMF"
+                HardwareAccelerationType.QSV -> "Intel QSV"
+                HardwareAccelerationType.NVENC -> "NVIDIA NVENC"
+                HardwareAccelerationType.V_4L_2M_2M -> "V4L2"
+                HardwareAccelerationType.VAAPI -> "VA-API"
+                HardwareAccelerationType.VIDEOTOOLBOX -> "VideoToolbox"
+                HardwareAccelerationType.RKMPP -> "Rockchip MPP"
+                HardwareAccelerationType.NONE, null -> null
+            },
+            videoDirect = info.isVideoDirect,
+            audioDirect = info.isAudioDirect,
+            reasons = info.transcodeReasons.orEmpty().map { it.serialName },
         )
     }
 

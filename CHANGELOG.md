@@ -48,6 +48,13 @@ renders the reference separately.
 - Diagnostics can also show a QR code to download the log on a phone or
   computer on the same network, and turn on detailed logging (playback events
   and navigation) for hard-to-find problems; it turns itself off after 24 hours
+- The info sheet in the player has three tabs. The title tab adds the tagline,
+  director, cast and studio, the chapter you are in and the next episode.
+  Technical shows video, audio, subtitles and the TV in tiles: hardware or
+  software decoding, passthrough to the receiver, whether the TV's refresh
+  rate fits the film and which HDR formats it takes, plus buffer and network
+  speed. Server compares the file with what reaches the device, says why the
+  server transcodes and how fast, and whether it uses hardware for it
 
 ### Improved
 - Coming back to an album or playlist puts the focus on the song you left
