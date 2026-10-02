@@ -104,6 +104,10 @@ class UpdateManager @Inject constructor(
     private var job: Job? = null
     private var installAfterDownload = false
 
+    /** The permission page is open; the update installs once the user comes back with the permission given. */
+    @Volatile
+    private var awaitingPermission = false
+
     /** Once per app start: a fresh check; the last result stands in until it answers or if it fails. */
     fun start() {
         if (started || installed == null) return
@@ -176,6 +180,12 @@ class UpdateManager @Inject constructor(
 
     fun install() {
         val candidate = (_state.value as? UpdateState.Ready)?.candidate ?: return
+        // Stays Ready: no installing overlay over the app while the user is on the permission page.
+        if (!installer.allowed) {
+            awaitingPermission = true
+            if (installer.openPermissionPage()) return
+            awaitingPermission = false
+        }
         _state.value = UpdateState.Installing(candidate)
         scope.launch {
             try {
@@ -200,6 +210,13 @@ class UpdateManager @Inject constructor(
                 fail((e as? UpdateException)?.error ?: UpdateError.Install, candidate)
             }
         }
+    }
+
+    /** The app is in front again: back from the permission page, the installation carries on, or stops without it. */
+    fun onAppResumed() {
+        if (!awaitingPermission) return
+        awaitingPermission = false
+        if (installer.allowed) install() else _notices.trySend(UpdateNotice.InstallCancelled)
     }
 
     /** "Try again" after a failure: repeats the step that failed. */

@@ -258,6 +258,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        startViewModel.updates.onAppResumed()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         HomeLaunch.from(intent)?.let(startViewModel::open)

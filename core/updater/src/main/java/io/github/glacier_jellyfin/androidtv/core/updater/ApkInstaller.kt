@@ -1,12 +1,15 @@
 package io.github.glacier_jellyfin.androidtv.core.updater
 
 import android.app.PendingIntent
+import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageInstaller
 import android.os.Build
+import android.provider.Settings
+import androidx.core.net.toUri
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.core.content.ContextCompat
 import java.io.File
@@ -20,13 +23,32 @@ internal sealed interface InstallResult {
 
 /**
  * Hands a checked APK to Android's package installer. Android asks the user
- * to confirm (and, the first time, to allow installs from Glacier); on
+ * to confirm (the first time, [openPermissionPage] allows installs from Glacier); on
  * success it replaces the running app, so success is never reported back.
  */
 internal class ApkInstaller(private val context: Context) {
 
     private val action = "${context.packageName}.UPDATE_INSTALL_STATUS"
     private var receiver: BroadcastReceiver? = null
+
+    /** Glacier may install apps ("install unknown apps" is allowed for it). */
+    val allowed: Boolean get() = context.packageManager.canRequestPackageInstalls()
+
+    /**
+     * Opens the system page that allows installs from Glacier; false where there is none.
+     * Glacier opens it itself: when the installer leads there, it does not carry on
+     * with the update after the permission was given, nor report back.
+     */
+    fun openPermissionPage(): Boolean = try {
+        context.startActivity(
+            Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, "package:${context.packageName}".toUri())
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+        true
+    } catch (e: ActivityNotFoundException) {
+        Log.w(TAG, "No page to allow installs from Glacier", e)
+        false
+    }
 
     fun install(file: File, onResult: (InstallResult) -> Unit) {
         listen(onResult)
@@ -74,7 +96,7 @@ internal class ApkInstaller(private val context: Context) {
         ContextCompat.registerReceiver(context, newReceiver, IntentFilter(action), ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
-    /** The installer's confirmation screen; the first time it leads to "allow installs from Glacier". */
+    /** The installer's confirmation screen. */
     private fun confirm(status: Intent) {
         val confirmation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             status.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
