@@ -61,6 +61,11 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module layout and
 
 Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
+## Support
+
+Glacier is free and stays that way. If you'd like to support development, you can
+[buy me a coffee on Ko-fi](https://ko-fi.com/jeansy91).
+
 ## License
 
 Glacier is licensed under the [GNU General Public License v3.0 or later](LICENSE).
