@@ -18,6 +18,8 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.1.0-beta.6] - 2026-10-02
+
 ### Fixed
 - The first update no longer stops on the installing screen after allowing
   Glacier to install apps: Glacier now asks for that permission itself and
