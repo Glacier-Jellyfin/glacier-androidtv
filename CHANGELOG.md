@@ -59,6 +59,12 @@ renders the reference separately.
   Settings › System › Start can open the profile used last or a fixed one
   instead, or always ask. A profile with a PIN shows the profiles with it
   selected
+- The Android TV home screen shows what you are watching in "Watch next", and
+  Glacier offers three channels there: continue watching, recently added and
+  new movies and shows. The channels are off until you add them in the TV's
+  channel settings. They follow the profile used last and leave out titles
+  above its age limit; picking a title opens its page in Glacier, after the
+  profile's PIN if it has one. Fire TV does not support either
 
 ### Improved
 - Coming back to an album or playlist puts the focus on the song you left

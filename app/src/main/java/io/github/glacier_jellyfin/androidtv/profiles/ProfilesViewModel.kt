@@ -12,6 +12,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.StartChoice
 import io.github.glacier_jellyfin.androidtv.core.data.StartMode
 import io.github.glacier_jellyfin.androidtv.core.data.StoredServer
+import io.github.glacier_jellyfin.androidtv.core.data.profileChoice
 import io.github.glacier_jellyfin.androidtv.core.data.profilesFor
 import io.github.glacier_jellyfin.androidtv.core.data.startChoice
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinKey
@@ -79,7 +80,9 @@ class ProfilesViewModel @Inject constructor(
             }
             _state.update { it.copy(server = server) }
             // Only "the single profile" needs the server's list; the other start modes decide right away.
-            if (route.appStart && accounts.current().startProfile.mode != StartMode.Single && start(publicUsers = null)) return@launch
+            if (route.appStart && (route.userId != null || accounts.current().startProfile.mode != StartMode.Single) && start(publicUsers = null)) {
+                return@launch
+            }
             val users = runCatching { authenticator.publicUsers(server.address) }
             publicUsers.value = users.getOrNull()
             // Nobody to pick (no public users, nobody signed in here before): go straight to sign-in.
@@ -105,7 +108,8 @@ class ProfilesViewModel @Inject constructor(
     private suspend fun start(publicUsers: List<PublicUser>?): Boolean {
         val state = accounts.current()
         val profiles = state.profilesFor(serverId, publicUsers)
-        when (val choice = state.startChoice(serverId, profiles)) {
+        val choice = route.userId?.let { profileChoice(it, profiles) } ?: state.startChoice(serverId, profiles)
+        when (choice) {
             StartChoice.Pick -> Unit
             is StartChoice.Focus -> _state.update { it.copy(focusUserId = choice.userId) }
             // Stays hidden on the way to Home; a revoked token lands on sign-in, and Back shows the profiles.

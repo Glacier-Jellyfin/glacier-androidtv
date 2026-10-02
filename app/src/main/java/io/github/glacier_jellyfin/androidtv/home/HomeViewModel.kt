@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.channels.HomeLaunches
 import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
 import io.github.glacier_jellyfin.androidtv.core.data.media.AgeFilter
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
@@ -60,6 +61,7 @@ class HomeViewModel @Inject constructor(
     private val ageFilter: AgeFilter,
     playback: PlaybackRepository,
     private val music: MusicController,
+    launches: HomeLaunches,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -73,6 +75,10 @@ class HomeViewModel @Inject constructor(
     val pin = PinGate(viewModelScope, parental) { _events.send(it) }
 
     init {
+        // A title picked on the Android TV home screen opens on top of Home.
+        sessions.session.value?.let { launches.take(it.server.id, it.user.userId) }?.let { launch ->
+            viewModelScope.launch { _events.send(UiEvent.Navigate(DetailRoute(launch.itemId))) }
+        }
         load()
         // Back from the player: "continue watching" and progress bars follow what was just watched.
         viewModelScope.launch { playback.stopped.collect { refresh() } }

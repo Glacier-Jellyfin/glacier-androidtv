@@ -23,6 +23,9 @@ libass-android = "0.5.1"
 jellyfin-sdk = "1.9.1"
 # QR codes for downloading the log on the local network (MIT).
 qrcodegen = "1.8.0"
+# Android TV home screen channels and "Watch next".
+tvprovider = "1.1.0"
+work = "2.12.0"
 junit = "4.13.2"
 
 [libraries]
@@ -51,6 +54,8 @@ coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" 
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
 coil-svg = { module = "io.coil-kt.coil3:coil-svg", version.ref = "coil" }
 qrcodegen = { module = "io.nayuki:qrcodegen", version.ref = "qrcodegen" }
+androidx-tvprovider = { module = "androidx.tvprovider:tvprovider", version.ref = "tvprovider" }
+androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
 media3-decoder = { module = "androidx.media3:media3-decoder", version.ref = "media3" }
 media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls", version.ref = "media3" }

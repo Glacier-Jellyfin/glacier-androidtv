@@ -9,6 +9,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <!-- TV only: Android TV, Google TV and Fire TV. -->
+    <!-- The TV provider holds the home screen channels and "Watch next" (not on Fire TV). -->
+    <queries>
+        <provider android:authorities="android.media.tv" />
+    </queries>
+
     <uses-feature
         android:name="android.software.leanback"
         android:required="true" />
@@ -30,6 +35,7 @@
 
         <activity
             android:name=".MainActivity"
+            android:launchMode="singleTask"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
             android:exported="true">
             <intent-filter>
@@ -48,6 +54,16 @@
                 <action android:name="androidx.media3.session.MediaSessionService" />
             </intent-filter>
         </service>
+
+        <!-- Exported: the launcher sends INITIALIZE_PROGRAMS from its own process. -->
+        <receiver
+            android:name=".channels.HomeChannelsReceiver"
+            android:exported="true"
+            tools:ignore="ExportedReceiver">
+            <intent-filter>
+                <action android:name="android.media.tv.action.INITIALIZE_PROGRAMS" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name=".update.RestartReceiver"

@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.userApi
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -114,34 +115,8 @@ class AgeFilter @Inject constructor(
         }
     }
 
-    private suspend fun query(session: Session, protection: Protection, ids: List<UUID>): Set<UUID> {
-        val userId = UUID.fromString(session.user.userId)
-        val maxRating = effectiveAge(session, protection)?.toString()
-        val allowed = ids.chunked(CHUNK).flatMap { chunk ->
-            session.api.libraryApi.getItems(
-                userId = userId,
-                ids = chunk,
-                recursive = true,
-                maxOfficialRating = maxRating,
-                enableUserData = false,
-                enableImages = false,
-            ).content.items
-        }
-        val rated = if (protection.blockUnrated) allowed.filterRated(session, userId) else allowed
-        return ids.toSet() - rated.mapTo(HashSet()) { it.id }
-    }
-
-    /** Episodes without a rating of their own take their show's. */
-    private suspend fun List<BaseItemDto>.filterRated(session: Session, userId: UUID): List<BaseItemDto> {
-        val seriesIds = filter { !isRated(it.officialRating) && it.type == BaseItemKind.EPISODE }.mapNotNull { it.seriesId }.distinct()
-        val seriesRated = if (seriesIds.isEmpty()) {
-            emptySet()
-        } else {
-            session.api.libraryApi.getItems(userId = userId, ids = seriesIds, recursive = true, enableUserData = false, enableImages = false)
-                .content.items.filter { isRated(it.officialRating) }.mapTo(HashSet()) { it.id }
-        }
-        return filter { isRated(it.officialRating) || it.seriesId in seriesRated }
-    }
+    private suspend fun query(session: Session, protection: Protection, ids: List<UUID>): Set<UUID> =
+        blockedTitles(session.api, UUID.fromString(session.user.userId), effectiveAge(session, protection), protection.blockUnrated, ids)
 
     /**
      * Call with [mutex] held. The profile's limit, but never above the one of the user's server policy:
@@ -150,7 +125,7 @@ class AgeFilter @Inject constructor(
     private suspend fun effectiveAge(session: Session, protection: Protection): Int? {
         val age = protection.maxAge.age ?: return null
         if (policyUser != session.user.userId) {
-            policyMaxAge = session.api.userApi.getCurrentUser().content.policy?.maxParentalRating
+            policyMaxAge = policyMaxAge(session.api)
             policyUser = session.user.userId
         }
         return policyMaxAge?.let { minOf(it, age) } ?: age
@@ -158,7 +133,6 @@ class AgeFilter @Inject constructor(
 
     companion object {
         private const val TAG = "AgeFilter"
-        private const val CHUNK = 100
 
         /** Kinds the age limit applies to; music, collections and the like are never locked. */
         val Checked = setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode)
@@ -169,3 +143,40 @@ class AgeFilter @Inject constructor(
         fun isRated(rating: String?): Boolean = !rating.isNullOrBlank() && rating.trim().lowercase() !in Unrated
     }
 }
+
+/** The highest rating the user's server policy allows; null without a limit. */
+internal suspend fun policyMaxAge(api: ApiClient): Int? = api.userApi.getCurrentUser().content.policy?.maxParentalRating
+
+/**
+ * Of [ids], the titles above [maxAge] (already capped at the server policy, see
+ * [policyMaxAge]) and, with [blockUnrated], those without a rating. Asked of the
+ * server, which knows every country's rating system.
+ */
+internal suspend fun blockedTitles(api: ApiClient, userId: UUID, maxAge: Int?, blockUnrated: Boolean, ids: List<UUID>): Set<UUID> {
+    val allowed = ids.chunked(AGE_CHUNK).flatMap { chunk ->
+        api.libraryApi.getItems(
+            userId = userId,
+            ids = chunk,
+            recursive = true,
+            maxOfficialRating = maxAge?.toString(),
+            enableUserData = false,
+            enableImages = false,
+        ).content.items
+    }
+    val rated = if (blockUnrated) allowed.filterRated(api, userId) else allowed
+    return ids.toSet() - rated.mapTo(HashSet()) { it.id }
+}
+
+/** Episodes without a rating of their own take their show's. */
+private suspend fun List<BaseItemDto>.filterRated(api: ApiClient, userId: UUID): List<BaseItemDto> {
+    val seriesIds = filter { !AgeFilter.isRated(it.officialRating) && it.type == BaseItemKind.EPISODE }.mapNotNull { it.seriesId }.distinct()
+    val seriesRated = if (seriesIds.isEmpty()) {
+        emptySet()
+    } else {
+        api.libraryApi.getItems(userId = userId, ids = seriesIds, recursive = true, enableUserData = false, enableImages = false)
+            .content.items.filter { AgeFilter.isRated(it.officialRating) }.mapTo(HashSet()) { it.id }
+    }
+    return filter { AgeFilter.isRated(it.officialRating) || it.seriesId in seriesRated }
+}
+
+private const val AGE_CHUNK = 100

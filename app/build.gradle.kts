@@ -117,6 +117,9 @@ dependencies {
     implementation(libs.coil.svg)
     // The QR code for downloading the log (Settings › System › Diagnostics).
     implementation(libs.qrcodegen)
+    // Channels and "Watch next" on the Android TV home screen, refreshed in the background.
+    implementation(libs.androidx.tvprovider)
+    implementation(libs.androidx.work.runtime)
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

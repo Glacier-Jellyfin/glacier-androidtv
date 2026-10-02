@@ -142,6 +142,18 @@ class AccountStateTest {
     }
 
     @Test
+    fun `a home screen title opens its own profile whatever the start mode, its pin first`() {
+        val state = twoProfiles(StartMode.Picker)
+        val profiles = state.profilesFor("s1", publicUsers = null)
+        assertEquals(StartChoice.Open(anna.toString()), profileChoice(anna.toString(), profiles))
+        val pin = Pins.hash("1234", salt = ByteArray(16), iterations = 1)
+        val locked = state.updateUser("s1", anna.toString()) { it.copy(pin = pin, protection = Protection(pinOnProfileSwitch = true)) }
+        assertEquals(StartChoice.Focus(anna.toString()), profileChoice(anna.toString(), locked.profilesFor("s1", publicUsers = null)))
+        val signedOut = state.updateUser("s1", anna.toString()) { it.copy(accessToken = null) }
+        assertEquals(StartChoice.Pick, profileChoice(anna.toString(), signedOut.profilesFor("s1", publicUsers = null)))
+    }
+
+    @Test
     fun `the app starts on the fixed profile's server`() {
         val other = ServerInfo(id = "s2", name = "Other", address = "http://other:8096", version = "12.1.0")
         val state = twoProfiles(StartMode.Fixed).withServer(other, now = 3)

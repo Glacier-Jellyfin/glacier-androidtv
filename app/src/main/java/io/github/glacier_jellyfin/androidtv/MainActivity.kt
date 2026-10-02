@@ -1,6 +1,7 @@
 package io.github.glacier_jellyfin.androidtv
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
@@ -34,8 +35,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.glacier_jellyfin.androidtv.channels.HomeLaunch
+import io.github.glacier_jellyfin.androidtv.channels.HomeLaunches
 import io.github.glacier_jellyfin.androidtv.core.data.AccountRepository
 import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
+import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.startServerId
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
@@ -52,6 +56,7 @@ import io.github.glacier_jellyfin.androidtv.core.updater.pending
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.music.NowPlaying
 import io.github.glacier_jellyfin.androidtv.navigation.GlacierNavHost
+import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ServerListRoute
 import io.github.glacier_jellyfin.androidtv.ui.CardSizes
@@ -71,6 +76,7 @@ import io.github.glacier_jellyfin.androidtv.update.InstallingOverlay
 import io.github.glacier_jellyfin.androidtv.update.text
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,6 +85,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -92,6 +99,8 @@ class StartViewModel @Inject constructor(
     val updates: UpdateManager,
     val music: MusicController,
     home: HomeRepository,
+    private val sessions: SessionManager,
+    private val launches: HomeLaunches,
 ) : ViewModel() {
     /** Library kinds of the server, for every navigation bar. */
     val libraryKinds: StateFlow<List<LibraryKind>> = home.kinds
@@ -113,12 +122,27 @@ class StartViewModel @Inject constructor(
     private val _start = MutableStateFlow<Any?>(null)
     val start = _start.asStateFlow()
 
+    private val _relaunch = Channel<Any>(Channel.CONFLATED)
+
+    /** Screens to open from scratch while the app runs: a title was picked on the home screen. */
+    val relaunch: Flow<Any> = _relaunch.receiveAsFlow()
+
     init {
         updates.start()
         viewModelScope.launch {
             val server = accounts.current().startServerId()
-            _start.value = server?.let { ProfilesRoute(it, appStart = true) } ?: ServerListRoute
+            _start.value = launches.pending?.let { ProfilesRoute(it.serverId, appStart = true, userId = it.userId) }
+                ?: server?.let { ProfilesRoute(it, appStart = true) }
+                ?: ServerListRoute
         }
+    }
+
+    /** A title picked on the home screen while the app runs: Home opens it, through the profile picker for another profile. */
+    fun open(launch: HomeLaunch) {
+        launches.set(launch)
+        val session = sessions.session.value
+        val same = session != null && session.server.id == launch.serverId && session.user.userId == launch.userId
+        _relaunch.trySend(if (same) HomeRoute else ProfilesRoute(launch.serverId, appStart = true, userId = launch.userId))
     }
 }
 
@@ -127,12 +151,17 @@ class MainActivity : ComponentActivity() {
 
     private val startViewModel: StartViewModel by viewModels()
 
+    @Inject
+    lateinit var launches: HomeLaunches
+
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(UiLocale.wrap(newBase))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Before the start screen is chosen; a recreated activity has already handled it.
+        if (savedInstanceState == null) HomeLaunch.from(intent)?.let(launches::set)
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 startViewModel.uiLanguage.filterNotNull().collect { language ->
@@ -210,7 +239,15 @@ class MainActivity : ComponentActivity() {
                         },
                     ) {
                         val start by startViewModel.start.collectAsStateWithLifecycle()
-                        start?.let { GlacierNavHost(rememberNavController(), startDestination = it) }
+                        start?.let {
+                            val navController = rememberNavController()
+                            GlacierNavHost(navController, startDestination = it)
+                            LaunchedEffect(navController) {
+                                startViewModel.relaunch.collect { route ->
+                                    navController.navigate(route) { popUpTo(0) { inclusive = true } }
+                                }
+                            }
+                        }
                         UpdateLayer(startViewModel.updates, toaster)
                         CrashNotice(toaster)
                         ToastHost(toaster)
@@ -219,6 +256,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        HomeLaunch.from(intent)?.let(startViewModel::open)
     }
 }
 

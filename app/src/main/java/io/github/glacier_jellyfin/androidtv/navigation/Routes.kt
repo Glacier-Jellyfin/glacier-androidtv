@@ -18,9 +18,12 @@ data class SignInRoute(val serverId: String, val username: String? = null)
 @Serializable
 data class QuickConnectRoute(val serverId: String)
 
-/** "Who's watching?"; [appStart] lets the start profile setting open a profile by itself. */
+/**
+ * "Who's watching?"; [appStart] lets the start profile setting open a profile by itself,
+ * or [userId] (the profile of a title picked on the Android TV home screen) instead.
+ */
 @Serializable
-data class ProfilesRoute(val serverId: String, val appStart: Boolean = false)
+data class ProfilesRoute(val serverId: String, val appStart: Boolean = false, val userId: String? = null)
 
 @Serializable
 data object HomeRoute

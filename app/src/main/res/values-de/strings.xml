@@ -794,4 +794,9 @@
     <string name="update_install_cancelled">Installation abgebrochen</string>
     <string name="update_installing_title">Glacier %1$s wird installiert …</string>
     <string name="update_installing_hint">Glacier wird dabei beendet und lässt sich danach wie gewohnt öffnen</string>
+
+    <!-- Android TV home screen channels -->
+    <string name="channel_continue_watching">Weiterschauen</string>
+    <string name="channel_recently_added">Neu hinzugefügte Filme und Serien</string>
+    <string name="channel_recent_releases">Aktuelle Filme und Serien</string>
 </resources>

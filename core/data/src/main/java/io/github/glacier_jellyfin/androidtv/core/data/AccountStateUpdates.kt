@@ -105,6 +105,11 @@ fun AccountState.startChoice(serverId: String, profiles: List<Profile>): StartCh
         StartMode.Last -> users.filter { it.serverId == serverId && it.accessToken != null }.maxByOrNull { it.lastUsedAt }?.userId
         StartMode.Fixed -> startProfile.userId.takeIf { startProfile.serverId == serverId }
     }
+    return userId?.let { profileChoice(it, profiles) } ?: StartChoice.Pick
+}
+
+/** Opening [userId]'s profile right away, as far as it is signed in and needs no PIN. */
+fun profileChoice(userId: String, profiles: List<Profile>): StartChoice {
     val profile = profiles.firstOrNull { it.userId == userId && it.isSignedIn } ?: return StartChoice.Pick
     return if (profile.pinLocked) StartChoice.Focus(profile.userId) else StartChoice.Open(profile.userId)
 }
