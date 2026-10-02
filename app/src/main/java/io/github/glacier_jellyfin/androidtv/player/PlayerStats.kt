@@ -5,6 +5,7 @@ import android.os.Build
 import android.view.Display
 import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
+import androidx.core.view.DisplayCompat
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
@@ -161,6 +162,8 @@ enum class HdrFormat(val label: String) { HDR10("HDR10"), HLG("HLG"), DolbyVisio
 internal fun displayInfo(context: Context): DisplayInfo {
     val display = ContextCompat.getDisplayOrDefault(context)
     val mode = display.mode
+    // Sony and others report the 1080p UI mode here; DisplayCompat knows the panel's real size.
+    val panel = DisplayCompat.getMode(context, display)
     val types = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
         mode.supportedHdrTypes
     } else {
@@ -168,8 +171,8 @@ internal fun displayInfo(context: Context): DisplayInfo {
         display.hdrCapabilities?.supportedHdrTypes ?: IntArray(0)
     }
     return DisplayInfo(
-        width = mode.physicalWidth,
-        height = mode.physicalHeight,
+        width = panel.physicalWidth,
+        height = panel.physicalHeight,
         refreshRate = mode.refreshRate,
         hdr = types.toList().mapNotNull {
             @Suppress("DEPRECATION")

@@ -7,6 +7,7 @@ import android.media.MediaCodecList
 import android.net.ConnectivityManager
 import android.os.Build
 import android.view.Display
+import androidx.core.view.DisplayCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.glacier_jellyfin.androidtv.BuildConfig
 import io.github.glacier_jellyfin.androidtv.core.data.AccountRepository
@@ -121,7 +122,8 @@ class Diagnostics @Inject constructor(
             display.hdrCapabilities?.supportedHdrTypes ?: IntArray(0)
         }
         val hdrNames = hdr.map { HDR_TYPES[it] ?: "type $it" }.ifEmpty { listOf("none") }
-        return "${mode.physicalWidth}x${mode.physicalHeight} @ ${mode.refreshRate.roundToInt()} Hz, HDR: ${hdrNames.joinToString()}"
+        val panel = DisplayCompat.getMode(context, display)
+        return "${panel.physicalWidth}x${panel.physicalHeight} @ ${mode.refreshRate.roundToInt()} Hz, HDR: ${hdrNames.joinToString()}"
     }
 
     /** Video formats the device decodes, e.g. "video/avc, video/hevc, video/dolby-vision". */

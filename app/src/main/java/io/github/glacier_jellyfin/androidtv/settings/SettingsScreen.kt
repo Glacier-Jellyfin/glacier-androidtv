@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.core.view.DisplayCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
@@ -1301,8 +1302,10 @@ private data class DeviceSummary(val name: String, val width: Int, val height: I
 private fun deviceSummary(context: Context): DeviceSummary {
     val name = Settings.Global.getString(context.contentResolver, Settings.Global.DEVICE_NAME)?.takeIf { it.isNotBlank() }
         ?: "${Build.MANUFACTURER} ${Build.MODEL}"
-    val mode = context.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY)?.mode
-    return DeviceSummary(name, mode?.physicalWidth ?: 0, mode?.physicalHeight ?: 0, mode?.refreshRate?.roundToInt() ?: 0)
+    val display = context.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY)
+    // Sony and others report the 1080p UI mode in Display.mode; DisplayCompat knows the panel's real size.
+    val panel = display?.let { DisplayCompat.getMode(context, it) }
+    return DeviceSummary(name, panel?.physicalWidth ?: 0, panel?.physicalHeight ?: 0, display?.mode?.refreshRate?.roundToInt() ?: 0)
 }
 
 /** "https://jellyfin.example.org:8920" -> "jellyfin.example.org:8920". */

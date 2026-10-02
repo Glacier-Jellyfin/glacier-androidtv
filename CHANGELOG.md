@@ -22,6 +22,11 @@ renders the reference separately.
 - The first update no longer stops on the installing screen after allowing
   Glacier to install apps: Glacier now asks for that permission itself and
   carries on with the installation once you come back
+- The info sheet in the player keeps the focus: the controls behind it no
+  longer react to the remote, and one press of Back closes it
+- 4K TVs that run their interface in 1080p, such as Sony's, now show their
+  real resolution in the player's info sheet, in Settings › System and in the
+  diagnostics log
 
 ## [0.1.0-beta.5] - 2026-10-02
 

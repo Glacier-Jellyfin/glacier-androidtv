@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -116,7 +118,16 @@ fun InfoPanel(
         }
     }
     val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
-    Box(Modifier.fillMaxSize().background(Color(0xA805090F)), contentAlignment = Alignment.Center) {
+    // Focus stays in the panel: Up/Down must not reach the OSD behind it, and with nowhere to go the first
+    // Back reaches the BackHandler instead of being spent on moving focus out.
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color(0xA805090F))
+            .focusProperties { onExit = { cancelFocusChange() } }
+            .focusGroup(),
+        contentAlignment = Alignment.Center,
+    ) {
         Column(
             Modifier
                 .width(1440.dp)
