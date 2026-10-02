@@ -39,4 +39,16 @@ class ReleaseNotesTest {
         val item = ReleaseNotes.parse("- Fixes (#12) and more", "Changes").single().items.single()
         assertEquals(NotesItem("Fixes (#12) and more", null), item)
     }
+
+    @Test
+    fun `indented lines continue a wrapped item, also with its reference`() {
+        val notes = ReleaseNotes.parse(
+            "### Fixed\n- The first update no longer stops\n  on the installing screen (#7)\n- Short\n\n  Not part of it\n",
+            "Changes",
+        )
+        assertEquals(
+            listOf(NotesItem("The first update no longer stops on the installing screen", "#7"), NotesItem("Short", null)),
+            notes.single().items,
+        )
+    }
 }
