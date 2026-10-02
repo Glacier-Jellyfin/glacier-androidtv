@@ -19,8 +19,8 @@
 </p>
 
 > [!NOTE]
-> Glacier is in early development and released as public betas. Expect rough
-> edges, and please [report what you find](https://github.com/Glacier-Jellyfin/glacier-androidtv/issues).
+> Glacier is young and still growing. If something does not work, please
+> [report it](https://github.com/Glacier-Jellyfin/glacier-androidtv/issues).
 
 ## Features
 
@@ -74,7 +74,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module layout and
 
 ## Contributing
 
-Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
+Bug reports, ideas, pull requests and translations are welcome. Please read
+[CONTRIBUTING.md](CONTRIBUTING.md) first.
 
 ## Support
 

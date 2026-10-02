@@ -8,12 +8,13 @@ website/assets/screenshots/:
   demo.mp4 and demo.webm (the hero video)
 
 Everything comes from the public Jellyfin demo server, whose library is public
-domain, so the pictures may be published.
+domain, so the pictures may be published. Never capture another server.
 
 Before running:
   - an emulator with a 1920x1080 TV image is running (adb sees one device, or
     pass --serial)
-  - the debug build is installed and signed in to the demo server as "demo",
+  - the debug build is installed and signed in to the demo server
+    (https://demo.jellyfin.org/stable, user "demo", no password),
     and the demo server is the last one used (the app opens on its
     "Who's watching?" screen)
   - the app's language is English and the accent is the default

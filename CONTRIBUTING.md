@@ -1,41 +1,55 @@
 # Contributing to Glacier
 
-Thanks for your interest in Glacier. This document covers the few rules that
-keep the project consistent.
+Thanks for your interest in Glacier. Glacier is maintained by one person, who
+reviews every change and decides what goes in. This document explains how to
+help without anyone's time going to waste.
+
+## Bugs and ideas
+
+Use the [issue forms](https://github.com/Glacier-Jellyfin/glacier-androidtv/issues/new/choose).
+For bugs, Settings › System › Diagnostics sends a cleaned error log to your
+Jellyfin server; attaching it helps a lot.
+
+## Pull requests
+
+Pull requests are welcome. Small fixes can go straight to a pull request; for
+anything larger, open an issue first and wait until the approach is agreed, so
+that the work is not done for nothing. The maintainer reviews, may ask for
+changes, and merges or closes the pull request.
+
+- Build and test with `./gradlew testDebugUnitTest lintDebug assembleDebug`;
+  CI runs the same command on every pull request.
+- Test focus and navigation with a D-pad (remote or emulator), not with a mouse.
+- Follow the style of the surrounding code. `.editorconfig` defines formatting.
+- Keep a pull request focused on one change.
+
+The maintainer takes care of the changelog, releases and the
+[website](website/); pull requests for the website are not accepted.
+
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) describes the module layout.
+
+## Translations
+
+Glacier is available in English and German, and follows the language of the
+TV. To add a language:
+
+1. Copy `app/src/main/res/values/strings.xml` to
+   `app/src/main/res/values-<lang>/strings.xml`, where `<lang>` is the
+   language code Android uses, such as `fr`, `pt-rBR` or `zh-rTW`.
+2. Translate the texts. Leave out every string marked `translatable="false"`,
+   keep placeholders such as `%1$s` or `%2$d` exactly as they are, and give
+   `<plurals>` the quantities your language needs.
+3. Open a pull request with that one file.
+
+Partial translations are fine: texts that are missing appear in English.
+Improvements to an existing translation are welcome the same way. Please say in
+the pull request whether you are a native speaker.
 
 ## Language
 
 Everything in this repository is written in English: code, identifiers,
 comments, documentation, commit messages and release notes. User-facing
 strings are the only exception; translations live in `values-<lang>/strings.xml`.
-
-## Before you start
-
-For anything larger than a small fix, open an issue first so the approach can
-be agreed on before you invest time.
-
-## Development
-
-- Build and test with `./gradlew testDebugUnitTest lintDebug assembleDebug`;
-  CI runs the same command on every pull request.
-- Test focus and navigation with a D-pad (remote or emulator), not with a mouse.
-- Follow the style of the surrounding code. `.editorconfig` defines formatting.
-
-## Website screenshots and video
-
-`scripts/capture-website-media.py` refreshes every screenshot and the demo
-video in `website/assets/screenshots/` from a debug build on a 1920x1080 TV
-emulator. Sign in to the Jellyfin demo server (`https://demo.jellyfin.org/stable`,
-user `demo`, no password) first, keep the app in English with the default
-accent, then run the script; it needs Python 3, adb and ffmpeg. Only use the
-demo server's public domain library for published pictures.
-
-## Commits and pull requests
-
-- Use [Conventional Commits](https://www.conventionalcommits.org/)
-  (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `build:`, `ci:`, `chore:`).
-- Keep pull requests focused on one change.
-- Add a line to the `[Unreleased]` section of `CHANGELOG.md` for user-visible changes.
 
 ## License
 

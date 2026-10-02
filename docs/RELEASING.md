@@ -5,6 +5,14 @@
 Glacier uses `MAJOR.MINOR.PATCH` for stable releases and
 `MAJOR.MINOR.PATCH-beta.N` for betas. No other pre-release forms exist.
 
+- **Patch releases** (`0.1.1`, `0.1.2`) are the normal case: fixes and small
+  improvements go out directly as stable releases, without a beta.
+- **Minor releases** (`0.2.0`) bring new features. Only before one of them,
+  and only when something larger should run on real devices first, are there
+  one or two betas (`0.2.0-beta.1`).
+- The Beta update channel therefore stays empty most of the time; it offers
+  every stable release as well.
+
 Android's `versionCode` is derived from the version so that it always
 increases, including from a beta to its stable release:
 
@@ -20,41 +28,6 @@ versionCode = major * 1_000_000 + minor * 10_000 + patch * 100 + (N for beta.N, 
 
 Limits: `minor` and `patch` ≤ 99, `N` between 1 and 98. The rule exists twice,
 in `app/build.gradle.kts` and in `core/updater` (`AppVersion`); keep them identical.
-
-## Publishing a release
-
-1. Move the `[Unreleased]` entries in `CHANGELOG.md` into a new section
-   `## [1.4.0-beta.2] - 2026-09-26`. The section becomes the release notes
-   and the text of the in-app update dialog.
-2. Commit, then tag and push:
-   ```sh
-   git tag v1.4.0-beta.2
-   git push origin v1.4.0-beta.2
-   ```
-3. The `Release` workflow builds the signed APK
-   `glacier-androidtv-1.4.0-beta.2.apk` and publishes the GitHub release.
-   Tags containing `-beta.` are published as pre-releases.
-
-## Signing key
-
-The release keystore never enters the repository. Create it once:
-
-```sh
-keytool -genkeypair -v -keystore glacier-release.jks -alias glacier \
-  -keyalg RSA -keysize 4096 -validity 36500
-```
-
-Store it in a safe place with a backup: **if the key is lost, installed apps
-can no longer be updated** and every user has to uninstall and reinstall.
-
-Add these repository secrets (Settings › Secrets and variables › Actions):
-
-| Secret | Value |
-|---|---|
-| `GLACIER_KEYSTORE_BASE64` | `base64 -w0 glacier-release.jks` |
-| `GLACIER_KEYSTORE_PASSWORD` | Keystore password |
-| `GLACIER_KEY_ALIAS` | `glacier` |
-| `GLACIER_KEY_PASSWORD` | Key password |
 
 ## How the app updates itself
 
@@ -102,3 +75,29 @@ adb shell "run-as $pkg mkdir -p files/updtest && run-as $pkg cp /data/local/tmp/
 `prerelease`, `published_at`, `body` and `assets` with `name`,
 `browser_download_url` (here a `file://` address in `files/updtest/`),
 `size` and `digest` (`sha256:<hex>`). The app checks again at every start.
+
+## Publishing a release (maintainer only)
+
+1. Move the `[Unreleased]` entries in `CHANGELOG.md` into a new section
+   `## [0.1.1] - 2026-10-03`. The section becomes the release notes and the
+   text of the in-app update dialog (`scripts/release-notes.sh` extracts it).
+2. Commit, then tag and push: `git tag v0.1.1 && git push origin main v0.1.1`.
+3. The `Release` workflow builds the signed APK `glacier-androidtv-0.1.1.apk`
+   and publishes the GitHub release; tags containing `-beta.` become
+   pre-releases.
+
+### Signing key
+
+The release keystore (`keytool -genkeypair -keystore glacier-release.jks
+-alias glacier -keyalg RSA -keysize 4096 -validity 36500`) never enters the
+repository. Keep it with a backup: **if the key is lost, installed apps can no
+longer be updated** and every user has to uninstall and reinstall.
+
+The workflow reads it from these repository secrets:
+
+| Secret | Value |
+|---|---|
+| `GLACIER_KEYSTORE_BASE64` | `base64 -w0 glacier-release.jks` |
+| `GLACIER_KEYSTORE_PASSWORD` | Keystore password |
+| `GLACIER_KEY_ALIAS` | `glacier` |
+| `GLACIER_KEY_PASSWORD` | Key password |
