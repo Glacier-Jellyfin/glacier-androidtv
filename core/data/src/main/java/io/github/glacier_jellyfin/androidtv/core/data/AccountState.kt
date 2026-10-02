@@ -12,6 +12,8 @@ data class AccountState(
     val servers: List<StoredServer> = emptyList(),
     val users: List<StoredUser> = emptyList(),
     val lastServerId: String? = null,
+    /** Which profile opens by itself when the app starts (Settings › System). */
+    val startProfile: StartProfile = StartProfile(),
 )
 
 @Serializable
@@ -68,3 +70,27 @@ data class Protection(
 /** Highest age rating a profile may watch; [All] has no limit. */
 @Serializable
 enum class AgeLimit(val age: Int?) { A0(0), A6(6), A12(12), A16(16), All(null) }
+
+/** Device-wide choice of the profile that opens by itself when the app starts. */
+@Serializable
+data class StartProfile(
+    val mode: StartMode = StartMode.Single,
+    /** The profile for [StartMode.Fixed]. */
+    val serverId: String? = null,
+    val userId: String? = null,
+)
+
+@Serializable
+enum class StartMode {
+    /** Always show "Who's watching?". */
+    Picker,
+
+    /** Open the profile when it is the only one on the server. */
+    Single,
+
+    /** Open the profile used last. */
+    Last,
+
+    /** Open one chosen profile. */
+    Fixed,
+}

@@ -674,6 +674,18 @@
 
     <string name="settings_cat_system">System</string>
     <string name="settings_group_update">App-Update</string>
+    <string name="settings_group_start">Start</string>
+    <string name="settings_start_profile">Profil beim Start</string>
+    <string name="settings_start_picker">Fragen</string>
+    <string name="settings_start_single">Einziges Profil</string>
+    <string name="settings_start_last">Zuletzt genutzt</string>
+    <string name="settings_start_fixed">Festes Profil</string>
+    <string name="settings_start_picker_sub">Fragt bei jedem Start von Glacier, wer schaut</string>
+    <string name="settings_start_single_sub">Öffnet das Profil direkt, wenn es das einzige auf dem Server ist, sonst fragt Glacier, wer schaut</string>
+    <string name="settings_start_last_sub">Öffnet das zuletzt genutzte Profil · mit PIN erscheint die Profilauswahl, das Profil ist vorausgewählt</string>
+    <string name="settings_start_fixed_sub">Öffnet immer das Profil darunter · mit PIN erscheint die Profilauswahl, das Profil ist vorausgewählt</string>
+    <string name="settings_start_user">Startprofil</string>
+    <string name="settings_start_user_sub">Gilt für dieses Gerät, für alle Profile</string>
     <string name="settings_group_device">Gerät</string>
     <string name="settings_group_server">Server</string>
     <string name="settings_group_about">Über</string>

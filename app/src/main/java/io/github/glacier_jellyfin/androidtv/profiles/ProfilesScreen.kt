@@ -66,8 +66,9 @@ fun ProfilesScreen(
     CollectEvents(viewModel.events, onNavigate)
 
     val firstFocus = remember { FocusRequester() }
-    LaunchedEffect(state.loading) {
-        if (!state.loading) runCatching { firstFocus.requestFocus() }
+    val ready = !state.loading && !state.starting
+    LaunchedEffect(ready) {
+        if (ready) runCatching { firstFocus.requestFocus() }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -85,14 +86,16 @@ fun ProfilesScreen(
                 )
                 Text(stringResource(platform.label), style = GlacierText.body(19), color = GlacierColors.Mist)
             }
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(36.dp)) {
+            // While the start profile opens only the brand shows, so the profiles do not flash up.
+            if (!state.starting) Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(36.dp)) {
                 Text(stringResource(R.string.profiles_title), style = GlacierText.display(38), color = GlacierColors.Ice)
+                val focusIndex = state.profiles.indexOfFirst { it.profile.userId == state.focusUserId }.coerceAtLeast(0)
                 Row(horizontalArrangement = Arrangement.spacedBy(52.dp)) {
                     state.profiles.forEachIndexed { index, card ->
                         ProfileTile(
                             card = card,
                             onClick = { viewModel.select(card.profile) },
-                            focusRequester = firstFocus.takeIf { index == 0 },
+                            focusRequester = firstFocus.takeIf { index == focusIndex },
                         )
                     }
                 }
@@ -109,7 +112,7 @@ fun ProfilesScreen(
         }
 
         // Provisional: the design will get its own way to switch servers.
-        state.server?.let { server ->
+        state.server?.takeUnless { state.starting }?.let { server ->
             GlacierClickable(
                 onClick = viewModel::changeServer,
                 shape = PillShape,

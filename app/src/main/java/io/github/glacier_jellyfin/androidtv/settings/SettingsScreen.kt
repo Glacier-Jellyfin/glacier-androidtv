@@ -48,6 +48,7 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.UiLocale
 import io.github.glacier_jellyfin.androidtv.core.data.AgeLimit
 import io.github.glacier_jellyfin.androidtv.core.data.Protection
+import io.github.glacier_jellyfin.androidtv.core.data.StartMode
 import io.github.glacier_jellyfin.androidtv.core.data.media.Languages
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentAction
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentKind
@@ -1027,6 +1028,7 @@ private fun systemRows(state: SettingsUiState, viewModel: SettingsViewModel): Li
                 ),
             ),
         ),
+        startGroup(state, viewModel),
         SettingGroup(
             stringResource(R.string.settings_group_device),
             listOf(
@@ -1061,6 +1063,48 @@ private fun systemRows(state: SettingsUiState, viewModel: SettingsViewModel): Li
                 ),
             ),
         ),
+    )
+}
+
+/** The profile that opens by itself when the app starts; device-wide. */
+@Composable
+private fun startGroup(state: SettingsUiState, viewModel: SettingsViewModel): SettingGroup {
+    val start = state.startProfile
+    val modes = StartMode.entries
+    val mode = SettingRow.Choice(
+        stringResource(R.string.settings_start_profile),
+        stringResource(
+            when (start.mode) {
+                StartMode.Picker -> R.string.settings_start_picker_sub
+                StartMode.Single -> R.string.settings_start_single_sub
+                StartMode.Last -> R.string.settings_start_last_sub
+                StartMode.Fixed -> R.string.settings_start_fixed_sub
+            },
+        ),
+        modes.map {
+            stringResource(
+                when (it) {
+                    StartMode.Picker -> R.string.settings_start_picker
+                    StartMode.Single -> R.string.settings_start_single
+                    StartMode.Last -> R.string.settings_start_last
+                    StartMode.Fixed -> R.string.settings_start_fixed
+                },
+            )
+        },
+        modes.indexOf(start.mode),
+        onSelect = { viewModel.setStartMode(modes[it]) },
+    )
+    val users = state.startCandidates
+    val user = SettingRow.Choice(
+        stringResource(R.string.settings_start_user),
+        stringResource(R.string.settings_start_user_sub),
+        users.map { it.name },
+        users.indexOfFirst { it.serverId == start.serverId && it.userId == start.userId },
+        onSelect = { viewModel.setStartUser(users[it]) },
+    )
+    return SettingGroup(
+        stringResource(R.string.settings_group_start),
+        if (start.mode == StartMode.Fixed && users.isNotEmpty()) listOf(mode, user) else listOf(mode),
     )
 }
 

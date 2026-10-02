@@ -47,6 +47,10 @@ class AccountRepository @Inject constructor(
         return Pins.verify(pin, stored)
     }
 
+    suspend fun setStartProfile(startProfile: StartProfile) {
+        store.updateData { it.copy(startProfile = startProfile) }
+    }
+
     suspend fun removeServer(serverId: String) {
         store.updateData { it.withoutServer(serverId) }
     }

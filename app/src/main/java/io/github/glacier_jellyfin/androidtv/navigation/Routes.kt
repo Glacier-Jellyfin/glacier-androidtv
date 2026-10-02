@@ -18,9 +18,9 @@ data class SignInRoute(val serverId: String, val username: String? = null)
 @Serializable
 data class QuickConnectRoute(val serverId: String)
 
-/** "Who's watching?" */
+/** "Who's watching?"; [appStart] lets the start profile setting open a profile by itself. */
 @Serializable
-data class ProfilesRoute(val serverId: String)
+data class ProfilesRoute(val serverId: String, val appStart: Boolean = false)
 
 @Serializable
 data object HomeRoute

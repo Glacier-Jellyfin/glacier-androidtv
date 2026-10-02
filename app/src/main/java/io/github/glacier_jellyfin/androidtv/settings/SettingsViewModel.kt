@@ -5,11 +5,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.core.data.AccountRepository
 import io.github.glacier_jellyfin.androidtv.core.data.AgeLimit
 import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
 import io.github.glacier_jellyfin.androidtv.core.data.ProfileLock
 import io.github.glacier_jellyfin.androidtv.core.data.Protection
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.StartMode
+import io.github.glacier_jellyfin.androidtv.core.data.StartProfile
+import io.github.glacier_jellyfin.androidtv.core.data.StoredUser
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryQuery
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryRepository
@@ -90,6 +94,9 @@ data class SettingsUiState(
     /** FFmpeg's version, null when this build has no FFmpeg decoder. */
     val ffmpegVersion: String? = null,
     val diagnostics: DiagnosticsState = DiagnosticsState(),
+    val startProfile: StartProfile = StartProfile(),
+    /** Profiles [StartMode.Fixed] can open: the signed-in ones of this server, and the chosen one wherever it is. */
+    val startCandidates: List<StoredUser> = emptyList(),
 )
 
 /** Settings › System › Diagnostics: [sentAs] is the file name the server gave the log just sent. */
@@ -109,6 +116,7 @@ data class ServerSummary(val name: String, val address: String, val version: Str
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val sessions: SessionManager,
+    private val accounts: AccountRepository,
     private val settings: SettingsRepository,
     private val serverPreferences: ServerPreferencesRepository,
     private val library: LibraryRepository,
@@ -144,6 +152,17 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { updates.channel.collect { channel -> _state.update { it.copy(updateChannel = channel) } } }
         viewModelScope.launch { updates.autoCheck.collect { on -> _state.update { it.copy(autoUpdate = on) } } }
         viewModelScope.launch { loadServerSummary() }
+        viewModelScope.launch {
+            accounts.state.collect { accountState ->
+                val serverId = sessions.session.value?.server?.id
+                val start = accountState.startProfile
+                val candidates = accountState.users.filter { user ->
+                    (user.serverId == serverId && user.accessToken != null) ||
+                        (start.mode == StartMode.Fixed && user.serverId == start.serverId && user.userId == start.userId)
+                }
+                _state.update { it.copy(startProfile = start, startCandidates = candidates) }
+            }
+        }
         viewModelScope.launch(Dispatchers.Default) { FfmpegAudio.version()?.let { version -> _state.update { it.copy(ffmpegVersion = version) } } }
         viewModelScope.launch(Dispatchers.IO) { Log.lastCrash()?.let { crash -> _state.update { it.copy(diagnostics = it.diagnostics.copy(lastCrash = crash)) } } }
         _state.update { it.copy(diagnostics = it.diagnostics.copy(verboseUntil = Log.verboseUntil())) }
@@ -179,6 +198,17 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+
+    /** Choosing "fixed profile" starts with the profile using the app now. */
+    fun setStartMode(mode: StartMode) {
+        val user = sessions.session.value?.user
+        val start = if (mode == StartMode.Fixed) StartProfile(mode, user?.serverId, user?.userId) else StartProfile(mode)
+        viewModelScope.launch { accounts.setStartProfile(start) }
+    }
+
+    fun setStartUser(user: StoredUser) {
+        viewModelScope.launch { accounts.setStartProfile(StartProfile(StartMode.Fixed, user.serverId, user.userId)) }
+    }
 
     fun setMaxAge(limit: AgeLimit) = updateProtection { it.copy(maxAge = limit) }
 

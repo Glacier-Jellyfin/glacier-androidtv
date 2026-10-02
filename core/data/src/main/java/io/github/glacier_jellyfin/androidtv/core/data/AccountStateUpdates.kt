@@ -40,6 +40,7 @@ internal fun AccountState.withoutServer(serverId: String): AccountState = copy(
     servers = servers.filterNot { it.id == serverId },
     users = users.filterNot { it.serverId == serverId },
     lastServerId = lastServerId.takeUnless { it == serverId },
+    startProfile = startProfile.takeUnless { it.serverId == serverId } ?: StartProfile(),
 )
 
 /** One entry on the "Who's watching?" screen. */
@@ -79,3 +80,37 @@ fun AccountState.profilesFor(serverId: String, publicUsers: List<PublicUser>?): 
 }
 
 internal val StoredUser.pinLocked: Boolean get() = pin != null && protection.pinOnProfileSwitch
+
+/** What the app does with "Who's watching?" on start. */
+sealed interface StartChoice {
+    /** Show the profiles as usual. */
+    data object Pick : StartChoice
+
+    /** Open this profile without showing the profiles. */
+    data class Open(val userId: String) : StartChoice
+
+    /** Show the profiles with this one focused: it needs its PIN first. */
+    data class Focus(val userId: String) : StartChoice
+}
+
+/**
+ * The profile [StartProfile] picks on [serverId] among [profiles] (as listed by
+ * [profilesFor]). Only signed-in profiles qualify; nothing qualifying means
+ * the profiles are shown.
+ */
+fun AccountState.startChoice(serverId: String, profiles: List<Profile>): StartChoice {
+    val userId = when (startProfile.mode) {
+        StartMode.Picker -> null
+        StartMode.Single -> profiles.singleOrNull()?.userId
+        StartMode.Last -> users.filter { it.serverId == serverId && it.accessToken != null }.maxByOrNull { it.lastUsedAt }?.userId
+        StartMode.Fixed -> startProfile.userId.takeIf { startProfile.serverId == serverId }
+    }
+    val profile = profiles.firstOrNull { it.userId == userId && it.isSignedIn } ?: return StartChoice.Pick
+    return if (profile.pinLocked) StartChoice.Focus(profile.userId) else StartChoice.Open(profile.userId)
+}
+
+/** The server the app starts on: the fixed profile's, otherwise the last one used. */
+fun AccountState.startServerId(): String? {
+    val fixed = startProfile.serverId.takeIf { startProfile.mode == StartMode.Fixed }
+    return listOfNotNull(fixed, lastServerId).firstOrNull { id -> servers.any { it.id == id } }
+}

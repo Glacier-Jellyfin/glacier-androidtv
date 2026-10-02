@@ -91,4 +91,63 @@ class AccountStateTest {
         assertTrue(state.users.isEmpty())
         assertNull(state.lastServerId)
     }
+
+    private fun twoProfiles(mode: StartMode) = AccountState()
+        .withServer(server, now = 0)
+        .withSignIn(signIn(anna, "Anna"), now = 1)
+        .withSignIn(signIn(jonas, "Jonas"), now = 2)
+        .copy(startProfile = StartProfile(mode, "s1", anna.toString()))
+
+    private fun AccountState.choice() = startChoice("s1", profilesFor("s1", publicUsers = null))
+
+    @Test
+    fun `picker mode always shows the profiles`() {
+        assertEquals(StartChoice.Pick, twoProfiles(StartMode.Picker).choice())
+    }
+
+    @Test
+    fun `single mode opens only a lone profile`() {
+        assertEquals(StartChoice.Pick, twoProfiles(StartMode.Single).choice())
+        val alone = AccountState().withSignIn(signIn(anna, "Anna"), now = 1)
+        assertEquals(StartChoice.Open(anna.toString()), alone.choice())
+    }
+
+    @Test
+    fun `single mode counts profiles the server lists but nobody signed in to`() {
+        val state = AccountState().withSignIn(signIn(anna, "Anna"), now = 1)
+        val public = listOf(PublicUser(anna, "Anna", primaryImageTag = null), PublicUser(jonas, "Jonas", primaryImageTag = null))
+        assertEquals(StartChoice.Pick, state.startChoice("s1", state.profilesFor("s1", public)))
+    }
+
+    @Test
+    fun `last mode opens the profile used last`() {
+        assertEquals(StartChoice.Open(jonas.toString()), twoProfiles(StartMode.Last).choice())
+        val signedOut = twoProfiles(StartMode.Last).updateUser("s1", jonas.toString()) { it.copy(accessToken = null) }
+        assertEquals(StartChoice.Open(anna.toString()), signedOut.choice())
+    }
+
+    @Test
+    fun `fixed mode opens the chosen profile while it is signed in`() {
+        assertEquals(StartChoice.Open(anna.toString()), twoProfiles(StartMode.Fixed).choice())
+        val signedOut = twoProfiles(StartMode.Fixed).updateUser("s1", anna.toString()) { it.copy(accessToken = null) }
+        assertEquals(StartChoice.Pick, signedOut.choice())
+    }
+
+    @Test
+    fun `a profile with a pin on switching is focused instead of opened`() {
+        val pin = Pins.hash("1234", salt = ByteArray(16), iterations = 1)
+        val state = twoProfiles(StartMode.Fixed)
+            .updateUser("s1", anna.toString()) { it.copy(pin = pin, protection = Protection(pinOnProfileSwitch = true)) }
+        assertEquals(StartChoice.Focus(anna.toString()), state.choice())
+    }
+
+    @Test
+    fun `the app starts on the fixed profile's server`() {
+        val other = ServerInfo(id = "s2", name = "Other", address = "http://other:8096", version = "12.1.0")
+        val state = twoProfiles(StartMode.Fixed).withServer(other, now = 3)
+        assertEquals("s1", state.startServerId())
+        assertEquals("s2", state.copy(startProfile = StartProfile(StartMode.Last)).startServerId())
+        assertEquals("s2", state.withoutServer("s1").startServerId())
+        assertEquals(StartProfile(), state.withoutServer("s1").startProfile)
+    }
 }

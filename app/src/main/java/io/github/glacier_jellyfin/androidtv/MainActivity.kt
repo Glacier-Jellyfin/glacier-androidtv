@@ -36,6 +36,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.core.data.AccountRepository
 import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
+import io.github.glacier_jellyfin.androidtv.core.data.startServerId
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AppearanceSettings
@@ -82,7 +83,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Picks the first screen: "Who's watching?" for the last server, otherwise setup. */
+/** Picks the first screen: "Who's watching?" (or the start profile) for the start server, otherwise setup. */
 @HiltViewModel
 class StartViewModel @Inject constructor(
     accounts: AccountRepository,
@@ -115,9 +116,8 @@ class StartViewModel @Inject constructor(
     init {
         updates.start()
         viewModelScope.launch {
-            val state = accounts.current()
-            val server = state.lastServerId?.takeIf { id -> state.servers.any { it.id == id } }
-            _start.value = server?.let(::ProfilesRoute) ?: ServerListRoute
+            val server = accounts.current().startServerId()
+            _start.value = server?.let { ProfilesRoute(it, appStart = true) } ?: ServerListRoute
         }
     }
 }

@@ -55,6 +55,10 @@ renders the reference separately.
   rate fits the film and which HDR formats it takes, plus buffer and network
   speed. Server compares the file with what reaches the device, says why the
   server transcodes and how fast, and whether it uses hardware for it
+- When the server has only one profile, Glacier opens it right away at start.
+  Settings › System › Start can open the profile used last or a fixed one
+  instead, or always ask. A profile with a PIN shows the profiles with it
+  selected
 
 ### Improved
 - Coming back to an album or playlist puts the focus on the song you left
@@ -69,6 +73,8 @@ renders the reference separately.
 - A dot on the settings gear in the navigation bar now shows that an update
   is waiting, and the dot on System stays while it downloads or after a failed
   attempt
+- Picking a profile with another interface language sometimes stayed on
+  "Who's watching?" instead of opening the home screen
 
 ## [0.1.0-beta.4] - 2026-10-01
 
