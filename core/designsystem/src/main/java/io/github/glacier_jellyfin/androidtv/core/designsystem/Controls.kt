@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
@@ -49,6 +50,8 @@ fun PillButton(
     /** Stretch to the available width with the label at the start, like the design's list actions. */
     fillWidth: Boolean = false,
     /** A fixed width with the label centred, like the update dialog's buttons. */
+    /** A small count or fact at the end, like a playlist's number of songs. */
+    badge: String? = null,
     width: Int? = null,
 ) {
     val accent = LocalAccent.current
@@ -78,7 +81,27 @@ fun PillButton(
             horizontalArrangement = Arrangement.spacedBy(12.dp, if (width != null) Alignment.CenterHorizontally else Alignment.Start),
         ) {
             if (icon != null) Icon(icon, contentDescription = null, tint = foreground, modifier = Modifier.size(20.dp))
-            Text(text, style = GlacierText.body(21, FontWeight.SemiBold), color = foreground)
+            Text(
+                text,
+                style = GlacierText.body(21, FontWeight.SemiBold),
+                color = foreground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = if (badge != null && fillWidth) Modifier.weight(1f) else Modifier,
+            )
+            if (badge != null) {
+                Box(
+                    Modifier
+                        .height(30.dp)
+                        .clip(PillShape)
+                        .background(if (focused || primary) GlacierColors.Void.copy(alpha = 0.12f) else GlacierColors.GlassFill2)
+                        .border(1.dp, if (focused || primary) GlacierColors.Void.copy(alpha = 0.3f) else GlacierColors.GlassBorder, PillShape)
+                        .padding(horizontal = 11.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(badge, style = GlacierText.body(15, FontWeight.SemiBold), color = if (focused || primary) GlacierColors.Void else GlacierColors.Mist, maxLines = 1)
+                }
+            }
         }
     }
 }

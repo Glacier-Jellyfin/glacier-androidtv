@@ -138,7 +138,11 @@ fun MusicPlayerScreen(
             .onPreviewKeyEvent { event ->
                 // Back closes on the first press, whatever has focus (see PlayerScreen); an open options sheet first.
                 if (event.key == Key.Back) {
-                    if (sheet != null) return@onPreviewKeyEvent false
+                    // An open options sheet takes Back itself: one step back, and the player stays.
+                    if (sheet != null) {
+                        if (event.type == KeyEventType.KeyUp) viewModel.musicActions.back()
+                        return@onPreviewKeyEvent true
+                    }
                     if (event.type == KeyEventType.KeyUp) viewModel.close()
                     return@onPreviewKeyEvent true
                 }
@@ -565,6 +569,7 @@ private fun Controls(
                 viewModel::toggleFavorite,
                 on = favorite,
             )
+            MusicButton(GlacierIcons.PlaylistAdd, stringResource(R.string.music_options_add_playlist), viewModel::addCurrentToPlaylist)
         }
     }
 }

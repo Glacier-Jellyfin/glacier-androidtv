@@ -24,8 +24,12 @@ renders the reference separately.
 
 ### Improved
 - The library is sorted by title from A to Z unless you pick another order
+- The music player has a button that adds the playing song to a playlist
+- When you pick a playlist, its number of songs shows as a badge on the right
 
 ### Fixed
+- Holding OK on a song now keeps its options open. On many remotes the menu closed right away and ran its first option
+- Back in the music player closes an open options sheet and no longer the player too
 - Marking a title watched or unwatched on its page now updates Home and the Android TV home screen right away
 - The library keeps its sort order after the app restarts. Movies, shows and music each remember their own
 

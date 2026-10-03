@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -30,6 +32,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -143,4 +146,19 @@ fun Modifier.onMenuKey(action: () -> Unit): Modifier = onKeyEvent { event ->
     if (event.key != Key.Menu) return@onKeyEvent false
     if (event.type == KeyEventType.KeyUp) action()
     true
+}
+
+/**
+ * For what holding OK opens: OK does nothing here until it is pressed anew.
+ * A real remote keeps repeating OK while it is held, and those repeats and
+ * the release would otherwise click whatever just got focus.
+ */
+@Composable
+fun Modifier.ignoreHeldOk(): Modifier {
+    var armed by remember { mutableStateOf(false) }
+    return onPreviewKeyEvent { event ->
+        if (event.key != Key.DirectionCenter && event.key != Key.Enter && event.key != Key.NumPadEnter) return@onPreviewKeyEvent false
+        if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0) armed = true
+        !armed
+    }
 }

@@ -69,23 +69,30 @@ class MusicPlayerViewModel @Inject constructor(
 
     /** Options for a song of the queue (hold OK, or the menu key). */
     fun queueOptions(index: Int) {
-        val current = state.value
-        val track = current.queue.getOrNull(index)?.track ?: return
-        val playing = index == current.index
-        musicActions.open(
-            MusicTarget(
-                title = track.title,
-                subtitle = listOfNotNull(track.artist, track.album).joinToString(" · ").ifEmpty { null },
-                tracks = { listOf(track) },
-                queueIndex = index.takeUnless { playing },
-                playing = playing,
-                mixFrom = track.id,
-            ),
-        )
+        musicActions.open(queueTarget(index) ?: return)
     }
 
     /** Options for the song that plays (the menu key outside the queue). */
     fun currentOptions() = queueOptions(state.value.index)
+
+    /** The add button: the song that plays goes into a playlist, picked right away. */
+    fun addCurrentToPlaylist() {
+        musicActions.openPlaylists(queueTarget(state.value.index) ?: return)
+    }
+
+    private fun queueTarget(index: Int): MusicTarget? {
+        val current = state.value
+        val track = current.queue.getOrNull(index)?.track ?: return null
+        val playing = index == current.index
+        return MusicTarget(
+            title = track.title,
+            subtitle = listOfNotNull(track.artist, track.album).joinToString(" · ").ifEmpty { null },
+            tracks = { listOf(track) },
+            queueIndex = index.takeUnless { playing },
+            playing = playing,
+            mixFrom = track.id,
+        )
+    }
 
     /** Back: the screen goes, the music stays. Once only (newer Android delivers Back twice). */
     fun close() {

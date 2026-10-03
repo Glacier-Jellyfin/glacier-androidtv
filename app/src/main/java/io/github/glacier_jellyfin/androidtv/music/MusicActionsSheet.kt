@@ -35,6 +35,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SystemTextInput
+import io.github.glacier_jellyfin.androidtv.core.designsystem.ignoreHeldOk
 import io.github.glacier_jellyfin.androidtv.setup.InputField
 import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
 
@@ -46,7 +47,9 @@ fun MusicActionsSheet(actions: MusicActions) {
     ModalSheet(onDismiss = actions::back, width = 680) {
         Column(
             // Focus stays in the sheet; the page behind it is out of reach.
+            // Holding OK opened it: the held key must not pick the first option.
             Modifier
+                .ignoreHeldOk()
                 .focusProperties { onExit = { cancelFocusChange() } }
                 .focusGroup(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -102,7 +105,7 @@ private fun Menu(sheet: MusicSheet.Menu, actions: MusicActions) {
         PillButton(
             stringResource(R.string.music_options_add_playlist),
             onClick = actions::choosePlaylist,
-            icon = GlacierIcons.Plus,
+            icon = GlacierIcons.PlaylistAdd,
             fillWidth = true,
             modifier = if (target.playing) Modifier.focusRequester(first) else Modifier,
         )
@@ -136,9 +139,10 @@ private fun Playlists(sheet: MusicSheet.Playlists, actions: MusicActions) {
         items(playlists, key = { it.id }) { playlist ->
             val count = playlist.childCount
             PillButton(
-                if (count != null) playlist.title + " · " + pluralStringResource(R.plurals.count_titles, count, count) else playlist.title,
+                playlist.title,
                 onClick = { actions.addTo(playlist) },
                 fillWidth = true,
+                badge = count?.let { pluralStringResource(R.plurals.count_titles, it, it) },
             )
         }
     }

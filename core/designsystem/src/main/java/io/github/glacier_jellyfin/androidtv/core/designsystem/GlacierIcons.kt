@@ -90,6 +90,7 @@ object GlacierIcons {
         strokeWidth = 2.2f,
     )
     val Chapters = icon("M3 5h.01", "M3 12h.01", "M3 19h.01", "M8 5h13", "M8 12h13", "M8 19h13")
+    val PlaylistAdd = icon("M16 6H3", "M11 12H3", "M16 18H3", "M18 9v6", "M21 12h-6")
     val Check = icon("M20 6 9 17l-5-5", strokeWidth = 3.4f)
     val SortLines = icon("M4 7h16", "M7 12h10", "M10 17h4", strokeWidth = 2.2f)
     val ArrowDown = icon("M12 5v14", "m6 13 6 6 6-6", strokeWidth = 2.4f)

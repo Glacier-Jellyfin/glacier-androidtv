@@ -65,8 +65,19 @@ class MusicActions(
     private val _sheet = MutableStateFlow<MusicSheet?>(null)
     val sheet: StateFlow<MusicSheet?> = _sheet.asStateFlow()
 
+    /** The sheet started at the playlists, with no menu to go back to. */
+    private var straightToPlaylists = false
+
     fun open(target: MusicTarget) {
+        straightToPlaylists = false
         _sheet.value = MusicSheet.Menu(target)
+    }
+
+    /** Straight to picking a playlist (the player's add button): Back then closes the sheet. */
+    fun openPlaylists(target: MusicTarget) {
+        straightToPlaylists = true
+        _sheet.value = MusicSheet.Playlists(target)
+        loadPlaylists(target)
     }
 
     fun dismiss() {
@@ -78,7 +89,7 @@ class MusicActions(
         val sheet = _sheet.value ?: return
         _sheet.value = when (sheet) {
             is MusicSheet.Menu -> null
-            is MusicSheet.Playlists -> MusicSheet.Menu(sheet.target)
+            is MusicSheet.Playlists -> if (straightToPlaylists) null else MusicSheet.Menu(sheet.target)
             is MusicSheet.NewPlaylist -> MusicSheet.Playlists(sheet.target).also { loadPlaylists(it.target) }
         }
     }
