@@ -18,9 +18,14 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-03
+
+### Improved
+- The search field looks like the fields of the sign-in screens. OK on it opens the system keyboard
+
 ### Fixed
 - Settings › Home scrolls down to the spotlight options again while no spotlight content is selected
-- On the search page, Up from the keypad now reaches the search field and the top navigation instead of opening the keyboard; OK on the search field opens it
+- On the search page, Up from the keypad reaches the search field and the top navigation again instead of opening the keyboard
 
 ## [0.1.0] - 2026-10-02
 
