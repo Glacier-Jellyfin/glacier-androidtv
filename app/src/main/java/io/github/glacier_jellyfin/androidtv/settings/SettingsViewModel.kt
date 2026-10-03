@@ -16,6 +16,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.StartProfile
 import io.github.glacier_jellyfin.androidtv.core.data.StoredUser
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryQuery
+import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AppearanceSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeSettings
@@ -365,7 +366,7 @@ class SettingsViewModel @Inject constructor(
 
     private suspend fun loadPreviewImage() {
         try {
-            val image = library.page(LibraryQuery(LibraryKind.Movies), start = 0, limit = PREVIEW_CANDIDATES)
+            val image = library.page(LibraryQuery(LibraryKind.Movies, sort = LibrarySort.DateAdded, descending = true), start = 0, limit = PREVIEW_CANDIDATES)
                 .items.firstNotNullOfOrNull { it.backdropUrl }
             _state.update { it.copy(previewImage = image) }
         } catch (e: CancellationException) {

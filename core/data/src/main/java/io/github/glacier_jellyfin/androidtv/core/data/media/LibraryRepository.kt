@@ -33,8 +33,8 @@ data class LibraryQuery(
     val libraryId: UUID? = null,
     val genreId: UUID? = null,
     val scope: LibraryScope = defaultScope(kind),
-    val sort: LibrarySort = LibrarySort.DateAdded,
-    val descending: Boolean = true,
+    val sort: LibrarySort = LibrarySort.Title,
+    val descending: Boolean = false,
     /** Design setting "Group movies into collections"; on by default. */
     val groupCollections: Boolean = true,
 ) {

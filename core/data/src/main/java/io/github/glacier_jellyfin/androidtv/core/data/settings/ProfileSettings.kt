@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.core.data.settings
 
+import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentAction
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentPolicy
@@ -24,6 +25,15 @@ data class ProfileSettings(
     val lastTracks: LastTracks = LastTracks(),
     /** The music player's switches, kept from one time to the next. */
     val music: MusicSettings = MusicSettings(),
+    /** The library sort last picked, keyed by library kind name (Movies, Shows, ...). */
+    val librarySorts: Map<String, LibrarySortChoice> = emptyMap(),
+)
+
+/** One library kind's sort, kept from one time to the next. */
+@Serializable
+data class LibrarySortChoice(
+    val sort: LibrarySort = LibrarySort.Title,
+    val descending: Boolean = false,
 )
 
 /** Shuffle (music pages and player share it) and lyrics in the player. */

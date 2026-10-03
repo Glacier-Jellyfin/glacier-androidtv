@@ -12,6 +12,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryQuery
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryScope
+import io.github.glacier_jellyfin.androidtv.core.data.settings.LibrarySortChoice
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
@@ -59,7 +60,7 @@ class LibraryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: LibraryRepository,
     private val sessions: SessionManager,
-    settings: SettingsRepository,
+    private val settings: SettingsRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<LibraryRoute>()
@@ -85,7 +86,14 @@ class LibraryViewModel @Inject constructor(
     private var lettersJob: Job? = null
 
     init {
-        reload()
+        // The kept sort comes from the settings file, which may not be read yet right after start.
+        viewModelScope.launch {
+            val kept = runCatching { settings.current().librarySorts[_state.value.query.kind.name] }
+                .onFailure { Log.w(TAG, "Reading the library sort failed", it) }
+                .getOrNull()
+            if (kept != null) _state.update { it.copy(query = it.query.copy(sort = kept.sort, descending = kept.descending)) }
+            reload()
+        }
     }
 
     /** Called by the grid when it gets near the end of what is loaded. */
@@ -110,6 +118,12 @@ class LibraryViewModel @Inject constructor(
         update { query ->
             if (query.sort == sort) query.copy(descending = !query.descending)
             else query.copy(sort = sort, descending = sort != LibrarySort.Title)
+        }
+        val query = _state.value.query
+        val choice = LibrarySortChoice(query.sort, query.descending)
+        viewModelScope.launch {
+            runCatching { settings.update { it.copy(librarySorts = it.librarySorts + (query.kind.name to choice)) } }
+                .onFailure { Log.w(TAG, "Saving the library sort failed", it) }
         }
     }
 

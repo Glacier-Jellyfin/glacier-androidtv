@@ -22,8 +22,12 @@ renders the reference separately.
 - Search also finds movies and shows that are not in the library yet, through Seerr. This needs the Jellyfin Enhanced plugin with Seerr set up on the server. Library titles come first, Seerr titles follow with their state
 - A Seerr title opens its own page with plot, cast and trailer. Movies and single seasons of a show can be requested from there
 
+### Improved
+- The library is sorted by title from A to Z unless you pick another order
+
 ### Fixed
 - Marking a title watched or unwatched on its page now updates Home and the Android TV home screen right away
+- The library keeps its sort order after the app restarts. Movies, shows and music each remember their own
 
 ## [0.1.1] - 2026-10-03
 
