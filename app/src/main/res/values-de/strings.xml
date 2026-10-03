@@ -444,9 +444,6 @@
     <string name="music_playing_from">Wiedergabe aus %1$s</string>
     <string name="music_now_playing">Läuft gerade</string>
     <string name="music_paused">Pausiert</string>
-    <string name="music_repeating">Titel wird wiederholt</string>
-    <string name="music_up_next">Als Nächstes: %1$s</string>
-    <string name="music_last_track">Letzter Titel der Warteschlange</string>
     <string name="music_track_of">Titel %1$d von %2$d</string>
     <string name="music_queue">Warteschlange</string>
     <string name="music_queue_left">noch %1$s</string>

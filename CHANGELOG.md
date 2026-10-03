@@ -28,6 +28,7 @@ renders the reference separately.
 - The library is sorted by title from A to Z unless you pick another order
 - The music player has a button that adds the playing song to a playlist
 - When you pick a playlist, its number of songs shows as a badge on the right
+- The music player has a calm background instead of the blurred cover. The line about the next song is gone, since the queue on the right already shows it
 
 ### Fixed
 - Holding OK on a song now keeps its options open. On many remotes the menu closed right away and ran its first option

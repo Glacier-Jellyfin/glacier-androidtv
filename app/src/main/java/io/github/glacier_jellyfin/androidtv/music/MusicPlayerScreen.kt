@@ -1,6 +1,5 @@
 package io.github.glacier_jellyfin.androidtv.music
 
-import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.RepeatMode as AnimationRepeat
@@ -48,7 +47,6 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
@@ -87,6 +85,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LyricLine
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackMethod
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierBackground
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
@@ -165,7 +164,7 @@ fun MusicPlayerScreen(
             },
     ) {
         val current = state.current
-        Background(current)
+        GlacierBackground {}
         if (current != null) {
             TopBar(state, current, Modifier.padding(start = 96.dp, end = 96.dp, top = 60.dp))
             Box(Modifier.padding(start = 96.dp).width(1064.dp)) {
@@ -235,24 +234,6 @@ fun MusicPlayerScreen(
     }
 }
 
-/** The cover, blown up and blurred behind everything (design: blur 90, 80 %), darkened towards the bottom. */
-@Composable
-private fun Background(track: MusicTrack?) {
-    Box(Modifier.fillMaxSize()) {
-        // Blur needs Android 12; before that the small cover, scaled up, is soft enough on its own.
-        val blurred = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-        Artwork(
-            if (blurred) track?.largeCoverUrl else track?.coverUrl,
-            Modifier
-                .fillMaxSize()
-                .scale(1.17f)
-                .then(if (blurred) Modifier.blur(90.dp) else Modifier)
-                .alpha(0.8f),
-        )
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x8005090F), Color(0xDB05090F)))))
-    }
-}
-
 @Composable
 private fun TopBar(state: MusicUiState, track: MusicTrack, modifier: Modifier) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.SpaceBetween) {
@@ -308,7 +289,7 @@ private fun StatusPill(text: String) {
     }
 }
 
-/** Big cover with title, artist, album and what comes next (design: lyrics off). */
+/** Big cover with title, artist and album (design: lyrics off). The queue on the right shows what comes next. */
 @Composable
 private fun NowPlaying(state: MusicUiState, track: MusicTrack) {
     Row(Modifier.padding(top = 190.dp).fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(56.dp)) {
@@ -336,19 +317,7 @@ private fun NowPlaying(state: MusicUiState, track: MusicTrack) {
             track.artist?.let { Text(it, style = GlacierText.body(26), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis) }
             val album = listOfNotNull(track.album, track.year?.toString()).joinToString(" · ")
             if (album.isNotEmpty()) Text(album, style = GlacierText.body(20), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(nextLabel(state), style = GlacierText.body(18), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 14.dp))
         }
-    }
-}
-
-@Composable
-private fun nextLabel(state: MusicUiState): String {
-    val next = state.queue.getOrNull(state.index + 1)?.track
-        ?: state.queue.firstOrNull()?.track?.takeIf { state.repeat == RepeatMode.All }
-    return when {
-        state.repeat == RepeatMode.One -> stringResource(R.string.music_repeating)
-        next != null -> stringResource(R.string.music_up_next, listOfNotNull(next.title, next.artist).joinToString(" · "))
-        else -> stringResource(R.string.music_last_track)
     }
 }
 

@@ -450,9 +450,6 @@
     <string name="music_playing_from">Playing from %1$s</string>
     <string name="music_now_playing">Now playing</string>
     <string name="music_paused">Paused</string>
-    <string name="music_repeating">Song repeats</string>
-    <string name="music_up_next">Up next: %1$s</string>
-    <string name="music_last_track">Last song in the queue</string>
     <string name="music_track_of">Song %1$d of %2$d</string>
     <string name="music_queue">Queue</string>
     <string name="music_queue_left">%1$s left</string>
