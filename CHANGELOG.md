@@ -18,6 +18,9 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### Fixed
+- Settings › Home scrolls down to the spotlight options again while no spotlight content is selected
+
 ## [0.1.0] - 2026-10-02
 
 The first release of Glacier. Thanks to everyone who tried the betas.

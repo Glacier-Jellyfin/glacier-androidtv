@@ -143,14 +143,19 @@ internal fun OptionCard(
     below: (@Composable () -> Unit)? = null,
 ) {
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
+    // A disabled card has no focusable control, so the card itself takes focus (a lit border
+    // only, like InfoCard): otherwise the list could not scroll down past it.
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
     Column(
         Modifier
             .fillMaxWidth()
             // Up/Down move card by card, also between a switch on the right and choices on the left.
             .focusGroup()
+            .then(if (enabled) Modifier else Modifier.focusable(interactionSource = interaction))
             .clip(shape)
             .background(GlacierColors.GlassFill)
-            .border(1.dp, GlacierColors.GlassBorder, shape)
+            .border(if (focused) 2.dp else 1.dp, if (focused) LocalAccent.current.main.copy(alpha = 0.6f) else GlacierColors.GlassBorder, shape)
             .padding(horizontal = 30.dp, vertical = 26.dp)
             .alpha(if (enabled) 1f else 0.5f),
         verticalArrangement = Arrangement.spacedBy(18.dp),
