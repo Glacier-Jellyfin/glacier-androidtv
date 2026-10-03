@@ -1,7 +1,5 @@
 package io.github.glacier_jellyfin.androidtv.search
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,7 +24,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.pluralStringResource
@@ -42,16 +38,14 @@ import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.KeyCap
-import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SystemTextInput
+import io.github.glacier_jellyfin.androidtv.setup.InputField
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
@@ -97,14 +91,19 @@ fun SearchScreen(
             horizontalArrangement = Arrangement.spacedBy(56.dp),
         ) {
             Column(Modifier.width(620.dp), verticalArrangement = Arrangement.spacedBy(26.dp)) {
-                SearchField(
-                    query = state.query,
+                // Same field as sign-in: OK opens the system keyboard, Up reaches the top navigation.
+                InputField(
+                    label = null,
+                    icon = GlacierIcons.Search,
+                    value = state.query,
+                    placeholder = stringResource(R.string.search_placeholder),
                     editing = systemKeyboard,
                     onClick = {
                         openedFromField = true
                         systemKeyboard = true
                     },
                     focusRequester = fieldFocus,
+                    down = keyFocus,
                 )
                 Keypad(
                     query = state.query,
@@ -137,57 +136,6 @@ fun SearchScreen(
             (if (openedFromField) fieldFocus else keyFocus).requestFocus()
         },
     )
-}
-
-/** Selecting the field opens the system keyboard; Up from it reaches the top navigation. */
-@Composable
-private fun SearchField(query: String, editing: Boolean, onClick: () -> Unit, focusRequester: FocusRequester) {
-    val shape = RoundedCornerShape(GlacierShapes.RadiusSm)
-    val accent = LocalAccent.current.main
-    GlacierClickable(
-        onClick = onClick,
-        shape = shape,
-        modifier = Modifier.width(620.dp).focusRequester(focusRequester),
-        unfocusedBorder = GlacierColors.GlassBorder,
-        scaleOnFocus = false,
-    ) {
-        Row(
-            Modifier
-                .width(620.dp)
-                .height(78.dp)
-                .clip(shape)
-                .background(if (editing) accent.copy(alpha = 0.1f) else GlacierColors.GlassFill)
-                .padding(horizontal = 26.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Icon(GlacierIcons.Search, contentDescription = null, tint = GlacierColors.Mist, modifier = Modifier.size(26.dp))
-            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                if (query.isNotEmpty()) {
-                    // Long queries keep their end visible, where typing happens.
-                    Text(
-                        query,
-                        style = GlacierText.body(26, FontWeight.SemiBold),
-                        color = GlacierColors.Ice,
-                        maxLines = 1,
-                        overflow = TextOverflow.StartEllipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                }
-                // A static caret: a blinking one would keep the whole screen redrawing.
-                Box(Modifier.width(2.dp).height(32.dp).background(accent))
-                if (query.isEmpty()) {
-                    Text(
-                        stringResource(R.string.search_placeholder),
-                        style = GlacierText.body(26, FontWeight.SemiBold),
-                        color = GlacierColors.Mist,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-        }
-    }
 }
 
 @Composable

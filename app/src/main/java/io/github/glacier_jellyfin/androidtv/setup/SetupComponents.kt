@@ -114,13 +114,13 @@ fun PulseDot(pulsing: Boolean = true) {
 }
 
 /**
- * The design's text field (104 high): label above, icon, value in mono and an
- * "OK" tag that turns into "Typing …" while the system keyboard is open.
+ * The design's text field (104 high): optional label above, icon, value in mono
+ * and an "OK" tag that turns into "Typing …" while the system keyboard is open.
  * Selecting it opens the system keyboard; the text is never edited in place.
  */
 @Composable
 fun InputField(
-    label: String,
+    label: String?,
     icon: ImageVector,
     value: String,
     placeholder: String,
@@ -135,7 +135,7 @@ fun InputField(
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusSm)
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(label.uppercase(), style = GlacierText.body(16).copy(letterSpacing = 0.08.em), color = GlacierColors.Mist, modifier = Modifier.padding(start = 4.dp))
+        if (label != null) Text(label.uppercase(), style = GlacierText.body(16).copy(letterSpacing = 0.08.em), color = GlacierColors.Mist, modifier = Modifier.padding(start = 4.dp))
         GlacierClickable(
             onClick = onClick,
             shape = shape,
