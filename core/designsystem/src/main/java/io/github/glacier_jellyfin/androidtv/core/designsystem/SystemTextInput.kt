@@ -14,6 +14,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -62,6 +63,8 @@ fun SystemTextInput(
         modifier = Modifier
             .size(1.dp)
             .alpha(0f)
+            // Only reachable while open: D-pad focus landing on it would bring up the keyboard.
+            .focusProperties { canFocus = open }
             .focusRequester(focus)
             // While Android's keyboard is up it consumes remote keys itself. A
             // D-pad, OK or Back key arriving here means it was dismissed (on

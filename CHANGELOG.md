@@ -20,6 +20,7 @@ renders the reference separately.
 
 ### Fixed
 - Settings › Home scrolls down to the spotlight options again while no spotlight content is selected
+- On the search page, Up from the keypad now reaches the search field and the top navigation instead of opening the keyboard; OK on the search field opens it
 
 ## [0.1.0] - 2026-10-02
 
