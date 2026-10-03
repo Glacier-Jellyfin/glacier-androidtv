@@ -67,6 +67,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
+import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 import io.github.glacier_jellyfin.androidtv.ui.seasonLabel
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
@@ -141,7 +142,7 @@ private fun MediaDetail(state: DetailState, details: ItemDetails, viewModel: Det
     val playFocus = remember { FocusRequester() }
     var initialFocusDone by rememberSaveable(item.id) { mutableStateOf(false) }
 
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().background(ImagePageGround)) {
         ScrollingBackdrop(item.backdropUrl, MEDIA_BACKDROP, listState)
         CompositionLocalProvider(LocalBringIntoViewSpec provides rememberRowPivotSpec(listState, HEADER_REGION)) {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
@@ -229,7 +230,7 @@ private fun EpisodeDetail(state: DetailState, details: ItemDetails, viewModel: D
     val playFocus = remember { FocusRequester() }
     val locale = LocalConfiguration.current.locales[0]
 
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().background(ImagePageGround)) {
         ScrollingBackdrop(episode.backdropUrl, EPISODE_BACKDROP, listState)
         CompositionLocalProvider(LocalBringIntoViewSpec provides rememberRowPivotSpec(listState, HEADER_REGION)) {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -18,10 +19,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.focus.FocusRequester
@@ -38,6 +42,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
+import coil3.compose.AsyncImage
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
@@ -52,6 +57,9 @@ val LocalLibraryKinds = staticCompositionLocalOf { listOf(LibraryKind.Movies, Li
 
 /** A newer app version is known (UpdateManager): the settings gear carries a dot. */
 val LocalUpdatePending = staticCompositionLocalOf { false }
+
+/** The signed-in profile's picture; the avatar shows the initial without one. */
+val LocalProfileImage = staticCompositionLocalOf<String?> { null }
 
 sealed interface NavTarget {
     data object Search : NavTarget
@@ -207,7 +215,18 @@ private fun NavItem(
                     .background(Brush.linearGradient(listOf(accent.main, accent.deep))),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(userName.take(1).uppercase(), style = GlacierText.display(16), color = GlacierColors.Void)
+                val image = LocalProfileImage.current
+                var imageLoaded by remember(image) { mutableStateOf(false) }
+                if (!imageLoaded) Text(userName.take(1).uppercase(), style = GlacierText.display(16), color = GlacierColors.Void)
+                if (image != null) {
+                    AsyncImage(
+                        model = image,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        onSuccess = { imageLoaded = true },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
             NavTarget.Home -> NavLabel(stringResource(R.string.nav_home), foreground)
             is NavTarget.Library -> NavLabel(

@@ -63,6 +63,7 @@ import io.github.glacier_jellyfin.androidtv.ui.CardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.LocalMusicProgress
+import io.github.glacier_jellyfin.androidtv.ui.LocalProfileImage
 import io.github.glacier_jellyfin.androidtv.ui.LocalNowPlaying
 import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
 import io.github.glacier_jellyfin.androidtv.ui.LocalUnlockedTitles
@@ -89,6 +90,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jellyfin.sdk.api.client.extensions.imageApi
+import java.util.UUID
 
 /** Picks the first screen: "Who's watching?" (or the start profile) for the start server, otherwise setup. */
 @HiltViewModel
@@ -109,6 +112,14 @@ class StartViewModel @Inject constructor(
     val appearance: StateFlow<AppearanceSettings> = settings.settings
         .map { it.appearance }
         .stateIn(viewModelScope, SharingStarted.Eagerly, settings.settings.value.appearance)
+
+    /** The signed-in profile's picture for the navigation bar; null when it has none. */
+    val profileImage: StateFlow<String?> = sessions.session
+        .map { session ->
+            val tag = session?.user?.primaryImageTag ?: return@map null
+            runCatching { session.api.imageApi.getUserImageUrl(UUID.fromString(session.user.userId), tag = tag) }.getOrNull()
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /** The song for the mini player. */
     val nowPlaying: StateFlow<NowPlaying?> = music.nowPlaying
@@ -176,6 +187,7 @@ class MainActivity : ComponentActivity() {
             val appearance by startViewModel.appearance.collectAsStateWithLifecycle()
             val unlockedTitles by startViewModel.unlockedTitles.collectAsStateWithLifecycle()
             val nowPlaying by startViewModel.nowPlaying.collectAsStateWithLifecycle()
+            val profileImage by startViewModel.profileImage.collectAsStateWithLifecycle()
             val libraryKinds by startViewModel.libraryKinds.collectAsStateWithLifecycle()
             val update by startViewModel.updates.state.collectAsStateWithLifecycle()
             GlacierTheme(accent = Accent.valueOf(appearance.accent.name), reduceMotion = appearance.reduceMotion) {
@@ -185,6 +197,7 @@ class MainActivity : ComponentActivity() {
                     LocalCardSizes provides if (appearance.compact) CardSizes.Compact else CardSizes.Comfortable,
                     LocalUnlockedTitles provides unlockedTitles,
                     LocalNowPlaying provides nowPlaying,
+                    LocalProfileImage provides profileImage,
                     LocalLibraryKinds provides libraryKinds,
                     LocalUpdatePending provides update.pending,
                     LocalMusicProgress provides startViewModel.music.progress,

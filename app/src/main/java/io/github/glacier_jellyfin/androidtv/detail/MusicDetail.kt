@@ -61,6 +61,7 @@ import io.github.glacier_jellyfin.androidtv.ui.audioFormatText
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
+import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 import java.util.UUID
 
 private const val MUSIC_BACKDROP = 760
@@ -102,7 +103,7 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
         runCatching { requester.requestFocus() }
     }
 
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().background(ImagePageGround)) {
         ScrollingBackdrop(item.backdropUrl ?: item.posterUrl, MUSIC_BACKDROP, listState)
         CompositionLocalProvider(LocalBringIntoViewSpec provides rememberRowPivotSpec(listState, HEADER_REGION)) {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {

@@ -493,7 +493,7 @@
     <string name="settings_group_library">Bibliothek</string>
     <string name="settings_group_spotlight">Spotlight</string>
     <string name="settings_accent">Akzentfarbe</string>
-    <string name="settings_accent_sub">Fünf Glacier-Akzente. Grund, Glas und Eislicht bleiben für alle identisch.</string>
+    <string name="settings_accent_sub">Fünf Glacier-Akzente. Sie färben auch den Verlauf im Hintergrund.</string>
     <string name="settings_accent_crevasse">Gletscherspalte</string>
     <string name="settings_accent_blueice">Blaueis</string>
     <string name="settings_accent_aurora">Polarlicht</string>

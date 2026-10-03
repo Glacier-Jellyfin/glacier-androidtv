@@ -23,10 +23,6 @@ object GlacierColors {
 
     val Ice = Color(0xFFE8F4F7)
     val Mist = Color(0xFF8FA6B3)
-
-    /** Ambient glows on the page ground. Deliberately not derived from the accent. */
-    val GlowNear = Color(red = 125, green = 199, blue = 217, alpha = (0.10f * 255).toInt())
-    val GlowFar = Color(red = 78, green = 147, blue = 168, alpha = (0.08f * 255).toInt())
 }
 
 /**

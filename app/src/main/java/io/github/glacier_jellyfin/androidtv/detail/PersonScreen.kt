@@ -74,6 +74,7 @@ import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
+import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -163,7 +164,7 @@ fun PersonScreen(
     val listState = rememberLazyListState()
     val favoriteFocus = remember { FocusRequester() }
 
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().background(ImagePageGround)) {
         when {
             person == null && state.failed -> Column(
                 Modifier.fillMaxSize(),

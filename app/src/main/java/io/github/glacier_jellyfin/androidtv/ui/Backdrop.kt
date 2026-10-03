@@ -45,6 +45,12 @@ fun KenBurns(content: @Composable () -> Unit) {
 }
 
 /**
+ * Ground of pages with artwork at the top. The artwork fades into it, so the
+ * page stays on this solid colour instead of the accent gradient behind other screens.
+ */
+val ImagePageGround = GlacierColors.Void
+
+/**
  * Top backdrop of detail pages: artwork with slow zoom, darkened from the left
  * where the text sits and fading into the page ground at the bottom.
  */

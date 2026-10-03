@@ -13,18 +13,19 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
 
 /**
- * The page ground: void colour with two off-screen glows, like light
- * scattering inside ice (glacier.css, --jf-palette-background-defaultImage).
+ * The page ground for screens without a picture: a wide glow in the accent
+ * colour from above, fading into near black towards the bottom and the edges.
  */
 @Composable
 fun GlacierBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+    val accent = LocalAccent.current.deep
     Box(
         modifier = modifier
             .fillMaxSize()
             .drawBehind {
-                drawRect(GlacierColors.Void)
-                glow(GlacierColors.GlowNear, centerX = 0.12f, centerY = -0.08f, radiusX = 900f, radiusY = 520f, stop = 0.60f)
-                glow(GlacierColors.GlowFar, centerX = 1.08f, centerY = 0.26f, radiusX = 800f, radiusY = 620f, stop = 0.55f)
+                drawRect(Ground)
+                glow(accent.copy(alpha = 0.42f), centerX = 0.42f, centerY = -0.12f, radiusX = 1500f, radiusY = 1000f, stop = 1f)
+                drawRect(Brush.verticalGradient(0.45f to Color.Transparent, 1f to Ground.copy(alpha = 0.7f)))
             },
         content = content,
     )
@@ -43,5 +44,7 @@ private fun DrawScope.glow(color: Color, centerX: Float, centerY: Float, radiusX
         )
     }
 }
+
+private val Ground = Color(0xFF05090D)
 
 private fun Float.dp2px(scope: DrawScope) = this * scope.density

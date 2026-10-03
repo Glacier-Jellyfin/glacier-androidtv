@@ -499,7 +499,7 @@
     <string name="settings_group_library">Library</string>
     <string name="settings_group_spotlight">Spotlight</string>
     <string name="settings_accent">Accent color</string>
-    <string name="settings_accent_sub">Five Glacier accents. Ground, glass and ice light stay the same for everyone.</string>
+    <string name="settings_accent_sub">Five Glacier accents. They also tint the gradient in the background.</string>
     <string name="settings_accent_crevasse">Crevasse</string>
     <string name="settings_accent_blueice">Blue ice</string>
     <string name="settings_accent_aurora">Aurora</string>

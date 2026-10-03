@@ -6,6 +6,7 @@ import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
@@ -73,6 +74,7 @@ import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
 import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
+import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 import io.github.glacier_jellyfin.androidtv.update.UpdateDialog
 import io.github.glacier_jellyfin.androidtv.update.UpdateViewModel
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateCandidate
@@ -183,7 +185,8 @@ fun HomeScreen(
         exitWasOpen = exitAsked
     }
 
-    Box(Modifier.fillMaxSize()) {
+    // The spotlight fades into the solid ground, so the page below it keeps that ground too.
+    Box(Modifier.fillMaxSize().then(if (spotlight.isNotEmpty()) Modifier.background(ImagePageGround) else Modifier)) {
         val content = state.content
         when {
             state.loading && content == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }

@@ -1,6 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.seerr
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
@@ -68,6 +69,7 @@ import io.github.glacier_jellyfin.androidtv.ui.ratingText
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import io.github.glacier_jellyfin.androidtv.ui.seasonLabel
+import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 
 private const val BACKDROP = 760
 
@@ -93,7 +95,7 @@ private fun Page(state: SeerrState, details: SeerrDetails, viewModel: SeerrViewM
     val item = details.item
     val requestFocus = remember { FocusRequester() }
     val listState = rememberLazyListState()
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().background(ImagePageGround)) {
         ScrollingBackdrop(item.backdropUrl, BACKDROP, listState)
         CompositionLocalProvider(LocalBringIntoViewSpec provides rememberRowPivotSpec(listState, HEADER_REGION)) {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {

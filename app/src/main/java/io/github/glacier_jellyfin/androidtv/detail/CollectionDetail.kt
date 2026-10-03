@@ -66,6 +66,7 @@ import io.github.glacier_jellyfin.androidtv.ui.ratingText
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
+import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 
 private const val COLLECTION_BACKDROP = 740
 private const val TITLE_CLAMP = 22
@@ -79,7 +80,7 @@ fun CollectionDetail(state: DetailState, details: ItemDetails, viewModel: Detail
     val playFocus = remember { FocusRequester() }
     val accent = LocalAccent.current.main
 
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().background(ImagePageGround)) {
         DetailBackdrop(
             url = collection.backdropUrl ?: items.firstOrNull()?.backdropUrl,
             height = COLLECTION_BACKDROP,
