@@ -4,9 +4,10 @@
 # Usage: scripts/check-ffmpeg-apk.sh <apk>
 set -euo pipefail
 apk="$1"
+listing=$(unzip -l "$apk")
 missing=0
 for abi in armeabi-v7a arm64-v8a x86 x86_64; do
-    if ! unzip -l "$apk" | grep -q "lib/$abi/libffmpegJNI.so"; then
+    if ! grep -q "lib/$abi/libffmpegJNI.so" <<< "$listing"; then
         echo "::error::$apk has no lib/$abi/libffmpegJNI.so"
         missing=1
     fi

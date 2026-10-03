@@ -13,13 +13,14 @@ app ──► core:designsystem
 
 | Module | Responsibility |
 |---|---|
-| `app` | Entry point, navigation, screens. Each feature is a package: `setup`, `profiles`, `home`, `library`, `detail`, `search`, `player`, `trailer`, `music`, `settings`, `update`. |
+| `app` | Entry point, navigation, screens. Each feature is a package: `setup`, `profiles`, `home`, `library`, `detail`, `search`, `seerr`, `player`, `trailer`, `music`, `channels`, `settings`, `diagnostics`, `update`. |
 | `core:designsystem` | Glacier tokens (colours, accents, shapes) and the Compose theme, plus focus-aware components shared by all screens. |
 | `core:jellyfin` | Server discovery, authentication, API access and the device profile sent to the server. |
 | `core:data` | Repositories, local settings, and syncing the preferences Jellyfin stores per user. |
 | `core:player` | Media3 ExoPlayer setup, media segments, trickplay, track selection. |
 | `core:ffmpeg` | Vendored Media3 FFmpeg audio decoder extension (see [core/ffmpeg/README.md](../core/ffmpeg/README.md)). Only linked into the app when the prebuilt `.so` files are present. |
 | `core:updater` | Self-update from GitHub releases. |
+| `core:log` | Logging to logcat and a small log file on the device, with tokens and passwords removed. Used by the diagnostics upload. |
 
 ## Key decisions
 
@@ -53,6 +54,16 @@ without a rating are detected client-side and hidden or locked the same way,
 because the server does not distinguish "unrated" from "no filter applied"
 once a policy exists. A PIN unlocks either a single title or, for a
 collection, everything in it, for the rest of the profile's session.
+
+### Seerr
+
+Search can also show titles from Seerr, the request manager for Jellyfin.
+Glacier never talks to Seerr directly. It goes through the proxy of the
+Jellyfin Enhanced server plugin (`/JellyfinEnhanced/jellyseerr/*`) with the
+normal Jellyfin token, and the plugin maps the Jellyfin user to the Seerr
+user. This also works for accounts signed in with Quick Connect, and no Seerr
+key is stored on the TV. The plugin API is not public, so the client ignores
+unknown fields and hides Seerr results quietly when anything fails.
 
 ### Server compatibility
 

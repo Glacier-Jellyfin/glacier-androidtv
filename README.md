@@ -26,6 +26,8 @@
 
 - Movies, shows and music from your Jellyfin server, with search, sorting and
   filters, collections and an A–Z rail for large libraries
+- Search that also finds titles missing from your library and requests them
+  through Seerr (needs the Jellyfin Enhanced plugin on the server)
 - Multiple servers and profiles, server discovery, Quick Connect; a start
   profile can open by itself
 - Parental controls: age limits and PINs for profiles, titles and settings,
