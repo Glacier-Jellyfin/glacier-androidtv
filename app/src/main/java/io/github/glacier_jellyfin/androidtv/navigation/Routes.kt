@@ -46,8 +46,9 @@ data class DetailRoute(val itemId: String, val themeArea: String? = null)
 @Serializable
 data class PlayerRoute(val itemId: String, val fromStart: Boolean = false, val queueOf: String? = null)
 
+/** Trailers of a library title ([itemId]), or of a Seerr title ([seerrType] and [tmdbId]) not in the library yet. */
 @Serializable
-data class TrailerRoute(val itemId: String)
+data class TrailerRoute(val itemId: String? = null, val seerrType: String? = null, val tmdbId: Int? = null)
 
 /**
  * The music player, queueing every song of an album, artist or playlist
@@ -63,6 +64,10 @@ data class PersonRoute(val personId: String, val fromTitle: String? = null, val 
 
 @Serializable
 data class SearchRoute(val query: String? = null)
+
+/** A movie or show to request through Seerr; [type] is a SeerrMediaType name. */
+@Serializable
+data class SeerrRoute(val type: String, val tmdbId: Int)
 
 @Serializable
 data object SettingsRoute

@@ -49,6 +49,20 @@ class SearchRepository @Inject constructor(
         }
     }
 
+    /** Library titles by id (those Seerr pointed to), in the given order and through the age filter. */
+    suspend fun byIds(ids: List<UUID>): List<MediaItem> = withContext(Dispatchers.IO) {
+        if (ids.isEmpty()) return@withContext emptyList()
+        val session = requireSession()
+        val mapper = MediaMapper(session.api)
+        val found = session.api.libraryApi.getItems(
+            userId = session.userId,
+            ids = ids,
+            fields = listOf(ItemFields.GENRES, ItemFields.SORT_NAME),
+            enableUserData = true,
+        ).content.items.associateBy { it.id }
+        ageFilter.screen(ids.mapNotNull { found[it] }.map(mapper::item))
+    }
+
     /** Shown before anything is typed ("Suggestions"). */
     suspend fun suggestions(): List<MediaItem> = withContext(Dispatchers.IO) {
         val session = requireSession()

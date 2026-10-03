@@ -197,6 +197,8 @@ fun PosterCard(
     title: String? = null,
     badge: Int? = null,
     locked: Boolean = false,
+    /** Short status on the artwork's lower edge (Seerr titles: "Request", "Requested" …). */
+    tag: String? = null,
 ) {
     val accent = LocalAccent.current.main
     val shape: Shape = RoundedCornerShape(if (square) GlacierShapes.RadiusMd else GlacierShapes.RadiusLg)
@@ -218,6 +220,20 @@ fun PosterCard(
                     .background(Brush.linearGradient(0f to Color(0x1AE8F4F7), 0.42f to Color.Transparent, start = Offset(Float.POSITIVE_INFINITY, 0f), end = Offset(0f, Float.POSITIVE_INFINITY))),
             )
             if (locked) LockBadge(Modifier.align(Alignment.TopStart))
+            if (tag != null) {
+                Box(
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(14.dp)
+                        .height(34.dp)
+                        .clip(PillShape)
+                        .background(Color(0xCC05090F))
+                        .padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(tag, style = GlacierText.body(16, FontWeight.SemiBold), color = GlacierColors.Ice, maxLines = 1)
+                }
+            }
             if (badge != null) {
                 Box(
                     Modifier

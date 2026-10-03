@@ -417,12 +417,14 @@ private fun TrailerOsd(
                         modifier = Modifier.padding(start = 12.dp),
                     )
                 }
-                val favorite = item?.isFavorite == true
-                LabelButton(
-                    if (favorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
-                    stringResource(if (favorite) R.string.favorite_tag else R.string.trailer_add_favorite),
-                    onClick = onFavorite,
-                )
+                if (!state.seerr) {
+                    val favorite = item?.isFavorite == true
+                    LabelButton(
+                        if (favorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
+                        stringResource(if (favorite) R.string.favorite_tag else R.string.trailer_add_favorite),
+                        onClick = onFavorite,
+                    )
+                }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {

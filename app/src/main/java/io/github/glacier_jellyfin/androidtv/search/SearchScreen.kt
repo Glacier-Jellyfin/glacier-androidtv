@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,6 +40,8 @@ import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
+import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrItem
+import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrMediaType
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
@@ -45,6 +49,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.KeyCap
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SystemTextInput
+import io.github.glacier_jellyfin.androidtv.seerr.seerrStatusLabel
 import io.github.glacier_jellyfin.androidtv.setup.InputField
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
@@ -75,12 +80,24 @@ fun SearchScreen(
     // Focus returns to whichever control opened the system keyboard.
     var openedFromField by rememberSaveable { mutableStateOf(false) }
     var initialFocusDone by rememberSaveable { mutableStateOf(false) }
+    // Back from a title lands on its card again, not on the first control.
+    var lastOpened by rememberSaveable { mutableStateOf<String?>(null) }
+    val restoreFocus = remember { FocusRequester() }
+    val gridState = rememberLazyGridState()
 
     LaunchedEffect(Unit) {
+        withFrameNanos { }
         if (!initialFocusDone) {
-            withFrameNanos { }
             initialFocusDone = runCatching { keyFocus.requestFocus() }.isSuccess
+            return@LaunchedEffect
         }
+        val index = resultKeys(state).indexOf(lastOpened)
+        if (index < 0) return@LaunchedEffect
+        if (gridState.layoutInfo.visibleItemsInfo.none { it.index == index }) {
+            gridState.scrollToItem(index)
+            withFrameNanos { }
+        }
+        runCatching { restoreFocus.requestFocus() }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -115,7 +132,22 @@ fun SearchScreen(
                     firstKeyFocus = keyFocus,
                 )
             }
-            Results(state, onOpen = viewModel::open, onRetry = viewModel::retry, modifier = Modifier.weight(1f))
+            Results(
+                state = state,
+                gridState = gridState,
+                lastOpened = lastOpened,
+                restoreFocus = restoreFocus,
+                onOpen = { item ->
+                    lastOpened = item.resultKey
+                    viewModel.open(item)
+                },
+                onOpenSeerr = { item ->
+                    lastOpened = item.resultKey
+                    viewModel.open(item)
+                },
+                onRetry = viewModel::retry,
+                modifier = Modifier.weight(1f),
+            )
         }
 
         TopNav(
@@ -181,11 +213,21 @@ internal fun typeChar(query: String, char: Char): String {
 }
 
 @Composable
-private fun Results(state: SearchState, onOpen: (MediaItem) -> Unit, onRetry: () -> Unit, modifier: Modifier) {
+private fun Results(
+    state: SearchState,
+    gridState: LazyGridState,
+    lastOpened: String?,
+    restoreFocus: FocusRequester,
+    onOpen: (MediaItem) -> Unit,
+    onOpenSeerr: (SeerrItem) -> Unit,
+    onRetry: () -> Unit,
+    modifier: Modifier,
+) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(22.dp)) {
+        val count = state.results.size + state.seerr.size
         val title = when {
             state.resultsFor == null -> stringResource(R.string.search_suggestions)
-            else -> pluralStringResource(R.plurals.search_results, state.results.size, state.results.size, state.resultsFor)
+            else -> pluralStringResource(R.plurals.search_results, count, count, state.resultsFor)
         }
         Text(title, style = GlacierText.display(28), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
         when {
@@ -193,14 +235,15 @@ private fun Results(state: SearchState, onOpen: (MediaItem) -> Unit, onRetry: ()
                 Text(stringResource(R.string.search_error), style = GlacierText.body(21), color = GlacierColors.Mist)
                 PillButton(stringResource(R.string.action_retry), onClick = onRetry)
             }
-            state.loading && state.results.isEmpty() -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { SpinningDiamond(60) }
-            state.resultsFor != null && state.results.isEmpty() -> Text(
+            (state.loading || state.seerrLoading) && count == 0 -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { SpinningDiamond(60) }
+            state.resultsFor != null && count == 0 -> Text(
                 stringResource(R.string.search_none, state.resultsFor),
                 style = GlacierText.body(21),
                 color = GlacierColors.Mist,
                 modifier = Modifier.padding(vertical = 60.dp),
             )
             else -> LazyVerticalGrid(
+                state = gridState,
                 columns = GridCells.Fixed(Columns),
                 horizontalArrangement = Arrangement.spacedBy(26.dp),
                 verticalArrangement = Arrangement.spacedBy(32.dp),
@@ -208,19 +251,45 @@ private fun Results(state: SearchState, onOpen: (MediaItem) -> Unit, onRetry: ()
                 contentPadding = PaddingValues(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 60.dp),
                 modifier = Modifier.width((LocalCardSizes.current.posterWidth * Columns + 26 * (Columns - 1) + 24).dp),
             ) {
-                items(state.results, key = { it.id }) { item -> ResultCard(item, onClick = { onOpen(item) }) }
+                fun Modifier.restoring(key: String) = if (key == lastOpened) focusRequester(restoreFocus) else this
+                items(state.results, key = { it.resultKey }) { item ->
+                    ResultCard(item, onClick = { onOpen(item) }, modifier = Modifier.restoring(item.resultKey))
+                }
+                items(state.seerr, key = { it.resultKey }) { item ->
+                    SeerrCard(item, onClick = { onOpenSeerr(item) }, modifier = Modifier.restoring(item.resultKey))
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ResultCard(item: MediaItem, onClick: () -> Unit) {
+private fun ResultCard(item: MediaItem, onClick: () -> Unit, modifier: Modifier) {
     if (item.kind == ItemKind.Album) {
         // Design: albums show title and artist under a square cover.
-        PosterCard(imageUrl = item.posterUrl, caption = item.parentTitle.orEmpty(), onClick = onClick, square = true, title = item.title)
+        PosterCard(imageUrl = item.posterUrl, caption = item.parentTitle.orEmpty(), onClick = onClick, modifier = modifier, square = true, title = item.title)
     } else {
         // Title above the year, laid out like the album cards.
-        PosterCard(imageUrl = item.posterUrl, caption = item.year?.toString().orEmpty(), onClick = onClick, title = item.title, locked = item.showsLock())
+        PosterCard(imageUrl = item.posterUrl, caption = item.year?.toString().orEmpty(), onClick = onClick, modifier = modifier, title = item.title, locked = item.showsLock())
     }
 }
+
+/** A title from Seerr: what it is and where its request stands. */
+@Composable
+private fun SeerrCard(item: SeerrItem, onClick: () -> Unit, modifier: Modifier) {
+    val kind = stringResource(if (item.type == SeerrMediaType.Movie) R.string.seerr_movie else R.string.seerr_show)
+    PosterCard(
+        imageUrl = item.posterUrl,
+        caption = listOfNotNull(item.year?.toString(), kind).joinToString(" · "),
+        onClick = onClick,
+        modifier = modifier,
+        title = item.title,
+        tag = stringResource(seerrStatusLabel(item.status)),
+    )
+}
+
+private val MediaItem.resultKey: String get() = id.toString()
+private val SeerrItem.resultKey: String get() = "seerr-$type-$tmdbId"
+
+/** Grid keys in display order: library hits, then Seerr's. */
+private fun resultKeys(state: SearchState) = state.results.map { it.resultKey } + state.seerr.map { it.resultKey }

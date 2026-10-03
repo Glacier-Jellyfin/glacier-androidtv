@@ -376,7 +376,10 @@ private fun Pill(text: String, modifier: Modifier, background: Color = GlacierCo
 
 /** Cast member: round portrait (or initial), name and character. */
 @Composable
-fun CastCard(person: CastMember, onClick: () -> Unit) {
+fun CastCard(person: CastMember, onClick: () -> Unit) = CastCard(person.name, person.role, person.imageUrl, onClick)
+
+@Composable
+fun CastCard(name: String, role: String?, imageUrl: String?, onClick: () -> Unit) {
     val accent = LocalAccent.current
     val size = LocalCardSizes.current.castSize
     GlacierCard(onClick = onClick, modifier = Modifier.width((size + 18).dp)) { focused ->
@@ -389,18 +392,18 @@ fun CastCard(person: CastMember, onClick: () -> Unit) {
                 .background(Brush.linearGradient(listOf(accent.deep, GlacierColors.Void))),
             contentAlignment = Alignment.Center,
         ) {
-            Text(person.name.take(1).uppercase(), style = GlacierText.display(38), color = GlacierColors.Ice)
-            if (person.imageUrl != null) Artwork(person.imageUrl, Modifier.fillMaxSize())
+            Text(name.take(1).uppercase(), style = GlacierText.display(38), color = GlacierColors.Ice)
+            if (imageUrl != null) Artwork(imageUrl, Modifier.fillMaxSize())
         }
         Text(
-            person.name,
+            name,
             style = GlacierText.body(17, FontWeight.SemiBold),
             color = if (focused) accent.main else GlacierColors.Ice,
             textAlign = TextAlign.Center,
             maxLines = 2,
             modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
         )
-        person.role?.let {
+        role?.let {
             Text(it, style = GlacierText.body(15), color = GlacierColors.Mist, textAlign = TextAlign.Center, maxLines = 2, modifier = Modifier.fillMaxWidth())
         }
     }

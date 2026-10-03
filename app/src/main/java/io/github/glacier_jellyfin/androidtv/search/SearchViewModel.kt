@@ -6,20 +6,27 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.SearchRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrItem
+import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrStatus
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
+import io.github.glacier_jellyfin.androidtv.navigation.SeerrRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SettingsRoute
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,8 +39,12 @@ import javax.inject.Inject
 
 data class SearchState(
     val query: String = "",
-    /** Hits for [resultsFor]; suggestions while the query is empty. */
+    /** Library hits for [resultsFor]; suggestions while the query is empty. */
     val results: List<MediaItem> = emptyList(),
+    /** Titles to request through Seerr, shown after the library hits. */
+    val seerr: List<SeerrItem> = emptyList(),
+    /** Seerr is still being asked for [resultsFor]. */
+    val seerrLoading: Boolean = false,
     /** The query [results] belong to; null for suggestions. */
     val resultsFor: String? = null,
     val loading: Boolean = false,
@@ -45,6 +56,8 @@ data class SearchState(
 class SearchViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: SearchRepository,
+    private val seerr: SeerrRepository,
+    private val parental: ParentalControl,
     private val sessions: SessionManager,
 ) : ViewModel() {
 
@@ -81,18 +94,47 @@ class SearchViewModel @Inject constructor(
             _state.update { it.copy(loading = true, failed = false) }
             val term = query.trim()
             try {
-                val results = if (term.isEmpty()) repository.suggestions() else repository.search(term)
-                _state.update { it.copy(loading = false, results = results, resultsFor = term.ifEmpty { null }) }
+                if (term.isEmpty()) {
+                    val results = repository.suggestions()
+                    _state.update { it.copy(loading = false, results = results, resultsFor = null, seerr = emptyList(), seerrLoading = false) }
+                } else {
+                    searchBoth(term)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Search failed", e)
-                _state.update { it.copy(loading = false, failed = true) }
+                _state.update { it.copy(loading = false, failed = true, seerrLoading = false) }
             }
         }
     }
 
+    /** Library hits show at once; Seerr's follow when they arrive and never fail the search. */
+    private suspend fun searchBoth(term: String) = coroutineScope {
+        // Requests are kept away from profiles with an age limit.
+        val found = async { if (parental.lock.value.protection.restricts) emptyList() else softly { seerr.search(term) } }
+        val results = repository.search(term)
+        _state.update { it.copy(loading = false, results = results, resultsFor = term, seerr = emptyList(), seerrLoading = true) }
+        val hits = found.await()
+        // Titles Seerr knows in the library but the title search missed (another language, say).
+        val known = results.mapTo(HashSet()) { it.id }
+        val extra = softly { repository.byIds(hits.mapNotNull { it.jellyfinId }.filter { it !in known }.distinct()) }
+        val requestable = hits.filter { it.jellyfinId == null && it.status != SeerrStatus.Available && it.status != SeerrStatus.Blocklisted }
+        _state.update { it.copy(results = results + extra, seerr = requestable, seerrLoading = false) }
+    }
+
+    private suspend fun <T> softly(block: suspend () -> List<T>): List<T> = try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w(TAG, "Seerr search failed", e)
+        emptyList()
+    }
+
     fun open(item: MediaItem) = navigate(DetailRoute(item.id.toString()))
+
+    fun open(item: SeerrItem) = navigate(SeerrRoute(item.type.name, item.tmdbId))
 
     fun onNav(target: NavTarget) {
         when (target) {

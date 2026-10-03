@@ -12,6 +12,7 @@ import io.github.glacier_jellyfin.androidtv.detail.DetailScreen
 import io.github.glacier_jellyfin.androidtv.detail.PersonScreen
 import io.github.glacier_jellyfin.androidtv.player.PlayerScreen
 import io.github.glacier_jellyfin.androidtv.search.SearchScreen
+import io.github.glacier_jellyfin.androidtv.seerr.SeerrScreen
 import io.github.glacier_jellyfin.androidtv.home.HomeScreen
 import io.github.glacier_jellyfin.androidtv.library.LibraryScreen
 import io.github.glacier_jellyfin.androidtv.music.MusicPlayerScreen
@@ -74,6 +75,7 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
         composable<PlayerRoute> { PlayerScreen(onBack = back) }
         composable<MusicRoute> { MusicPlayerScreen(onBack = back) }
         composable<SearchRoute> { SearchScreen(onNavigate = navigate) }
+        composable<SeerrRoute> { SeerrScreen(onNavigate = navigate) }
         composable<SettingsRoute> { SettingsScreen(onNavigate = navigate) }
     }
 }

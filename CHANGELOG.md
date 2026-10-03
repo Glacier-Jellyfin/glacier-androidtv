@@ -18,6 +18,10 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### New
+- Search also finds movies and shows that are not in the library yet, through Seerr. This needs the Jellyfin Enhanced plugin with Seerr set up on the server. Library titles come first, Seerr titles follow with their state
+- A Seerr title opens its own page with plot, cast and trailer. Movies and single seasons of a show can be requested from there
+
 ## [0.1.1] - 2026-10-03
 
 ### Improved

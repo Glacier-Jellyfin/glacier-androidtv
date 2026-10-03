@@ -226,6 +226,37 @@
     </plurals>
     <string name="search_none">Keine Treffer für „%1$s“.</string>
     <string name="search_error">Suche fehlgeschlagen.</string>
+    <!-- Seerr (through the Jellyfin Enhanced plugin) -->
+    <string name="seerr_movie">Film</string>
+    <string name="seerr_show">Serie</string>
+    <string name="seerr_crumb">Seerr · %1$s</string>
+    <string name="seerr_status_request">Anfragen</string>
+    <string name="seerr_status_pending">Angefragt</string>
+    <string name="seerr_status_processing">In Bearbeitung</string>
+    <string name="seerr_status_partial">Teilweise verfügbar</string>
+    <string name="seerr_status_available">Verfügbar</string>
+    <string name="seerr_status_blocked">Gesperrt</string>
+    <string name="seerr_request">Anfragen</string>
+    <plurals name="seerr_request_seasons">
+        <item quantity="one">%1$d Staffel anfragen</item>
+        <item quantity="other">%1$d Staffeln anfragen</item>
+    </plurals>
+    <plurals name="seerr_seasons">
+        <item quantity="one">%1$d Staffel</item>
+        <item quantity="other">%1$d Staffeln</item>
+    </plurals>
+    <string name="seerr_seasons_title">Staffeln</string>
+    <string name="seerr_requested">„%1$s“ angefragt</string>
+    <string name="seerr_not_allowed">Du darfst das nicht anfragen. Frag den Server-Admin.</string>
+    <string name="seerr_quota_used_up">Gerade sind keine Anfragen mehr übrig. Versuch es später noch einmal.</string>
+    <string name="seerr_already_requested">Dieser Titel wurde schon angefragt.</string>
+    <string name="seerr_request_failed">Die Anfrage konnte nicht gesendet werden.</string>
+    <string name="seerr_quota_label">Verbleibende Anfragen</string>
+    <string name="seerr_request_hint">Die Anfrage geht über Seerr an deinen Server. Je nach Einstellung muss sie erst freigegeben werden. Danach erscheint der Titel von selbst in deiner Bibliothek.</string>
+    <plurals name="seerr_quota">
+        <item quantity="one">%1$d von %2$d pro Tag</item>
+        <item quantity="other">%1$d von %2$d in %3$d Tagen</item>
+    </plurals>
     <string name="keyboard_system">Systemtastatur</string>
     <string name="keyboard_delete">Löschen</string>
 

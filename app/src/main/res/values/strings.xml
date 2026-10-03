@@ -232,6 +232,37 @@
     </plurals>
     <string name="search_none">No results for “%1$s”.</string>
     <string name="search_error">Search failed.</string>
+    <!-- Seerr (through the Jellyfin Enhanced plugin) -->
+    <string name="seerr_movie">Movie</string>
+    <string name="seerr_show">Show</string>
+    <string name="seerr_crumb">Seerr · %1$s</string>
+    <string name="seerr_status_request">Request</string>
+    <string name="seerr_status_pending">Requested</string>
+    <string name="seerr_status_processing">Processing</string>
+    <string name="seerr_status_partial">Partly available</string>
+    <string name="seerr_status_available">Available</string>
+    <string name="seerr_status_blocked">Blocked</string>
+    <string name="seerr_request">Request</string>
+    <plurals name="seerr_request_seasons">
+        <item quantity="one">Request %1$d season</item>
+        <item quantity="other">Request %1$d seasons</item>
+    </plurals>
+    <plurals name="seerr_seasons">
+        <item quantity="one">%1$d season</item>
+        <item quantity="other">%1$d seasons</item>
+    </plurals>
+    <string name="seerr_seasons_title">Seasons</string>
+    <string name="seerr_requested">“%1$s” requested</string>
+    <string name="seerr_not_allowed">You may not request this. Ask the server admin.</string>
+    <string name="seerr_quota_used_up">No requests left for now. Try again later.</string>
+    <string name="seerr_already_requested">This title has already been requested.</string>
+    <string name="seerr_request_failed">The request could not be sent.</string>
+    <string name="seerr_quota_label">Requests left</string>
+    <string name="seerr_request_hint">The request goes to your server through Seerr. Depending on its settings, it has to be approved first. After that, the title shows up in your library by itself.</string>
+    <plurals name="seerr_quota">
+        <item quantity="one">%1$d of %2$d per day</item>
+        <item quantity="other">%1$d of %2$d per %3$d days</item>
+    </plurals>
     <string name="keyboard_system">System keyboard</string>
     <string name="keyboard_delete">Delete</string>
 

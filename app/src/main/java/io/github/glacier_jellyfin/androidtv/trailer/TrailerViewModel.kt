@@ -18,6 +18,10 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LocalTrailer
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.Trailer
+import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrDetails
+import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrMediaType
+import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.Trailers
 import io.github.glacier_jellyfin.androidtv.core.data.media.YouTubeTrailer
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
@@ -64,6 +68,8 @@ data class TrailerUiState(
     val countdown: Int? = null,
     /** Lengths learned while playing (YouTube reports them only then), by trailer index. */
     val durations: Map<Int, Long> = emptyMap(),
+    /** A Seerr title: not in the library, so nothing to play or mark as favourite. */
+    val seerr: Boolean = false,
 ) {
     val item: MediaItem? get() = details?.item
     val current: Trailer? get() = trailers.getOrNull(index)
@@ -72,7 +78,7 @@ data class TrailerUiState(
     fun durationOf(index: Int): Long? = durations[index] ?: (trailers.getOrNull(index) as? LocalTrailer)?.durationMs
 
     val titleAction: TitleAction?
-        get() = when (item?.kind) {
+        get() = if (seerr) null else when (item?.kind) {
             ItemKind.Movie -> if ((item?.resumePositionMs ?: 0) > 0) TitleAction.ResumeMovie else TitleAction.PlayMovie
             ItemKind.Series -> TitleAction.WatchShow
             ItemKind.Episode -> TitleAction.PlayEpisode
@@ -90,9 +96,11 @@ class TrailerViewModel @Inject constructor(
     private val playback: PlaybackRepository,
     private val settings: SettingsRepository,
     private val musicPlayback: MusicController,
+    private val seerrRepository: SeerrRepository,
 ) : ViewModel(), YouTubeListener {
 
-    private val itemId = UUID.fromString(savedStateHandle.toRoute<TrailerRoute>().itemId)
+    private val route = savedStateHandle.toRoute<TrailerRoute>()
+    private val itemId = route.itemId?.let(UUID::fromString)
 
     private val _state = MutableStateFlow(TrailerUiState())
     val state: StateFlow<TrailerUiState> = _state.asStateFlow()
@@ -152,6 +160,10 @@ class TrailerViewModel @Inject constructor(
     private fun load() {
         viewModelScope.launch {
             try {
+                if (itemId == null) {
+                    loadSeerr()
+                    return@launch
+                }
                 val details = repository.details(itemId)
                 val local = if (details.trailers.localCount > 0) {
                     runCatching { repository.localTrailers(itemId) }
@@ -171,6 +183,17 @@ class TrailerViewModel @Inject constructor(
                 _state.update { it.copy(empty = true, loading = false) }
             }
         }
+    }
+
+    /** Trailers of a title that is not in the library: Seerr's YouTube links only. */
+    private suspend fun loadSeerr() {
+        val type = SeerrMediaType.valueOf(checkNotNull(route.seerrType) { "Trailer route without a title" })
+        val seerr = seerrRepository.details(type, checkNotNull(route.tmdbId))
+        val details = seerr.asItemDetails()
+        _state.update {
+            it.copy(details = details, trailers = seerr.trailers, seerr = true, empty = seerr.trailers.isEmpty(), loading = seerr.trailers.isNotEmpty())
+        }
+        if (seerr.trailers.isNotEmpty()) play(0)
     }
 
     /** Starts trailer [index] from the beginning. */
@@ -331,6 +354,7 @@ class TrailerViewModel @Inject constructor(
     }
 
     fun toggleFavorite() {
+        if (_state.value.seerr) return
         val details = _state.value.details ?: return
         val favorite = !details.item.isFavorite
         setFavorite(favorite)
@@ -412,4 +436,45 @@ class TrailerViewModel @Inject constructor(
         const val YT_PLAYING = 1
         const val YT_PAUSED = 2
     }
+}
+
+/** The fields the trailer screen shows, for a title that only Seerr knows. */
+private fun SeerrDetails.asItemDetails(): ItemDetails {
+    val seerr = item
+    return ItemDetails(
+        item = MediaItem(
+            // Never sent to Jellyfin: favourites and playback are off for Seerr titles.
+            id = UUID(0L, seerr.tmdbId.toLong()),
+            kind = if (seerr.type == SeerrMediaType.Movie) ItemKind.Movie else ItemKind.Series,
+            title = seerr.title,
+            sortName = null,
+            year = seerr.year,
+            communityRating = rating,
+            officialRating = null,
+            runtimeMinutes = runtimeMinutes.takeIf { seerr.type == SeerrMediaType.Movie },
+            genres = genres,
+            overview = seerr.overview,
+            parentTitle = null,
+            seasonNumber = null,
+            episodeNumber = null,
+            progress = null,
+            remainingMinutes = null,
+            unwatchedCount = null,
+            isFavorite = false,
+            played = false,
+            childCount = null,
+            quality = null,
+            posterUrl = seerr.posterUrl,
+            thumbUrl = seerr.backdropUrl,
+            backdropUrl = seerr.backdropUrl,
+        ),
+        cast = emptyList(),
+        tracks = null,
+        trailers = Trailers(localCount = 0, youTube = trailers),
+        seriesId = null,
+        seasonId = null,
+        premiereDate = null,
+        seasonCount = seasons.size.takeIf { it > 0 },
+        episodeCount = null,
+    )
 }
