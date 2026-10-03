@@ -8,6 +8,7 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.channels.HomeLaunches
 import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
 import io.github.glacier_jellyfin.androidtv.core.data.media.AgeFilter
+import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeContent
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
@@ -60,6 +61,7 @@ class HomeViewModel @Inject constructor(
     private val parental: ParentalControl,
     private val ageFilter: AgeFilter,
     playback: PlaybackRepository,
+    details: DetailRepository,
     private val music: MusicController,
     launches: HomeLaunches,
 ) : ViewModel() {
@@ -82,6 +84,8 @@ class HomeViewModel @Inject constructor(
         load()
         // Back from the player: "continue watching" and progress bars follow what was just watched.
         viewModelScope.launch { playback.stopped.collect { refresh() } }
+        // Marked watched or unwatched on a detail page.
+        viewModelScope.launch { details.playedChanged.collect { refresh() } }
         // Settings › Home changed: only the spotlight follows.
         viewModelScope.launch {
             settings.settings.map { it.home }.distinctUntilChanged().collect { home ->

@@ -3,6 +3,9 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
@@ -28,6 +31,11 @@ class DetailRepository @Inject constructor(
     private val sessions: SessionManager,
     private val ageFilter: AgeFilter,
 ) {
+
+    private val _playedChanged = MutableSharedFlow<UUID>(extraBufferCapacity = 8)
+
+    /** A title the user marked watched or unwatched: lists showing its state or progress are stale. */
+    val playedChanged: SharedFlow<UUID> = _playedChanged.asSharedFlow()
 
     suspend fun details(id: UUID): ItemDetails = withContext(Dispatchers.IO) {
         val session = requireSession()
@@ -252,6 +260,7 @@ class DetailRepository @Inject constructor(
         withContext(Dispatchers.IO) {
             if (played) api.markPlayedItem(itemId = id) else api.markUnplayedItem(itemId = id)
         }
+        _playedChanged.tryEmit(id)
     }
 
     suspend fun setFavorite(id: UUID, favorite: Boolean) {

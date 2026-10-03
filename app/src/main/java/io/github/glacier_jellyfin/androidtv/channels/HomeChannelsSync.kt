@@ -20,6 +20,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import io.github.glacier_jellyfin.androidtv.core.data.AccountRepository
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeScreenRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.log.Log
@@ -42,7 +43,8 @@ import javax.inject.Singleton
 /**
  * Keeps the Android TV home screen ([HomeChannels]) current: when a profile
  * opens, after the profile used last or its age limit changed, after
- * playback, and every few hours in the background for titles added meanwhile.
+ * playback or marking a title watched, and every few hours in the background
+ * for titles added meanwhile.
  */
 @Singleton
 class HomeChannelsSync @Inject constructor(
@@ -50,6 +52,7 @@ class HomeChannelsSync @Inject constructor(
     private val accounts: AccountRepository,
     private val sessions: SessionManager,
     private val playback: PlaybackRepository,
+    private val details: DetailRepository,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -78,6 +81,7 @@ class HomeChannelsSync @Inject constructor(
                 .collect { refresh(context) }
         }
         scope.launch { playback.stopped.collect { refresh(context) } }
+        scope.launch { details.playedChanged.collect { refresh(context) } }
     }
 
     companion object {
