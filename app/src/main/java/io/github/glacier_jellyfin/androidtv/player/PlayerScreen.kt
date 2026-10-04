@@ -79,6 +79,7 @@ fun PlayerScreen(
     BackHandler { viewModel.stop() }
     // Leaving the app (Home button) pauses; nobody is watching.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.pause() }
+    MatchFrameRate(state.file?.video?.frameRate?.takeIf { it > 0 }, state.matchFrameRate)
     val view = LocalView.current
     DisposableEffect(view) {
         view.keepScreenOn = true

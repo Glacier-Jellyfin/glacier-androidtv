@@ -549,6 +549,9 @@
     <string name="settings_up_next_credits">Mit Abspann</string>
     <string name="settings_trailer_auto">Trailer nacheinander abspielen</string>
     <string name="settings_trailer_auto_sub">Nach dem Ende eines Trailers startet der nächste nach 8 Sekunden</string>
+    <string name="settings_match_frame_rate">Bildwiederholrate anpassen</string>
+    <string name="settings_match_frame_rate_sub">Der Fernseher wechselt während der Wiedergabe auf die Bildrate des Videos. Filme laufen so ohne Ruckeln. Der Bildschirm kann dabei kurz schwarz werden.</string>
+    <string name="settings_match_frame_rate_sub_fire_tv">Der Fernseher wechselt während der Wiedergabe auf die Bildrate des Videos. Filme laufen so ohne Ruckeln. Schalte auf dem Fire TV zusätzlich „An Originalbildrate anpassen“ unter Töne und Bildschirm › Bildschirm ein.</string>
     <string name="settings_seek_back">Zurückspulen</string>
     <string name="settings_seek_forward">Vorspulen</string>
     <string name="settings_seek_sub">Links/Rechts, Spultasten der Fernbedienung und Schaltflächen im Player · auch im Musik-Player</string>

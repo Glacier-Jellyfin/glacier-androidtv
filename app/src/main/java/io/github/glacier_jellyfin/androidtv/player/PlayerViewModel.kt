@@ -107,6 +107,8 @@ data class PlayerUiState(
     val seekBackMs: Long = 10_000,
     val seekForwardMs: Long = 30_000,
     val subtitleStyle: SubtitleStyle = SubtitleStyle(),
+    /** Switch the TV to the video's frame rate (Settings › Playback). */
+    val matchFrameRate: Boolean = true,
 ) {
     val chapters: List<Chapter> get() = details?.chapters.orEmpty()
     val isEpisode: Boolean get() = details?.item?.kind == ItemKind.Episode
@@ -239,6 +241,7 @@ class PlayerViewModel @Inject constructor(
                         seekBackMs = profile.playback.seekBack.ms,
                         seekForwardMs = profile.playback.seekForward.ms,
                         subtitleStyle = profile.subtitleStyle,
+                        matchFrameRate = profile.playback.matchFrameRate,
                     )
                 }
             }

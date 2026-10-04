@@ -86,6 +86,7 @@ import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PinDialog
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
+import io.github.glacier_jellyfin.androidtv.ui.TvPlatform
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import android.content.Context
 import android.hardware.display.DisplayManager
@@ -539,6 +540,8 @@ private fun homeRows(state: SettingsUiState, viewModel: SettingsViewModel): List
 @Composable
 private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): List<SettingGroup> {
     val playback = state.profile.playback
+    val context = LocalContext.current
+    val platform = remember(context) { TvPlatform.of(context) }
     val upNextLabels = UpNextChoice.entries.map { choice ->
         when (val mode = choice.mode) {
             UpNextMode.Off -> stringResource(R.string.settings_off)
@@ -591,6 +594,12 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
                     stringResource(R.string.settings_trailer_auto_sub),
                     playback.trailerAutoNext,
                     onToggle = { viewModel.updatePlayback { it.copy(trailerAutoNext = !it.trailerAutoNext) } },
+                ),
+                SettingRow.Toggle(
+                    stringResource(R.string.settings_match_frame_rate),
+                    stringResource(if (platform == TvPlatform.FireTv) R.string.settings_match_frame_rate_sub_fire_tv else R.string.settings_match_frame_rate_sub),
+                    playback.matchFrameRate,
+                    onToggle = { viewModel.updatePlayback { it.copy(matchFrameRate = !it.matchFrameRate) } },
                 ),
             ),
         ),

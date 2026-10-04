@@ -555,6 +555,9 @@
     <string name="settings_up_next_credits">With credits</string>
     <string name="settings_trailer_auto">Play trailers one after another</string>
     <string name="settings_trailer_auto_sub">When a trailer ends, the next one starts after 8 seconds</string>
+    <string name="settings_match_frame_rate">Match frame rate</string>
+    <string name="settings_match_frame_rate_sub">The TV switches to the frame rate of the video while it plays. Films run smoothly. The screen may go black for a moment.</string>
+    <string name="settings_match_frame_rate_sub_fire_tv">The TV switches to the frame rate of the video while it plays. Films run smoothly. On Fire TV, also turn on “Match Original Frame Rate” under Display &amp; Sounds › Display.</string>
     <string name="settings_seek_back">Skip back</string>
     <string name="settings_seek_forward">Skip forward</string>
     <string name="settings_seek_sub">Left/Right, the remote\'s rewind and fast-forward keys and the player buttons · also in the music player</string>

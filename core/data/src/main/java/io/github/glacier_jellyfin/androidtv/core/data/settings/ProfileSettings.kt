@@ -102,6 +102,8 @@ data class PlaybackSettings(
     val themeSongs: Boolean = true,
     val upNext: UpNextChoice = UpNextChoice.WithCredits,
     val trailerAutoNext: Boolean = true,
+    /** The TV switches to the video's frame rate while it plays, so 24p films do not judder on 60 Hz. */
+    val matchFrameRate: Boolean = true,
     val seekBack: SeekStep = SeekStep.S10,
     val seekForward: SeekStep = SeekStep.S30,
     val maxBitrate: MaxBitrate = MaxBitrate.Auto,

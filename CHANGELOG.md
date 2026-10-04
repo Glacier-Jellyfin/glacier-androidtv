@@ -18,6 +18,9 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### New
+- The TV switches to the frame rate of the video, so films play without judder. You can turn this off in Settings › Playback
+
 ### Fixed
 - Trailers play more smoothly. The background image no longer moves while a trailer plays
 - Some converted videos no longer fail to start, e.g. 4K films with TrueHD sound
