@@ -5,6 +5,7 @@ Drives a debug build on an Android TV emulator over adb and writes into
 website/assets/screenshots/:
 
   home.jpg, library.jpg, detail.jpg, player-trickplay.jpg, player-upnext.jpg,
+  music.jpg,
   demo.mp4 and demo.webm (the hero video)
 
 Everything comes from the public Jellyfin demo server, whose library is public
@@ -47,8 +48,9 @@ SERVER = "https://demo.jellyfin.org/stable"
 USER = "demo"
 DETAIL_TITLE = "Dracula"
 SHOW_TITLE = "Pioneer One"
+MUSIC_ARTIST = "Binärpilot"
 NAV = ["Home", "Movie", "Show", "Music"]
-SHOTS = ["home", "video", "library", "detail", "trickplay", "upnext"]
+SHOTS = ["home", "video", "library", "detail", "trickplay", "upnext", "music"]
 
 # The up-next card appears 30 s before the end (UpNextMode.FALLBACK_MS); the
 # episode resumes just before that, so the card is up once the OSD has hidden.
@@ -348,6 +350,31 @@ class Capture:
         self.wait_for_playback()
         self.save_jpg("player-upnext")
         self.d.key("BACK")
+
+    def music(self) -> None:
+        """The music player with an artist's songs in the queue, paused again afterwards."""
+        self.start_app()
+        self.nav_to("Music")
+        self.d.wait_for("albums")
+        # The demo albums hold one or two songs each; an artist fills the queue better.
+        self.d.press_until("DPAD_UP", lambda f: f == "Albums", tries=3)
+        self.d.key("DPAD_RIGHT", "DPAD_CENTER")
+        self.d.wait_for("artists")
+        self.d.key("DPAD_DOWN")
+        self.d.press_until("DPAD_RIGHT", lambda f: MUSIC_ARTIST in f, tries=8)
+        self.d.key("DPAD_CENTER")
+        self.d.press_until("DPAD_LEFT", lambda f: f.startswith("Play"), tries=4)
+        self.d.key("DPAD_CENTER")
+        self.d.wait_for("PLAYING FROM", timeout=45)
+        time.sleep(2)
+        if "NOW PLAYING" not in self.d.texts():
+            # Lyrics are a saved choice of the profile; the shot shows the cover.
+            self.d.press_until("DPAD_RIGHT", lambda f: f == "Lyrics", tries=6)
+            self.d.key("DPAD_CENTER")
+            self.d.wait_for("NOW PLAYING", exact=True)
+        time.sleep(4)  # artwork in the queue
+        self.save_jpg("music")
+        self.d.key("MEDIA_PAUSE", "BACK")
 
 
 def main() -> None:
