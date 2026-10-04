@@ -6,9 +6,14 @@ import org.junit.Test
 
 class ReleaseSelectorTest {
 
-    private fun release(tag: String, prerelease: Boolean = tag.contains("-beta"), draft: Boolean = false, withApk: Boolean = true): Release {
+    private fun release(
+        tag: String,
+        prerelease: Boolean = tag.contains("-beta"),
+        draft: Boolean = false,
+        apkNames: List<String> = listOf(ReleaseSelector.APK_NAME),
+    ): Release {
         val version = tag.removePrefix("v")
-        val assets = if (withApk) listOf(ReleaseAsset("glacier-androidtv-$version.apk", "https://example.invalid/$version", 1, null)) else emptyList()
+        val assets = apkNames.map { ReleaseAsset(it, "https://example.invalid/$version/$it", 1, null) }
         return Release(tag, isDraft = draft, isPrerelease = prerelease, assets = assets)
     }
 
@@ -45,11 +50,29 @@ class ReleaseSelectorTest {
     fun `skips drafts, releases without apk and mismatched prerelease flags`() {
         val broken = listOf(
             release("v2.0.0", draft = true),
-            release("v2.1.0", withApk = false),
+            release("v2.1.0", apkNames = emptyList()),
             release("v2.2.0", prerelease = true),
             release("v2.3.0-beta.1", prerelease = false),
         )
         assertNull(ReleaseSelector.select(broken, v("1.0.0"), UpdateChannel.Beta))
+    }
+
+    @Test
+    fun `accepts the versioned apk name of older releases`() {
+        val legacy = listOf(release("v1.5.0", apkNames = listOf("glacier-androidtv-1.5.0.apk")))
+        assertEquals("glacier-androidtv-1.5.0.apk", ReleaseSelector.select(legacy, v("1.3.0"), UpdateChannel.Stable)?.apk?.name)
+    }
+
+    @Test
+    fun `prefers the fixed apk name when a release has both`() {
+        val both = listOf(release("v1.5.0", apkNames = listOf("glacier-androidtv-1.5.0.apk", ReleaseSelector.APK_NAME)))
+        assertEquals(ReleaseSelector.APK_NAME, ReleaseSelector.select(both, v("1.3.0"), UpdateChannel.Stable)?.apk?.name)
+    }
+
+    @Test
+    fun `ignores apks of other versions`() {
+        val wrong = listOf(release("v1.5.0", apkNames = listOf("glacier-androidtv-1.4.0.apk")))
+        assertNull(ReleaseSelector.select(wrong, v("1.3.0"), UpdateChannel.Stable))
     }
 
     @Test

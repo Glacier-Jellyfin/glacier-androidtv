@@ -35,7 +35,11 @@ data class UpdateCandidate(
 
 object ReleaseSelector {
 
-    fun apkName(version: AppVersion): String = "glacier-androidtv-$version.apk"
+    /** Same name in every release, so releases/latest/download links stay stable. */
+    const val APK_NAME = "glacier-androidtv.apk"
+
+    /** Name used up to 0.2.1; still accepted for those releases. */
+    fun legacyApkName(version: AppVersion): String = "glacier-androidtv-$version.apk"
 
     /**
      * Picks the newest release the channel allows that is strictly newer than
@@ -52,7 +56,9 @@ object ReleaseSelector {
                 val version = AppVersion.parse(release.tag) ?: return@mapNotNull null
                 if (version.isBeta != release.isPrerelease) return@mapNotNull null
                 if (version.isBeta && channel == UpdateChannel.Stable) return@mapNotNull null
-                val apk = release.assets.firstOrNull { it.name == apkName(version) } ?: return@mapNotNull null
+                val apk = release.assets.firstOrNull { it.name == APK_NAME }
+                    ?: release.assets.firstOrNull { it.name == legacyApkName(version) }
+                    ?: return@mapNotNull null
                 UpdateCandidate(version, release, apk)
             }
             .filter { it.version > installed }
