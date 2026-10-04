@@ -57,10 +57,11 @@
 
 Glacier is distributed only through
 [GitHub releases](https://github.com/Glacier-Jellyfin/glacier-androidtv/releases).
-Download `glacier-androidtv-<version>.apk` from the latest release and sideload
-it, for example with [Downloader](https://www.aftvnews.com/downloader/). Once
-installed, Glacier keeps itself up to date; Android asks once for permission to
-install updates from Glacier.
+The quickest way is the [Downloader](https://www.aftvnews.com/downloader/)
+app on your TV: enter the code **2423112** and it installs the newest version.
+You can also download [`glacier-androidtv.apk`](https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest/download/glacier-androidtv.apk) directly and sideload
+it. Once installed, Glacier keeps itself up to date; Android asks once for
+permission to install updates from Glacier.
 
 ## Building
 

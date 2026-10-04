@@ -294,6 +294,17 @@ h2.title { margin: 0 0 16px; font-size: clamp(26px, 6vw, 42px); font-weight: 700
 }
 .cta h2 { margin: 0; font-size: clamp(28px, 4vw, 40px); font-weight: 700; }
 .cta p { margin: 0; color: var(--mist); font-size: 17px; max-width: 42em; }
+.cta p a { color: var(--accent); }
+.cta .actions { justify-content: center; }
+.downloader-code {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 16px 32px;
+  border-radius: var(--radius-md);
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border-strong);
+}
+.downloader-label { font-size: 13px; color: var(--mist-dim); text-transform: uppercase; letter-spacing: .08em; }
+.downloader-value { font-size: clamp(36px, 6vw, 48px); font-weight: 700; letter-spacing: .08em; color: var(--ice); font-variant-numeric: tabular-nums; user-select: all; }
 @media (max-width: 620px) {
   .cta { padding: 44px 24px; }
 }
