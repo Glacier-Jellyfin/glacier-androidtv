@@ -17,9 +17,11 @@
 # Copyright (C) 2019 The Android Open Source Project.
 set -euo pipefail
 
-# FFmpeg release Media3's decoder module recommends.
-FFMPEG_VERSION=6.0.1
-FFMPEG_SHA256=9b16b8731d78e596b4be0d720428ca42df642bb2d78342881ff7f5bc29fc9623
+# Media3's decoder module recommends FFmpeg 6.0, but its JNI wrapper only uses
+# APIs that 8.1 still has (ch_layout, swr_alloc_set_opts2). The newest stable
+# branch receives security fixes the longest.
+FFMPEG_VERSION=8.1.3
+FFMPEG_SHA256=7138d28c96d9d3e3af4ee3d8cad72741f8ffb40da90c1112235dea3ecd3178a3
 # minSdk of the app.
 API_LEVEL=28
 # FFmpeg decoder names for everything FfmpegLibrary maps that TV platforms
@@ -69,7 +71,6 @@ options=(
     --disable-avdevice
     --disable-avformat
     --disable-swscale
-    --disable-postproc
     --disable-avfilter
     --disable-symver
     --enable-swresample
