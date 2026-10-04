@@ -4,6 +4,11 @@ description: >
   headers and static libraries (scripts/build-ffmpeg.sh), cached until the
   script or the NDK changes.
 
+inputs:
+  cache:
+    description: Reuse FFmpeg from the cache. Releases build it from source instead.
+    default: 'true'
+
 runs:
   using: composite
   steps:
@@ -18,8 +23,9 @@ runs:
         test -d "$ANDROID_HOME/ndk/28.2.13676358" && test -d "$ANDROID_HOME/cmake/3.31.6"
 
     - name: Cache FFmpeg
+      if: inputs.cache == 'true'
       id: cache
-      uses: actions/cache@v6
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: core/ffmpeg/src/main/jni/ffmpeg
         key: ffmpeg-${{ runner.os }}-ndk28.2.13676358-${{ hashFiles('scripts/build-ffmpeg.sh') }}

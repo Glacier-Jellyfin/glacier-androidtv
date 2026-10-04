@@ -90,6 +90,10 @@ adb shell "run-as $pkg mkdir -p files/updtest && run-as $pkg cp /data/local/tmp/
    to 0.2.1 carry the old versioned name (0.2.1 has both), which the updater
    still accepts.
 
+   The workflow uses no caches (Gradle and FFmpeg are built from scratch, so
+   a release takes longer than a CI run) and attaches a build provenance
+   attestation to the APK (see `SECURITY.md`).
+
 ### Signing key
 
 The release keystore (`keytool -genkeypair -keystore glacier-release.jks

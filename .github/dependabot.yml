@@ -4,6 +4,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # New releases wait a week, so a hijacked release is usually pulled before it arrives.
+    # Security updates are not delayed.
+    cooldown:
+      default-days: 7
     groups:
       androidx:
         patterns: ['androidx.*']
@@ -14,3 +18,7 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # New releases wait a week, so a hijacked release is usually pulled before it arrives.
+    # Security updates are not delayed.
+    cooldown:
+      default-days: 7

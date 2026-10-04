@@ -9,6 +9,9 @@ on:
 
 permissions:
   contents: write
+  # Build provenance for the APK (gh attestation verify).
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -30,19 +33,28 @@ jobs:
             echo "prerelease=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-java@v6
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: 17
 
-      - uses: gradle/actions/setup-gradle@v6
+      # No caches: everything in the signed APK is built from this tag's sources.
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          cache-disabled: true
 
       - uses: ./.github/actions/ffmpeg
+        with:
+          cache: 'false'
 
       - name: Extract release notes
-        run: scripts/release-notes.sh "${{ steps.tag.outputs.version }}" > "$RUNNER_TEMP/notes.md"
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: scripts/release-notes.sh "$VERSION" > "$RUNNER_TEMP/notes.md"
 
       - name: Build signed APK
         env:
@@ -50,6 +62,7 @@ jobs:
           GLACIER_KEYSTORE_PASSWORD: ${{ secrets.GLACIER_KEYSTORE_PASSWORD }}
           GLACIER_KEY_ALIAS: ${{ secrets.GLACIER_KEY_ALIAS }}
           GLACIER_KEY_PASSWORD: ${{ secrets.GLACIER_KEY_PASSWORD }}
+          VERSION: ${{ steps.tag.outputs.version }}
         run: |
           if [ -z "$GLACIER_KEYSTORE_BASE64" ]; then
             echo "::error::Signing secrets are missing, see docs/RELEASING.md"
@@ -57,7 +70,7 @@ jobs:
           fi
           export GLACIER_KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
           echo "$GLACIER_KEYSTORE_BASE64" | base64 --decode > "$GLACIER_KEYSTORE_PATH"
-          ./gradlew testDebugUnitTest :app:assembleRelease -Pglacier.version="${{ steps.tag.outputs.version }}"
+          ./gradlew testDebugUnitTest :app:assembleRelease -Pglacier.version="$VERSION"
           rm "$GLACIER_KEYSTORE_PATH"
 
       - name: Verify signature
@@ -69,16 +82,22 @@ jobs:
           # Same name in every release for releases/latest/download links and the updater
           mv "$apk" glacier-androidtv.apk
 
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: glacier-androidtv.apk
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.tag.outputs.version }}
+          PRERELEASE: ${{ steps.tag.outputs.prerelease }}
         run: |
           flags=()
           # Betas never become "Latest", so releases/latest/download keeps serving stable builds
-          if [ "${{ steps.tag.outputs.prerelease }}" = "true" ]; then flags+=(--prerelease --latest=false); else flags+=(--latest); fi
+          if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease --latest=false); else flags+=(--latest); fi
           gh release create "$GITHUB_REF_NAME" \
             glacier-androidtv.apk \
             --verify-tag \
-            --title "Glacier ${{ steps.tag.outputs.version }}" \
+            --title "Glacier $VERSION" \
             --notes-file "$RUNNER_TEMP/notes.md" \
             "${flags[@]}"
