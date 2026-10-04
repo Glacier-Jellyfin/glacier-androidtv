@@ -100,6 +100,9 @@ private fun createWebView(context: Context, videoId: String, listener: YouTubeLi
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
         settings.mediaPlaybackRequiresUserGesture = false
+        // The page only needs the network: no files or content providers of the device.
+        settings.allowFileAccess = false
+        settings.allowContentAccess = false
         webChromeClient = object : WebChromeClient() {
             // Without a poster, WebView shows a grey play symbol until the video starts.
             override fun getDefaultVideoPoster(): Bitmap = createBitmap(1, 1)
