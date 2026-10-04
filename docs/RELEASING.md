@@ -87,8 +87,8 @@ adb shell "run-as $pkg mkdir -p files/updtest && run-as $pkg cp /data/local/tmp/
    pre-releases. The file name never changes, so
    `releases/latest/download/glacier-androidtv.apk` always points to the
    newest stable version (website and Downloader code use it). Releases up
-   to 0.2.1 also carry the old versioned name, which the updater still
-   accepts.
+   to 0.2.1 carry the old versioned name (0.2.1 has both), which the updater
+   still accepts.
 
 ### Signing key
 

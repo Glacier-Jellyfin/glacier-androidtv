@@ -66,10 +66,8 @@ jobs:
           apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
           "$apksigner" verify --print-certs "$apk"
           scripts/check-ffmpeg-apk.sh "$apk"
-          mv "$apk" "glacier-androidtv-${{ steps.tag.outputs.version }}.apk"
-          # Fixed name for releases/latest/download links and the updater.
-          # The versioned file is only kept so 0.2.0 finds 0.2.1; drop it after 0.2.1.
-          cp "glacier-androidtv-${{ steps.tag.outputs.version }}.apk" glacier-androidtv.apk
+          # Same name in every release for releases/latest/download links and the updater
+          mv "$apk" glacier-androidtv.apk
 
       - name: Publish release
         env:
@@ -79,7 +77,6 @@ jobs:
           # Betas never become "Latest", so releases/latest/download keeps serving stable builds
           if [ "${{ steps.tag.outputs.prerelease }}" = "true" ]; then flags+=(--prerelease --latest=false); else flags+=(--latest); fi
           gh release create "$GITHUB_REF_NAME" \
-            "glacier-androidtv-${{ steps.tag.outputs.version }}.apk" \
             glacier-androidtv.apk \
             --verify-tag \
             --title "Glacier ${{ steps.tag.outputs.version }}" \
