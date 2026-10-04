@@ -57,12 +57,14 @@ object DeviceProfiles {
             audioCodec(*audioCodecs.toTypedArray())
         }
 
-        // Transcoding target: fragmented MP4 over HLS, HEVC when the device decodes it.
-        val hlsAudio = listOf("aac", "ac3", "eac3", "mp3", "flac", "opus").filter { it in capabilities.audioCodecs }.ifEmpty { listOf("aac") }
+        // Transcoding target: MPEG-TS segments over HLS, HEVC when the device decodes it.
+        // Not fragmented MP4: the server's FFmpeg writes negative start times into some
+        // fMP4 segments (Toy Story 5, TrueHD 7.1), which Media3 refuses to read.
+        val hlsAudio = listOf("aac", "ac3", "eac3", "mp3").filter { it in capabilities.audioCodecs }.ifEmpty { listOf("aac") }
         transcodingProfile {
             type = DlnaProfileType.VIDEO
             context = EncodingContext.STREAMING
-            container = "mp4"
+            container = "ts"
             protocol = MediaStreamProtocol.HLS
             videoCodec(*listOfNotNull("hevc".takeIf { capabilities.hevc != null }, "h264").toTypedArray())
             audioCodec(*hlsAudio.toTypedArray())

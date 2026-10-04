@@ -20,6 +20,7 @@ renders the reference separately.
 
 ### Fixed
 - Trailers play more smoothly. The background image no longer moves while a trailer plays
+- Some converted videos no longer fail to start, e.g. 4K films with TrueHD sound
 
 ### Security
 - The audio decoder for DTS, TrueHD and other formats is based on a newer FFmpeg with current security fixes

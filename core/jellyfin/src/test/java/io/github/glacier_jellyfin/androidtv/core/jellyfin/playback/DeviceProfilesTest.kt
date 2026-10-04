@@ -39,6 +39,14 @@ class DeviceProfilesTest {
     }
 
     @Test
+    fun `video is transcoded to MPEG-TS segments with codecs TS carries`() {
+        val tv = fullHdTv.copy(audioCodecs = setOf("aac", "ac3", "eac3", "flac", "opus"))
+        val video = DeviceProfiles.build(tv, MAX).transcodingProfiles.single { it.type == DlnaProfileType.VIDEO }
+        assertEquals("ts", video.container)
+        assertEquals("aac,ac3,eac3", video.audioCodec)
+    }
+
+    @Test
     fun `resolution and level limits follow the decoder`() {
         val h264 = DeviceProfiles.build(fullHdTv, MAX).codecProfiles.single { it.codec == "h264" }
         val byProperty = h264.conditions.associate { it.property to it.value }
