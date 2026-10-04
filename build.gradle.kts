@@ -10,10 +10,11 @@ plugins {
     alias(libs.plugins.hilt) apply false
 }
 
-// Libraries AGP brings onto the build classpath, raised to versions without
-// known vulnerabilities until AGP ships them itself. They only run during the
-// build and never end up in the APK. Remove an entry once AGP's own version is
-// at least as new (./gradlew buildEnvironment).
+// Libraries AGP brings onto the build classpath and Lint's own classpath,
+// raised to versions without known vulnerabilities until AGP ships them
+// itself. They only run during the build and never end up in the APK. Remove
+// an entry once AGP's own version is at least as new (./gradlew
+// buildEnvironment, ./gradlew :app:dependencies --configuration androidLintTool).
 buildscript {
     dependencies {
         constraints {
@@ -23,6 +24,19 @@ buildscript {
             classpath("org.bitbucket.b_c:jose4j:0.9.6")
             classpath("org.jdom:jdom2:2.0.6.1")
             classpath("org.apache.commons:commons-lang3:3.18.0")
+            classpath("org.apache.httpcomponents:httpclient:4.5.14")
         }
+    }
+}
+
+subprojects {
+    configurations.matching { it.name == "androidLintTool" }.configureEach {
+        listOf(
+            "org.bouncycastle:bcprov-jdk18on:1.85",
+            "org.bouncycastle:bcpkix-jdk18on:1.85",
+            "org.bouncycastle:bcutil-jdk18on:1.85",
+            "org.apache.commons:commons-lang3:3.18.0",
+            "org.apache.httpcomponents:httpclient:4.5.14",
+        ).forEach { dependencyConstraints.add(project.dependencies.constraints.create(it)) }
     }
 }
