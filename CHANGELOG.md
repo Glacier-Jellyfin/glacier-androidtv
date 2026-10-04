@@ -20,11 +20,14 @@ renders the reference separately.
 
 ### New
 - The TV switches to the frame rate of the video, so films play without judder. You can turn this off in Settings › Playback
+- Trailers have a subtitles button. Pick a language or turn them off. Trailers start without subtitles, and your choice carries over to the next trailers
+- In the trailer player you can move along the progress bar with left and right
 
 ### Improved
 - When the server converts surround sound, it sends Dolby Digital or Dolby Digital Plus if your receiver or TV takes it. The sound stays surround over HDMI ARC
 - The update dialog lists the changes of every version since yours, not only the newest one
 - After "Update now", the download shows its progress right away. Back cancels it
+- A trailer still goes full screen quickly when it starts. When you bring the controls back, they stay longer
 
 ### Fixed
 - Trailers play more smoothly. The background image no longer moves while a trailer plays

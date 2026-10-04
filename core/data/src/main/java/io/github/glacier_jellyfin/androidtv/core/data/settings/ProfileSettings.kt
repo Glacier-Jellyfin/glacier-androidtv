@@ -102,6 +102,8 @@ data class PlaybackSettings(
     val themeSongs: Boolean = true,
     val upNext: UpNextChoice = UpNextChoice.WithCredits,
     val trailerAutoNext: Boolean = true,
+    /** Subtitle language for trailers, "" for off (default: they show only when picked). Set in the trailer's subtitle menu. */
+    val trailerSubtitles: String = "",
     /** The TV switches to the video's frame rate while it plays, so 24p films do not judder on 60 Hz. */
     val matchFrameRate: Boolean = true,
     val seekBack: SeekStep = SeekStep.S10,

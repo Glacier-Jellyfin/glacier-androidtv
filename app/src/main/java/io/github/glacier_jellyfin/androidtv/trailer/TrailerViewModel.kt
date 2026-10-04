@@ -5,8 +5,10 @@ import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.Tracks
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,6 +26,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.Trailers
 import io.github.glacier_jellyfin.androidtv.core.data.media.YouTubeTrailer
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.PlaybackSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
@@ -70,6 +73,11 @@ data class TrailerUiState(
     val durations: Map<Int, Long> = emptyMap(),
     /** A Seerr title: not in the library, so nothing to play or mark as favourite. */
     val seerr: Boolean = false,
+    /** Subtitle languages of the current trailer, known once it plays. */
+    val subtitleTracks: List<TrailerSubtitle> = emptyList(),
+    /** The language shown; null while subtitles are off. */
+    val subtitle: String? = null,
+    val subtitlesOpen: Boolean = false,
 ) {
     val item: MediaItem? get() = details?.item
     val current: Trailer? get() = trailers.getOrNull(index)
@@ -85,6 +93,9 @@ data class TrailerUiState(
             else -> null
         }
 }
+
+/** A subtitle language a trailer offers; [name] as the player reports it, if it does. */
+data class TrailerSubtitle(val language: String, val name: String?)
 
 data class TrailerProgress(val positionMs: Long = 0, val durationMs: Long = 0)
 
@@ -131,6 +142,9 @@ class TrailerViewModel @Inject constructor(
      */
     private var seekTarget: Long? = null
     private var seekStartedAt = 0L
+    /** The profile's subtitle choice for trailers (see [PlaybackSettings.trailerSubtitles]). */
+    var subtitlePreference: String = settings.settings.value.playback.trailerSubtitles
+        private set
 
     private val listener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -143,6 +157,17 @@ class TrailerViewModel @Inject constructor(
 
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
             _state.update { it.copy(playWhenReady = playWhenReady) }
+        }
+
+        override fun onTracksChanged(tracks: Tracks) {
+            val text = tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
+            val options = text.flatMap { group -> (0 until group.length).map(group::getTrackFormat) }
+                .mapNotNull { format -> format.language?.let { TrailerSubtitle(it, format.label) } }
+                .distinctBy { it.language }
+            val shown = text.firstNotNullOfOrNull { group ->
+                (0 until group.length).firstOrNull(group::isTrackSelected)?.let { group.getTrackFormat(it).language }
+            }
+            _state.update { it.copy(subtitleTracks = options, subtitle = shown) }
         }
 
         override fun onPlayerError(error: PlaybackException) {
@@ -205,7 +230,10 @@ class TrailerViewModel @Inject constructor(
         seekTarget = null
         _progress.value = TrailerProgress(durationMs = _state.value.durationOf(index) ?: 0)
         _state.update {
-            it.copy(index = index, attempt = it.attempt + 1, loading = true, failed = false, ended = false, playWhenReady = true, countdown = null)
+            it.copy(
+                index = index, attempt = it.attempt + 1, loading = true, failed = false, ended = false,
+                playWhenReady = true, countdown = null, subtitleTracks = emptyList(), subtitle = null, subtitlesOpen = false,
+            )
         }
         startLoadTimeout()
         when (trailer) {
@@ -224,6 +252,7 @@ class TrailerViewModel @Inject constructor(
                     StreamRequest(url = source.url, isHls = source.isHls, headers = source.headers, startPositionMs = 0),
                 ).player
                 player.addListener(listener)
+                applySubtitles(player, subtitlePreference)
                 player.playWhenReady = true
                 _state.update { it.copy(player = player) }
                 startTicker(player)
@@ -265,13 +294,13 @@ class TrailerViewModel @Inject constructor(
 
     private fun fail() {
         releasePlayer()
-        _state.update { it.copy(failed = true, loading = false) }
+        _state.update { it.copy(failed = true, loading = false, subtitlesOpen = false) }
     }
 
     private fun onEnded() {
         releasePlayer()
         _progress.update { it.copy(positionMs = it.durationMs) }
-        _state.update { it.copy(ended = true, loading = false, playWhenReady = false) }
+        _state.update { it.copy(ended = true, loading = false, playWhenReady = false, subtitlesOpen = false) }
         // Without "play trailers one after another" the end screen waits for a choice.
         if (_state.value.next != null && settings.settings.value.playback.trailerAutoNext) startCountdown()
     }
@@ -302,6 +331,29 @@ class TrailerViewModel @Inject constructor(
             _youTube.trySend(if (playing) YouTubeCommand.Play else YouTubeCommand.Pause)
             _state.update { it.copy(playWhenReady = playing) }
         }
+    }
+
+    fun openSubtitles() {
+        if (_state.value.subtitleTracks.isNotEmpty()) _state.update { it.copy(subtitlesOpen = true) }
+    }
+
+    fun closeSubtitles() = _state.update { it.copy(subtitlesOpen = false) }
+
+    /** Shows [language], or turns subtitles off for null; kept for the next trailers too. */
+    fun pickSubtitle(language: String?) {
+        val choice = language.orEmpty()
+        subtitlePreference = choice
+        _state.update { it.copy(subtitle = language, subtitlesOpen = false) }
+        _state.value.player?.let { applySubtitles(it, choice) }
+        if (_state.value.current is YouTubeTrailer) _youTube.trySend(YouTubeCommand.Subtitles(choice))
+        viewModelScope.launch { settings.updatePlayback { it.copy(trailerSubtitles = choice) } }
+    }
+
+    private fun applySubtitles(player: ExoPlayer, choice: String) {
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, choice == "")
+            .setPreferredTextLanguage(choice.ifEmpty { null })
+            .build()
     }
 
     fun pause() {
@@ -401,6 +453,14 @@ class TrailerViewModel @Inject constructor(
             seekTarget = null
         }
         onProgress(positionMs, durationMs)
+    }
+
+    override fun onYouTubeSubtitles(videoId: String, tracks: List<TrailerSubtitle>, shown: String?) {
+        if (!isCurrent(videoId)) return
+        _state.update { state ->
+            // Unloading the captions module reports an empty list; the languages are still there.
+            state.copy(subtitleTracks = tracks.ifEmpty { state.subtitleTracks }, subtitle = shown)
+        }
     }
 
     override fun onYouTubeError(videoId: String, code: Int) {

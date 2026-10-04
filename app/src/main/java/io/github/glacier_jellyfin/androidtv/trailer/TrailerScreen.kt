@@ -13,6 +13,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -46,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -58,9 +61,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.pluralStringResource
@@ -80,6 +85,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
+import io.github.glacier_jellyfin.androidtv.core.data.media.Languages
 import io.github.glacier_jellyfin.androidtv.core.data.media.Trailer
 import io.github.glacier_jellyfin.androidtv.core.data.media.YouTubeTrailer
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierCard
@@ -92,6 +98,8 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
+import io.github.glacier_jellyfin.androidtv.detail.TrackPanel
+import io.github.glacier_jellyfin.androidtv.detail.TrackRow
 import io.github.glacier_jellyfin.androidtv.player.ControlButton
 import io.github.glacier_jellyfin.androidtv.player.LabelButton
 import io.github.glacier_jellyfin.androidtv.player.formatTime
@@ -110,7 +118,10 @@ import java.time.format.DateTimeFormatter
 /** The OSD hides after this long without input while playing (design: 5 s). */
 private const val OSD_TIMEOUT_MS = 5_000L
 
-/** With the small YouTube frame the OSD leaves sooner, so the video reaches full screen faster. */
+/**
+ * When a YouTube trailer starts, the OSD leaves sooner, so the video reaches full
+ * screen faster. Brought back by a key, it stays for [OSD_TIMEOUT_MS].
+ */
 private const val YOUTUBE_OSD_TIMEOUT_MS = 2_000L
 
 /** The end screen takes focus after this pause. */
@@ -153,11 +164,14 @@ fun TrailerScreen(
     val playFocus = remember { FocusRequester() }
     val endFocus = remember { FocusRequester() }
     val errorFocus = remember { FocusRequester() }
+    val subtitleFocus = remember { FocusRequester() }
     val current = state.current
     val youTube = current as? YouTubeTrailer
     val stopped = state.ended || state.failed || state.empty
     var osdVisible by remember { mutableStateOf(true) }
     var interaction by remember { mutableIntStateOf(0) }
+    /** The OSD came up with the trailer, not by a key press. */
+    var autoShown by remember { mutableStateOf(true) }
     val osdShown = osdVisible && !stopped && current != null
 
     fun showOsd() {
@@ -166,11 +180,15 @@ fun TrailerScreen(
     }
 
     // Every new trailer and every pause brings the OSD back.
-    LaunchedEffect(state.attempt) { showOsd() }
+    LaunchedEffect(state.attempt) {
+        showOsd()
+        autoShown = true
+    }
     LaunchedEffect(state.playWhenReady) { if (!state.playWhenReady) showOsd() }
-    LaunchedEffect(osdVisible, interaction, state.playWhenReady, state.loading) {
-        if (osdVisible && state.playWhenReady && !state.loading) {
-            delay(if (youTube != null) YOUTUBE_OSD_TIMEOUT_MS else OSD_TIMEOUT_MS)
+    // The subtitle menu keeps the OSD: without it the YouTube player would grow over the menu.
+    LaunchedEffect(osdVisible, interaction, state.playWhenReady, state.loading, state.subtitlesOpen) {
+        if (osdVisible && state.playWhenReady && !state.loading && !state.subtitlesOpen) {
+            delay(if (youTube != null && autoShown) YOUTUBE_OSD_TIMEOUT_MS else OSD_TIMEOUT_MS)
             osdVisible = false
         }
     }
@@ -187,6 +205,8 @@ fun TrailerScreen(
             .background(GlacierColors.Void)
             .focusRequester(rootFocus)
             .onPreviewKeyEvent { event ->
+                // The subtitle menu handles its own keys, Back included.
+                if (state.subtitlesOpen) return@onPreviewKeyEvent false
                 // One Back closes, whatever has focus; on key up (see PlayerScreen).
                 if (event.key == Key.Back) {
                     if (event.type == KeyEventType.KeyUp) viewModel.close()
@@ -194,6 +214,7 @@ fun TrailerScreen(
                 }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 interaction++
+                autoShown = false
                 when (event.key) {
                     Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause -> {
                         viewModel.togglePlay()
@@ -238,6 +259,8 @@ fun TrailerScreen(
                 onSeekBy = viewModel::seekBy,
                 onPlayTitle = viewModel::playTitle,
                 onFavorite = viewModel::toggleFavorite,
+                onSubtitles = viewModel::openSubtitles,
+                subtitleFocus = subtitleFocus,
                 onPick = { index -> if (index == state.index) viewModel.replay() else viewModel.play(index) },
             )
         }
@@ -248,6 +271,7 @@ fun TrailerScreen(
             key(state.attempt) {
                 YouTubePlayer(
                     videoId = youTube.videoId,
+                    subtitles = viewModel.subtitlePreference,
                     commands = viewModel.youTubeCommands,
                     listener = viewModel,
                     modifier = Modifier
@@ -264,6 +288,13 @@ fun TrailerScreen(
                         },
                 )
             }
+        }
+
+        if (state.subtitlesOpen && osdShown) {
+            SubtitlePanel(state, onPick = viewModel::pickSubtitle, onDismiss = viewModel::closeSubtitles)
+        }
+        LaunchedEffect(state.subtitlesOpen) {
+            if (!state.subtitlesOpen) runCatching { subtitleFocus.requestFocus() }
         }
 
         if (state.ended) {
@@ -313,6 +344,8 @@ private fun TrailerOsd(
     onSeekBy: (Long) -> Unit,
     onPlayTitle: () -> Unit,
     onFavorite: () -> Unit,
+    onSubtitles: () -> Unit,
+    subtitleFocus: FocusRequester,
     onPick: (Int) -> Unit,
 ) {
     val item = state.item
@@ -389,7 +422,7 @@ private fun TrailerOsd(
             verticalArrangement = Arrangement.spacedBy(34.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                ProgressBar(progress)
+                ProgressBar(progress, onSeekBy = onSeekBy, downFocus = playFocus)
                 Row(Modifier.fillMaxWidth()) {
                     Text(formatTime(progress.positionMs), style = GlacierText.mono(19), color = GlacierColors.Ice)
                     Spacer(Modifier.weight(1f))
@@ -426,6 +459,14 @@ private fun TrailerOsd(
                         onClick = onFavorite,
                     )
                 }
+                if (state.subtitleTracks.isNotEmpty()) {
+                    LabelButton(
+                        GlacierIcons.Subtitles,
+                        stringResource(R.string.player_subtitles),
+                        onClick = onSubtitles,
+                        modifier = Modifier.focusRequester(subtitleFocus),
+                    )
+                }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -452,6 +493,31 @@ private fun TrailerOsd(
     }
 }
 
+/** The track sheet with the trailer's subtitle languages, left of the YouTube player. */
+@Composable
+private fun SubtitlePanel(state: TrailerUiState, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
+    val off = stringResource(R.string.track_off)
+    val languages = listOf<String?>(null) + state.subtitleTracks.map { it.language }
+    val rows = listOf(TrackRow(off, null, emptyList(), off)) + state.subtitleTracks.map { track ->
+        val name = subtitleName(track)
+        TrackRow(name, Languages.flag(track.language), emptyList(), name)
+    }
+    TrackPanel(
+        title = stringResource(R.string.track_subtitles),
+        subtitle = listOfNotNull(state.item?.title, trailerName(state, state.index)).joinToString(" · "),
+        options = rows,
+        selected = languages.indexOf(state.subtitle).coerceAtLeast(0),
+        onPick = { onPick(languages[it]) },
+        onDismiss = onDismiss,
+        alignment = Alignment.CenterStart,
+    )
+}
+
+/** YouTube's own name ("English (auto-generated)"), else the language's. */
+@Composable
+private fun subtitleName(track: TrailerSubtitle): String =
+    track.name ?: Languages.name(track.language, LocalConfiguration.current.locales[0]) ?: track.language
+
 /** "Trailer" with the film icon, accent-tinted (design). */
 @Composable
 private fun TrailerChip() {
@@ -475,15 +541,33 @@ private fun TrailerChip() {
     }
 }
 
+/** Focused, Left and Right skip like the buttons below it. */
 @Composable
-private fun ProgressBar(progress: TrailerProgress) {
+private fun ProgressBar(progress: TrailerProgress, onSeekBy: (Long) -> Unit, downFocus: FocusRequester) {
     val accent = LocalAccent.current.main
     val played = fraction(progress)
-    Box(Modifier.fillMaxWidth().height(16.dp), contentAlignment = Alignment.CenterStart) {
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(26.dp)
+            .focusProperties { down = downFocus }
+            .onKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                when (event.key) {
+                    Key.DirectionLeft -> { onSeekBy(-SEEK_BACK_MS); true }
+                    Key.DirectionRight -> { onSeekBy(SEEK_FORWARD_MS); true }
+                    else -> false
+                }
+            }
+            .focusable(interactionSource = interaction),
+        contentAlignment = Alignment.CenterStart,
+    ) {
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(6.dp)
+                .height(if (focused) 10.dp else 6.dp)
                 .clip(PillShape)
                 .background(GlacierColors.GlassFill2),
         ) {
@@ -491,14 +575,24 @@ private fun ProgressBar(progress: TrailerProgress) {
         }
         if (progress.durationMs > 0) {
             BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val knob = if (focused) 22.dp else 16.dp
+                // Focused, a glow ring shows where the keys go (as in the player).
+                val ring = if (focused) 6.dp else 0.dp
                 Box(
                     Modifier
-                        .offset(x = maxWidth * played - 8.dp)
-                        .size(16.dp)
-                        .shadow(10.dp, CircleShape)
-                        .clip(CircleShape)
-                        .background(accent),
-                )
+                        .offset(x = maxWidth * played - knob / 2 - ring)
+                        .size(knob + ring * 2)
+                        .background(if (focused) accent.copy(alpha = 0.3f) else Color.Transparent, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        Modifier
+                            .size(knob)
+                            .shadow(if (focused) 0.dp else 10.dp, CircleShape)
+                            .clip(CircleShape)
+                            .background(accent),
+                    )
+                }
             }
         }
     }

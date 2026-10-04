@@ -202,11 +202,16 @@ fun TrackPanel(
     selected: Int,
     onPick: (Int) -> Unit,
     onDismiss: () -> Unit,
+    /** The trailer screen moves the sheet aside, clear of the YouTube player. */
+    alignment: Alignment = Alignment.Center,
 ) {
     BackHandler(onBack = onDismiss)
     val focus = remember { FocusRequester() }
     // A long track list keeps a margin to the screen edges and scrolls inside the sheet.
-    Box(Modifier.fillMaxSize().background(Color(0xA805090F)).padding(vertical = 54.dp), contentAlignment = Alignment.Center) {
+    Box(
+        Modifier.fillMaxSize().background(Color(0xA805090F)).padding(horizontal = 80.dp, vertical = 54.dp),
+        contentAlignment = alignment,
+    ) {
         val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
         Column(
             Modifier
