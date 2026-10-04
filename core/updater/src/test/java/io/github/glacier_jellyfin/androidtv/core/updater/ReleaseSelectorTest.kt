@@ -79,4 +79,25 @@ class ReleaseSelectorTest {
     fun `returns null when already current`() {
         assertNull(ReleaseSelector.select(releases, v("1.3.0"), UpdateChannel.Stable))
     }
+
+    @Test
+    fun `brings the notes of every skipped release of the channel, newest first`() {
+        val history = listOf(
+            release("v1.5.0"),
+            release("v1.4.1", apkNames = emptyList()),
+            release("v1.4.0"),
+            release("v1.3.0"),
+            release("v1.5.0-beta.1"),
+        )
+        val candidate = ReleaseSelector.select(history, v("1.3.0"), UpdateChannel.Stable)!!
+        assertEquals(listOf("v1.5.0", "v1.4.1", "v1.4.0"), candidate.changes.map { it.tag })
+        assertEquals(emptyList<ReleaseAsset>(), candidate.skipped.flatMap { it.assets })
+    }
+
+    @Test
+    fun `a newer release without apk is not offered`() {
+        val history = listOf(release("v1.5.0", apkNames = emptyList()), release("v1.4.0"))
+        val candidate = ReleaseSelector.select(history, v("1.3.0"), UpdateChannel.Stable)!!
+        assertEquals(listOf("v1.4.0"), candidate.changes.map { it.tag })
+    }
 }

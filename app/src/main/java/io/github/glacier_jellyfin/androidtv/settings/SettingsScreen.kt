@@ -94,7 +94,7 @@ import android.os.Build
 import android.provider.Settings
 import android.view.Display
 import io.github.glacier_jellyfin.androidtv.BuildConfig
-import io.github.glacier_jellyfin.androidtv.core.updater.ReleaseNotes
+import io.github.glacier_jellyfin.androidtv.core.updater.AppVersion
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateCandidate
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateChannel
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
@@ -102,6 +102,7 @@ import io.github.glacier_jellyfin.androidtv.core.updater.pending
 import io.github.glacier_jellyfin.androidtv.update.megabytes
 import io.github.glacier_jellyfin.androidtv.update.message
 import io.github.glacier_jellyfin.androidtv.update.publishedDate
+import io.github.glacier_jellyfin.androidtv.update.releaseNotes
 import java.text.DateFormat
 import kotlin.math.roundToInt
 import java.util.Date
@@ -1236,7 +1237,7 @@ private fun updateRow(state: SettingsUiState, viewModel: SettingsViewModel): Set
                 stringResource(R.string.update_download),
                 primary = true,
                 onClick = { updates.download() },
-                notesTitle = stringResource(R.string.update_new_in, candidate.version.toString()),
+                notesTitle = notesTitle(candidate, installed),
                 notes = notes(candidate),
             )
         }
@@ -1260,7 +1261,7 @@ private fun updateRow(state: SettingsUiState, viewModel: SettingsViewModel): Set
             stringResource(R.string.update_install_now),
             primary = true,
             onClick = updates::install,
-            notesTitle = stringResource(R.string.update_new_in, update.candidate.version.toString()),
+            notesTitle = notesTitle(update.candidate, installed),
             notes = notes(update.candidate),
         )
         is UpdateState.Installing -> SettingRow.Update(
@@ -1280,14 +1281,32 @@ private fun updateRow(state: SettingsUiState, viewModel: SettingsViewModel): Set
     }
 }
 
-/** The release notes as single lines, "New · Voice search". */
+/** "New in 1.4.0", or "New since 1.2.0" when the update spans several releases. */
+@Composable
+private fun notesTitle(candidate: UpdateCandidate, installed: AppVersion): String =
+    if (candidate.changes.size > 1) {
+        stringResource(R.string.update_new_since, installed.toString())
+    } else {
+        stringResource(R.string.update_new_in, candidate.version.toString())
+    }
+
+/** The release notes as single lines, "New · Voice search"; across several releases "1.4.0 · New · Voice search". */
 @Composable
 private fun notes(candidate: UpdateCandidate): List<String> {
     val fallback = stringResource(R.string.update_notes_fallback)
     val resources = LocalResources.current
     return remember(candidate, resources) {
-        ReleaseNotes.parse(candidate.release.body, fallback).flatMap { section ->
-            section.items.map { resources.getString(R.string.update_note, section.heading, it.text) }
+        val releases = releaseNotes(candidate, fallback)
+        releases.flatMap { release ->
+            release.sections.flatMap { section ->
+                section.items.map {
+                    if (releases.size > 1) {
+                        resources.getString(R.string.update_note_versioned, release.version, section.heading, it.text)
+                    } else {
+                        resources.getString(R.string.update_note, section.heading, it.text)
+                    }
+                }
+            }
         }
     }
 }

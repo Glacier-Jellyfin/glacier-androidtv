@@ -73,6 +73,7 @@ import io.github.glacier_jellyfin.androidtv.ui.NowPlayingSaver
 import io.github.glacier_jellyfin.androidtv.ui.SAVER_IDLE_MS
 import io.github.glacier_jellyfin.androidtv.ui.ToastHost
 import io.github.glacier_jellyfin.androidtv.ui.Toaster
+import io.github.glacier_jellyfin.androidtv.update.DownloadingOverlay
 import io.github.glacier_jellyfin.androidtv.update.InstallingOverlay
 import io.github.glacier_jellyfin.androidtv.update.text
 import javax.inject.Inject
@@ -239,7 +240,9 @@ class MainActivity : ComponentActivity() {
                                     Key.DirectionLeft, Key.DirectionRight -> NavDirection.vertical = false
                                 }
                             }
-                            // Nothing reacts to keys while Android installs an update.
+                            // Nothing reacts to keys while an update downloads for the installation or Android installs it.
+                            // Back still reaches the download dialog, which cancels the download (newer Android sends no Back key events at all).
+                            if ((update as? UpdateState.Downloading)?.install == true) return@onPreviewKeyEvent event.key != Key.Back
                             update is UpdateState.Installing
                         }.onKeyEvent { event ->
                             // Media keys no screen used go to the music, wherever the user is.
@@ -282,13 +285,19 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/** What the updater shows on any screen: its notices as toasts and the overlay while Android installs. */
+/** What the updater shows on any screen: its notices as toasts, the download before an installation and the overlay while Android installs. */
 @Composable
 private fun UpdateLayer(updates: UpdateManager, toaster: Toaster) {
     val context = LocalContext.current
     LaunchedEffect(updates) { updates.notices.collect { toaster.show(it.text(context)) } }
     val state by updates.state.collectAsStateWithLifecycle()
-    (state as? UpdateState.Installing)?.let { InstallingOverlay(it.candidate.version) }
+    when (val update = state) {
+        is UpdateState.Downloading -> if (update.install) {
+            DownloadingOverlay(update.candidate.version, update.bytes, update.candidate.apk.sizeBytes, onCancel = updates::cancelDownload)
+        }
+        is UpdateState.Installing -> InstallingOverlay(update.candidate.version)
+        else -> Unit
+    }
 }
 
 /** After a crash, the next start points to sending the log (Settings › System › Diagnostics). */

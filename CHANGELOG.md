@@ -23,6 +23,8 @@ renders the reference separately.
 
 ### Improved
 - When the server converts surround sound, it sends Dolby Digital or Dolby Digital Plus if your receiver or TV takes it. The sound stays surround over HDMI ARC
+- The update dialog lists the changes of every version since yours, not only the newest one
+- After "Update now", the download shows its progress right away. Back cancels it
 
 ### Fixed
 - Trailers play more smoothly. The background image no longer moves while a trailer plays

@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,7 +37,8 @@ sealed interface UpdateState {
     data object Checking : UpdateState
     data class Current(val checkedAt: Long) : UpdateState
     data class Available(val candidate: UpdateCandidate) : UpdateState
-    data class Downloading(val candidate: UpdateCandidate, val bytes: Long) : UpdateState
+    /** [install] continues with the installation right away; the download dialog shows meanwhile. */
+    data class Downloading(val candidate: UpdateCandidate, val bytes: Long, val install: Boolean = false) : UpdateState
     data class Ready(val candidate: UpdateCandidate) : UpdateState
     data class Installing(val candidate: UpdateCandidate) : UpdateState
     /** [candidate] is null when the check itself failed. */
@@ -102,7 +104,6 @@ class UpdateManager @Inject constructor(
 
     private var started = false
     private var job: Job? = null
-    private var installAfterDownload = false
 
     /** The permission page is open; the update installs once the user comes back with the permission given. */
     @Volatile
@@ -155,8 +156,7 @@ class UpdateManager @Inject constructor(
             is UpdateState.Failed -> state.candidate
             else -> null
         } ?: return
-        installAfterDownload = install
-        _state.value = UpdateState.Downloading(candidate, 0)
+        _state.value = UpdateState.Downloading(candidate, 0, install)
         job = scope.launch {
             try {
                 var shown = 0L
@@ -164,11 +164,13 @@ class UpdateManager @Inject constructor(
                     // About every percent is plenty for a progress bar.
                     if (bytes - shown >= candidate.apk.sizeBytes / 100 || bytes == candidate.apk.sizeBytes) {
                         shown = bytes
-                        _state.value = UpdateState.Downloading(candidate, bytes)
+                        // A cancelled download may still report once; it must not come back.
+                        _state.update { if (it is UpdateState.Downloading) UpdateState.Downloading(candidate, bytes, install) else it }
                     }
                 }
+                ensureActive()
                 _state.value = UpdateState.Ready(candidate)
-                if (installAfterDownload) install() else _notices.send(UpdateNotice.Downloaded(candidate.version))
+                if (install) install() else _notices.send(UpdateNotice.Downloaded(candidate.version))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -176,6 +178,13 @@ class UpdateManager @Inject constructor(
                 fail((e as? UpdateException)?.error ?: UpdateError.Network, candidate)
             }
         }
+    }
+
+    /** Back in the download dialog: stops the download, the update stays on offer. */
+    fun cancelDownload() {
+        val downloading = _state.value as? UpdateState.Downloading ?: return
+        job?.cancel()
+        _state.value = UpdateState.Available(downloading.candidate)
     }
 
     fun install() {

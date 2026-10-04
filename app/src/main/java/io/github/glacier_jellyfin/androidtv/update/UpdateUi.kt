@@ -92,7 +92,7 @@ fun UpdateDialog(candidate: UpdateCandidate, installed: AppVersion, onNow: () ->
     val scope = rememberCoroutineScope()
     val nowFocus = remember { FocusRequester() }
     val fallback = stringResource(R.string.update_notes_fallback)
-    val sections = remember(candidate) { ReleaseNotes.parse(candidate.release.body, fallback) }
+    val notes = remember(candidate) { releaseNotes(candidate, fallback) }
     GlacierBackground(
         Modifier
             .onPreviewKeyEvent { event ->
@@ -132,7 +132,7 @@ fun UpdateDialog(candidate: UpdateCandidate, installed: AppVersion, onNow: () ->
                         FactLine(stringResource(R.string.update_size), megabytes(LocalResources.current, candidate.apk.sizeBytes), mono = true)
                     }
                 }
-                NotesPanel(candidate, sections, notesScroll, Modifier.weight(1f).fillMaxHeight())
+                NotesPanel(candidate, installed, notes, notesScroll, Modifier.weight(1f).fillMaxHeight())
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(40.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.update_hint), style = GlacierText.body(17), color = GlacierColors.Mist, modifier = Modifier.weight(1f))
@@ -147,7 +147,7 @@ fun UpdateDialog(candidate: UpdateCandidate, installed: AppVersion, onNow: () ->
 }
 
 @Composable
-private fun NotesPanel(candidate: UpdateCandidate, sections: List<NotesSection>, scroll: ScrollState, modifier: Modifier) {
+private fun NotesPanel(candidate: UpdateCandidate, installed: AppVersion, notes: List<VersionNotes>, scroll: ScrollState, modifier: Modifier) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
     Column(
@@ -160,7 +160,12 @@ private fun NotesPanel(candidate: UpdateCandidate, sections: List<NotesSection>,
     ) {
         Row(Modifier.fillMaxWidth().padding(end = 24.dp), verticalAlignment = Alignment.Bottom) {
             Text(stringResource(R.string.update_notes), style = GlacierText.display(30), color = GlacierColors.Ice, modifier = Modifier.weight(1f))
-            Text(stringResource(R.string.update_release, candidate.release.tag), style = GlacierText.mono(17), color = GlacierColors.Mist)
+            val range = if (notes.size > 1) {
+                stringResource(R.string.update_release_since, installed.toString())
+            } else {
+                stringResource(R.string.update_release, candidate.release.tag)
+            }
+            Text(range, style = GlacierText.mono(17), color = GlacierColors.Mist)
         }
         Column(
             Modifier
@@ -169,17 +174,26 @@ private fun NotesPanel(candidate: UpdateCandidate, sections: List<NotesSection>,
                 .padding(end = 20.dp),
             verticalArrangement = Arrangement.spacedBy(30.dp),
         ) {
-            sections.forEach { section ->
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Text(section.heading.uppercase(), style = GlacierText.label(17, 0.06), color = accent)
-                        Box(Modifier.weight(1f).height(1.dp).background(GlacierColors.GlassBorder))
+            notes.forEach { release ->
+                // Only an update across several releases needs a heading per version.
+                if (notes.size > 1) {
+                    Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Text(stringResource(R.string.update_title, release.version), style = GlacierText.display(26), color = GlacierColors.Ice)
+                        release.date?.let { Text(it, style = GlacierText.body(17), color = GlacierColors.Mist, modifier = Modifier.padding(bottom = 3.dp)) }
                     }
-                    section.items.forEach { item ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Box(Modifier.padding(top = 12.dp).size(6.dp).clip(CircleShape).background(GlacierColors.Ice))
-                            Text(item.text, style = GlacierText.body(20), color = GlacierColors.Ice, modifier = Modifier.weight(1f))
-                            item.ref?.let { Text(it, style = GlacierText.mono(16), color = GlacierColors.Mist, modifier = Modifier.padding(top = 3.dp)) }
+                }
+                release.sections.forEach { section ->
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Text(section.heading.uppercase(), style = GlacierText.label(17, 0.06), color = accent)
+                            Box(Modifier.weight(1f).height(1.dp).background(GlacierColors.GlassBorder))
+                        }
+                        section.items.forEach { item ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                Box(Modifier.padding(top = 12.dp).size(6.dp).clip(CircleShape).background(GlacierColors.Ice))
+                                Text(item.text, style = GlacierText.body(20), color = GlacierColors.Ice, modifier = Modifier.weight(1f))
+                                item.ref?.let { Text(it, style = GlacierText.mono(16), color = GlacierColors.Mist, modifier = Modifier.padding(top = 3.dp)) }
+                            }
                         }
                     }
                 }
@@ -262,9 +276,64 @@ fun InstallingOverlay(version: AppVersion) {
     }
 }
 
+/**
+ * "Downloading Glacier 1.4.0 …" with a progress bar, right after "Update now":
+ * the installation follows by itself. Like [InstallingOverlay] it leaves the
+ * focus where it is; the activity holds back every key but Back (see MainActivity),
+ * which cancels the download.
+ */
+@Composable
+fun DownloadingOverlay(version: AppVersion, bytes: Long, total: Long, onCancel: () -> Unit) {
+    BackHandler(onBack = onCancel)
+    val accent = LocalAccent.current.main
+    val resources = LocalResources.current
+    val share = (bytes.toFloat() / total.coerceAtLeast(1)).coerceIn(0f, 1f)
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color(0xD105090F)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(Modifier.width(640.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(26.dp)) {
+            UpdateMark()
+            Text(stringResource(R.string.update_downloading_title, version.displayName), style = GlacierText.display(28), color = GlacierColors.Ice)
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.fillMaxWidth().height(8.dp).clip(PillShape).background(GlacierColors.GlassFill2)) {
+                    Box(Modifier.fillMaxWidth(share).fillMaxHeight().clip(PillShape).background(accent))
+                }
+                Row(Modifier.fillMaxWidth()) {
+                    Text(
+                        stringResource(R.string.update_percent, (share * 100).toInt()),
+                        style = GlacierText.mono(17),
+                        color = GlacierColors.Mist,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        stringResource(R.string.update_bar_size, megabytes(resources, bytes), megabytes(resources, total)),
+                        style = GlacierText.mono(17),
+                        color = GlacierColors.Mist,
+                    )
+                }
+            }
+            Text(stringResource(R.string.update_downloading_hint), style = GlacierText.body(19), color = GlacierColors.Mist)
+        }
+    }
+}
+
+/** The notes of one release the update brings; [version] like "0.2.2", [date] see [publishedDate]. */
+class VersionNotes(val version: String, val date: String?, val sections: List<NotesSection>)
+
+/** The notes of every release from the installed version up to [candidate], newest first; releases without notes left out. */
+fun releaseNotes(candidate: UpdateCandidate, fallbackHeading: String): List<VersionNotes> =
+    candidate.changes
+        .map { VersionNotes(it.tag.removePrefix("v"), publishedDate(it.publishedAt), ReleaseNotes.parse(it.body, fallbackHeading)) }
+        .filter { it.sections.isNotEmpty() }
+
 /** The release date in the interface language, e.g. "24 September 2026"; null if GitHub sent none. */
-fun publishedDate(candidate: UpdateCandidate): String? =
-    candidate.release.publishedAt
+fun publishedDate(candidate: UpdateCandidate): String? = publishedDate(candidate.release.publishedAt)
+
+private fun publishedDate(publishedAt: String?): String? =
+    publishedAt
         ?.let { runCatching { Instant.parse(it) }.getOrNull() }
         ?.let { DateFormat.getDateInstance(DateFormat.LONG).format(Date.from(it)) }
 

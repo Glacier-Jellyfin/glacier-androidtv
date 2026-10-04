@@ -31,7 +31,12 @@ data class UpdateCandidate(
     val version: AppVersion,
     val release: Release,
     val apk: ReleaseAsset,
-)
+    /** The releases between the installed version and [release], newest first, without their assets. */
+    val skipped: List<Release> = emptyList(),
+) {
+    /** Every release the update brings, newest first: [release] and the [skipped] ones. */
+    val changes: List<Release> get() = listOf(release) + skipped
+}
 
 object ReleaseSelector {
 
@@ -49,18 +54,27 @@ object ReleaseSelector {
      * A release is ignored when its tag does not parse, when GitHub's
      * pre-release flag disagrees with the tag, or when it lacks the APK asset.
      */
-    fun select(releases: List<Release>, installed: AppVersion, channel: UpdateChannel): UpdateCandidate? =
-        releases.asSequence()
+    fun select(releases: List<Release>, installed: AppVersion, channel: UpdateChannel): UpdateCandidate? {
+        val newer = releases.asSequence()
             .filterNot { it.isDraft }
             .mapNotNull { release ->
                 val version = AppVersion.parse(release.tag) ?: return@mapNotNull null
                 if (version.isBeta != release.isPrerelease) return@mapNotNull null
                 if (version.isBeta && channel == UpdateChannel.Stable) return@mapNotNull null
-                val apk = release.assets.firstOrNull { it.name == APK_NAME }
-                    ?: release.assets.firstOrNull { it.name == legacyApkName(version) }
-                    ?: return@mapNotNull null
-                UpdateCandidate(version, release, apk)
+                version to release
             }
-            .filter { it.version > installed }
-            .maxByOrNull { it.version }
+            .filter { (version, _) -> version > installed }
+            .sortedByDescending { (version, _) -> version }
+            .toList()
+        val index = newer.indexOfFirst { (version, release) -> apkOf(release, version) != null }
+        if (index < 0) return null
+        val (version, release) = newer[index]
+        // A release without an APK still tells what changed, so its notes come along.
+        val skipped = newer.drop(index + 1).map { (_, it) -> it.copy(assets = emptyList()) }
+        return UpdateCandidate(version, release, apkOf(release, version)!!, skipped)
+    }
+
+    private fun apkOf(release: Release, version: AppVersion): ReleaseAsset? =
+        release.assets.firstOrNull { it.name == APK_NAME }
+            ?: release.assets.firstOrNull { it.name == legacyApkName(version) }
 }
