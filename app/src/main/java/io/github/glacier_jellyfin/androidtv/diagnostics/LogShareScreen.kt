@@ -38,14 +38,20 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
+import java.text.DateFormat
+import java.util.Date
 
-/** The log offered on the local network: where to get it, what it is called and how large it is. */
-data class LogShare(val url: String, val fileName: String, val sizeBytes: Int)
+/**
+ * The log offered on the local network: where to get it, what it is called and how large it is.
+ * [crashedAt] is set when the page opens by itself after a crash (epoch ms).
+ */
+data class LogShare(val url: String, val fileName: String, val sizeBytes: Int, val crashedAt: Long? = null)
 
 /**
  * Downloading the log on another device, laid out like the update dialog:
  * the steps on the left, the QR code on a glass panel on the right, "Close"
- * at the bottom. The download works while this page is open.
+ * at the bottom. The download works while this page is open. After a crash
+ * it says so and asks for a report on GitHub.
  */
 @Composable
 fun LogShareScreen(share: LogShare, onClose: () -> Unit) {
@@ -65,12 +71,23 @@ fun LogShareScreen(share: LogShare, onClose: () -> Unit) {
                             style = GlacierText.label(18, 0.08),
                             color = LocalAccent.current.main,
                         )
-                        Text(stringResource(R.string.diag_share_title), style = GlacierText.display(64), color = GlacierColors.Ice)
+                        Text(
+                            stringResource(if (share.crashedAt != null) R.string.diag_crash_title else R.string.diag_share_title),
+                            style = GlacierText.display(64),
+                            color = GlacierColors.Ice,
+                        )
+                        share.crashedAt?.let {
+                            Text(
+                                stringResource(R.string.diag_crash_intro, DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(it))),
+                                style = GlacierText.body(21),
+                                color = GlacierColors.Mist,
+                            )
+                        }
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
                         Step(1, stringResource(R.string.diag_share_step_network))
                         Step(2, stringResource(R.string.diag_share_step_scan))
-                        Step(3, stringResource(R.string.diag_share_step_attach))
+                        Step(3, stringResource(R.string.diag_share_step_attach, ISSUES_URL))
                     }
                     Box(Modifier.fillMaxWidth().height(1.dp).background(GlacierColors.GlassBorder))
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -143,3 +160,5 @@ private fun Fact(label: String, value: String) {
         Text(value, style = GlacierText.mono(19), color = GlacierColors.Ice)
     }
 }
+
+private const val ISSUES_URL = "github.com/Glacier-Jellyfin/glacier-androidtv/issues"

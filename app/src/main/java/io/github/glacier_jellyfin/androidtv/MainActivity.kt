@@ -53,6 +53,10 @@ import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateManager
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
 import io.github.glacier_jellyfin.androidtv.core.updater.pending
+import io.github.glacier_jellyfin.androidtv.diagnostics.Diagnostics
+import io.github.glacier_jellyfin.androidtv.diagnostics.LogServer
+import io.github.glacier_jellyfin.androidtv.diagnostics.LogShare
+import io.github.glacier_jellyfin.androidtv.diagnostics.LogShareScreen
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.music.NowPlaying
 import io.github.glacier_jellyfin.androidtv.navigation.GlacierNavHost
@@ -77,6 +81,7 @@ import io.github.glacier_jellyfin.androidtv.update.DownloadingOverlay
 import io.github.glacier_jellyfin.androidtv.update.InstallingOverlay
 import io.github.glacier_jellyfin.androidtv.update.text
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -105,6 +110,7 @@ class StartViewModel @Inject constructor(
     home: HomeRepository,
     private val sessions: SessionManager,
     private val launches: HomeLaunches,
+    private val diagnostics: Diagnostics,
 ) : ViewModel() {
     /** Library kinds of the server, for every navigation bar. */
     val libraryKinds: StateFlow<List<LibraryKind>> = home.kinds
@@ -139,9 +145,21 @@ class StartViewModel @Inject constructor(
     /** Screens to open from scratch while the app runs: a title was picked on the home screen. */
     val relaunch: Flow<Any> = _relaunch.receiveAsFlow()
 
+    private val _crashShare = MutableStateFlow<LogShare?>(null)
+
+    /** After a crash, the log offered for download before the first screen opens. */
+    val crashShare = _crashShare.asStateFlow()
+
+    private var crashServer: LogServer? = null
+
+    /** Shown once after a crash, when the log could not be offered on the network. */
+    private val _crashNotice = Channel<Unit>(Channel.CONFLATED)
+    val crashNotice: Flow<Unit> = _crashNotice.receiveAsFlow()
+
     init {
         updates.start()
         viewModelScope.launch {
+            offerCrashLog()
             val server = accounts.current().startServerId()
             _start.value = launches.pending?.let { ProfilesRoute(it.serverId, appStart = true, userId = it.userId) }
                 ?: server?.let { ProfilesRoute(it, appStart = true) }
@@ -155,6 +173,39 @@ class StartViewModel @Inject constructor(
         val session = sessions.session.value
         val same = session != null && session.server.id == launch.serverId && session.user.userId == launch.userId
         _relaunch.trySend(if (same) HomeRoute else ProfilesRoute(launch.serverId, appStart = true, userId = launch.userId))
+    }
+
+    fun closeCrashShare() {
+        crashServer?.close()
+        crashServer = null
+        _crashShare.value = null
+    }
+
+    override fun onCleared() {
+        crashServer?.close()
+    }
+
+    /** After a crash, the log for a GitHub issue; without a network, a notice pointing to Settings › System. */
+    private suspend fun offerCrashLog() {
+        val crashedAt = withContext(Dispatchers.IO) { if (Log.takeCrashNotice()) Log.lastCrash() else null } ?: return
+        val server = try {
+            diagnostics.shareOnNetwork()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Offering the log after a crash failed", e)
+            null
+        }
+        if (server == null) {
+            _crashNotice.trySend(Unit)
+            return
+        }
+        crashServer = server
+        _crashShare.value = LogShare(server.url, server.fileName, server.sizeBytes, crashedAt)
+    }
+
+    private companion object {
+        const val TAG = "Start"
     }
 }
 
@@ -255,7 +306,9 @@ class MainActivity : ComponentActivity() {
                         },
                     ) {
                         val start by startViewModel.start.collectAsStateWithLifecycle()
-                        start?.let {
+                        val crashShare by startViewModel.crashShare.collectAsStateWithLifecycle()
+                        // The first screen waits for the crash page, so it cannot take the focus from it.
+                        if (crashShare == null) start?.let {
                             val navController = rememberNavController()
                             GlacierNavHost(navController, startDestination = it)
                             LaunchedEffect(navController) {
@@ -265,7 +318,8 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         UpdateLayer(startViewModel.updates, toaster)
-                        CrashNotice(toaster)
+                        crashShare?.let { LogShareScreen(it, onClose = startViewModel::closeCrashShare) }
+                        CrashNotice(startViewModel.crashNotice, toaster)
                         ToastHost(toaster)
                         NowPlayingSaver(saverOn, nowPlaying, startViewModel.music.progress)
                     }
@@ -300,11 +354,9 @@ private fun UpdateLayer(updates: UpdateManager, toaster: Toaster) {
     }
 }
 
-/** After a crash, the next start points to sending the log (Settings › System › Diagnostics). */
+/** After a crash without a network for the log page, points to sending the log (Settings › System › Diagnostics). */
 @Composable
-private fun CrashNotice(toaster: Toaster) {
+private fun CrashNotice(notices: Flow<Unit>, toaster: Toaster) {
     val resources = LocalResources.current
-    LaunchedEffect(Unit) {
-        if (withContext(Dispatchers.IO) { Log.takeCrashNotice() }) toaster.show(resources.getString(R.string.diag_crash_notice))
-    }
+    LaunchedEffect(notices) { notices.collect { toaster.show(resources.getString(R.string.diag_crash_notice)) } }
 }

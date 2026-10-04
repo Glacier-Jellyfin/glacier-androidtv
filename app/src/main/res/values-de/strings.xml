@@ -795,7 +795,7 @@
     <string name="diag_share_title">Protokoll herunterladen</string>
     <string name="diag_share_step_network">Verbinde Handy oder Computer mit demselben Netzwerk wie diesen Fernseher</string>
     <string name="diag_share_step_scan">Scanne den Code mit der Kamera oder gib die Adresse im Browser ein</string>
-    <string name="diag_share_step_attach">Der Browser speichert das Protokoll als Textdatei: Hänge sie an deinen Fehlerbericht auf GitHub an</string>
+    <string name="diag_share_step_attach">Der Browser speichert das Protokoll als Textdatei. Hänge es an ein neues Issue auf %1$s an</string>
     <string name="diag_share_file">Datei</string>
     <string name="diag_share_size">Größe</string>
     <string name="diag_share_kb">%1$.0f kB</string>
@@ -805,6 +805,8 @@
     <string name="diag_share_no_network">Keine Netzwerkverbindung</string>
     <string name="diag_share_close">Schließen</string>
     <string name="diag_crash_notice">Glacier wurde unerwartet beendet. Protokoll senden: Einstellungen › System</string>
+    <string name="diag_crash_title">Glacier wurde unerwartet beendet</string>
+    <string name="diag_crash_intro">Das passierte am %1$s. Bitte melde den Fehler auf GitHub und hänge das Protokoll an. Das hilft, die Ursache zu finden.</string>
     <string name="settings_unknown">Unbekannt</string>
 
     <!-- Update dialog -->

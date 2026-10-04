@@ -801,7 +801,7 @@
     <string name="diag_share_title">Download log</string>
     <string name="diag_share_step_network">Connect a phone or computer to the same network as this TV</string>
     <string name="diag_share_step_scan">Scan the code with its camera, or type the address into a browser</string>
-    <string name="diag_share_step_attach">The browser saves the log as a text file: attach it to your bug report on GitHub</string>
+    <string name="diag_share_step_attach">The browser saves the log as a text file. Attach it to a new issue at %1$s</string>
     <string name="diag_share_file">File</string>
     <string name="diag_share_size">Size</string>
     <string name="diag_share_kb">%1$.0f kB</string>
@@ -811,6 +811,8 @@
     <string name="diag_share_no_network">No network connection</string>
     <string name="diag_share_close">Close</string>
     <string name="diag_crash_notice">Glacier closed unexpectedly. Send the log: Settings › System</string>
+    <string name="diag_crash_title">Glacier closed unexpectedly</string>
+    <string name="diag_crash_intro">This happened on %1$s. Please report it on GitHub and attach the log. It helps find the cause.</string>
     <string name="settings_unknown">Unknown</string>
 
     <!-- Update dialog -->
