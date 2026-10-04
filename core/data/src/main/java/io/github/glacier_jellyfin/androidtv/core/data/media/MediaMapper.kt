@@ -60,7 +60,7 @@ internal class MediaMapper(private val api: ApiClient) {
             officialRating = dto.officialRating,
             runtimeMinutes = runtimeTicks?.let { (it / TICKS_PER_MINUTE).toInt() },
             genres = dto.genres.orEmpty(),
-            overview = dto.overview,
+            overview = plainText(dto.overview),
             parentTitle = if (kind == ItemKind.Album) dto.albumArtist else dto.seriesName,
             seriesId = dto.seriesId,
             seasonNumber = dto.parentIndexNumber,

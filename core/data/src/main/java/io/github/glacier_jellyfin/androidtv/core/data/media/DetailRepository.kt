@@ -245,7 +245,7 @@ class DetailRepository @Inject constructor(
         PersonDetails(
             id = dto.id,
             name = dto.name.orEmpty(),
-            biography = dto.overview?.takeIf { it.isNotBlank() },
+            biography = plainText(dto.overview),
             born = dto.premiereDate?.toLocalDate(),
             birthplace = dto.productionLocations?.firstOrNull(),
             imageUrl = dto.imageTags?.get(ImageType.PRIMARY)?.let { tag ->

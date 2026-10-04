@@ -192,7 +192,7 @@ class SeerrRepository @Inject constructor(
         SeerrPersonDetails(
             tmdbId = dto.id,
             name = dto.name,
-            biography = dto.biography?.takeIf { it.isNotBlank() },
+            biography = plainText(dto.biography),
             born = dto.birthday?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
             birthplace = dto.placeOfBirth?.takeIf { it.isNotBlank() },
             imageUrl = dto.profilePath?.let { "$TMDB_IMAGES/w500$it" },
