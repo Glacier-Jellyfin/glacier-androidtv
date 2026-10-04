@@ -18,6 +18,9 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### Fixed
+- Trailers play more smoothly. The background image no longer moves while a trailer plays
+
 ### Security
 - The audio decoder for DTS, TrueHD and other formats is based on a newer FFmpeg with current security fixes
 - Trailers from Seerr only accept real YouTube video IDs

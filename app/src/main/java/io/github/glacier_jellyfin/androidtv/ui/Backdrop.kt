@@ -1,9 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.ui
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -11,7 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -21,28 +22,44 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
-/** The design's `gKen`: a slow 22 s zoom and drift, alternating. Off with "reduce motion". */
+/**
+ * The design's `gKen`: a slow 22 s zoom and drift, alternating. Off with "reduce motion".
+ * Without [animate] it holds still where it is: each animated frame redraws the whole
+ * artwork, which a video on top of it cannot afford on slower TVs.
+ */
 @Composable
-fun KenBurns(content: @Composable () -> Unit) {
+fun KenBurns(animate: Boolean = true, content: @Composable () -> Unit) {
     if (LocalReduceMotion.current) {
         content()
         return
     }
-    val transition = rememberInfiniteTransition(label = "ken")
-    val t by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(22_000), RepeatMode.Reverse), label = "kenT")
+    val t = remember { Animatable(0f) }
+    var forward by remember { mutableStateOf(true) }
+    LaunchedEffect(animate) {
+        // Pausing cancels this effect, which stops the animation at its current value.
+        while (animate) {
+            val target = if (forward) 1f else 0f
+            t.animateTo(target, tween((abs(target - t.value) * KEN_BURNS_MS).roundToInt()))
+            forward = !forward
+        }
+    }
     Box(
         Modifier
             .fillMaxSize()
             .graphicsLayer {
-                val scale = 1.02f + 0.07f * t
+                val scale = 1.02f + 0.07f * t.value
                 scaleX = scale
                 scaleY = scale
-                translationX = -0.012f * size.width * t
-                translationY = -0.01f * size.height * t
+                translationX = -0.012f * size.width * t.value
+                translationY = -0.01f * size.height * t.value
             },
     ) { content() }
 }
+
+private const val KEN_BURNS_MS = 22_000
 
 /**
  * Ground of pages with artwork at the top. The artwork fades into it, so the

@@ -214,7 +214,8 @@ fun TrailerScreen(
     ) {
         val item = state.item
         val art = item?.backdropUrl ?: item?.thumbUrl
-        KenBurns { Artwork(art, Modifier.fillMaxSize()) }
+        // Still while a trailer plays: the video covers the artwork or sits in front of it.
+        KenBurns(animate = stopped) { Artwork(art, Modifier.fillMaxSize()) }
         // Around the smaller YouTube frame the artwork stays visible: dimmed, so the OSD reads and the video stands out.
         if (youTube != null && !stopped) Box(Modifier.fillMaxSize().background(Color(0xA605090F)))
 
