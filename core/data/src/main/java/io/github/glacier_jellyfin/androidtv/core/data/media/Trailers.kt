@@ -29,6 +29,11 @@ data class LocalTrailer(
 
 /** Played in YouTube's embedded player. */
 data class YouTubeTrailer(val videoId: String, override val name: String?) : Trailer {
+    // The id is written into the player page's script, so nothing else may get through.
+    init {
+        require(isYouTubeId(videoId)) { "Not a YouTube video id: $videoId" }
+    }
+
     override val imageUrl: String get() = "https://i.ytimg.com/vi/$videoId/hqdefault.jpg"
 }
 
@@ -51,7 +56,10 @@ fun youTubeId(url: String): String? {
         }
         else -> null
     }
-    return id?.takeIf { YOUTUBE_ID.matches(it) }
+    return id?.takeIf(::isYouTubeId)
 }
+
+/** Eleven characters of A-Z, a-z, 0-9, "_" and "-". */
+fun isYouTubeId(id: String): Boolean = YOUTUBE_ID.matches(id)
 
 private val YOUTUBE_ID = Regex("[A-Za-z0-9_-]{11}")

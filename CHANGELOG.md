@@ -18,6 +18,10 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### Security
+- The audio decoder for DTS, TrueHD and other formats is based on a newer FFmpeg with current security fixes
+- Trailers from Seerr only accept real YouTube video IDs
+
 ## [0.2.1] - 2026-10-04
 
 ### Improved

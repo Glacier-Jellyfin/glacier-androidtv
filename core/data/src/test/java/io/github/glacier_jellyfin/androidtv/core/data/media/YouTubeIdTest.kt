@@ -1,7 +1,10 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class YouTubeIdTest {
@@ -24,5 +27,13 @@ class YouTubeIdTest {
         assertNull(youTubeId("https://www.youtube.com/channel/UC1234567890"))
         assertNull(youTubeId("not a url"))
         assertNull(youTubeId(""))
+    }
+
+    @Test
+    fun `ids that could break out of the player script are refused`() {
+        assertFalse(isYouTubeId("abc');alert(1)//"))
+        assertFalse(isYouTubeId("dQw4w9WgXc'"))
+        assertTrue(isYouTubeId("dQw4w9WgXcQ"))
+        assertThrows(IllegalArgumentException::class.java) { YouTubeTrailer("x'+evil+'x", null) }
     }
 }

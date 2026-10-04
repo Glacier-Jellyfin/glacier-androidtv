@@ -229,7 +229,7 @@ class SeerrRepository @Inject constructor(
     /** Trailers first, then teasers, as TMDB lists them. */
     private fun DetailsDto.youTubeTrailers(): List<YouTubeTrailer> =
         relatedVideos
-            .filter { it.site.equals("YouTube", ignoreCase = true) && it.type in TrailerTypes && !it.key.isNullOrBlank() }
+            .filter { it.site.equals("YouTube", ignoreCase = true) && it.type in TrailerTypes && it.key?.let(::isYouTubeId) == true }
             .sortedBy { TrailerTypes.indexOf(it.type) }
             .map { YouTubeTrailer(it.key!!, it.name) }
 
