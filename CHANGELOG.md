@@ -18,6 +18,12 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-04
+
+### Improved
+- Glacier can be installed with the code 2423112 in the Downloader app on the TV. The code always loads the newest version
+- Updates now come as a file with the same name for every version. This keeps download links stable
+
 ## [0.2.0] - 2026-10-04
 
 ### New
