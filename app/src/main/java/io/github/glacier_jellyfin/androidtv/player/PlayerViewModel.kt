@@ -48,6 +48,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepositor
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SourceFile
 import io.github.glacier_jellyfin.androidtv.core.data.playback.TranscodeStatus
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.HlsSegments
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
@@ -170,6 +171,8 @@ class PlayerViewModel @Inject constructor(
     private val autoSkipped = mutableSetOf<MediaSegment>()
     /** Tracks to apply once Media3 knows the file's tracks. */
     private var tracksPending = false
+    /** Set once fMP4 segments failed for this title: it plays from MPEG-TS segments from then on. */
+    private var segments: HlsSegments? = null
 
     @OptIn(UnstableApi::class)
     private val decoders = object : AnalyticsListener {
@@ -224,6 +227,14 @@ class PlayerViewModel @Inject constructor(
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            val current = source
+            // Some fMP4 segments from the server start at a negative time, which Media3 cannot read.
+            if (current != null && current.fmp4Segments && segments == null && error.errorCode in FMP4_ERRORS) {
+                Log.w(TAG, "Reading fMP4 segments failed, asking for MPEG-TS", error)
+                segments = HlsSegments.Ts
+                reopen(audio = _state.value.audioIndex, subtitle = _state.value.subtitleIndex)
+                return
+            }
             Log.w(TAG, "Playback failed", error)
             source?.let { playback.reportStopped(it, currentPositionMs(), failed = true) }
             _state.update { it.copy(failed = true, loading = false) }
@@ -276,7 +287,7 @@ class PlayerViewModel @Inject constructor(
                 } else {
                     null
                 }
-                val opened = playback.open(itemId, start, remembered?.audio ?: audio, remembered?.subtitle ?: subtitle)
+                val opened = playback.open(itemId, start, remembered?.audio ?: audio, remembered?.subtitle ?: subtitle, segments)
                 source = opened
                 recordTracks(opened.audioIndex, opened.subtitleIndex)
                 val request = StreamRequest(
@@ -393,6 +404,7 @@ class PlayerViewModel @Inject constructor(
         source = null
         itemId = item.id
         fromStart = false
+        segments = null
         autoSkipped.clear()
         _state.update {
             it.copy(
@@ -619,6 +631,12 @@ class PlayerViewModel @Inject constructor(
         const val END_TOLERANCE_MS = 2_000L
         /** The server's "no subtitles". */
         const val NO_SUBTITLE = -1
+        /** How Media3 reports a segment it cannot parse; the negative start time arrives as an unexpected loader failure. */
+        val FMP4_ERRORS = setOf(
+            PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
+        )
     }
 }
 

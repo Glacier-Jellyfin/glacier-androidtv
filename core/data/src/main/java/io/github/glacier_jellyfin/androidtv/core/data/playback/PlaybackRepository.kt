@@ -8,6 +8,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.Track
 import io.github.glacier_jellyfin.androidtv.core.data.media.toTrack
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.DeviceProfiles
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.HlsSegments
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.MediaCapabilityDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -79,6 +80,8 @@ data class PlaybackSource(
     val subtitles: List<PlaybackSubtitle>,
     /** The file as the server stores it; null for music. */
     val file: SourceFile? = null,
+    /** A transcode in fragmented MP4 segments, which may need a second try as MPEG-TS. */
+    val fmp4Segments: Boolean = false,
 ) {
     /** Direct play keeps every audio track in the file; a transcode carries only the chosen one. */
     val allAudioInStream: Boolean get() = method == PlaybackMethod.DirectPlay
@@ -161,8 +164,11 @@ class PlaybackRepository @Inject constructor(
     /** A title whose "stopped" report reached the server: resume points and watched state changed. */
     val stopped: SharedFlow<UUID> = _stopped.asSharedFlow()
 
-    /** Asks the server how to play [itemId] on this device and builds the stream URL. */
-    suspend fun open(itemId: UUID, startMs: Long, audioIndex: Int?, subtitleIndex: Int?): PlaybackSource = withContext(Dispatchers.IO) {
+    /**
+     * Asks the server how to play [itemId] on this device and builds the stream URL.
+     * [segments] null: the container that suits the device, see [HlsSegments.preferredFor].
+     */
+    suspend fun open(itemId: UUID, startMs: Long, audioIndex: Int?, subtitleIndex: Int?, segments: HlsSegments? = null): PlaybackSource = withContext(Dispatchers.IO) {
         val session = requireSession()
         val api = session.api
         val playback = settings.current().playback
@@ -178,7 +184,7 @@ class PlaybackRepository @Inject constructor(
                 startTimeTicks = startMs * TICKS_PER_MS,
                 audioStreamIndex = audioIndex,
                 subtitleStreamIndex = subtitleIndex,
-                deviceProfile = DeviceProfiles.build(device, bitrate, playback.subtitleBurnIn),
+                deviceProfile = DeviceProfiles.build(device, bitrate, playback.subtitleBurnIn, segments ?: HlsSegments.preferredFor(device)),
                 enableDirectPlay = true,
                 enableDirectStream = true,
                 enableTranscoding = true,
@@ -220,6 +226,8 @@ class PlaybackRepository @Inject constructor(
             playSessionId = info.playSessionId,
             url = url,
             isHls = method != PlaybackMethod.DirectPlay && source.transcodingSubProtocol == MediaStreamProtocol.HLS,
+            fmp4Segments = method != PlaybackMethod.DirectPlay && source.transcodingSubProtocol == MediaStreamProtocol.HLS &&
+                source.transcodingContainer.equals("mp4", ignoreCase = true),
             method = method,
             headers = mapOf("Authorization" to authorization(session)),
             audioIndex = audioIndex ?: source.defaultAudioStreamIndex,

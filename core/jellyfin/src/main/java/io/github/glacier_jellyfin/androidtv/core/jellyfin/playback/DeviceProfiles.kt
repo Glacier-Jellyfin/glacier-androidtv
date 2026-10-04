@@ -31,6 +31,7 @@ object DeviceProfiles {
         capabilities: DeviceCapabilities,
         maxBitrate: Int,
         burnIn: SubtitleBurnIn = SubtitleBurnIn.Auto,
+        segments: HlsSegments = HlsSegments.preferredFor(capabilities),
     ): DeviceProfile = buildDeviceProfile {
         name = "Glacier"
         maxStreamingBitrate = maxBitrate
@@ -57,14 +58,16 @@ object DeviceProfiles {
             audioCodec(*audioCodecs.toTypedArray())
         }
 
-        // Transcoding target: MPEG-TS segments over HLS, HEVC when the device decodes it.
-        // Not fragmented MP4: the server's FFmpeg writes negative start times into some
-        // fMP4 segments (Toy Story 5, TrueHD 7.1), which Media3 refuses to read.
-        val hlsAudio = listOf("aac", "ac3", "eac3", "mp3").filter { it in capabilities.audioCodecs }.ifEmpty { listOf("aac") }
+        // Transcoding target: HLS, HEVC when the device decodes it. The server converts
+        // audio to the first codec listed: a bitstream the receiver takes beats AAC,
+        // because AAC arrives as PCM, and HDMI ARC carries PCM in stereo only.
+        val hlsAudio = (hlsAudioOrder(capabilities.passthroughAudio) + if (segments == HlsSegments.Fmp4) listOf("flac", "opus") else emptyList())
+            .filter { it in capabilities.audioCodecs }
+            .ifEmpty { listOf("aac") }
         transcodingProfile {
             type = DlnaProfileType.VIDEO
             context = EncodingContext.STREAMING
-            container = "ts"
+            container = if (segments == HlsSegments.Fmp4) "mp4" else "ts"
             protocol = MediaStreamProtocol.HLS
             videoCodec(*listOfNotNull("hevc".takeIf { capabilities.hevc != null }, "h264").toTypedArray())
             audioCodec(*hlsAudio.toTypedArray())
@@ -113,6 +116,12 @@ object DeviceProfiles {
             if (burnIn == SubtitleBurnIn.Auto) subtitleProfile(it, SubtitleDeliveryMethod.EMBED)
             subtitleProfile(it, SubtitleDeliveryMethod.ENCODE)
         }
+    }
+
+    /** E-AC-3, then AC-3 first when the receiver takes them as a bitstream; AAC otherwise. */
+    internal fun hlsAudioOrder(passthrough: Set<String>): List<String> {
+        val bitstreams = listOf("eac3", "ac3").filter { it in passthrough }
+        return bitstreams + listOf("aac", "eac3", "ac3", "mp3").filterNot { it in bitstreams }
     }
 
     /**

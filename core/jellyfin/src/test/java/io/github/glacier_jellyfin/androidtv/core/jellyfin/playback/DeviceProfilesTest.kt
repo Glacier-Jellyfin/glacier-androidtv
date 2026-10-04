@@ -34,7 +34,7 @@ class DeviceProfilesTest {
     fun `transcoding prefers hevc and keeps the device's surround codecs`() {
         val video = DeviceProfiles.build(fullHdTv, MAX).transcodingProfiles.single { it.type == DlnaProfileType.VIDEO }
         assertEquals("hevc,h264", video.videoCodec)
-        assertEquals("aac,ac3,eac3,mp3", video.audioCodec)
+        assertEquals("aac,eac3,ac3,mp3", video.audioCodec)
         assertEquals("6", video.maxAudioChannels)
     }
 
@@ -43,7 +43,24 @@ class DeviceProfilesTest {
         val tv = fullHdTv.copy(audioCodecs = setOf("aac", "ac3", "eac3", "flac", "opus"))
         val video = DeviceProfiles.build(tv, MAX).transcodingProfiles.single { it.type == DlnaProfileType.VIDEO }
         assertEquals("ts", video.container)
-        assertEquals("aac,ac3,eac3", video.audioCodec)
+        assertEquals("aac,eac3,ac3", video.audioCodec)
+    }
+
+    @Test
+    fun `dolby vision devices get fMP4 segments, which keep the dolby vision tag`() {
+        val tv = fullHdTv.copy(audioCodecs = setOf("aac", "eac3", "flac"), hdr = setOf(HdrType.Hdr10, HdrType.DolbyVision))
+        val video = DeviceProfiles.build(tv, MAX).transcodingProfiles.single { it.type == DlnaProfileType.VIDEO }
+        assertEquals("mp4", video.container)
+        assertEquals("aac,eac3,flac", video.audioCodec)
+        val retry = DeviceProfiles.build(tv, MAX, segments = HlsSegments.Ts).transcodingProfiles.single { it.type == DlnaProfileType.VIDEO }
+        assertEquals("ts", retry.container)
+    }
+
+    @Test
+    fun `a bitstream the receiver takes comes before AAC`() {
+        assertEquals(listOf("eac3", "ac3", "aac", "mp3"), DeviceProfiles.hlsAudioOrder(setOf("ac3", "eac3", "dts")))
+        assertEquals(listOf("ac3", "aac", "eac3", "mp3"), DeviceProfiles.hlsAudioOrder(setOf("ac3")))
+        assertEquals(listOf("aac", "eac3", "ac3", "mp3"), DeviceProfiles.hlsAudioOrder(emptySet()))
     }
 
     @Test

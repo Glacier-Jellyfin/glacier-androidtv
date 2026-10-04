@@ -45,9 +45,10 @@ class MediaCapabilityDetector @Inject constructor(
             if (has(MIME_DOLBY_VISION) && Display.HdrCapabilities.HDR_TYPE_DOLBY_VISION in displayHdr) add(HdrType.DolbyVision)
         }
 
+        val passthrough = passthroughCodecs().toSet()
         val audio = buildSet {
             AUDIO_DECODERS.forEach { (mime, codecs) -> if (has(mime)) addAll(codecs) }
-            passthroughCodecs().forEach(::add)
+            addAll(passthrough)
             addAll(softwareAudio.codecs())
         }
 
@@ -64,6 +65,7 @@ class MediaCapabilityDetector @Inject constructor(
             },
             audioCodecs = audio,
             maxAudioChannels = maxAudioChannels(),
+            passthroughAudio = passthrough,
             hdr = hdr,
         )
     }
