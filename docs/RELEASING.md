@@ -84,7 +84,10 @@ adb shell "run-as $pkg mkdir -p files/updtest && run-as $pkg cp /data/local/tmp/
 2. Commit, then tag and push: `git tag v0.1.1 && git push origin main v0.1.1`.
 3. The `Release` workflow builds the signed APK `glacier-androidtv-0.1.1.apk`
    and publishes the GitHub release; tags containing `-beta.` become
-   pre-releases.
+   pre-releases. Each release also carries a copy named
+   `glacier-androidtv.apk`, so
+   `releases/latest/download/glacier-androidtv.apk` always points to the
+   newest stable version (website and Downloader code use it).
 
 ### Signing key
 

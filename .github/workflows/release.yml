@@ -67,6 +67,8 @@ jobs:
           "$apksigner" verify --print-certs "$apk"
           scripts/check-ffmpeg-apk.sh "$apk"
           mv "$apk" "glacier-androidtv-${{ steps.tag.outputs.version }}.apk"
+          # Fixed name for releases/latest/download links (website, Downloader)
+          cp "glacier-androidtv-${{ steps.tag.outputs.version }}.apk" glacier-androidtv.apk
 
       - name: Publish release
         env:
@@ -76,6 +78,7 @@ jobs:
           if [ "${{ steps.tag.outputs.prerelease }}" = "true" ]; then flags+=(--prerelease); else flags+=(--latest); fi
           gh release create "$GITHUB_REF_NAME" \
             "glacier-androidtv-${{ steps.tag.outputs.version }}.apk" \
+            glacier-androidtv.apk \
             --verify-tag \
             --title "Glacier ${{ steps.tag.outputs.version }}" \
             --notes-file "$RUNNER_TEMP/notes.md" \
