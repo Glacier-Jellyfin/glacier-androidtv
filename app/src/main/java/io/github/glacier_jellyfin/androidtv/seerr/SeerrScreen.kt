@@ -23,7 +23,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -94,6 +97,17 @@ fun SeerrScreen(
 private fun Page(state: SeerrState, details: SeerrDetails, viewModel: SeerrViewModel) {
     val item = details.item
     val requestFocus = remember { FocusRequester() }
+    // Set once per state of the page, so coming back from a cast member keeps the focus there.
+    var focusedFor by rememberSaveable { mutableStateOf<String?>(null) }
+    val focusKey = "${item.tmdbId}/${details.requestable}"
+    // Back from a cast member lands on their card again, not on the first control.
+    var lastPerson by rememberSaveable { mutableStateOf<Int?>(null) }
+    val personFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        if (focusedFor != focusKey || lastPerson == null) return@LaunchedEffect
+        withFrameNanos { }
+        runCatching { personFocus.requestFocus() }
+    }
     val listState = rememberLazyListState()
     Box(Modifier.fillMaxSize().background(ImagePageGround)) {
         ScrollingBackdrop(item.backdropUrl, BACKDROP, listState)
@@ -130,9 +144,10 @@ private fun Page(state: SeerrState, details: SeerrDetails, viewModel: SeerrViewM
                                 )
                                 if (details.trailers.isNotEmpty()) TrailerButton(viewModel::playTrailer)
                             }
-                            LaunchedEffect(item.tmdbId) {
+                            LaunchedEffect(focusKey) {
+                                if (focusedFor == focusKey) return@LaunchedEffect
                                 withFrameNanos { }
-                                runCatching { requestFocus.requestFocus() }
+                                if (runCatching { requestFocus.requestFocus() }.isSuccess) focusedFor = focusKey
                             }
                         } else {
                             // Nothing left to ask for: the button stays where it was, showing where the request stands.
@@ -147,9 +162,10 @@ private fun Page(state: SeerrState, details: SeerrDetails, viewModel: SeerrViewM
                                 if (details.trailers.isNotEmpty()) {
                                     TrailerButton(viewModel::playTrailer, Modifier.focusRequester(requestFocus))
                                     // Also once a request went out and its button turned into the status.
-                                    LaunchedEffect(item.tmdbId, details.requestable) {
+                                    LaunchedEffect(focusKey) {
+                                        if (focusedFor == focusKey) return@LaunchedEffect
                                         withFrameNanos { }
-                                        runCatching { requestFocus.requestFocus() }
+                                        if (runCatching { requestFocus.requestFocus() }.isSuccess) focusedFor = focusKey
                                     }
                                 }
                             }
@@ -165,7 +181,16 @@ private fun Page(state: SeerrState, details: SeerrDetails, viewModel: SeerrViewM
                             modifier = Modifier.padding(top = 28.dp),
                         ) {
                             items(details.cast) { person ->
-                                CastCard(person.name, person.role, person.imageUrl, onClick = { viewModel.openPerson(person.name) })
+                                CastCard(
+                                    person.name,
+                                    person.role,
+                                    person.imageUrl,
+                                    onClick = {
+                                        lastPerson = person.tmdbId
+                                        viewModel.openPerson(person)
+                                    },
+                                    modifier = if (person.tmdbId == lastPerson) Modifier.focusRequester(personFocus) else Modifier,
+                                )
                             }
                         }
                     }

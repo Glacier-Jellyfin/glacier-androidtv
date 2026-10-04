@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
+import org.jellyfin.sdk.api.client.extensions.personApi
 import org.jellyfin.sdk.api.client.extensions.playlistApi
 import org.jellyfin.sdk.api.client.extensions.showApi
 import org.jellyfin.sdk.api.client.extensions.trickPlayApi
@@ -252,7 +253,25 @@ class DetailRepository @Inject constructor(
             },
             isFavorite = dto.userData?.isFavorite ?: false,
             credits = credits,
+            tmdbId = dto.providerIds?.get("Tmdb")?.toIntOrNull(),
         )
+    }
+
+    /**
+     * The library's person for a TMDB cast member: the one carrying that TMDB id,
+     * else the only one with exactly that name. Null when the library has no match.
+     */
+    suspend fun findPerson(tmdbId: Int, name: String): UUID? = withContext(Dispatchers.IO) {
+        if (name.isBlank()) return@withContext null
+        val session = requireSession()
+        val people = session.api.personApi.getPersons(
+            searchTerm = name,
+            userId = session.userId,
+            fields = listOf(ItemFields.PROVIDER_IDS),
+            limit = PERSON_MATCH_LIMIT,
+        ).content.items
+        people.firstOrNull { it.providerIds?.get("Tmdb")?.toIntOrNull() == tmdbId }?.id
+            ?: people.filter { it.name.equals(name, ignoreCase = true) }.singleOrNull()?.id
     }
 
     suspend fun setPlayed(id: UUID, played: Boolean) {
@@ -310,5 +329,6 @@ class DetailRepository @Inject constructor(
         val UUID_PARTS = Regex("^(.{8})(.{4})(.{4})(.{4})(.{12})$")
         const val SIMILAR_LIMIT = 12
         const val CAST_LIMIT = 20
+        const val PERSON_MATCH_LIMIT = 20
     }
 }

@@ -384,10 +384,10 @@ private fun Pill(text: String, modifier: Modifier, background: Color = GlacierCo
 fun CastCard(person: CastMember, onClick: () -> Unit) = CastCard(person.name, person.role, person.imageUrl, onClick)
 
 @Composable
-fun CastCard(name: String, role: String?, imageUrl: String?, onClick: () -> Unit) {
+fun CastCard(name: String, role: String?, imageUrl: String?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val accent = LocalAccent.current
     val size = LocalCardSizes.current.castSize
-    GlacierCard(onClick = onClick, modifier = Modifier.width((size + 18).dp)) { focused ->
+    GlacierCard(onClick = onClick, modifier = modifier.width((size + 18).dp)) { focused ->
         Box(
             Modifier
                 .align(Alignment.CenterHorizontally)

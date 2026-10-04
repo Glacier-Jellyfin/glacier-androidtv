@@ -58,9 +58,19 @@ data class TrailerRoute(val itemId: String? = null, val seerrType: String? = nul
 @Serializable
 data class MusicRoute(val sourceId: String? = null, val startTrackId: String? = null)
 
-/** A cast member; [fromTitle] and [role] feed the breadcrumb ("Dracula · Count Dracula"). */
+/**
+ * A cast member; [fromTitle] and [role] feed the breadcrumb ("Dracula · Count Dracula").
+ * Without [personId], the person is a TMDB cast member ([tmdbId], [name]) from a
+ * Seerr title: the library's page when the library knows them, else TMDB's.
+ */
 @Serializable
-data class PersonRoute(val personId: String, val fromTitle: String? = null, val role: String? = null)
+data class PersonRoute(
+    val personId: String? = null,
+    val fromTitle: String? = null,
+    val role: String? = null,
+    val tmdbId: Int? = null,
+    val name: String? = null,
+)
 
 @Serializable
 data class SearchRoute(val query: String? = null)

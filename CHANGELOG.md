@@ -22,12 +22,15 @@ renders the reference separately.
 - The TV switches to the frame rate of the video, so films play without judder. You can turn this off in Settings › Playback
 - Trailers have a subtitles button. Pick a language or turn them off. Trailers start without subtitles, and your choice carries over to the next trailers
 - In the trailer player you can move along the progress bar with left and right
+- With Seerr, a person's filmography also lists titles that are not in your library yet. Open one to request it
+- On a Seerr request page, the cast opens the person's page instead of a search
 
 ### Improved
 - When the server converts surround sound, it sends Dolby Digital or Dolby Digital Plus if your receiver or TV takes it. The sound stays surround over HDMI ARC
 - The update dialog lists the changes of every version since yours, not only the newest one
 - After "Update now", the download shows its progress right away. Back cancels it
 - A trailer still goes full screen quickly when it starts. When you bring the controls back, they stay longer
+- Back from a title on a person's page, or from a person on a Seerr page, lands on the card you opened
 
 ### Fixed
 - Trailers play more smoothly. The background image no longer moves while a trailer plays

@@ -14,6 +14,7 @@ import org.jellyfin.sdk.api.client.HttpMethod
 import org.jellyfin.sdk.api.client.util.AuthorizationHeaderBuilder
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.LocalDate
 import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
@@ -49,7 +50,20 @@ data class SeerrSeason(
 }
 
 /** A cast member from TMDB, known to Seerr but not necessarily to Jellyfin. */
-data class SeerrPerson(val name: String, val role: String?, val imageUrl: String?)
+data class SeerrPerson(val tmdbId: Int, val name: String, val role: String?, val imageUrl: String?)
+
+/** A person as TMDB describes them, for someone the library does not know. */
+data class SeerrPersonDetails(
+    val tmdbId: Int,
+    val name: String,
+    val biography: String?,
+    val born: LocalDate?,
+    val birthplace: String?,
+    val imageUrl: String?,
+)
+
+/** A title from a person's TMDB filmography, with the part they played. */
+data class SeerrCredit(val item: SeerrItem, val role: String?)
 
 data class SeerrDetails(
     val item: SeerrItem,
@@ -163,6 +177,7 @@ class SeerrRepository @Inject constructor(
                 },
             cast = dto.credits?.cast.orEmpty().take(CAST_LIMIT).map { person ->
                 SeerrPerson(
+                    tmdbId = person.id,
                     name = person.name,
                     role = person.character?.takeIf { it.isNotBlank() },
                     imageUrl = person.profilePath?.let { "$TMDB_IMAGES/w185$it" },
@@ -170,6 +185,38 @@ class SeerrRepository @Inject constructor(
             },
             trailers = dto.youTubeTrailers(),
         )
+    }
+
+    suspend fun person(tmdbId: Int): SeerrPersonDetails = withContext(Dispatchers.IO) {
+        val dto = requireSession().get<PersonDto>("/person/$tmdbId")
+        SeerrPersonDetails(
+            tmdbId = dto.id,
+            name = dto.name,
+            biography = dto.biography?.takeIf { it.isNotBlank() },
+            born = dto.birthday?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
+            birthplace = dto.placeOfBirth?.takeIf { it.isNotBlank() },
+            imageUrl = dto.profilePath?.let { "$TMDB_IMAGES/w500$it" },
+        )
+    }
+
+    /**
+     * Movies and shows a person played in or directed, newest first; unreleased
+     * ones lead. Talk shows, news and appearances as themselves are left out,
+     * as are titles without a poster. Empty when Seerr cannot be used.
+     */
+    suspend fun personCredits(tmdbId: Int): List<SeerrCredit> = withContext(Dispatchers.IO) {
+        if (!available()) return@withContext emptyList()
+        val dto = requireSession().get<CombinedCreditsDto>("/person/$tmdbId/combined_credits")
+        val acted = dto.cast
+            .filter { it.genreIds.none { genre -> genre in TalkGenres } && !playsThemselves(it.character) }
+            .map { it to it.character?.takeIf { role -> role.isNotBlank() } }
+        val directed = dto.crew.filter { it.job == "Director" }.map { it to null }
+        (acted + directed)
+            .filter { (credit, _) -> credit.posterPath != null }
+            .mapNotNull { (credit, role) -> credit.toResult().toItem()?.let { SeerrCredit(it, role) } }
+            .distinctBy { it.item.type to it.item.tmdbId }
+            .sortedByDescending { it.item.year ?: Int.MAX_VALUE }
+            .take(PERSON_CREDIT_LIMIT)
     }
 
     /** The user's request limit for [type]; null when there is none or it cannot be read. */
@@ -263,6 +310,12 @@ class SeerrRepository @Inject constructor(
         const val TMDB_IMAGES = "https://image.tmdb.org/t/p"
         const val RECHECK_MS = 5 * 60_000L
         const val CAST_LIMIT = 20
+        const val PERSON_CREDIT_LIMIT = 60
+        /** TMDB's Talk and News genres. */
+        val TalkGenres = setOf(10767, 10763)
+        val Themselves = Regex("""\b(self|himself|herself|themselves)\b""", RegexOption.IGNORE_CASE)
+
+        fun playsThemselves(character: String?) = character != null && Themselves.containsMatchIn(character)
         const val TIMEOUT_MS = 15_000
         const val FALLBACK_LANGUAGE = "en"
         val TrailerTypes = listOf("Trailer", "Teaser")
@@ -354,7 +407,39 @@ private data class VideoDto(val key: String? = null, val name: String? = null, v
 private data class CreditsDto(val cast: List<CastDto> = emptyList())
 
 @Serializable
-private data class CastDto(val name: String, val character: String? = null, val profilePath: String? = null)
+private data class CastDto(val id: Int, val name: String, val character: String? = null, val profilePath: String? = null)
+
+@Serializable
+private data class PersonDto(
+    val id: Int,
+    val name: String,
+    val biography: String? = null,
+    val birthday: String? = null,
+    val placeOfBirth: String? = null,
+    val profilePath: String? = null,
+)
+
+@Serializable
+private data class CombinedCreditsDto(val cast: List<PersonCreditDto> = emptyList(), val crew: List<PersonCreditDto> = emptyList())
+
+@Serializable
+private data class PersonCreditDto(
+    val id: Int,
+    val mediaType: String? = null,
+    val title: String? = null,
+    val name: String? = null,
+    val releaseDate: String? = null,
+    val firstAirDate: String? = null,
+    val overview: String? = null,
+    val posterPath: String? = null,
+    val backdropPath: String? = null,
+    val character: String? = null,
+    val job: String? = null,
+    val genreIds: List<Int> = emptyList(),
+    val mediaInfo: MediaInfoDto? = null,
+) {
+    fun toResult() = ResultDto(id, mediaType, title, name, releaseDate, firstAirDate, overview, posterPath, backdropPath, mediaInfo)
+}
 
 @Serializable
 private data class GenreDto(val name: String)

@@ -21,7 +21,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +56,11 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.Credit
 import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.PersonDetails
+import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrCredit
+import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrMediaType
+import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrStatus
+import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
@@ -63,6 +71,9 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PersonRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
+import io.github.glacier_jellyfin.androidtv.navigation.SeerrRoute
+import io.github.glacier_jellyfin.androidtv.seerr.seerrStatusLabel
+import io.github.glacier_jellyfin.androidtv.ui.PosterCard
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
@@ -93,12 +104,16 @@ data class PersonState(
     /** Breadcrumb: title the person was opened from, and their role in it. */
     val fromTitle: String? = null,
     val role: String? = null,
+    /** Titles from the person's TMDB filmography to request through Seerr, after the library's. */
+    val seerrCredits: List<SeerrCredit> = emptyList(),
 )
 
 @HiltViewModel
 class PersonViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: DetailRepository,
+    private val seerr: SeerrRepository,
+    private val parental: ParentalControl,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<PersonRoute>()
@@ -116,8 +131,9 @@ class PersonViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(loading = true, failed = false) }
             try {
-                val person = repository.person(UUID.fromString(route.personId))
+                val person = resolve()
                 _state.update { it.copy(loading = false, person = person) }
+                (person.tmdbId ?: route.tmdbId)?.let { loadSeerrCredits(it) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -127,12 +143,49 @@ class PersonViewModel @Inject constructor(
         }
     }
 
+    /** The library's person; a TMDB cast member the library does not know comes from Seerr. */
+    private suspend fun resolve(): PersonDetails {
+        route.personId?.let { return repository.person(UUID.fromString(it)) }
+        val tmdbId = checkNotNull(route.tmdbId) { "A person route needs a person or TMDB id" }
+        repository.findPerson(tmdbId, route.name.orEmpty())?.let { return repository.person(it) }
+        val person = seerr.person(tmdbId)
+        return PersonDetails(
+            id = null,
+            name = person.name,
+            biography = person.biography,
+            born = person.born,
+            birthplace = person.birthplace,
+            imageUrl = person.imageUrl,
+            isFavorite = false,
+            credits = emptyList(),
+            tmdbId = tmdbId,
+        )
+    }
+
+    /** Titles the library lacks; never fails the page. Kept from profiles with an age limit, like Seerr search. */
+    private suspend fun loadSeerrCredits(tmdbId: Int) {
+        if (parental.lock.value.protection.restricts) return
+        val credits = try {
+            seerr.personCredits(tmdbId)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Seerr filmography failed", e)
+            return
+        }
+        val requestable = credits.filter {
+            it.item.jellyfinId == null && it.item.status != SeerrStatus.Available && it.item.status != SeerrStatus.Blocklisted
+        }
+        _state.update { it.copy(seerrCredits = requestable) }
+    }
+
     fun toggleFavorite() {
         val person = _state.value.person ?: return
+        val id = person.id ?: return
         val favorite = !person.isFavorite
         _state.update { it.copy(person = person.copy(isFavorite = favorite)) }
         viewModelScope.launch {
-            runCatching { repository.setFavorite(person.id, favorite) }
+            runCatching { repository.setFavorite(id, favorite) }
                 .onSuccess { _events.send(UiEvent.Toast(if (favorite) R.string.favorite_added else R.string.favorite_removed)) }
                 .onFailure { _state.update { it.copy(person = it.person?.copy(isFavorite = !favorite)) } }
         }
@@ -145,6 +198,10 @@ class PersonViewModel @Inject constructor(
 
     fun open(credit: Credit) {
         viewModelScope.launch { _events.send(UiEvent.Navigate(DetailRoute(credit.item.id.toString()))) }
+    }
+
+    fun open(credit: SeerrCredit) {
+        viewModelScope.launch { _events.send(UiEvent.Navigate(SeerrRoute(credit.item.type.name, credit.item.tmdbId))) }
     }
 
     private companion object {
@@ -163,6 +220,17 @@ fun PersonScreen(
     val person = state.person
     val listState = rememberLazyListState()
     val favoriteFocus = remember { FocusRequester() }
+    // Only on first show, so coming back from a title keeps the focus on its card.
+    var initialFocusDone by rememberSaveable { mutableStateOf(false) }
+    // Back from a title lands on its card again, not on the first control.
+    var lastOpened by rememberSaveable { mutableStateOf<String?>(null) }
+    val titleFocus = remember { FocusRequester() }
+    fun Modifier.restoring(key: String) = if (key == lastOpened) focusRequester(titleFocus) else this
+    LaunchedEffect(Unit) {
+        if (!initialFocusDone || lastOpened == null) return@LaunchedEffect
+        withFrameNanos { }
+        runCatching { titleFocus.requestFocus() }
+    }
 
     Box(Modifier.fillMaxSize().background(ImagePageGround)) {
         when {
@@ -177,7 +245,8 @@ fun PersonScreen(
             person == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
             else -> {
                 DetailBackdrop(
-                    url = person.credits.firstOrNull { it.item.backdropUrl != null }?.item?.backdropUrl,
+                    url = person.credits.firstOrNull { it.item.backdropUrl != null }?.item?.backdropUrl
+                        ?: state.seerrCredits.firstOrNull { it.item.backdropUrl != null }?.item?.backdropUrl,
                     height = 700,
                     modifier = Modifier.graphicsLayer {
                         translationY = if (listState.firstVisibleItemIndex == 0) -listState.firstVisibleItemScrollOffset.toFloat() else -size.height
@@ -216,23 +285,32 @@ fun PersonScreen(
                                         )
                                     }
                                     Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                        // A person the library does not know cannot be a favourite.
+                                        if (person.id != null) {
+                                            ActionButton(
+                                                onClick = viewModel::toggleFavorite,
+                                                icon = if (person.isFavorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
+                                                on = person.isFavorite,
+                                                contentDescription = stringResource(if (person.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
+                                                modifier = Modifier.focusRequester(favoriteFocus),
+                                            )
+                                        }
                                         ActionButton(
-                                            onClick = viewModel::toggleFavorite,
-                                            icon = if (person.isFavorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
-                                            on = person.isFavorite,
-                                            contentDescription = stringResource(if (person.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
-                                            modifier = Modifier.focusRequester(favoriteFocus),
+                                            onClick = viewModel::searchLibrary,
+                                            label = stringResource(R.string.person_search),
+                                            icon = GlacierIcons.Search,
+                                            modifier = if (person.id == null) Modifier.focusRequester(favoriteFocus) else Modifier,
                                         )
-                                        ActionButton(onClick = viewModel::searchLibrary, label = stringResource(R.string.person_search), icon = GlacierIcons.Search)
                                     }
                                 }
                             }
-                            LaunchedEffect(person.id) {
+                            LaunchedEffect(person.id, person.name) {
+                                if (initialFocusDone) return@LaunchedEffect
                                 withFrameNanos { }
-                                runCatching { favoriteFocus.requestFocus() }
+                                initialFocusDone = runCatching { favoriteFocus.requestFocus() }.isSuccess
                             }
                         }
-                        if (person.credits.isNotEmpty()) {
+                        if (person.credits.isNotEmpty() || state.seerrCredits.isNotEmpty()) {
                             item(key = "filmography") {
                                 MediaRow(
                                     title = stringResource(R.string.person_filmography),
@@ -246,10 +324,31 @@ fun PersonScreen(
                                                 imageUrl = credit.item.posterUrl,
                                                 title = credit.item.title,
                                                 caption = listOfNotNull(credit.role, credit.item.year?.toString()).joinToString(" · "),
-                                                onClick = { viewModel.open(credit) },
+                                                onClick = {
+                                                    lastOpened = credit.item.id.toString()
+                                                    viewModel.open(credit)
+                                                },
+                                                modifier = Modifier.restoring(credit.item.id.toString()),
                                                 locked = credit.item.showsLock(),
                                             )
                                             KindPill(if (credit.item.kind == ItemKind.Series) R.string.kind_show else R.string.kind_movie)
+                                        }
+                                    }
+                                    // Then what the library lacks, to request through Seerr.
+                                    items(state.seerrCredits, key = { it.key }) { credit ->
+                                        Box {
+                                            PosterCard(
+                                                imageUrl = credit.item.posterUrl,
+                                                caption = listOfNotNull(credit.role, credit.item.year?.toString()).joinToString(" · "),
+                                                onClick = {
+                                                    lastOpened = credit.key
+                                                    viewModel.open(credit)
+                                                },
+                                                modifier = Modifier.restoring(credit.key),
+                                                title = credit.item.title,
+                                                tag = stringResource(seerrStatusLabel(credit.item.status)),
+                                            )
+                                            KindPill(if (credit.item.type == SeerrMediaType.Tv) R.string.kind_show else R.string.kind_movie)
                                         }
                                     }
                                 }
@@ -261,6 +360,8 @@ fun PersonScreen(
         }
     }
 }
+
+private val SeerrCredit.key: String get() = "seerr-${item.type}-${item.tmdbId}"
 
 @Composable
 private fun Portrait(person: PersonDetails) {
@@ -298,7 +399,7 @@ private fun PersonFacts(person: PersonDetails) {
         val facts = listOfNotNull(
             person.born?.year?.let { stringResource(R.string.person_born, it.toString()) },
             person.birthplace,
-            pluralStringResource(R.plurals.person_titles, count, count),
+            count.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.person_titles, it, it) },
         )
         Text(facts.joinToString("  ·  "), style = GlacierText.body(20), color = GlacierColors.Mist)
         if (person.isFavorite) FactBadge(stringResource(R.string.favorite_tag), accent.copy(alpha = 0.45f), 16, accent)

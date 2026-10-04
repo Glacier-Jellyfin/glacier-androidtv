@@ -8,11 +8,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrMediaType
+import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrPerson
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrQuota
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrRequestResult
 import io.github.glacier_jellyfin.androidtv.core.log.Log
-import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
+import io.github.glacier_jellyfin.androidtv.navigation.PersonRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SeerrRoute
 import io.github.glacier_jellyfin.androidtv.navigation.TrailerRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
@@ -66,10 +67,6 @@ class SeerrViewModel @Inject constructor(
                     val quota = repository.quota(type)
                     _state.update { it.copy(quota = quota) }
                 }
-                if (details.requestable) {
-                    val quota = repository.quota(type)
-                    _state.update { it.copy(quota = quota) }
-                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -87,9 +84,9 @@ class SeerrViewModel @Inject constructor(
         viewModelScope.launch { _events.send(UiEvent.Navigate(TrailerRoute(seerrType = type.name, tmdbId = route.tmdbId))) }
     }
 
-    /** TMDB people have no Jellyfin page; their name is looked up in the library instead. */
-    fun openPerson(name: String) {
-        viewModelScope.launch { _events.send(UiEvent.Navigate(SearchRoute(name))) }
+    fun openPerson(person: SeerrPerson) {
+        val route = PersonRoute(fromTitle = _state.value.details?.item?.title, role = person.role, tmdbId = person.tmdbId, name = person.name)
+        viewModelScope.launch { _events.send(UiEvent.Navigate(route)) }
     }
 
     fun request() {

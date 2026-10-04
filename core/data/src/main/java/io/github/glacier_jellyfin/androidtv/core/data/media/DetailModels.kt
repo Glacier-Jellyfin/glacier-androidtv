@@ -61,7 +61,8 @@ data class Trickplay(
 data class Credit(val item: MediaItem, val role: String?)
 
 data class PersonDetails(
-    val id: UUID,
+    /** Null for someone known only to TMDB (through Seerr), not to this server. */
+    val id: UUID?,
     val name: String,
     val biography: String?,
     val born: LocalDate?,
@@ -70,4 +71,6 @@ data class PersonDetails(
     val isFavorite: Boolean,
     /** Titles in this server's libraries, newest first. */
     val credits: List<Credit>,
+    /** The person's TMDB id, which Seerr knows them by. */
+    val tmdbId: Int? = null,
 )
