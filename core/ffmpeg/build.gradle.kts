@@ -12,6 +12,8 @@ android {
     defaultConfig {
         minSdk = 28
         consumerProguardFiles("consumer-rules.pro")
+        // FfmpegDecoderTest: ./gradlew :core:ffmpeg:connectedDebugAndroidTest on a device or emulator.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
@@ -36,4 +38,7 @@ dependencies {
     implementation(libs.media3.exoplayer)
     implementation(libs.androidx.annotation)
     compileOnly(libs.checker.qual)
+
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.junit)
 }

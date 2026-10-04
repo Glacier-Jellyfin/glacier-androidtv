@@ -28,6 +28,19 @@ WSL; on Windows without WSL, download the `ffmpeg-android` artifact of a CI run
 and unpack it into `src/main/jni/ffmpeg/`. Without that directory the app
 builds and runs as before, just without the FFmpeg decoder.
 
+## Testing
+
+`FfmpegDecoderTest` plays one second of DTS, TrueHD, AC-3 and E-AC-3 through
+the FFmpeg renderer alone. It needs FFmpeg built into the module (or the
+`ffmpeg-android` artifact of a CI run unpacked into `src/main/jni/ffmpeg/`)
+and a device or emulator:
+
+```sh
+./gradlew :core:ffmpeg:connectedDebugAndroidTest
+```
+
+Run it after raising `FFMPEG_VERSION`.
+
 ## License
 
 FFmpeg is built with LGPL components only (no `--enable-gpl` or
