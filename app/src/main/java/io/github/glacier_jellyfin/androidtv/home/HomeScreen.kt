@@ -75,6 +75,7 @@ import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
+import io.github.glacier_jellyfin.androidtv.ui.yearText
 import io.github.glacier_jellyfin.androidtv.update.UpdateDialog
 import io.github.glacier_jellyfin.androidtv.update.UpdateViewModel
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateCandidate
@@ -387,7 +388,7 @@ private fun PosterFor(item: MediaItem, onClick: () -> Unit, modifier: Modifier) 
         PosterCard(
             imageUrl = item.posterUrl,
             // Title above year and genre, like the album cards.
-            caption = listOfNotNull(item.year?.toString(), item.genres.firstOrNull()).joinToString(" · "),
+            caption = listOfNotNull(yearText(item), item.genres.firstOrNull()).joinToString(" · "),
             title = item.title,
             badge = item.unwatchedCount,
             locked = item.showsLock(),
@@ -408,7 +409,7 @@ private fun continueSubtitle(item: MediaItem): String {
         item.kind == ItemKind.Episode && season != null && episode != null ->
             listOfNotNull(stringResource(R.string.episode_short, season, episode), item.title).joinToString(" · ")
         left != null -> stringResource(R.string.minutes_left, left)
-        else -> item.year?.toString().orEmpty()
+        else -> yearText(item).orEmpty()
     }
 }
 

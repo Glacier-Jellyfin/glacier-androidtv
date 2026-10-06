@@ -28,6 +28,10 @@ data class MediaItem(
     /** The server's sort name: lower case, leading articles removed. */
     val sortName: String?,
     val year: Int?,
+    /** Last year a show aired; null while it runs or when unknown. */
+    val endYear: Int? = null,
+    /** A show that is still running. */
+    val ongoing: Boolean = false,
     val communityRating: Float?,
     val officialRating: String?,
     val runtimeMinutes: Int?,

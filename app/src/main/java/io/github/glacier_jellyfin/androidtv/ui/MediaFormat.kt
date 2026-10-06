@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.HdrFormat
+import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.VideoQuality
 import java.util.Locale
@@ -40,6 +41,19 @@ fun qualityText(quality: VideoQuality?): String? {
 
 /** Community rating with one decimal in the display language ("8,1" in German). */
 fun ratingText(rating: Float): String = String.format(Locale.getDefault(), "%.1f", rating)
+
+/** The release year; for shows the years they ran ("2018 – 2024", "2000 – today"). */
+@Composable
+fun yearText(item: MediaItem): String? {
+    val year = item.year ?: return null
+    if (item.kind != ItemKind.Series) return year.toString()
+    val end = item.endYear
+    return when {
+        item.ongoing -> stringResource(R.string.years_ongoing, year)
+        end != null && end > year -> stringResource(R.string.years_range, year, end)
+        else -> year.toString()
+    }
+}
 
 /** "S2 · F4" for episodes, null otherwise. */
 @Composable

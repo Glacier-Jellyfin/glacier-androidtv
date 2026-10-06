@@ -113,6 +113,8 @@
     <string name="episode_minutes_left">S%1$d F%2$d · noch %3$d Min.</string>
     <string name="runtime_hours">%1$d Std. %2$d Min.</string>
     <string name="runtime_minutes">%1$d Min.</string>
+    <string name="years_range">%1$d – %2$d</string>
+    <string name="years_ongoing">%1$d – heute</string>
     <string name="coming_soon">Dieser Bildschirm folgt in einem späteren Schritt.</string>
     <string name="action_back">Zurück</string>
 

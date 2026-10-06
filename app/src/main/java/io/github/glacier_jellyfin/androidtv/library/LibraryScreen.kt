@@ -92,6 +92,7 @@ import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
+import io.github.glacier_jellyfin.androidtv.ui.yearText
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -552,7 +553,7 @@ private fun captionFor(item: MediaItem): String? = when (item.kind) {
     ItemKind.Album -> item.parentTitle
     ItemKind.Collection, ItemKind.Genre, ItemKind.Playlist -> item.childCount?.let { pluralStringResource(R.plurals.count_titles, it, it) }
     ItemKind.Artist -> item.childCount?.let { pluralStringResource(R.plurals.count_albums, it, it) }
-    else -> item.year?.toString()
+    else -> yearText(item)
 }
 
 @Composable

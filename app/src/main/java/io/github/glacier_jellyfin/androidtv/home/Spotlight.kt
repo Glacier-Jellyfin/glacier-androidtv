@@ -64,6 +64,7 @@ import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 import io.github.glacier_jellyfin.androidtv.ui.episodeText
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
+import io.github.glacier_jellyfin.androidtv.ui.yearText
 const val SpotlightHeight = 680
 
 /**
@@ -173,7 +174,7 @@ private fun SpotlightInfo(
             val episode = episodeText(item)
             Text(listOfNotNull(episode, item.title).joinToString(" · "), style = GlacierText.body(24, FontWeight.SemiBold), color = GlacierColors.Ice)
         }
-        FactsRow(item, listOfNotNull(item.year?.toString(), item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }, item.genres.firstOrNull()))
+        FactsRow(item, listOfNotNull(yearText(item), item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }, item.genres.firstOrNull()))
         item.overview?.let {
             Text(
                 it,

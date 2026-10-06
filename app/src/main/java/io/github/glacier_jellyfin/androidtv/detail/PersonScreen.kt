@@ -86,6 +86,7 @@ import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
+import io.github.glacier_jellyfin.androidtv.ui.yearText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -323,7 +324,7 @@ fun PersonScreen(
                                             GridCard(
                                                 imageUrl = credit.item.posterUrl,
                                                 title = credit.item.title,
-                                                caption = listOfNotNull(credit.role, credit.item.year?.toString()).joinToString(" · "),
+                                                caption = listOfNotNull(credit.role, yearText(credit.item)).joinToString(" · "),
                                                 onClick = {
                                                     lastOpened = credit.item.id.toString()
                                                     viewModel.open(credit)

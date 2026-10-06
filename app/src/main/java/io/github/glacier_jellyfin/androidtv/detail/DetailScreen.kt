@@ -87,6 +87,7 @@ import io.github.glacier_jellyfin.androidtv.ui.qualityText
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
+import io.github.glacier_jellyfin.androidtv.ui.yearText
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import java.time.format.FormatStyle
@@ -208,7 +209,7 @@ private fun MediaDetail(state: DetailState, details: ItemDetails, viewModel: Det
                                 GridCard(
                                     imageUrl = similar.posterUrl,
                                     title = similar.title,
-                                    caption = similar.year?.toString(),
+                                    caption = yearText(similar),
                                     onClick = { viewModel.openItem(similar) },
                                     watched = similar.played,
                                     locked = similar.showsLock(),
@@ -553,7 +554,7 @@ private fun mediaFacts(details: ItemDetails): List<String> {
     } else {
         item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }
     }
-    return listOfNotNull(item.year?.toString(), middle, item.genres.firstOrNull())
+    return listOfNotNull(yearText(item), middle, item.genres.firstOrNull())
 }
 
 /** Design `techLine`: "4K HDR · DE/JP · 5.1". */

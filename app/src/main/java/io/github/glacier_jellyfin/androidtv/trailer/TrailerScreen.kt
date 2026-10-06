@@ -111,6 +111,7 @@ import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.ageRatingText
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
+import io.github.glacier_jellyfin.androidtv.ui.yearText
 import kotlinx.coroutines.delay
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -730,7 +731,7 @@ private fun EndScreen(
                     ItemKind.Series -> state.details?.seasonCount?.let { pluralStringResource(R.plurals.count_seasons, it, it) }
                     else -> item.runtimeMinutes?.let { runtimeText(it) }
                 }
-                val facts = listOfNotNull(item.year?.toString(), item.genres.firstOrNull(), length)
+                val facts = listOfNotNull(yearText(item), item.genres.firstOrNull(), length)
                 if (facts.isNotEmpty()) Text(facts.joinToString(" · "), style = GlacierText.body(21), color = GlacierColors.Mist)
             }
             item.overview?.let {

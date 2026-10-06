@@ -59,6 +59,7 @@ import io.github.glacier_jellyfin.androidtv.ui.PosterCard
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
+import io.github.glacier_jellyfin.androidtv.ui.yearText
 
 /** Design keypad: six columns of letters and digits, then keyboard, space and delete. */
 private val KeypadRows = listOf("ABCDEF", "GHIJKL", "MNOPQR", "STUVWX", "YZ0123", "456789")
@@ -270,7 +271,7 @@ private fun ResultCard(item: MediaItem, onClick: () -> Unit, modifier: Modifier)
         PosterCard(imageUrl = item.posterUrl, caption = item.parentTitle.orEmpty(), onClick = onClick, modifier = modifier, square = true, title = item.title)
     } else {
         // Title above the year, laid out like the album cards.
-        PosterCard(imageUrl = item.posterUrl, caption = item.year?.toString().orEmpty(), onClick = onClick, modifier = modifier, title = item.title, locked = item.showsLock())
+        PosterCard(imageUrl = item.posterUrl, caption = yearText(item).orEmpty(), onClick = onClick, modifier = modifier, title = item.title, locked = item.showsLock())
     }
 }
 

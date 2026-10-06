@@ -56,6 +56,8 @@ internal class MediaMapper(private val api: ApiClient) {
             title = dto.name.orEmpty(),
             sortName = dto.sortName,
             year = dto.productionYear,
+            endYear = dto.endDate?.year?.takeIf { kind == ItemKind.Series },
+            ongoing = kind == ItemKind.Series && dto.status.equals("Continuing", ignoreCase = true),
             communityRating = dto.communityRating,
             officialRating = dto.officialRating,
             runtimeMinutes = runtimeTicks?.let { (it / TICKS_PER_MINUTE).toInt() },

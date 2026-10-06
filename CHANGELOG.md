@@ -18,6 +18,9 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### Improved
+- Shows list the years they ran, such as 2018 – 2024, or 2000 – today while they are still running
+
 ## [0.3.0] - 2026-10-04
 
 ### New
