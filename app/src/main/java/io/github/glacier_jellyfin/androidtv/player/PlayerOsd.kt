@@ -166,7 +166,7 @@ private fun TitleBlock(state: PlayerUiState, modifier: Modifier) {
 /** The time of day. Quality and delivery live in the info panel. */
 @Composable
 private fun Clock(modifier: Modifier) {
-    Text(LocalTime.now().format(ClockFormat), modifier, style = GlacierText.mono(34), color = GlacierColors.Ice)
+    Text(LocalTime.now().format(ClockFormat), modifier, style = GlacierText.display(34), color = GlacierColors.Ice)
 }
 
 /**
