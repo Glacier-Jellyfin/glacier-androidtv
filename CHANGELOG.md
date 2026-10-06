@@ -20,6 +20,7 @@ renders the reference separately.
 
 ### Improved
 - Shows list the years they ran, such as 2018 – 2024, or 2000 – today while they are still running
+- Movie and episode pages show when the title would end if you start it now
 
 ## [0.3.0] - 2026-10-04
 

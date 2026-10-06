@@ -27,6 +27,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -86,8 +87,10 @@ import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import io.github.glacier_jellyfin.androidtv.ui.yearText
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
+import kotlinx.coroutines.delay
 import java.time.format.FormatStyle
 
 private const val MEDIA_BACKDROP = 760
@@ -253,7 +256,7 @@ private fun EpisodeDetail(state: DetailState, details: ItemDetails, viewModel: D
                             val aired = details.premiereDate?.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))
                             FactsRow(
                                 episode,
-                                listOfNotNull(episode.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }, aired),
+                                listOfNotNull(episode.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }, endsAtText(episode), aired),
                                 tech = techLine(details),
                                 size = 19,
                             )
@@ -550,10 +553,27 @@ private fun mediaFacts(details: ItemDetails): List<String> {
             details.episodeCount?.let { pluralStringResource(R.plurals.count_episodes, it, it) },
         ).joinToString(" · ").ifEmpty { null }
     } else {
-        item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }
+        listOfNotNull(item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }, endsAtText(item))
+            .joinToString("  ·  ").ifEmpty { null }
     }
     return listOfNotNull(yearText(item), middle, item.genres.firstOrNull())
 }
+
+/** When the item would end if played now, from the resume point if there is one. Ticks with the clock. */
+@Composable
+private fun endsAtText(item: MediaItem): String? {
+    val minutes = (if (item.progress != null) item.remainingMinutes else item.runtimeMinutes)?.takeIf { it > 0 } ?: return null
+    val now by produceState(LocalTime.now()) {
+        while (true) {
+            delay(CLOCK_TICK_MS)
+            value = LocalTime.now()
+        }
+    }
+    return stringResource(R.string.detail_ends_at, now.plusMinutes(minutes.toLong()).format(ClockFormat))
+}
+
+private val ClockFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private const val CLOCK_TICK_MS = 15_000L
 
 /** The video format only, e.g. "4K HDR". Audio languages could grow the line without bound. */
 private fun techLine(details: ItemDetails): String? = qualityText(details.item.quality)

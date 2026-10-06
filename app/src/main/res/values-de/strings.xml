@@ -295,6 +295,7 @@
     <string name="player_rewind">10 Sekunden zurück</string>
     <string name="player_forward">30 Sekunden vor</string>
     <string name="player_ends_at">Endet um %1$s</string>
+    <string name="detail_ends_at">Endet um %1$s</string>
     <string name="player_episode_title">F%1$d · %2$s</string>
     <string name="player_direct_play">Direct Play</string>
     <string name="player_direct_stream">Direct Stream</string>
