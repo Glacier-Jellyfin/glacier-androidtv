@@ -56,9 +56,7 @@ import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
-import io.github.glacier_jellyfin.androidtv.core.data.media.Languages
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
-import io.github.glacier_jellyfin.androidtv.core.data.media.channelLayout
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
@@ -557,17 +555,8 @@ private fun mediaFacts(details: ItemDetails): List<String> {
     return listOfNotNull(yearText(item), middle, item.genres.firstOrNull())
 }
 
-/** Design `techLine`: "4K HDR · DE/JP · 5.1". */
-private fun techLine(details: ItemDetails): String? {
-    val audio = details.tracks?.audio.orEmpty()
-    val languages = audio.mapNotNull { Languages.iso2(it.language)?.uppercase() }
-        .distinct()
-        .take(3)
-        .joinToString("/")
-        .ifEmpty { null }
-    val channels = channelLayout(audio.maxOfOrNull { it.channels ?: 0 })
-    return listOfNotNull(qualityText(details.item.quality), languages, channels).joinToString(" · ").ifEmpty { null }
-}
+/** The video format only, e.g. "4K HDR". Audio languages could grow the line without bound. */
+private fun techLine(details: ItemDetails): String? = qualityText(details.item.quality)
 
 @Composable
 internal fun ErrorState(onRetry: () -> Unit) {
