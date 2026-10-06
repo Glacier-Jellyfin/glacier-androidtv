@@ -41,6 +41,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -76,6 +77,7 @@ fun PlayerOsd(
     seekFocus: FocusRequester,
     playFocus: FocusRequester,
     buttonFocus: Map<OsdButton, FocusRequester>,
+    onPlayFocused: (Boolean) -> Unit,
     onScrub: (Long) -> Unit,
     onCommitScrub: () -> Unit,
     onTogglePlay: () -> Unit,
@@ -122,7 +124,7 @@ fun PlayerOsd(
                         stringResource(if (state.playWhenReady) R.string.player_pause else R.string.player_play),
                         onClick = onTogglePlay,
                         big = true,
-                        modifier = Modifier.focusRequester(playFocus),
+                        modifier = Modifier.focusRequester(playFocus).onFocusChanged { onPlayFocused(it.isFocused) },
                     )
                     ControlButton(GlacierIcons.Forward, stringResource(R.string.player_forward), onClick = { onSeekBy(state.seekForwardMs) })
                     if (state.next != null) {

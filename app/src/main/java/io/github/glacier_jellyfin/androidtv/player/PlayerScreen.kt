@@ -103,6 +103,7 @@ fun PlayerScreen(
         else -> null
     }
     var promptFocused by remember { mutableStateOf(false) }
+    var playFocused by remember { mutableStateOf(false) }
     val currentPrompt by rememberUpdatedState(prompt)
     var osdVisible by remember { mutableStateOf(true) }
     /** Which control gets focus when the OSD appears. */
@@ -164,6 +165,14 @@ fun PlayerScreen(
         if (prompt == null) promptFocused = false
         withFrameNanos { }
         runCatching { (prompt ?: rootFocus).requestFocus() }
+    }
+    // A prompt that appears while the OSD rests on the play button takes the focus, e.g. an intro at the start
+    // or a recap right after skipping the intro. Runs after the effects above, which may focus the play button first.
+    LaunchedEffect(prompt, skip) {
+        if (prompt == null || !osdVisible) return@LaunchedEffect
+        withFrameNanos { }
+        withFrameNanos { }
+        if (playFocused) runCatching { prompt.requestFocus() }
     }
 
     Box(
@@ -246,6 +255,7 @@ fun PlayerScreen(
                 seekFocus = seekFocus,
                 playFocus = playFocus,
                 buttonFocus = buttonFocus,
+                onPlayFocused = { playFocused = it },
                 onOpen = { button ->
                     lastOverlay = button
                     when (button) {
