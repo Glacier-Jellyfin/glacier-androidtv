@@ -57,7 +57,6 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
-import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackMethod
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
@@ -65,7 +64,6 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.ui.seasonLabel
-import io.github.glacier_jellyfin.androidtv.ui.qualityText
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
@@ -91,7 +89,7 @@ fun PlayerOsd(
         Box(Modifier.align(Alignment.BottomCenter).osdScrim(top = false))
 
         TitleBlock(state, Modifier.align(Alignment.TopStart).padding(start = 80.dp, top = 60.dp))
-        StatusBlock(state, Modifier.align(Alignment.TopEnd).padding(end = 80.dp, top = 64.dp))
+        Clock(Modifier.align(Alignment.TopEnd).padding(end = 80.dp, top = 60.dp))
 
         Column(
             Modifier
@@ -165,39 +163,10 @@ private fun TitleBlock(state: PlayerUiState, modifier: Modifier) {
     }
 }
 
-/** Picture quality, how the stream is delivered, and the time of day. */
+/** The time of day. Quality and delivery live in the info panel. */
 @Composable
-private fun StatusBlock(state: PlayerUiState, modifier: Modifier) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        qualityText(state.details?.item?.quality)?.let { StatusPill(it) }
-        state.method?.let {
-            StatusPill(
-                stringResource(
-                    when (it) {
-                        PlaybackMethod.DirectPlay -> R.string.player_direct_play
-                        PlaybackMethod.DirectStream -> R.string.player_direct_stream
-                        PlaybackMethod.Transcode -> R.string.player_transcode
-                    },
-                ),
-            )
-        }
-        Text(LocalTime.now().format(ClockFormat), style = GlacierText.mono(20), color = OsdSecondary)
-    }
-}
-
-@Composable
-private fun StatusPill(text: String) {
-    Box(
-        Modifier
-            .height(44.dp)
-            .clip(PillShape)
-            .background(OsdGlass)
-            .border(1.dp, GlacierColors.GlassBorder2, PillShape)
-            .padding(horizontal = 18.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text, style = GlacierText.body(17, FontWeight.SemiBold), color = GlacierColors.Ice)
-    }
+private fun Clock(modifier: Modifier) {
+    Text(LocalTime.now().format(ClockFormat), modifier, style = GlacierText.mono(34), color = GlacierColors.Ice)
 }
 
 /**
