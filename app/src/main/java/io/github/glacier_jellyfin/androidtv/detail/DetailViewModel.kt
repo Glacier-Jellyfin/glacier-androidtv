@@ -33,6 +33,7 @@ import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.TrailerRoute
 import io.github.glacier_jellyfin.androidtv.ui.PinGate
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -120,7 +121,7 @@ class DetailViewModel @Inject constructor(
     init {
         load()
         viewModelScope.launch { shuffle.on.collect { on -> _state.update { it.copy(shuffle = on) } } }
-        viewModelScope.launch { playback.stopped.collect { refresh() } }
+        viewModelScope.launch { playback.stopped.collect(::refresh) }
     }
 
     fun load() {
@@ -133,12 +134,7 @@ class DetailViewModel @Inject constructor(
                     return@launch
                 }
                 val similarAsync = async { runCatching { repository.similar(itemId) }.getOrDefault(emptyList()) }
-                _state.update {
-                    it.copy(
-                        details = details,
-                        selection = trackSelections.get(itemId) ?: details.tracks?.let { t -> TrackSelection(t.defaultAudio, t.defaultSubtitle) },
-                    )
-                }
+                _state.update { it.copy(details = details, selection = selectionOf(details)) }
                 when (details.item.kind) {
                     ItemKind.Series -> loadSeries(details)
                     ItemKind.Episode -> loadSeasonOf(details)
@@ -166,23 +162,40 @@ class DetailViewModel @Inject constructor(
         }
     }
 
+    private fun selectionOf(details: ItemDetails): TrackSelection? =
+        trackSelections.get(details.item.id) ?: details.tracks?.let { TrackSelection(it.defaultAudio, it.defaultSubtitle) }
+
+    private var refreshJob: Job? = null
+
     /**
-     * After playback stopped: watched state, resume point, episodes and next episode follow,
-     * quietly, without the loading state and with the chosen season kept.
+     * After playback of [stoppedId] stopped: watched state, resume point, episodes and next episode follow,
+     * quietly, without the loading state. A show's pages move to the episode that was playing
+     * (or the next one, once it was watched to the end), even when autoplay went on past the opened one.
      */
-    private fun refresh() {
+    private fun refresh(stoppedId: UUID) {
         if (_state.value.details == null) return
-        viewModelScope.launch {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
             try {
-                val details = repository.details(itemId)
-                _state.update { it.copy(details = details) }
+                var details = repository.details(itemId)
+                val target = when (details.item.kind) {
+                    ItemKind.Series -> episodeAfter(stoppedId, details.item.id)
+                    ItemKind.Episode -> episodeAfter(stoppedId, details.seriesId)
+                    else -> null
+                }
+                if (details.item.kind == ItemKind.Episode && target != null && target.item.id != itemId) {
+                    itemId = target.item.id
+                    details = target
+                }
+                _state.update { it.copy(details = details, selection = selectionOf(details)) }
                 when (details.item.kind) {
                     ItemKind.Series -> {
                         val seasons = repository.seasons(details.item.id)
                         val next = runCatching { repository.nextEpisode(details.item.id) }.getOrNull()
                         _state.update { it.copy(seasons = seasons, nextEpisode = next) }
-                        val season = seasons.firstOrNull { it.id == _state.value.season?.id }
-                        season?.let { selectSeason(it, details.item.id) }
+                        val season = seasons.firstOrNull { it.id == target?.seasonId }
+                            ?: seasons.firstOrNull { it.id == _state.value.season?.id }
+                        season?.let { selectSeason(it, details.item.id, focusId = target?.item?.id) }
                     }
                     ItemKind.Episode -> loadSeasonOf(details)
                     ItemKind.Collection -> loadCollection(details)
@@ -269,13 +282,25 @@ class DetailViewModel @Inject constructor(
         viewModelScope.launch { selectSeason(season, seriesId) }
     }
 
-    private suspend fun selectSeason(season: Season, seriesId: UUID) {
+    /** The episode row lands on [focusId] if given, else on the first unwatched episode. */
+    private suspend fun selectSeason(season: Season, seriesId: UUID, focusId: UUID? = null) {
         _state.update { it.copy(season = season) }
         val episodes = runCatching { repository.episodes(seriesId, season.id) }
             .onFailure { Log.w(TAG, "Loading episodes failed", it) }
             .getOrDefault(emptyList())
-        val firstUnwatched = episodes.indexOfFirst { !it.played }.takeIf { it >= 0 } ?: 0
-        _state.update { if (it.season?.id == season.id) it.copy(episodes = episodes, focusEpisode = firstUnwatched) else it }
+        val focus = episodes.indexOfFirst { it.id == focusId }.takeIf { it >= 0 }
+            ?: episodes.indexOfFirst { !it.played }.takeIf { it >= 0 } ?: 0
+        _state.update { if (it.season?.id == season.id) it.copy(episodes = episodes, focusEpisode = focus) else it }
+    }
+
+    /** The episode of show [seriesId] to show after [stoppedId] played: it, or the next one once watched to the end. */
+    private suspend fun episodeAfter(stoppedId: UUID, seriesId: UUID?): ItemDetails? {
+        if (seriesId == null) return null
+        val stopped = repository.details(stoppedId)
+        if (stopped.item.kind != ItemKind.Episode || stopped.seriesId != seriesId) return null
+        if (!stopped.item.played) return stopped
+        val next = runCatching { repository.nextEpisode(seriesId) }.getOrNull() ?: return stopped
+        return runCatching { repository.details(next.id) }.getOrDefault(stopped)
     }
 
     /** Episode pages switch in place when another episode of the season is picked (design). */
