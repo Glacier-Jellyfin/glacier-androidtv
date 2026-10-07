@@ -242,10 +242,11 @@ class DetailViewModel @Inject constructor(
         }
     }
 
-    /** Design: open a show on the first season with something unwatched. */
+    /** Design: open a show on the first season with something unwatched. Specials (season 0) only when there is nothing else. */
     private suspend fun loadSeries(details: ItemDetails) {
         val seasons = repository.seasons(details.item.id)
-        val season = seasons.firstOrNull { (it.unwatchedCount ?: 0) > 0 } ?: seasons.lastOrNull()
+        val regular = seasons.filter { it.number != 0 }.ifEmpty { seasons }
+        val season = regular.firstOrNull { (it.unwatchedCount ?: 0) > 0 } ?: regular.lastOrNull()
         val next = runCatching { repository.nextEpisode(details.item.id) }.getOrNull()
         _state.update { it.copy(seasons = seasons, nextEpisode = next) }
         season?.let { selectSeason(it, details.item.id) }
