@@ -15,6 +15,7 @@ import org.jellyfin.sdk.api.client.extensions.showApi
 import org.jellyfin.sdk.api.client.extensions.trickPlayApi
 import org.jellyfin.sdk.api.client.extensions.userDataApi
 import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.BaseItemPerson
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemFields
@@ -290,8 +291,7 @@ class DetailRepository @Inject constructor(
     }
 
     private fun cast(session: Session, dto: BaseItemDto): List<CastMember> =
-        dto.people.orEmpty()
-            .filter { it.type == PersonKind.ACTOR || it.type == PersonKind.GUEST_STAR }
+        actingPeople(dto.people.orEmpty())
             .take(CAST_LIMIT)
             .map { person ->
                 CastMember(
@@ -332,3 +332,16 @@ class DetailRepository @Inject constructor(
         const val PERSON_MATCH_LIMIT = 20
     }
 }
+
+/**
+ * Actors and guest stars, one entry per person: someone with several roles is listed
+ * once, roles joined. The cast row keys its cards by person.
+ */
+internal fun actingPeople(people: List<BaseItemPerson>): List<BaseItemPerson> =
+    people
+        .filter { it.type == PersonKind.ACTOR || it.type == PersonKind.GUEST_STAR }
+        .groupBy { it.id }
+        .map { (_, entries) ->
+            val roles = entries.mapNotNull { it.role?.takeIf(String::isNotBlank) }.distinct()
+            entries.first().copy(role = roles.joinToString(" / ").takeIf { it.isNotEmpty() })
+        }
