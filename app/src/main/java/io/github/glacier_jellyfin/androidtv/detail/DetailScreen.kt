@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -42,7 +44,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -83,6 +88,7 @@ import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 import io.github.glacier_jellyfin.androidtv.ui.PinDialog
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.qualityText
+import io.github.glacier_jellyfin.androidtv.ui.rememberEdgeSpec
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
@@ -444,26 +450,50 @@ private fun TrackSheet(kind: TrackKind, state: DetailState, details: ItemDetails
     )
 }
 
+/** Long-running shows have more seasons than fit the width, so the chips scroll. */
+@OptIn(ExperimentalFoundationApi::class) // LocalBringIntoViewSpec
 @Composable
 private fun SeasonChips(state: DetailState, viewModel: DetailViewModel) {
     val active = remember { FocusRequester() }
-    Row(
-        Modifier
-            .padding(start = PageEdge.dp, end = PageEdge.dp, top = 54.dp, bottom = 20.dp)
-            .focusProperties { onEnter = { active.requestFocus() } }
-            .focusGroup(),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        state.seasons.forEach { season ->
-            val selected = season.id == state.season?.id
-            FilterChip(
-                label = season.number?.let { seasonLabel(it) } ?: season.name,
-                active = selected,
-                onClick = { viewModel.selectSeason(season) },
-                height = 50,
-                fontSize = 18,
-                modifier = if (selected) Modifier.focusRequester(active) else Modifier,
-            )
+    val scroll = rememberScrollState()
+    var activeBounds by remember { mutableStateOf<IntRange?>(null) }
+    val edge = with(LocalDensity.current) { PageEdge.dp.roundToPx() }
+    // Show the selected season on arrival, even when it sits far to the right.
+    LaunchedEffect(activeBounds, scroll.viewportSize) {
+        val bounds = activeBounds ?: return@LaunchedEffect
+        val viewport = scroll.viewportSize.takeIf { it > 0 } ?: return@LaunchedEffect
+        if (bounds.first < scroll.value || bounds.last > scroll.value + viewport) {
+            scroll.scrollTo((bounds.first + bounds.last) / 2 - viewport / 2)
+        }
+    }
+    CompositionLocalProvider(LocalBringIntoViewSpec provides rememberEdgeSpec(PageEdge)) {
+        Row(
+            Modifier
+                .padding(top = 54.dp, bottom = 20.dp)
+                .focusProperties { onEnter = { active.requestFocus() } }
+                .focusGroup()
+                .horizontalScroll(scroll)
+                .padding(horizontal = PageEdge.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            state.seasons.forEach { season ->
+                val selected = season.id == state.season?.id
+                FilterChip(
+                    label = season.number?.let { seasonLabel(it) } ?: season.name,
+                    active = selected,
+                    onClick = { viewModel.selectSeason(season) },
+                    height = 50,
+                    fontSize = 18,
+                    modifier = if (selected) {
+                        Modifier
+                            .focusRequester(active)
+                            // Relative to the row's padded content; add the padding for scroll offsets.
+                            .onPlaced { activeBounds = (it.positionInParent().x.toInt() + edge).let { x -> x..x + it.size.width } }
+                    } else {
+                        Modifier
+                    },
+                )
+            }
         }
     }
 }

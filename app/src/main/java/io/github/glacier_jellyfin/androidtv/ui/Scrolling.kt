@@ -71,3 +71,20 @@ fun rememberCardPivotSpec(): BringIntoViewSpec {
         }
     }
 }
+
+/** Scrolls a short strip (chips) only as far as needed to keep the focused one [margin] dp inside the edges. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun rememberEdgeSpec(margin: Int): BringIntoViewSpec {
+    val density = LocalDensity.current
+    return remember(density, margin) {
+        val edge = with(density) { margin.dp.toPx() }
+        object : BringIntoViewSpec {
+            override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = when {
+                offset < edge -> offset - edge
+                offset + size > containerSize - edge -> offset + size - (containerSize - edge)
+                else -> 0f
+            }
+        }
+    }
+}
