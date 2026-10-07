@@ -18,6 +18,16 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-07
+
+### Improved
+- A show opens on its first season with unwatched episodes. Specials come only after that
+- On an episode page, the resume button no longer repeats the time left. The line above it already shows it
+
+### Fixed
+- Shows with many seasons list every season. The season row now scrolls
+- A person with several roles appears only once in the cast row
+
 ## [0.3.1] - 2026-10-07
 
 ### Improved
