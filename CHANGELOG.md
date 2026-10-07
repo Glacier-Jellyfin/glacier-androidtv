@@ -18,9 +18,17 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-07
+
 ### Improved
-- Shows list the years they ran, such as 2018 – 2024, or 2000 – today while they are still running
 - Movie and episode pages show when the title would end if you start it now
+- Shows list the years they ran, such as 2018 – 2024, or 2000 – today while they are still running
+- After playback, a show's page moves to the episode you watched last, or to the next one if you finished it
+- The player controls show a larger clock and no status labels. Quality and playback method are in the info panel
+- The quality label on a title's page shows only the video format, so it stays short
+
+### Fixed
+- When a skip prompt such as "Skip intro" appears while the play button has focus, the prompt now gets the focus
 
 ## [0.3.0] - 2026-10-04
 
