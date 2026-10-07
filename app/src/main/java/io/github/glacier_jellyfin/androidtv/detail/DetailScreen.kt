@@ -375,6 +375,8 @@ private fun PlayButtons(
     ActionButton(
         onClick = { viewModel.play() },
         label = when {
+            // The episode page already shows "x % watched · y min left" above the buttons.
+            left != null && episodeLabel -> stringResource(R.string.hero_resume)
             left != null -> stringResource(R.string.detail_resume_left, left)
             episodeLabel -> stringResource(R.string.episode_play)
             else -> stringResource(R.string.hero_play)
