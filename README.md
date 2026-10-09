@@ -1,8 +1,9 @@
 <p align="center">
-  <img src="website/assets/mark.svg" width="96" alt="Glacier logo">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="website/assets/wordmark-dark.svg">
+    <img src="website/assets/wordmark-light.svg" height="56" alt="Glacier">
+  </picture>
 </p>
-
-<h1 align="center">Glacier</h1>
 
 <p align="center">
   A Jellyfin client for Android TV, Google TV and Fire TV.
@@ -15,7 +16,7 @@
 </p>
 
 <p align="center">
-  <img src="website/assets/screenshots/home.jpg" width="800" alt="Glacier home screen">
+  <img src="website/assets/screenshots/demo.gif" width="800" alt="Browsing Glacier on a TV">
 </p>
 
 > [!NOTE]
