@@ -1,8 +1,11 @@
 <p align="center">
+  <br>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="website/assets/wordmark-dark.svg">
-    <img src="website/assets/wordmark-light.svg" height="56" alt="Glacier">
+    <img src="website/assets/wordmark-light.svg" height="84" alt="Glacier">
   </picture>
+  <br>
+  <br>
 </p>
 
 <p align="center">
