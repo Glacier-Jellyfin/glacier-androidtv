@@ -105,8 +105,11 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module layout and
 
 ## How I build Glacier
 
-I want to be open about this: I build Glacier with the help of AI. Almost all
-code, tests and documentation are written with
+Glacier is a hobby project. I work as a software developer, and next to my
+job I use Glacier to find out how to build software together with AI.
+
+I want to be open about what that means. Almost all code, tests and
+documentation are written with
 [Claude Code](https://claude.com/claude-code), Anthropic's coding assistant,
 working together with me. Every commit it worked on says so with a
 `Co-Authored-By: Claude` line, and today that is nearly every commit.
