@@ -103,23 +103,22 @@ Requirements: JDK 17 or newer and the Android SDK (Android Studio installs it).
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module layout and
 [docs/RELEASING.md](docs/RELEASING.md) for versioning and releases.
 
-## How Glacier is made
+## How I build Glacier
 
-Glacier is developed with the help of AI. Almost all code, tests and
-documentation are written with [Claude Code](https://claude.com/claude-code),
-Anthropic's coding assistant, working together with the maintainer. Every
-commit it worked on says so with a `Co-Authored-By: Claude` line, and today
-that is nearly every commit.
+I want to be open about this: I build Glacier with the help of AI. Almost all
+code, tests and documentation are written with
+[Claude Code](https://claude.com/claude-code), Anthropic's coding assistant,
+working together with me. Every commit it worked on says so with a
+`Co-Authored-By: Claude` line, and today that is nearly every commit.
 
-The maintainer decides what Glacier does and how it looks and feels, reviews
-the changes and tests them on real TVs and the Android TV emulator before they
-ship. On top of that, every change goes through lint, unit tests and security
-scans in CI, and releases are built only by GitHub from the public source
-code.
+I decide what Glacier does and how it looks and feels. I review the changes
+and test them on my own TVs and the Android TV emulator before they ship. On
+top of that, every change goes through lint, unit tests and security scans in
+CI, and releases are built only by GitHub from the public source code.
 
-Glacier itself has no AI features and sends nothing to AI services. AI and
-people both make mistakes. If something looks wrong, please
-[report it](https://github.com/Glacier-Jellyfin/glacier-androidtv/issues).
+Glacier itself has no AI features and sends nothing to AI services. AI makes
+mistakes, and so do I. If something looks wrong, please
+[tell me](https://github.com/Glacier-Jellyfin/glacier-androidtv/issues).
 
 ## Contributing
 
