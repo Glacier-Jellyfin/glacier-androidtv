@@ -36,10 +36,13 @@
         <a href="#showcase">Funktionen</a>
         <a href="#get-it">Herunterladen</a>
         <a href="#support">Unterstützen</a>
-        <a class="button-ghost-sm" href="https://github.com/Glacier-Jellyfin/glacier-androidtv">GitHub</a>
       </div>
       <div class="nav-right">
-        <a class="lang" href="../" hreflang="en">English</a>
+        <div class="lang-toggle" role="group" aria-label="Sprache">
+          <a href="../" hreflang="en" lang="en">EN</a>
+          <a href="./" hreflang="de" lang="de" aria-current="page">DE</a>
+        </div>
+        <a class="icon-button" href="https://github.com/Glacier-Jellyfin/glacier-androidtv" aria-label="Glacier auf GitHub" title="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg></a>
       </div>
     </div>
   </nav>
@@ -48,18 +51,13 @@
     <section class="hero-section">
       <div class="wrap hero">
         <div class="hero-copy">
-          <span class="pill"><span class="dot"></span> In früher Entwicklung</span>
+          <a class="pill" href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest" data-latest-release="Version {v} ist da"><span class="dot"></span> <span>Stabil und aktiv weiterentwickelt</span></a>
           <h1>Jellyfin,<br>ganz einfach.</h1>
-          <p>Glacier ist ein moderner Jellyfin-Client, von Grund auf für den Fernseher entwickelt statt nur dorthin portiert &mdash; gebaut, um nicht im Weg zu stehen, damit das Finden von etwas zum Schauen der ganze Punkt bleibt.</p>
+          <p>Glacier ist ein moderner Jellyfin-Client, von Grund auf für den Fernseher gebaut statt dorthin portiert. Er hält sich zurück, damit du schnell findest, was du schauen willst.</p>
           <div class="actions">
             <a class="button" href="#get-it">Herunterladen</a>
             <a class="button-ghost" href="https://github.com/Glacier-Jellyfin/glacier-androidtv">Auf GitHub ansehen</a>
           </div>
-          <ul class="facts">
-            <li class="fact"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Android TV, Google TV &amp; Fire TV</li>
-            <li class="fact"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></svg>Open Source unter GPL-3.0</li>
-            <li class="fact"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>Keine Werbung, kein Tracking</li>
-          </ul>
         </div>
         <div class="hero-glow" aria-hidden="true"></div>
         <div class="hero-shot reveal">
@@ -68,6 +66,11 @@
             <source src="../assets/screenshots/demo.mp4" type="video/mp4">
           </video>
         </div>
+        <ul class="facts">
+          <li class="fact"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Android TV, Google TV &amp; Fire TV</li>
+          <li class="fact"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></svg>Open Source, GPL-3.0</li>
+          <li class="fact"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>Keine Werbung, kein Tracking</li>
+        </ul>
       </div>
     </section>
 
@@ -127,6 +130,7 @@
               <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Besetzung, Crew und ähnliche Titel</li>
               <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Lokale und YouTube-Trailer, direkt abspielbar</li>
               <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Auswahl von Audio- und Untertitelspur</li>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Wann ein Titel endet, wenn du ihn jetzt startest</li>
             </ul>
           </div>
         </div>
@@ -152,6 +156,7 @@
               <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Intro, Rückblick und Abspann mit einem Tastendruck überspringen oder automatisch überspringen lassen</li>
               <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Die nächste Episode startet nach einem kurzen Countdown, oder du bleibst für den Abspann</li>
               <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Vorschaubilder beim Spulen, damit du genau die richtige Szene trifft</li>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Der Fernseher wechselt auf die Bildrate des Videos, damit Filme ohne Ruckeln laufen</li>
             </ul>
           </div>
         </div>
@@ -196,8 +201,8 @@
           </div>
           <div class="feature reveal">
             <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 9l5 3-5 3V9Z" fill="currentColor" stroke="none"/></svg></div>
-            <h3>Präzise Wiedergabe</h3>
-            <p>Media3/ExoPlayer mit erweitertem FFmpeg-Audio-Codec-Set, damit mehr aus der Bibliothek direkt statt transkodiert abgespielt wird.</p>
+            <h3>Spielt es, wie es ist</h3>
+            <p>DTS, TrueHD und mehr laufen direkt, ohne Transkodierung. Wandelt der Server doch um, bleibt Surround-Ton über HDMI ARC erhalten.</p>
           </div>
           <div class="feature reveal">
             <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M11 8v6M8 11h6"/></svg></div>
@@ -220,17 +225,28 @@
 
     <section id="get-it">
       <div class="wrap">
-        <div class="cta reveal">
-          <p class="eyebrow">Herunterladen</p>
-          <h2>Glacier installieren</h2>
-          <p>Öffne auf deinem Fernseher die App <a href="https://www.aftvnews.com/downloader/">Downloader</a> und gib diesen Code ein. Er installiert immer die neueste Version. Danach hält sich Glacier selbst aktuell.</p>
-          <div class="downloader-code">
-            <span class="downloader-label">Downloader-Code</span>
-            <span class="downloader-value">2423112</span>
+        <div class="install reveal">
+          <div class="install-copy">
+            <p class="eyebrow">Herunterladen</p>
+            <h2>Glacier installieren</h2>
+            <p>Kostenlos und ohne Konto. Für Android TV, Google TV und Fire TV ab Android 9.</p>
+            <ol class="steps">
+              <li><span class="step-num">1</span><div><strong>Downloader holen</strong><span>Installiere die kostenlose App <a href="https://www.aftvnews.com/downloader/">Downloader</a> aus dem App Store deines Fernsehers.</span></div></li>
+              <li><span class="step-num">2</span><div><strong>Code eingeben</strong><span>Öffne Downloader, gib den Code ein und erlaube die Installation.</span></div></li>
+              <li><span class="step-num">3</span><div><strong>Fertig</strong><span>Ab jetzt hält sich Glacier selbst aktuell.</span></div></li>
+            </ol>
           </div>
-          <div class="actions">
-            <a class="button" href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest/download/glacier-androidtv.apk">APK herunterladen</a>
-            <a class="button-ghost" href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases">Alle Releases</a>
+          <div class="install-side">
+            <div class="code-card">
+              <span class="code-label">Downloader-Code</span>
+              <span class="sr-only">2423112</span>
+              <div class="code-digits" aria-hidden="true"><span>2</span><span>4</span><span>2</span><span>3</span><span>1</span><span>1</span><span>2</span></div>
+              <span class="code-hint">Lädt immer die neueste Version</span>
+            </div>
+            <div class="install-alt">
+              <a class="button-ghost" href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest/download/glacier-androidtv.apk"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg> APK herunterladen</a>
+              <a class="text-link" href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases">Alle Releases &rarr;</a>
+            </div>
           </div>
         </div>
       </div>
@@ -263,5 +279,6 @@
   </footer>
 
   <script src="../assets/reveal.js"></script>
+  <script src="../assets/latest.js"></script>
 </body>
 </html>
