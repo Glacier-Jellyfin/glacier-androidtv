@@ -28,17 +28,18 @@
   filters, collections and an A–Z rail for large libraries
 - Search that also finds titles missing from your library and requests them
   through Seerr (needs the Jellyfin Enhanced plugin on the server)
-- Multiple servers and profiles, server discovery, Quick Connect; a start
+- Multiple servers and profiles, server discovery and Quick Connect. A start
   profile can open by itself
 - Parental controls: age limits and PINs for profiles, titles and settings,
   stored only on the device
 - A player made for watching: skip intros, recaps and credits, trickplay
   previews while seeking, chapters and "next episode" with a countdown
+- The TV switches to the frame rate of the video, so films play without judder
 - Extended audio codec support via FFmpeg (DTS, TrueHD and more) for more
-  direct playback
+  direct playback, and surround sound that stays surround over HDMI ARC
 - Music that keeps playing while you browse, with a mini player, queue,
   playlists, lyrics, instant mix and music videos
-- Local and YouTube trailers, and theme songs on detail pages
+- Local and YouTube trailers with subtitles, and theme songs on detail pages
 - Audio and subtitle preferences synced with your Jellyfin account
 - Android TV home screen: "Watch next" and three optional channels (not on
   Fire TV)
@@ -55,13 +56,40 @@
 
 ## Installation
 
-Glacier is distributed only through
+Glacier is free and needs no account. It is distributed only through
 [GitHub releases](https://github.com/Glacier-Jellyfin/glacier-androidtv/releases).
-The quickest way is the [Downloader](https://www.aftvnews.com/downloader/)
-app on your TV: enter the code **2423112** and it installs the newest version.
-You can also download [`glacier-androidtv.apk`](https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest/download/glacier-androidtv.apk) directly and sideload
-it. Once installed, Glacier keeps itself up to date; Android asks once for
-permission to install updates from Glacier.
+
+### With Downloader (recommended)
+
+1. Install the free [Downloader](https://www.aftvnews.com/downloader/) app from
+   the app store on your TV.
+2. Open Downloader and enter the code **2423112**.
+3. Allow the install when Android asks. The code always loads the newest
+   version.
+
+### As an APK
+
+Download
+[`glacier-androidtv.apk`](https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest/download/glacier-androidtv.apk)
+and sideload it, for example with `adb install glacier-androidtv.apk`.
+
+### Updates
+
+Once installed, Glacier keeps itself up to date. It checks for new versions
+at every start and installs them from GitHub releases. Android asks once for
+permission to install updates from Glacier. You can pick the Stable or Beta
+channel in Settings › System.
+
+### Checking a download
+
+Every release is built on GitHub from the source code in this repository and
+carries a signed build provenance attestation. With the
+[GitHub CLI](https://cli.github.com/) you can check that your APK came from
+here:
+
+```sh
+gh attestation verify glacier-androidtv.apk --repo Glacier-Jellyfin/glacier-androidtv
+```
 
 ## Building
 
@@ -74,6 +102,24 @@ Requirements: JDK 17 or newer and the Android SDK (Android Studio installs it).
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module layout and
 [docs/RELEASING.md](docs/RELEASING.md) for versioning and releases.
+
+## How Glacier is made
+
+Glacier is developed with the help of AI. Almost all code, tests and
+documentation are written with [Claude Code](https://claude.com/claude-code),
+Anthropic's coding assistant, working together with the maintainer. Every
+commit it worked on says so with a `Co-Authored-By: Claude` line, and today
+that is nearly every commit.
+
+The maintainer decides what Glacier does and how it looks and feels, reviews
+the changes and tests them on real TVs and the Android TV emulator before they
+ship. On top of that, every change goes through lint, unit tests and security
+scans in CI, and releases are built only by GitHub from the public source
+code.
+
+Glacier itself has no AI features and sends nothing to AI services. AI and
+people both make mistakes. If something looks wrong, please
+[report it](https://github.com/Glacier-Jellyfin/glacier-androidtv/issues).
 
 ## Contributing
 
