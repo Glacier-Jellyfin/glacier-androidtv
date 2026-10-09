@@ -148,6 +148,9 @@ a.pill:hover { color: var(--ice); border-color: var(--accent); }
   line-height: 1.02;
   letter-spacing: -0.02em;
   overflow-wrap: break-word;
+  /* Room for descenders: background-clip: text cuts off the "g" at line-height 1.02. */
+  padding-bottom: .12em;
+  margin-bottom: -.12em;
   background: linear-gradient(135deg, #ffffff 6%, var(--accent) 58%, var(--accent-2) 100%);
   -webkit-background-clip: text;
   background-clip: text;
