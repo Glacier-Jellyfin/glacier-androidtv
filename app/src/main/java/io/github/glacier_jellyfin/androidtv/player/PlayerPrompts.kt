@@ -114,6 +114,9 @@ fun UpNextCard(
         modifier
             .width(520.dp)
             .clip(shape)
+            // Dark base under the glass, as in the top navigation: on a bright
+            // scene the accent label and the grey line kept too little contrast.
+            .background(GlacierColors.Deep.copy(alpha = 0.72f))
             .background(GlacierColors.GlassFill2)
             .border(1.dp, GlacierColors.GlassBorder2, shape)
             .padding(26.dp),
