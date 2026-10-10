@@ -296,6 +296,7 @@
     <!-- Player -->
     <string name="player_loading">Loading …</string>
     <string name="player_error">Playback failed</string>
+    <string name="player_error_body">Check that the server is reachable and try again.</string>
     <string name="player_play">Play</string>
     <string name="player_pause">Pause</string>
     <string name="player_rewind">Back 10 seconds</string>
@@ -448,6 +449,7 @@
     <string name="audio_bit_depth">%1$d-bit</string>
     <string name="audio_mono">Mono</string>
     <string name="audio_stereo">Stereo</string>
+    <string name="music_nothing_to_play">There are no songs to play here.</string>
     <string name="music_track_failed">Song could not be played, skipped</string>
     <string name="music_queue_end">End of the queue</string>
     <string name="music_playing_from">Playing from %1$s</string>

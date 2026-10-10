@@ -64,6 +64,29 @@ class MusicRepository @Inject constructor(
         albums.map { album -> async { albumTracks(album.id) } }.awaitAll().flatten()
     }
 
+    /**
+     * Every song of the artist: the discography of [albums] (fetched when null), else
+     * the songs tagged with the artist. Albums without an album artist leave the first empty.
+     */
+    suspend fun artistTracks(artistId: UUID, albums: List<MediaItem>? = null): List<MusicTrack> =
+        tracksOf(albums ?: artistAlbums(artistId)).ifEmpty { songsBy(artistId) }
+
+    /** Songs with [artistId] among their artists, newest album first, in disc and track order. */
+    private suspend fun songsBy(artistId: UUID): List<MusicTrack> = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        val mapper = MediaMapper(session.api)
+        session.api.libraryApi.getItems(
+            userId = session.userId,
+            artistIds = listOf(artistId),
+            includeItemTypes = listOf(BaseItemKind.AUDIO),
+            recursive = true,
+            fields = TRACK_FIELDS,
+            enableUserData = true,
+            sortBy = listOf(ItemSortBy.PRODUCTION_YEAR, ItemSortBy.ALBUM, ItemSortBy.PARENT_INDEX_NUMBER, ItemSortBy.INDEX_NUMBER),
+            sortOrder = listOf(SortOrder.DESCENDING, SortOrder.ASCENDING, SortOrder.ASCENDING, SortOrder.ASCENDING),
+        ).content.items.map(mapper::track)
+    }
+
     /** The playlist's songs in its order; videos in a mixed playlist are left out. */
     suspend fun playlistTracks(playlistId: UUID): List<MusicTrack> = withContext(Dispatchers.IO) {
         val session = requireSession()

@@ -220,6 +220,11 @@ fun MusicPlayerScreen(
                 verticalArrangement = Arrangement.spacedBy(28.dp),
             ) {
                 Text(stringResource(R.string.player_error), style = GlacierText.display(30), color = GlacierColors.Ice)
+                Text(
+                    stringResource(if (state.nothingToPlay) R.string.music_nothing_to_play else R.string.player_error_body),
+                    style = GlacierText.body(21),
+                    color = GlacierColors.Mist,
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     PillButton(stringResource(R.string.action_retry), onClick = viewModel::load, primary = true, modifier = Modifier.focusRequester(retryFocus))
                     PillButton(stringResource(R.string.action_back), onClick = viewModel::stop)

@@ -363,7 +363,7 @@ class DetailViewModel @Inject constructor(
                 tracks = {
                     val state = _state.value
                     when (item.kind) {
-                        ItemKind.Artist -> music.tracksOf(state.artistAlbums.ifEmpty { music.artistAlbums(item.id) })
+                        ItemKind.Artist -> music.artistTracks(item.id, state.artistAlbums.ifEmpty { null })
                         ItemKind.Playlist -> state.musicTracks.ifEmpty { music.playlistTracks(item.id) }
                         else -> state.musicTracks.ifEmpty { music.albumTracks(item.id) }
                     }

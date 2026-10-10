@@ -60,6 +60,8 @@ sealed interface LyricsState {
 data class MusicUiState(
     val loading: Boolean = false,
     val failed: Boolean = false,
+    /** The failure was an album, artist or playlist without songs. */
+    val nothingToPlay: Boolean = false,
     /** Album, artist or playlist the queue was made from. */
     val sourceKind: ItemKind? = null,
     val sourceTitle: String = "",
@@ -216,7 +218,7 @@ class MusicController @Inject constructor(
                 p.prepare()
                 p.play()
             } else {
-                _state.update { it.copy(failed = true, loading = false) }
+                _state.update { it.copy(failed = true, nothingToPlay = false, loading = false) }
             }
         }
     }
@@ -240,7 +242,7 @@ class MusicController @Inject constructor(
         request = QueueRequest(startTrackId) {
             val source = details.details(sourceId).item
             val tracks = when (source.kind) {
-                ItemKind.Artist -> music.tracksOf(music.artistAlbums(sourceId))
+                ItemKind.Artist -> music.artistTracks(sourceId)
                 ItemKind.Playlist -> music.playlistTracks(sourceId)
                 else -> music.albumTracks(sourceId)
             }
@@ -268,11 +270,15 @@ class MusicController @Inject constructor(
         loadJob?.cancel()
         activePlayer?.pause()
         reportCurrentStopped(null)
-        _state.update { it.copy(loading = true, failed = false) }
+        _state.update { it.copy(loading = true, failed = false, nothingToPlay = false) }
         loadJob = scope.launch {
             try {
                 val (kind, title, tracks) = request.load()
-                if (tracks.isEmpty()) error("Nothing to play in $kind")
+                if (tracks.isEmpty()) {
+                    Log.w(TAG, "Nothing to play in $kind")
+                    _state.update { it.copy(loading = false, failed = true, nothingToPlay = true) }
+                    return@launch
+                }
                 sourceOrder = tracks.mapIndexed { i, track -> QueueEntry(i, track) }
                 nextKey = tracks.size
                 sources = sourceOrder.associate { it.key to playback.audioSource(it.track) }
@@ -416,7 +422,7 @@ class MusicController @Inject constructor(
             loadJob?.cancel()
             request = null
             sourceOrder = entries
-            _state.update { it.copy(loading = true, failed = false, sourceKind = null, sourceTitle = "", queue = entries, index = 0) }
+            _state.update { it.copy(loading = true, failed = false, nothingToPlay = false, sourceKind = null, sourceTitle = "", queue = entries, index = 0) }
             startPlayer(QueueOrder(entries, 0))
             return
         }

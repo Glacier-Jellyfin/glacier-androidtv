@@ -290,6 +290,7 @@
     <!-- Player -->
     <string name="player_loading">Wird geladen …</string>
     <string name="player_error">Wiedergabe fehlgeschlagen</string>
+    <string name="player_error_body">Prüfe, ob der Server erreichbar ist, und versuche es noch einmal.</string>
     <string name="player_play">Abspielen</string>
     <string name="player_pause">Pause</string>
     <string name="player_rewind">10 Sekunden zurück</string>
@@ -442,6 +443,7 @@
     <string name="audio_bit_depth">%1$d Bit</string>
     <string name="audio_mono">Mono</string>
     <string name="audio_stereo">Stereo</string>
+    <string name="music_nothing_to_play">Hier gibt es keine Titel zum Abspielen.</string>
     <string name="music_track_failed">Titel nicht abspielbar, übersprungen</string>
     <string name="music_queue_end">Ende der Warteschlange</string>
     <string name="music_playing_from">Wiedergabe aus %1$s</string>
