@@ -18,6 +18,15 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### New
+- Live TV, as a first beta: when your server has Live TV set up, a Live TV page joins the top navigation. It lists your channels with what runs on each now, and shows the focused channel's programme and what comes next (#1)
+- Watch a channel full screen. Up and Down or the channel keys switch channels, OK or Left opens the channel list, Right or Info shows what is on. Type a channel number to jump to it, and the "last channel" key takes you back
+- Hold OK on a channel to make it a favorite, and show only your favorite channels with the Favorites chip
+- A programme guide shows three hours of every channel at a time. Left and Right move from programme to programme, Up and Down change the channel at the same time. OK watches what is on now
+
+### Known issues
+- Recordings are not there yet. They follow in a later beta
+
 ## [0.4.0] - 2026-10-10
 
 ### New

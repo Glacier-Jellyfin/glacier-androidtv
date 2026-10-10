@@ -57,6 +57,9 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
 /** The library kinds the server has (HomeRepository.kinds): one navigation entry each. */
 val LocalLibraryKinds = staticCompositionLocalOf { listOf(LibraryKind.Movies, LibraryKind.Shows, LibraryKind.Music) }
 
+/** The server offers Live TV (HomeRepository.liveTv): the navigation gets its entry. */
+val LocalLiveTv = staticCompositionLocalOf { false }
+
 /** The entries between search and settings as Settings › Appearance arranges them; null before they are known. */
 val LocalNavTargets = staticCompositionLocalOf<List<NavTarget>?> { null }
 
@@ -70,6 +73,8 @@ sealed interface NavTarget {
     data object Search : NavTarget
     data object Home : NavTarget
     data class Library(val kind: LibraryKind) : NavTarget
+    /** The channels of the server's Live TV. */
+    data object LiveTv : NavTarget
     /** Everything marked with the heart. */
     data object Favorites : NavTarget
     data object Settings : NavTarget
@@ -240,6 +245,7 @@ private fun NavItem(
             }
             NavTarget.Home -> NavLabel(stringResource(R.string.nav_home), foreground)
             NavTarget.Favorites -> NavLabel(stringResource(R.string.nav_favorites), foreground)
+            NavTarget.LiveTv -> NavLabel(stringResource(R.string.nav_live_tv), foreground)
             is NavTarget.Library -> NavLabel(stringResource(target.kind.navTitle), foreground)
             NavTarget.NowPlaying -> Unit
         }
@@ -251,18 +257,21 @@ private fun NavLabel(text: String, color: Color) {
     Text(text, style = GlacierText.body(19, FontWeight.SemiBold), color = color)
 }
 
-/** Ids of the entries Settings › Appearance arranges, in their default order. */
-fun navEntryIds(kinds: List<LibraryKind>): List<String> = listOf(NAV_HOME) + kinds.map { it.name } + NAV_FAVORITES
+/** Ids of the entries Settings › Appearance arranges, in their default order; Live TV only when the server has it. */
+fun navEntryIds(kinds: List<LibraryKind>, liveTv: Boolean): List<String> =
+    listOf(NAV_HOME) + kinds.map { it.name } + listOfNotNull(NAV_LIVE_TV.takeIf { liveTv }) + NAV_FAVORITES
 
 fun navTargetOf(id: String): NavTarget? = when (id) {
     NAV_HOME -> NavTarget.Home
     NAV_FAVORITES -> NavTarget.Favorites
+    NAV_LIVE_TV -> NavTarget.LiveTv
     else -> LibraryKind.entries.firstOrNull { it.name == id }?.let(NavTarget::Library)
 }
 
 /** The entries between search and settings, as [navigation] arranges them. */
-fun navTargets(navigation: NavigationSettings, kinds: List<LibraryKind>): List<NavTarget> =
-    navigation.entries.arranged(navEntryIds(kinds)).filter { it.shown }.mapNotNull { navTargetOf(it.id) }
+fun navTargets(navigation: NavigationSettings, kinds: List<LibraryKind>, liveTv: Boolean): List<NavTarget> =
+    navigation.entries.arranged(navEntryIds(kinds, liveTv)).filter { it.shown }.mapNotNull { navTargetOf(it.id) }
 
 const val NAV_HOME = "Home"
 const val NAV_FAVORITES = "Favorites"
+const val NAV_LIVE_TV = "LiveTv"

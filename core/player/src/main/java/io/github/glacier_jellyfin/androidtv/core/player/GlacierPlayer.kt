@@ -33,6 +33,8 @@ data class StreamRequest(
     val startPositionMs: Long,
     /** Subtitle files loaded next to the stream. */
     val subtitles: List<SideloadedSubtitle> = emptyList(),
+    /** A Live TV channel: starts at the live edge, [startPositionMs] does not apply. */
+    val live: Boolean = false,
 )
 
 data class SideloadedSubtitle(
@@ -86,17 +88,15 @@ object GlacierPlayer {
             )
             .build()
         Media3Logs.attach(player)
+        val item = MediaItem.Builder()
+            .setUri(request.url)
+            .apply { if (request.isHls) setMimeType(MimeTypes.APPLICATION_M3U8) }
+            .setSubtitleConfigurations(request.subtitles.map { it.toConfiguration() })
+            .build()
         player.apply {
-                setMediaItem(
-                    MediaItem.Builder()
-                        .setUri(request.url)
-                        .apply { if (request.isHls) setMimeType(MimeTypes.APPLICATION_M3U8) }
-                        .setSubtitleConfigurations(request.subtitles.map { it.toConfiguration() })
-                        .build(),
-                    request.startPositionMs,
-                )
-                prepare()
-            }
+            if (request.live) setMediaItem(item) else setMediaItem(item, request.startPositionMs)
+            prepare()
+        }
         ass.init(player)
         return GlacierPlayback(player, ass)
     }

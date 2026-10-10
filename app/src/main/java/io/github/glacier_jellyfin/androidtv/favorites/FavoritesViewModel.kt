@@ -22,6 +22,7 @@ import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
+import io.github.glacier_jellyfin.androidtv.navigation.LiveTvRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
@@ -113,6 +114,7 @@ class FavoritesViewModel @Inject constructor(
             NavTarget.Settings -> navigate(SettingsRoute)
             is NavTarget.Library -> navigate(LibraryRoute(target.kind.name))
             NavTarget.NowPlaying -> navigate(MusicRoute())
+            NavTarget.LiveTv -> navigate(LiveTvRoute)
             NavTarget.Profile -> {
                 val serverId = sessions.session.value?.server?.id ?: return
                 sessions.leave()

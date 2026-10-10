@@ -82,7 +82,12 @@ data class PlaybackSource(
     val file: SourceFile? = null,
     /** A transcode in fragmented MP4 segments, which may need a second try as MPEG-TS. */
     val fmp4Segments: Boolean = false,
+    /** The tuner stream the server opened for a Live TV channel; reporting the stop closes it. */
+    val liveStreamId: String? = null,
 ) {
+    /** A Live TV channel: no end, no resume point. */
+    val live: Boolean get() = liveStreamId != null
+
     /** Direct play keeps every audio track in the file; a transcode carries only the chosen one. */
     val allAudioInStream: Boolean get() = method == PlaybackMethod.DirectPlay
 
@@ -212,6 +217,7 @@ class PlaybackRepository @Inject constructor(
                 static = true,
                 mediaSourceId = source.id,
                 playSessionId = info.playSessionId,
+                liveStreamId = source.liveStreamId,
             ) to PlaybackMethod.DirectPlay
             source.transcodingUrl != null -> (baseUrl + source.transcodingUrl) to
                 if (source.supportsDirectStream) PlaybackMethod.DirectStream else PlaybackMethod.Transcode
@@ -228,6 +234,7 @@ class PlaybackRepository @Inject constructor(
             isHls = method != PlaybackMethod.DirectPlay && source.transcodingSubProtocol == MediaStreamProtocol.HLS,
             fmp4Segments = method != PlaybackMethod.DirectPlay && source.transcodingSubProtocol == MediaStreamProtocol.HLS &&
                 source.transcodingContainer.equals("mp4", ignoreCase = true),
+            liveStreamId = source.liveStreamId,
             method = method,
             headers = mapOf("Authorization" to authorization(session)),
             audioIndex = audioIndex ?: source.defaultAudioStreamIndex,
@@ -365,10 +372,11 @@ class PlaybackRepository @Inject constructor(
     fun reportStart(source: PlaybackSource, position: PlaybackPosition) = report("start") {
         sessionApi.reportPlaybackStart(
             PlaybackStartInfo(
-                canSeek = true,
+                canSeek = !source.live,
                 itemId = source.itemId,
                 mediaSourceId = source.mediaSourceId,
                 playSessionId = source.playSessionId,
+                liveStreamId = source.liveStreamId,
                 audioStreamIndex = source.audioIndex,
                 subtitleStreamIndex = source.subtitleIndex,
                 isPaused = position.paused,
@@ -384,10 +392,11 @@ class PlaybackRepository @Inject constructor(
     fun reportProgress(source: PlaybackSource, position: PlaybackPosition) = report("progress") {
         sessionApi.reportPlaybackProgress(
             PlaybackProgressInfo(
-                canSeek = true,
+                canSeek = !source.live,
                 itemId = source.itemId,
                 mediaSourceId = source.mediaSourceId,
                 playSessionId = source.playSessionId,
+                liveStreamId = source.liveStreamId,
                 audioStreamIndex = source.audioIndex,
                 subtitleStreamIndex = source.subtitleIndex,
                 isPaused = position.paused,
@@ -411,6 +420,7 @@ class PlaybackRepository @Inject constructor(
                     itemId = source.itemId,
                     mediaSourceId = source.mediaSourceId,
                     playSessionId = source.playSessionId,
+                    liveStreamId = source.liveStreamId,
                     positionTicks = positionMs * TICKS_PER_MS,
                     failed = failed,
                 ),

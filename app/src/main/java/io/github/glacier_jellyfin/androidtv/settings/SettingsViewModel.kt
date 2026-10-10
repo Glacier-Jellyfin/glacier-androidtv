@@ -37,6 +37,7 @@ import io.github.glacier_jellyfin.androidtv.diagnostics.LogShare
 import io.github.glacier_jellyfin.androidtv.navigation.FavoritesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
+import io.github.glacier_jellyfin.androidtv.navigation.LiveTvRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
@@ -292,6 +293,7 @@ class SettingsViewModel @Inject constructor(
                 is NavTarget.Library -> _events.send(UiEvent.Navigate(LibraryRoute(target.kind.name)))
                 NavTarget.Favorites -> _events.send(UiEvent.Navigate(FavoritesRoute))
                 NavTarget.NowPlaying -> _events.send(UiEvent.Navigate(MusicRoute()))
+                NavTarget.LiveTv -> _events.send(UiEvent.Navigate(LiveTvRoute))
                 NavTarget.Profile -> {
                     val serverId = sessions.session.value?.server?.id ?: return@launch
                     sessions.leave()

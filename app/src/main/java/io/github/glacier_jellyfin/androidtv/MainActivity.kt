@@ -69,6 +69,7 @@ import io.github.glacier_jellyfin.androidtv.navigation.ServerListRoute
 import io.github.glacier_jellyfin.androidtv.ui.CardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
+import io.github.glacier_jellyfin.androidtv.ui.LocalLiveTv
 import io.github.glacier_jellyfin.androidtv.ui.LocalMusicProgress
 import io.github.glacier_jellyfin.androidtv.ui.LocalProfileImage
 import io.github.glacier_jellyfin.androidtv.ui.LocalNowPlaying
@@ -117,6 +118,9 @@ class StartViewModel @Inject constructor(
 ) : ViewModel() {
     /** Library kinds of the server, for every navigation bar. */
     val libraryKinds: StateFlow<List<LibraryKind>> = home.kinds
+
+    /** Whether the server offers Live TV, for every navigation bar. */
+    val liveTv: StateFlow<Boolean> = home.liveTv
 
     /** The signed-in profile's look; defaults on the setup and profile screens. */
     val appearance: StateFlow<AppearanceSettings> = settings.settings
@@ -248,6 +252,7 @@ class MainActivity : ComponentActivity() {
             val nowPlaying by startViewModel.nowPlaying.collectAsStateWithLifecycle()
             val profileImage by startViewModel.profileImage.collectAsStateWithLifecycle()
             val libraryKinds by startViewModel.libraryKinds.collectAsStateWithLifecycle()
+            val liveTv by startViewModel.liveTv.collectAsStateWithLifecycle()
             val navigation by startViewModel.navigation.collectAsStateWithLifecycle()
             val update by startViewModel.updates.state.collectAsStateWithLifecycle()
             GlacierTheme(accent = Accent.valueOf(appearance.accent.name), reduceMotion = appearance.reduceMotion) {
@@ -259,7 +264,8 @@ class MainActivity : ComponentActivity() {
                     LocalNowPlaying provides nowPlaying,
                     LocalProfileImage provides profileImage,
                     LocalLibraryKinds provides libraryKinds,
-                    LocalNavTargets provides navTargets(navigation, libraryKinds),
+                    LocalLiveTv provides liveTv,
+                    LocalNavTargets provides navTargets(navigation, libraryKinds, liveTv),
                     LocalUpdatePending provides update.pending,
                     LocalMusicProgress provides startViewModel.music.progress,
                 ) {

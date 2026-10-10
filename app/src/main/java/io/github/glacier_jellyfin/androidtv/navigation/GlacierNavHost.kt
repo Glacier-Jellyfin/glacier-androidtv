@@ -16,6 +16,8 @@ import io.github.glacier_jellyfin.androidtv.search.SearchScreen
 import io.github.glacier_jellyfin.androidtv.seerr.SeerrScreen
 import io.github.glacier_jellyfin.androidtv.home.HomeScreen
 import io.github.glacier_jellyfin.androidtv.library.LibraryScreen
+import io.github.glacier_jellyfin.androidtv.livetv.LiveTvPlayerScreen
+import io.github.glacier_jellyfin.androidtv.livetv.LiveTvScreen
 import io.github.glacier_jellyfin.androidtv.music.MusicPlayerScreen
 import io.github.glacier_jellyfin.androidtv.profiles.ProfilesScreen
 import io.github.glacier_jellyfin.androidtv.settings.SettingsScreen
@@ -27,7 +29,7 @@ import io.github.glacier_jellyfin.androidtv.trailer.TrailerScreen
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 
 /** Screens without arguments; navigating to one that is already on top does nothing. */
-private val SingleScreens = setOf(ServerListRoute, ServerAddressRoute, HomeRoute, SettingsRoute, FavoritesRoute)
+private val SingleScreens = setOf(ServerListRoute, ServerAddressRoute, HomeRoute, SettingsRoute, FavoritesRoute, LiveTvRoute)
 
 private const val TAG = "Navigation"
 
@@ -79,5 +81,7 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
         composable<SeerrRoute> { SeerrScreen(onNavigate = navigate) }
         composable<SettingsRoute> { SettingsScreen(onNavigate = navigate) }
         composable<FavoritesRoute> { FavoritesScreen(onNavigate = navigate) }
+        composable<LiveTvRoute> { LiveTvScreen(onNavigate = navigate) }
+        composable<LiveTvPlayerRoute> { LiveTvPlayerScreen(onBack = back) }
     }
 }

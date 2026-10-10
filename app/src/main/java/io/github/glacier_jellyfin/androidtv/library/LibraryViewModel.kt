@@ -21,6 +21,7 @@ import io.github.glacier_jellyfin.androidtv.navigation.FavoritesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
+import io.github.glacier_jellyfin.androidtv.navigation.LiveTvRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
@@ -180,6 +181,7 @@ class LibraryViewModel @Inject constructor(
             NavTarget.Settings -> SettingsRoute
             NavTarget.Favorites -> FavoritesRoute
             NavTarget.NowPlaying -> MusicRoute()
+            NavTarget.LiveTv -> LiveTvRoute
             is NavTarget.Library -> if (target.kind == _state.value.query.kind && route.libraryId == null && route.genreId == null) return else LibraryRoute(target.kind.name)
             NavTarget.Profile -> {
                 val serverId = sessions.session.value?.server?.id ?: return

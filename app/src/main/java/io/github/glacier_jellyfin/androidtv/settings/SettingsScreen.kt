@@ -55,6 +55,7 @@ import io.github.glacier_jellyfin.androidtv.favorites.title
 import io.github.glacier_jellyfin.androidtv.ui.navTitle
 import io.github.glacier_jellyfin.androidtv.ui.navTargetOf
 import io.github.glacier_jellyfin.androidtv.ui.navEntryIds
+import io.github.glacier_jellyfin.androidtv.ui.LocalLiveTv
 import io.github.glacier_jellyfin.androidtv.core.data.settings.withShown
 import io.github.glacier_jellyfin.androidtv.core.data.settings.withMoved
 import io.github.glacier_jellyfin.androidtv.core.data.settings.arranged
@@ -566,7 +567,7 @@ private fun appearanceRows(
     val appearance = state.profile.appearance
     val navigation = state.profile.navigation
     val kinds = LocalLibraryKinds.current
-    val navIds = navEntryIds(kinds)
+    val navIds = navEntryIds(kinds, LocalLiveTv.current)
     val favoriteIds = FavoriteRow.entries.map { it.name }
     val favoriteRows = navigation.favoriteRows.arranged(favoriteIds)
     val shownRows = favoriteRows.count { it.shown }
@@ -585,6 +586,7 @@ private fun appearanceRows(
                     when (target) {
                         NavTarget.Home -> R.string.nav_home
                         NavTarget.Favorites -> R.string.nav_favorites
+                        NavTarget.LiveTv -> R.string.nav_live_tv
                         is NavTarget.Library -> target.kind.navTitle
                         else -> R.string.nav_home
                     },
@@ -594,6 +596,7 @@ private fun appearanceRows(
                         moving == id -> R.string.settings_entry_moving_sub
                         target == NavTarget.Home -> R.string.settings_nav_home_sub
                         target == NavTarget.Favorites -> R.string.settings_nav_favorites_sub
+                        target == NavTarget.LiveTv -> R.string.settings_nav_live_tv_sub
                         else -> R.string.settings_nav_library_sub
                     },
                 ),

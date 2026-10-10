@@ -83,5 +83,13 @@ data class SeerrRoute(val type: String, val tmdbId: Int)
 @Serializable
 data object FavoritesRoute
 
+/** The channels of the server's Live TV. */
+@Serializable
+data object LiveTvRoute
+
+/** A Live TV channel, full screen; channel up and down switch to its neighbours. */
+@Serializable
+data class LiveTvPlayerRoute(val channelId: String)
+
 @Serializable
 data object SettingsRoute

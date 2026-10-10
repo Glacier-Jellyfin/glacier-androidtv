@@ -20,6 +20,7 @@ import org.jellyfin.sdk.api.client.extensions.userDataApi
 import org.jellyfin.sdk.api.client.extensions.userViewApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.sdk.model.api.CollectionType
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemFilter
@@ -44,6 +45,11 @@ class HomeRepository @Inject constructor(
      * screen loaded. Until then the usual three, without music videos.
      */
     val kinds: StateFlow<List<LibraryKind>> = _kinds.asStateFlow()
+
+    private val _liveTv = MutableStateFlow(false)
+
+    /** The server offers Live TV to this profile; known once the home screen loaded. */
+    val liveTv: StateFlow<Boolean> = _liveTv.asStateFlow()
 
     private val _libraries = MutableStateFlow<List<Library>>(emptyList())
 
@@ -197,7 +203,9 @@ class HomeRepository @Inject constructor(
     }
 
     private suspend fun libraries(session: Session, mapper: MediaMapper): List<Library> = coroutineScope {
-        session.api.userViewApi.getUserViews(userId = session.userId).content.items
+        val views = session.api.userViewApi.getUserViews(userId = session.userId).content.items
+        _liveTv.value = views.any { it.collectionType == CollectionType.LIVETV }
+        views
             .mapNotNull { view -> view.collectionType.toLibraryKind()?.let { view to it } }
             .map { (view, kind) -> async { mapper.library(view, kind, count(session, view.id, kind)) } }
             .awaitAll()
