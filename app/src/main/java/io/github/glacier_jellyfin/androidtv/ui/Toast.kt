@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,7 +40,7 @@ import kotlinx.coroutines.delay
 /** Shows short notices; see [ToastHost]. */
 class Toaster {
     internal var message by mutableStateOf<String?>(null)
-    internal var sequence by mutableStateOf(0)
+    internal var sequence by mutableIntStateOf(0)
 
     fun show(text: String) {
         message = text

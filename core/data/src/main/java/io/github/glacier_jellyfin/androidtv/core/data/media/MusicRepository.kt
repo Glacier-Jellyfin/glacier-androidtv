@@ -87,6 +87,20 @@ class MusicRepository @Inject constructor(
         ).content.items.map(mapper::track)
     }
 
+    /** The songs with [ids], in that order; ids the server does not know are left out. */
+    suspend fun tracks(ids: List<UUID>): List<MusicTrack> = withContext(Dispatchers.IO) {
+        if (ids.isEmpty()) return@withContext emptyList()
+        val session = requireSession()
+        val mapper = MediaMapper(session.api)
+        val byId = session.api.libraryApi.getItems(
+            userId = session.userId,
+            ids = ids,
+            fields = TRACK_FIELDS,
+            enableUserData = true,
+        ).content.items.associateBy { it.id }
+        ids.mapNotNull { byId[it] }.map(mapper::track)
+    }
+
     /** The playlist's songs in its order; videos in a mixed playlist are left out. */
     suspend fun playlistTracks(playlistId: UUID): List<MusicTrack> = withContext(Dispatchers.IO) {
         val session = requireSession()

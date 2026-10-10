@@ -45,6 +45,7 @@ internal class MediaMapper(private val api: ApiClient) {
             BaseItemKind.MUSIC_ARTIST -> ItemKind.Artist
             BaseItemKind.PLAYLIST -> ItemKind.Playlist
             BaseItemKind.MUSIC_VIDEO -> ItemKind.MusicVideo
+            BaseItemKind.AUDIO -> ItemKind.Song
             else -> ItemKind.Other
         }
         val runtimeTicks = dto.runTimeTicks
@@ -61,9 +62,14 @@ internal class MediaMapper(private val api: ApiClient) {
             communityRating = dto.communityRating,
             officialRating = dto.officialRating,
             runtimeMinutes = runtimeTicks?.let { (it / TICKS_PER_MINUTE).toInt() },
+            runtimeMs = runtimeTicks?.let { it / TICKS_PER_MS },
             genres = dto.genres.orEmpty(),
             overview = plainText(dto.overview),
-            parentTitle = if (kind == ItemKind.Album) dto.albumArtist else dto.seriesName,
+            parentTitle = when (kind) {
+                ItemKind.Album -> dto.albumArtist
+                ItemKind.Song -> artists(dto)
+                else -> dto.seriesName
+            },
             seriesId = dto.seriesId,
             seasonNumber = dto.parentIndexNumber,
             episodeNumber = dto.indexNumber,
@@ -91,7 +97,7 @@ internal class MediaMapper(private val api: ApiClient) {
         return MusicTrack(
             id = dto.id,
             title = dto.name.orEmpty(),
-            artist = dto.artists?.filter { it.isNotBlank() }?.joinToString(", ")?.ifEmpty { null } ?: dto.albumArtist,
+            artist = artists(dto),
             album = dto.album,
             albumId = dto.albumId,
             year = dto.productionYear,
@@ -105,6 +111,10 @@ internal class MediaMapper(private val api: ApiClient) {
             playlistItemId = dto.playlistItemId,
         )
     }
+
+    /** A song's artists, else its album artist. */
+    private fun artists(dto: BaseItemDto): String? =
+        dto.artists?.filter { it.isNotBlank() }?.joinToString(", ")?.ifEmpty { null } ?: dto.albumArtist
 
     private fun cover(dto: BaseItemDto, width: Int): String? {
         val albumId = dto.albumId
@@ -137,6 +147,8 @@ internal class MediaMapper(private val api: ApiClient) {
     }
 
     private fun poster(dto: BaseItemDto): String? {
+        // Songs show their album's cover first, like the music player.
+        if (dto.type == BaseItemKind.AUDIO) return cover(dto, ImageWidth.POSTER)
         dto.imageTags?.get(ImageType.PRIMARY)?.let { return image(dto.id, ImageType.PRIMARY, it, ImageWidth.POSTER) }
         // Episodes without their own poster fall back to the series poster.
         val seriesId = dto.seriesId

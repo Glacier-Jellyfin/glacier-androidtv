@@ -142,9 +142,12 @@
     <string name="scope_favorites">Favorites</string>
     <string name="scope_albums">Albums</string>
     <string name="scope_artists">Artists</string>
+    <string name="scope_songs">Songs</string>
     <string name="scope_playlists">Playlists</string>
     <string name="sort_date_added">Recently added</string>
     <string name="sort_title">Title</string>
+    <string name="sort_artist">Artist</string>
+    <string name="sort_album">Album</string>
     <string name="sort_year">Release year</string>
     <string name="sort_rating">Rating</string>
     <string name="sort_runtime">Runtime</string>
@@ -162,11 +165,16 @@
         <item quantity="one">%1$d artist</item>
         <item quantity="other">%1$d artists</item>
     </plurals>
+    <plurals name="count_songs">
+        <item quantity="one">%1$d song</item>
+        <item quantity="other">%1$d songs</item>
+    </plurals>
     <plurals name="count_playlists">
         <item quantity="one">%1$d playlist</item>
         <item quantity="other">%1$d playlists</item>
     </plurals>
     <string name="library_empty_favorites">No favorites in this library yet. Mark a title as favorite on its detail page.</string>
+    <string name="library_empty_music_favorites">Nothing here is marked as favorite yet. Mark it with the heart on its page or in the player.</string>
     <string name="library_empty_unwatched">All caught up. No unwatched titles are left in this library.</string>
     <string name="library_empty">Nothing in this view.</string>
     <string name="library_error">This view could not be loaded.</string>
@@ -544,7 +552,6 @@
     <string name="settings_spot_unwatched">Unwatched only</string>
     <string name="settings_spot_unwatched_sub">Hides titles already watched</string>
     <string name="settings_group_rows">Rows</string>
-    <string name="settings_row_favorites">Favorites</string>
     <string name="settings_row_favorites_sub">Shows your favorite movies and shows on the home screen</string>
     <string name="settings_row_continue_sub">Titles you started and the next episodes</string>
     <string name="settings_row_latest_sub">The newest titles of this library</string>

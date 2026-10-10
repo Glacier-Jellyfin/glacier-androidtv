@@ -16,6 +16,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.LibrarySortChoice
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
+import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.FavoritesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
@@ -62,6 +63,7 @@ class LibraryViewModel @Inject constructor(
     private val repository: LibraryRepository,
     private val sessions: SessionManager,
     private val settings: SettingsRepository,
+    private val music: MusicController,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<LibraryRoute>()
@@ -89,10 +91,10 @@ class LibraryViewModel @Inject constructor(
     init {
         // The kept sort comes from the settings file, which may not be read yet right after start.
         viewModelScope.launch {
-            val kept = runCatching { settings.current().librarySorts[_state.value.query.kind.name] }
+            val kept = runCatching { settings.current().librarySorts }
                 .onFailure { Log.w(TAG, "Reading the library sort failed", it) }
                 .getOrNull()
-            if (kept != null) _state.update { it.copy(query = it.query.copy(sort = kept.sort, descending = kept.descending)) }
+            if (kept != null) _state.update { it.copy(query = it.query.withKeptSort(kept)) }
             reload()
         }
     }
@@ -106,10 +108,15 @@ class LibraryViewModel @Inject constructor(
 
     fun retry() = reload()
 
+    /** Each music tab has its own sort, so a tab change also brings back the sort kept for it. */
     fun setScope(scope: LibraryScope) {
         if (scope == _state.value.query.scope) return
-        update { it.copy(scope = scope) }
+        val kept = settings.settings.value.librarySorts
+        update { it.copy(scope = scope).withKeptSort(kept) }
     }
+
+    /** The heart toggle of the music tabs; it stays on across the tabs. */
+    fun toggleFavoritesOnly() = update { it.copy(favoritesOnly = !it.favoritesOnly) }
 
     fun toggleSortMenu(open: Boolean = !_state.value.sortMenuOpen) = _state.update { it.copy(sortMenuOpen = open) }
 
@@ -118,12 +125,12 @@ class LibraryViewModel @Inject constructor(
         _state.update { it.copy(sortMenuOpen = false) }
         update { query ->
             if (query.sort == sort) query.copy(descending = !query.descending)
-            else query.copy(sort = sort, descending = sort != LibrarySort.Title)
+            else query.copy(sort = sort, descending = sort !in AscendingFirst)
         }
         val query = _state.value.query
         val choice = LibrarySortChoice(query.sort, query.descending)
         viewModelScope.launch {
-            runCatching { settings.update { it.copy(librarySorts = it.librarySorts + (query.kind.name to choice)) } }
+            runCatching { settings.update { it.copy(librarySorts = it.librarySorts + (query.sortKey to choice)) } }
                 .onFailure { Log.w(TAG, "Saving the library sort failed", it) }
         }
     }
@@ -149,6 +156,18 @@ class LibraryViewModel @Inject constructor(
             else -> DetailRoute(item.id.toString())
         }
         viewModelScope.launch { _events.send(UiEvent.Navigate(route)) }
+    }
+
+    /**
+     * A song of the songs tab plays with the loaded songs after it as the queue, and the
+     * player opens; [title] names the queue.
+     */
+    fun play(item: MediaItem, title: String) {
+        val items = _state.value.items
+        val start = items.indexOf(item).takeIf { it >= 0 } ?: return
+        val ids = items.drop(start).take(SONG_QUEUE).map { it.id }
+        music.playSongs(title, ids, startTrackId = item.id.toString())
+        viewModelScope.launch { _events.send(UiEvent.Navigate(MusicRoute())) }
     }
 
     fun onNav(target: NavTarget) {
@@ -221,9 +240,19 @@ class LibraryViewModel @Inject constructor(
         }.also { loadJob = it }
     }
 
+    /** The sort kept for this query's kind and tab, if the tab offers it; else by title, A to Z. */
+    private fun LibraryQuery.withKeptSort(kept: Map<String, LibrarySortChoice>): LibraryQuery {
+        val choice = kept[sortKey]?.takeIf { it.sort in sorts } ?: LibrarySortChoice()
+        return copy(sort = choice.sort, descending = choice.descending)
+    }
+
     companion object {
         /** Ten rows of seven posters. */
         const val PAGE_SIZE = 70
+        /** Names sort A to Z first; dates, years, ratings and runtimes newest or largest first. */
+        private val AscendingFirst = setOf(LibrarySort.Title, LibrarySort.Artist, LibrarySort.Album)
+        /** Songs queued from the songs tab; their ids go into one request. */
+        private const val SONG_QUEUE = 100
         private const val TAG = "Library"
     }
 }

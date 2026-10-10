@@ -260,6 +260,12 @@ class MusicController @Inject constructor(
         load()
     }
 
+    /** The songs with [ids] as a plain queue named [title], fetched here: the songs tab of the music library. */
+    fun playSongs(title: String, ids: List<UUID>, startTrackId: String? = null) {
+        request = QueueRequest(startTrackId) { LoadedQueue(null, title, music.tracks(ids)) }
+        load()
+    }
+
     /** Loads the last [play] again after it failed. */
     fun retry() {
         if (request != null) load()

@@ -137,9 +137,12 @@
     <string name="scope_favorites">Favoriten</string>
     <string name="scope_albums">Alben</string>
     <string name="scope_artists">Künstler</string>
+    <string name="scope_songs">Songs</string>
     <string name="scope_playlists">Wiedergabelisten</string>
     <string name="sort_date_added">Zuletzt hinzugefügt</string>
     <string name="sort_title">Titel</string>
+    <string name="sort_artist">Künstler</string>
+    <string name="sort_album">Album</string>
     <string name="sort_year">Erscheinungsjahr</string>
     <string name="sort_rating">Bewertung</string>
     <string name="sort_runtime">Laufzeit</string>
@@ -157,11 +160,16 @@
         <item quantity="one">%1$d Künstler</item>
         <item quantity="other">%1$d Künstler</item>
     </plurals>
+    <plurals name="count_songs">
+        <item quantity="one">%1$d Song</item>
+        <item quantity="other">%1$d Songs</item>
+    </plurals>
     <plurals name="count_playlists">
         <item quantity="one">%1$d Wiedergabeliste</item>
         <item quantity="other">%1$d Wiedergabelisten</item>
     </plurals>
     <string name="library_empty_favorites">Noch keine Favoriten in dieser Bibliothek. Markiere einen Titel auf seiner Detailseite als Favorit.</string>
+    <string name="library_empty_music_favorites">Hier ist noch nichts als Favorit markiert. Das geht mit dem Herz auf der Seite oder im Player.</string>
     <string name="library_empty_unwatched">Alles gesehen. In dieser Bibliothek ist kein ungesehener Titel übrig.</string>
     <string name="library_empty">Keine Einträge in dieser Ansicht.</string>
     <string name="library_error">Diese Ansicht konnte nicht geladen werden.</string>
@@ -538,7 +546,6 @@
     <string name="settings_spot_unwatched">Nur Ungesehenes</string>
     <string name="settings_spot_unwatched_sub">Blendet bereits gesehene Titel aus</string>
     <string name="settings_group_rows">Reihen</string>
-    <string name="settings_row_favorites">Favoriten</string>
     <string name="settings_row_favorites_sub">Zeigt deine Lieblingsfilme und -serien auf der Startseite</string>
     <string name="settings_row_continue_sub">Angefangene Titel und die nächsten Folgen</string>
     <string name="settings_row_latest_sub">Die neuesten Titel dieser Bibliothek</string>

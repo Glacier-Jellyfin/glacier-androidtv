@@ -13,7 +13,7 @@ data class Library(
     val imageUrl: String?,
 )
 
-enum class ItemKind { Movie, Series, Episode, Album, Collection, Genre, Artist, Playlist, MusicVideo, Other }
+enum class ItemKind { Movie, Series, Episode, Album, Collection, Genre, Artist, Playlist, MusicVideo, Song, Other }
 
 /** Resolution and dynamic range, as far as the server reports them. */
 data class VideoQuality(val uhd: Boolean, val hdr: HdrFormat?)
@@ -35,9 +35,11 @@ data class MediaItem(
     val communityRating: Float?,
     val officialRating: String?,
     val runtimeMinutes: Int?,
+    /** The exact length, for songs, whose minutes alone say too little. */
+    val runtimeMs: Long? = null,
     val genres: List<String>,
     val overview: String?,
-    /** Series name for episodes, album artist for albums. */
+    /** Series name for episodes, album artist for albums, artists for songs. */
     val parentTitle: String?,
     /** The show of an episode or season. */
     val seriesId: UUID? = null,

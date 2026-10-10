@@ -49,6 +49,7 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -74,6 +75,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryScope
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
+import io.github.glacier_jellyfin.androidtv.core.data.media.railLetter
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
@@ -94,6 +96,9 @@ import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import io.github.glacier_jellyfin.androidtv.ui.yearText
+import io.github.glacier_jellyfin.androidtv.ui.ratingText
+import io.github.glacier_jellyfin.androidtv.ui.runtimeText
+import io.github.glacier_jellyfin.androidtv.player.formatTime
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -130,6 +135,19 @@ fun LibraryScreen(
     var focusedIndex by remember { mutableIntStateOf(-1) }
     var jumpTarget by remember { mutableStateOf<Int?>(null) }
     var sortAnchor by remember { mutableStateOf<Rect?>(null) }
+    // The menu takes the focus with it when it closes; it goes back to the sort button.
+    val sortButtonFocus = remember { FocusRequester() }
+    var sortMenuWasOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(state.sortMenuOpen) {
+        if (state.sortMenuOpen) {
+            sortMenuWasOpen = true
+        } else if (sortMenuWasOpen) {
+            sortMenuWasOpen = false
+            withFrameNanos { }
+            runCatching { sortButtonFocus.requestFocus() }
+        }
+    }
+    val songsTitle = stringResource(R.string.scope_songs)
 
     // Load the next page when the grid gets within three rows of the end.
     LaunchedEffect(gridState, state.items.size) {
@@ -194,8 +212,10 @@ fun LibraryScreen(
                             modifier = Modifier.onFocusChanged { if (it.hasFocus) scope.launch { gridState.animateScrollToItem(0) } },
                             state = state,
                             onScope = viewModel::setScope,
+                            onFavoritesOnly = viewModel::toggleFavoritesOnly,
                             onSortMenu = viewModel::toggleSortMenu,
                             onSortAnchor = { sortAnchor = it },
+                            sortButtonFocus = sortButtonFocus,
                         )
                     }
                     itemsIndexed(state.items, key = { _, item -> item.id }) { index, item ->
@@ -208,10 +228,10 @@ fun LibraryScreen(
                         GridCard(
                             imageUrl = item.posterUrl,
                             title = item.title,
-                            caption = captionFor(item),
-                            onClick = { viewModel.open(item) },
+                            caption = captionFor(item, sort = state.query.sort.takeUnless { state.query.listedByName }),
+                            onClick = { if (item.kind == ItemKind.Song) viewModel.play(item, songsTitle) else viewModel.open(item) },
                             shape = when (item.kind) {
-                                ItemKind.Album, ItemKind.Playlist -> CardShape.Square
+                                ItemKind.Album, ItemKind.Playlist, ItemKind.Song -> CardShape.Square
                                 ItemKind.Artist -> CardShape.Round
                                 else -> CardShape.Poster
                             },
@@ -239,9 +259,10 @@ fun LibraryScreen(
                         state.complete && state.items.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
                             Text(
                                 stringResource(
-                                    when (state.query.scope) {
-                                        LibraryScope.Favorites -> R.string.library_empty_favorites
-                                        LibraryScope.Unwatched -> R.string.library_empty_unwatched
+                                    when {
+                                        state.query.favoritesOnly -> R.string.library_empty_music_favorites
+                                        state.query.scope == LibraryScope.Favorites -> R.string.library_empty_favorites
+                                        state.query.scope == LibraryScope.Unwatched -> R.string.library_empty_unwatched
                                         else -> R.string.library_empty
                                     },
                                 ),
@@ -316,14 +337,17 @@ private fun Toolbar(
     modifier: Modifier,
     state: LibraryState,
     onScope: (LibraryScope) -> Unit,
+    onFavoritesOnly: () -> Unit,
     onSortMenu: (Boolean) -> Unit,
     onSortAnchor: (Rect) -> Unit,
+    sortButtonFocus: FocusRequester,
 ) {
     val activeChip = remember { FocusRequester() }
     Row(
         modifier
-            // Entering the toolbar lands on the active filter, not the geometrically nearest chip.
-            .focusProperties { onEnter = { activeChip.requestFocus() } }
+            // Moving into the toolbar lands on the active filter, not the geometrically nearest chip.
+            // A request for one control (the sort button after its menu closes) is left alone.
+            .focusProperties { onEnter = { if (requestedFocusDirection != FocusDirection.Enter) activeChip.requestFocus() } }
             .focusGroup(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -338,14 +362,55 @@ private fun Toolbar(
             )
         }
         Spacer(Modifier.weight(1f))
-        // Genres and artists are always listed by name.
+        // Music has no favorites tab: the heart narrows every tab instead.
+        if (state.query.kind == LibraryKind.Music) FavoritesToggle(on = state.query.favoritesOnly, onClick = onFavoritesOnly)
+        // Genres are always listed by name.
         if (!state.query.listedByName) {
             SortButton(
                 state,
                 onClick = { onSortMenu(!state.sortMenuOpen) },
-                modifier = Modifier.onGloballyPositioned { onSortAnchor(it.boundsInRoot()) },
+                modifier = Modifier.focusRequester(sortButtonFocus).onGloballyPositioned { onSortAnchor(it.boundsInRoot()) },
             )
         }
+    }
+}
+
+/** Pill with a heart that switches the music tabs to favorites only; filled and tinted while on. */
+@Composable
+private fun FavoritesToggle(on: Boolean, onClick: () -> Unit) {
+    val accent = LocalAccent.current.main
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val foreground = when {
+        focused -> GlacierColors.Void
+        on -> GlacierColors.Ice
+        else -> GlacierColors.Mist
+    }
+    Row(
+        Modifier
+            .focusScale(focused)
+            .height(52.dp)
+            .clip(PillShape)
+            .background(
+                when {
+                    focused -> accent
+                    on -> accent.copy(alpha = 0.18f)
+                    else -> GlacierColors.GlassFill
+                },
+            )
+            .border(2.dp, if (focused) accent else if (on) accent.copy(alpha = 0.45f) else Color.Transparent, PillShape)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .padding(horizontal = 24.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(
+            if (on) GlacierIcons.HeartFilled else GlacierIcons.Heart,
+            contentDescription = null,
+            tint = if (on && !focused) accent else foreground,
+            modifier = Modifier.size(20.dp),
+        )
+        Text(stringResource(R.string.scope_favorites), style = GlacierText.body(19, FontWeight.SemiBold), color = foreground)
     }
 }
 
@@ -405,7 +470,7 @@ private fun SortMenu(state: LibraryState, anchor: Rect, onSort: (LibrarySort) ->
             .focusGroup(),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        LibrarySort.entries.forEach { sort ->
+        state.query.sorts.forEach { sort ->
             SortOption(
                 label = stringResource(sort.label),
                 active = sort == state.query.sort,
@@ -536,15 +601,28 @@ private fun firstRowHome(gridState: LazyGridState): Int? {
     return firstRow.offset.y - info.viewportStartOffset
 }
 
-private fun letterOf(item: MediaItem): Char {
-    val first = (item.sortName ?: item.title).trim().firstOrNull()?.uppercaseChar() ?: return '#'
-    val plain = java.text.Normalizer.normalize(first.toString(), java.text.Normalizer.Form.NFD).first()
-    return if (plain in 'A'..'Z') plain else '#'
+/** A song's sort name starts with its disc and track numbers, so songs go by their title. */
+private fun letterOf(item: MediaItem): Char =
+    railLetter(if (item.kind == ItemKind.Song) item.title else item.sortName ?: item.title)
+
+/** The card's caption, plus the value the grid is sorted by when the caption does not show it yet. */
+@Composable
+private fun captionFor(item: MediaItem, sort: LibrarySort?): String? {
+    val showsYear = item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode, ItemKind.MusicVideo)
+    val sorted = when (sort) {
+        LibrarySort.Year -> item.year?.takeUnless { showsYear }?.toString()
+        LibrarySort.Runtime ->
+            if (item.kind == ItemKind.Song) item.runtimeMs?.let(::formatTime)
+            else item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }
+        LibrarySort.Rating -> item.communityRating?.let { "★ ${ratingText(it)}" }
+        else -> null
+    }
+    return listOfNotNull(baseCaption(item), sorted).joinToString(" · ").ifEmpty { null }
 }
 
 @Composable
-private fun captionFor(item: MediaItem): String? = when (item.kind) {
-    ItemKind.Album -> item.parentTitle
+private fun baseCaption(item: MediaItem): String? = when (item.kind) {
+    ItemKind.Album, ItemKind.Song -> item.parentTitle
     ItemKind.Collection, ItemKind.Genre, ItemKind.Playlist -> item.childCount?.let { pluralStringResource(R.plurals.count_titles, it, it) }
     ItemKind.Artist -> item.childCount?.let { pluralStringResource(R.plurals.count_albums, it, it) }
     else -> yearText(item)
@@ -557,6 +635,7 @@ private fun countText(scope: LibraryScope, kind: LibraryKind, count: Int): Strin
     LibraryScope.Artists -> pluralStringResource(R.plurals.count_artists, count, count)
     LibraryScope.Playlists -> pluralStringResource(R.plurals.count_playlists, count, count)
     LibraryScope.Albums -> pluralStringResource(R.plurals.count_albums, count, count)
+    LibraryScope.Songs -> pluralStringResource(R.plurals.count_songs, count, count)
     else -> if (kind == LibraryKind.Music) pluralStringResource(R.plurals.count_albums, count, count) else pluralStringResource(R.plurals.count_titles, count, count)
 }
 
@@ -569,6 +648,7 @@ private val LibraryScope.label: Int
         LibraryScope.Favorites -> R.string.scope_favorites
         LibraryScope.Albums -> R.string.scope_albums
         LibraryScope.Artists -> R.string.scope_artists
+        LibraryScope.Songs -> R.string.scope_songs
         LibraryScope.Playlists -> R.string.scope_playlists
     }
 
@@ -576,6 +656,8 @@ private val LibrarySort.label: Int
     get() = when (this) {
         LibrarySort.DateAdded -> R.string.sort_date_added
         LibrarySort.Title -> R.string.sort_title
+        LibrarySort.Artist -> R.string.sort_artist
+        LibrarySort.Album -> R.string.sort_album
         LibrarySort.Year -> R.string.sort_year
         LibrarySort.Rating -> R.string.sort_rating
         LibrarySort.Runtime -> R.string.sort_runtime

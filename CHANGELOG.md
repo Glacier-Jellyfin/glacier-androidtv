@@ -18,6 +18,8 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-10
+
 ### New
 - A new Favorites page in the top navigation shows everything you marked with the heart: movies, shows, episodes, albums, artists and songs (#1)
 - You can choose which libraries get a card in "My media" and in which order. Open it with the button on the "My media" row in Settings › Home
@@ -26,10 +28,16 @@ renders the reference separately.
 - Your favorite movies and shows have their own row on the home screen (#1)
 - You can hide the rows of the home screen and change their order in Settings › Home. Each library has its own "New in" row
 - Libraries on the home screen are named after their kind in the app language, e.g. "Movies" or "Shows", when the server has only one of that kind
+- Music has a Songs tab. Pick a song to play it with the songs after it
+- A heart button in every music tab shows only your favorites. It stays on when you switch tabs
 
-## [0.3.4] - 2026-10-10
+### Improved
+- You can sort artists by name or by when they were added
+- Albums and songs can be sorted by artist, songs also by album. Each music tab keeps its own sort
+- Cards show the value you sort by, like the release year, runtime or rating
 
 ### Fixed
+- After picking a sort in a library, the focus stays on the sort button instead of jumping to the top navigation
 - Playing an artist works when their albums have no album artist set. Glacier now plays the songs tagged with the artist
 - The message after failed playback now says what to do next
 
