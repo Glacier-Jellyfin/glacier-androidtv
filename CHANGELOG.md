@@ -18,6 +18,11 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### New
+- Your favorite movies and shows have their own row on the home screen (#1)
+- You can hide the rows of the home screen and change their order in Settings › Home. Each library has its own "New in" row
+- Libraries on the home screen are named after their kind in the app language, e.g. "Movies" or "Shows", when the server has only one of that kind
+
 ## [0.3.4] - 2026-10-10
 
 ### Fixed

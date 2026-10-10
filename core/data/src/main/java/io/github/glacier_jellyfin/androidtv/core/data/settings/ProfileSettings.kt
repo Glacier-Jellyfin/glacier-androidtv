@@ -69,7 +69,7 @@ data class AppearanceSettings(
 @Serializable
 enum class AccentColor { Crevasse, BlueIce, Aurora, PolarNight, Firn }
 
-/** Settings › Home: what the spotlight at the top of the home screen shows. */
+/** Settings › Home: what the spotlight at the top of the home screen shows, and which rows appear. */
 @Serializable
 data class HomeSettings(
     /** The single source of earlier versions; only read, as the default of [spotlightSources]. */
@@ -81,7 +81,68 @@ data class HomeSettings(
     val spotlightRotation: SpotlightRotation = SpotlightRotation.S9,
     /** Leaves out watched titles; "Continue watching" holds no watched ones anyway. */
     val spotlightUnwatched: Boolean = false,
-)
+    /** The home rows in the order picked; read through [homeRows], which also holds rows newer than this list. */
+    val rows: List<HomeRowChoice> = DefaultHomeRows,
+) {
+    /**
+     * Every row once, in the order picked, with "New in" once per library of
+     * [libraries] (ids, in the server's order). Libraries without an entry of
+     * their own take the place of the general "New in" entry; rows the saved
+     * list does not know yet come last.
+     */
+    fun homeRows(libraries: List<String>): List<HomeRowChoice> = arranged(libraries).filterNot { it.isLatestSlot }
+
+    fun withRowShown(id: String, shown: Boolean, libraries: List<String>): HomeSettings =
+        copy(rows = arranged(libraries).map { if (it.id == id) it.copy(shown = shown) else it })
+
+    /**
+     * The row [id] swapped with its neighbour [by] steps away (-1 up, 1 down),
+     * skipping rows not [visible] in the settings, e.g. the music rows on a
+     * server without music.
+     */
+    fun withRowMoved(id: String, by: Int, libraries: List<String>, visible: (HomeRowChoice) -> Boolean = { true }): HomeSettings {
+        val list = arranged(libraries).toMutableList()
+        val from = list.indexOfFirst { it.id == id }
+        if (from < 0 || by == 0) return this
+        val step = if (by < 0) -1 else 1
+        var to = from + step
+        while (to in list.indices && (list[to].isLatestSlot || !visible(list[to]))) to += step
+        if (to !in list.indices) return this
+        list[from] = list[to].also { list[to] = list[from] }
+        return copy(rows = list)
+    }
+
+    /** [homeRows] with the general "New in" entry kept, so libraries added later have their place. */
+    private fun arranged(libraries: List<String>): List<HomeRowChoice> {
+        val saved = (rows.filter { it.row != null } + DefaultHomeRows)
+            .distinctBy { it.id }
+            .filter { it.row != HomeRow.Latest || it.library == null || it.library in libraries }
+        val own = saved.mapNotNullTo(HashSet()) { it.library }
+        val fresh = libraries.filter { it !in own }.map { HomeRowChoice(HomeRow.Latest, library = it) }
+        return saved.flatMap { if (it.isLatestSlot) fresh + it else listOf(it) }
+    }
+}
+
+/** The rows of the home screen below the spotlight; each shows only when it has something in it. */
+@Serializable
+enum class HomeRow { ContinueWatching, Favorites, Latest, RecentAlbums, FavoriteSongs, Libraries }
+
+/** One home row, switched on or off. */
+@Serializable
+data class HomeRowChoice(
+    /** Null for a row of a later version, read back after a downgrade; such rows are dropped. */
+    val row: HomeRow? = null,
+    val shown: Boolean = true,
+    /** "New in" of this library (id). Without one it marks where libraries without an entry of their own go. */
+    val library: String? = null,
+) {
+    /** Names the row in the settings, e.g. "Latest:<library id>". */
+    val id: String get() = row?.name.orEmpty() + library?.let { ":$it" }.orEmpty()
+
+    internal val isLatestSlot: Boolean get() = row == HomeRow.Latest && library == null
+}
+
+private val DefaultHomeRows = HomeRow.entries.map { HomeRowChoice(it) }
 
 @Serializable
 enum class SpotlightSource { ContinueWatching, RecentlyAdded, Favorites, Random }

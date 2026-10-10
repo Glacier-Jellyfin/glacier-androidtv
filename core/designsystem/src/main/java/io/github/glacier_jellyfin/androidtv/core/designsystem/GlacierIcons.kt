@@ -31,6 +31,10 @@ object GlacierIcons {
         "M7 6.5h.01",
         "M7 17.5h.01",
     )
+    /** Grip of something that can be moved, e.g. a home row in the settings. */
+    val Grip = icon("M9 5h.01", "M9 12h.01", "M9 19h.01", "M15 5h.01", "M15 12h.01", "M15 19h.01", strokeWidth = 3.2f)
+    /** Moves something up or down, e.g. a home row. */
+    val Move = icon("m21 16-4 4-4-4", "M17 20V4", "m3 8 4-4 4 4", "M7 4v16")
     val Plus = icon("M5 12h14", "M12 5v14")
     val Globe = icon(
         "M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z",

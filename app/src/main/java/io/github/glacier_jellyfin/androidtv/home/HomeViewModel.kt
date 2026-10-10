@@ -86,6 +86,8 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch { playback.stopped.collect { refresh() } }
         // Marked watched or unwatched on a detail page.
         viewModelScope.launch { details.playedChanged.collect { refresh() } }
+        // Added to or removed from the favorites on a detail page.
+        viewModelScope.launch { details.favoriteChanged.collect { refreshFavorites() } }
         // Settings › Home changed: only the spotlight follows.
         viewModelScope.launch {
             settings.settings.map { it.home }.distinctUntilChanged().collect { home ->
@@ -106,6 +108,15 @@ class HomeViewModel @Inject constructor(
                     if (SpotlightSource.ContinueWatching in _state.value.settings.spotlightSources) updateSpotlight(content)
                 }
                 .onFailure { Log.w(TAG, "Refreshing home failed", it) }
+        }
+    }
+
+    /** Only the favorites row; the rest of the page stays as it is. */
+    private fun refreshFavorites() {
+        viewModelScope.launch {
+            runCatching { repository.favorites() }
+                .onSuccess { favorites -> _state.update { it.copy(content = it.content?.copy(favorites = favorites)) } }
+                .onFailure { Log.w(TAG, "Refreshing favorites failed", it) }
         }
     }
 
@@ -146,7 +157,10 @@ class HomeViewModel @Inject constructor(
         updateItem(item.id) { it.copy(isFavorite = favorite) }
         viewModelScope.launch {
             runCatching { repository.setFavorite(item.id, favorite) }
-                .onSuccess { _events.send(UiEvent.Toast(if (favorite) R.string.favorite_added else R.string.favorite_removed)) }
+                .onSuccess {
+                    _events.send(UiEvent.Toast(if (favorite) R.string.favorite_added else R.string.favorite_removed))
+                    refreshFavorites()
+                }
                 .onFailure {
                     Log.w(TAG, "Changing favorite failed", it)
                     updateItem(item.id) { current -> current.copy(isFavorite = !favorite) }
@@ -162,6 +176,7 @@ class HomeViewModel @Inject constructor(
                 content.copy(
                     continueWatching = content.continueWatching.map(map),
                     latest = content.latest.map { (library, items) -> library to items.map(map) },
+                    favorites = content.favorites.map(map),
                 )
             },
         )

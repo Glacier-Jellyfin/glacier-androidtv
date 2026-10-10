@@ -1,5 +1,8 @@
 package io.github.glacier_jellyfin.androidtv.home
 
+import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
@@ -52,7 +55,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.ui.libraryTitle
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
+import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeRow
 import io.github.glacier_jellyfin.androidtv.core.data.media.Library
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
@@ -189,6 +194,7 @@ fun HomeScreen(
     // The spotlight fades into the solid ground, so the page below it keeps that ground too.
     Box(Modifier.fillMaxSize().then(if (spotlight.isNotEmpty()) Modifier.background(ImagePageGround) else Modifier)) {
         val content = state.content
+        val rows = state.settings
         when {
             state.loading && content == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
             state.failed && content == null -> ErrorState(onRetry = viewModel::load)
@@ -253,80 +259,96 @@ fun HomeScreen(
                                 }
                             }
                         }
-                        if (content.continueWatching.isNotEmpty()) {
-                            item(key = "continue") {
-                                MediaRow(title = stringResource(R.string.home_continue_watching)) {
-                                    items(content.continueWatching, key = { it.id }) { item ->
-                                        ContinueCard(
-                                            title = if (item.kind == ItemKind.Episode) item.parentTitle ?: item.title else item.title,
-                                            subtitle = continueSubtitle(item),
-                                            // The show's art, not the episode still (user decision).
-                                            imageUrl = item.showThumbUrl ?: item.posterUrl,
-                                            progress = item.progress,
-                                            onClick = { viewModel.openContinueWatching(item) },
-                                            modifier = Modifier.remembered("continue-${item.id}"),
-                                            locked = item.showsLock(),
-                                        )
+                        rows.homeRows(content.latestLibraries.map { it.id.toString() }).forEach { choice ->
+                            if (choice.shown) when (choice.row) {
+                                HomeRow.ContinueWatching -> if (content.continueWatching.isNotEmpty()) {
+                                    item(key = "continue") {
+                                        MediaRow(title = stringResource(R.string.home_continue_watching)) {
+                                            items(content.continueWatching, key = { it.id }) { item ->
+                                                ContinueCard(
+                                                    title = if (item.kind == ItemKind.Episode) item.parentTitle ?: item.title else item.title,
+                                                    subtitle = continueSubtitle(item),
+                                                    // The show's art, not the episode still (user decision).
+                                                    imageUrl = item.showThumbUrl ?: item.posterUrl,
+                                                    progress = item.progress,
+                                                    onClick = { viewModel.openContinueWatching(item) },
+                                                    modifier = Modifier.remembered("continue-${item.id}"),
+                                                    locked = item.showsLock(),
+                                                )
+                                            }
+                                        }
                                     }
                                 }
-                            }
-                        }
-                        content.latest.forEach { (library, items) ->
-                            item(key = "latest-${library.id}") {
-                                MediaRow(
-                                    title = stringResource(R.string.home_new_in, library.name),
-                                    subtitle = libraryCount(library),
-                                ) {
-                                    items(items, key = { it.id }) { item ->
-                                        PosterFor(item, onClick = { viewModel.openDetails(item) }, modifier = Modifier.remembered("latest-${library.id}-${item.id}"))
+                                HomeRow.Favorites -> if (content.favorites.isNotEmpty()) {
+                                    item(key = "favorites") {
+                                        MediaRow(title = stringResource(R.string.home_favorites)) {
+                                            items(content.favorites, key = { it.id }) { item ->
+                                                PosterFor(item, onClick = { viewModel.openDetails(item) }, modifier = Modifier.remembered("favorites-${item.id}"))
+                                            }
+                                        }
                                     }
                                 }
-                            }
-                        }
-                        if (content.recentAlbums.isNotEmpty()) {
-                            item(key = "recent-albums") {
-                                MediaRow(title = stringResource(R.string.home_recent_albums)) {
-                                    items(content.recentAlbums, key = { it.id }) { album ->
-                                        PosterFor(album, onClick = { viewModel.openDetails(album) }, modifier = Modifier.remembered("recent-${album.id}"))
+                                HomeRow.Latest -> content.latest.firstOrNull { it.first.id.toString() == choice.library }?.let { (library, items) ->
+                                    item(key = "latest-${library.id}") {
+                                        MediaRow(
+                                            title = stringResource(R.string.home_new_in, libraryTitle(library, content.libraries)),
+                                            subtitle = libraryCount(library),
+                                        ) {
+                                            items(items, key = { it.id }) { item ->
+                                                PosterFor(item, onClick = { viewModel.openDetails(item) }, modifier = Modifier.remembered("latest-${library.id}-${item.id}"))
+                                            }
+                                        }
                                     }
                                 }
-                            }
-                        }
-                        if (content.favoriteSongs.isNotEmpty()) {
-                            item(key = "favorite-songs") {
-                                val favoritesTitle = stringResource(R.string.home_favorite_songs)
-                                MediaRow(title = favoritesTitle) {
-                                    items(content.favoriteSongs, key = { it.id }) { track ->
-                                        PosterCard(
-                                            imageUrl = track.coverUrl,
-                                            caption = track.artist.orEmpty(),
-                                            title = track.title,
-                                            square = true,
-                                            onClick = { viewModel.playFavorite(track, favoritesTitle) },
-                                            modifier = Modifier.remembered("favorite-${track.id}"),
-                                        )
+                                HomeRow.RecentAlbums -> if (content.recentAlbums.isNotEmpty()) {
+                                    item(key = "recent-albums") {
+                                        MediaRow(title = stringResource(R.string.home_recent_albums)) {
+                                            items(content.recentAlbums, key = { it.id }) { album ->
+                                                PosterFor(album, onClick = { viewModel.openDetails(album) }, modifier = Modifier.remembered("recent-${album.id}"))
+                                            }
+                                        }
                                     }
                                 }
-                            }
-                        }
-                        if (content.libraries.isNotEmpty()) {
-                            item(key = "libraries") {
-                                MediaRow(title = stringResource(R.string.home_my_media), bottomPadding = 90) {
-                                    items(content.libraries, key = { it.id }) { library ->
-                                        // Jellyfin's generated library images carry the name already;
-                                        // a backdrop from the library reads like the design's photo.
-                                        val newest = content.latest.firstOrNull { it.first.id == library.id }?.second?.firstOrNull()
-                                        LibraryCard(
-                                            name = library.name,
-                                            count = libraryCount(library),
-                                            imageUrl = newest?.backdropUrl ?: newest?.posterUrl ?: library.imageUrl,
-                                            onClick = { viewModel.openLibrary(library) },
-                                            modifier = Modifier.remembered("library-${library.id}"),
-                                        )
+                                HomeRow.FavoriteSongs -> if (content.favoriteSongs.isNotEmpty()) {
+                                    item(key = "favorite-songs") {
+                                        val favoritesTitle = stringResource(R.string.home_favorite_songs)
+                                        MediaRow(title = favoritesTitle) {
+                                            items(content.favoriteSongs, key = { it.id }) { track ->
+                                                PosterCard(
+                                                    imageUrl = track.coverUrl,
+                                                    caption = track.artist.orEmpty(),
+                                                    title = track.title,
+                                                    square = true,
+                                                    onClick = { viewModel.playFavorite(track, favoritesTitle) },
+                                                    modifier = Modifier.remembered("favorite-${track.id}"),
+                                                )
+                                            }
+                                        }
                                     }
                                 }
+                                HomeRow.Libraries -> if (content.libraries.isNotEmpty()) {
+                                    item(key = "libraries") {
+                                        MediaRow(title = stringResource(R.string.home_my_media)) {
+                                            items(content.libraries, key = { it.id }) { library ->
+                                                // Jellyfin's generated library images carry the name already;
+                                                // a backdrop from the library reads like the design's photo.
+                                                val newest = content.latest.firstOrNull { it.first.id == library.id }?.second?.firstOrNull()
+                                                LibraryCard(
+                                                    name = libraryTitle(library, content.libraries),
+                                                    count = libraryCount(library),
+                                                    imageUrl = newest?.backdropUrl ?: newest?.posterUrl ?: library.imageUrl,
+                                                    onClick = { viewModel.openLibrary(library) },
+                                                    modifier = Modifier.remembered("library-${library.id}"),
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                null -> Unit
                             }
                         }
+                        // Room below the last row, whichever it is.
+                        item(key = "end") { Spacer(Modifier.height((LastRowBottom - LocalCardSizes.current.rowBottom).coerceAtLeast(0).dp)) }
                     }
                 }
             }
@@ -370,6 +392,9 @@ fun HomeScreen(
 
 /** How long OK is ignored after the spotlight moved on by itself. */
 private const val SWITCH_GRACE_MS = 700L
+
+/** Space below the last row, as the bottom padding of a [MediaRow]. */
+private const val LastRowBottom = 90
 
 private val ConfirmKeys = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
 

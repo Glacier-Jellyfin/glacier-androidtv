@@ -67,6 +67,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.ui.title
 import io.github.glacier_jellyfin.androidtv.core.data.media.AlphabetLetters
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
@@ -296,14 +297,7 @@ fun LibraryScreen(
 
 @Composable
 private fun Header(state: LibraryState) {
-    val title = state.title ?: stringResource(
-        when (state.query.kind) {
-            LibraryKind.Movies -> R.string.library_movies
-            LibraryKind.Shows -> R.string.library_shows
-            LibraryKind.Music -> R.string.library_music
-            LibraryKind.MusicVideos -> R.string.library_music_videos
-        },
-    )
+    val title = state.title ?: stringResource(state.query.kind.title)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, style = GlacierText.display(50), color = GlacierColors.Ice)
         // The sort button already shows sort and order, so the line only counts. It keeps its

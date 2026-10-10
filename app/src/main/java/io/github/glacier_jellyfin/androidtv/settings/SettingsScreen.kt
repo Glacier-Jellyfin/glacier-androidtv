@@ -16,6 +16,10 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -46,16 +50,20 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.ui.libraryTitle
 import io.github.glacier_jellyfin.androidtv.UiLocale
 import io.github.glacier_jellyfin.androidtv.core.data.AgeLimit
 import io.github.glacier_jellyfin.androidtv.core.data.Protection
 import io.github.glacier_jellyfin.androidtv.core.data.StartMode
 import io.github.glacier_jellyfin.androidtv.core.data.media.Languages
+import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentAction
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.UpNextMode
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AccentColor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AudioChannels
+import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeRow
+import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeRowChoice
 import io.github.glacier_jellyfin.androidtv.core.data.settings.Language
 import io.github.glacier_jellyfin.androidtv.core.data.settings.MaxBitrate
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SeekStep
@@ -166,6 +174,22 @@ private sealed interface SettingRow {
         val focus: FocusRequester? = null,
     ) : SettingRow
 
+    /** A home row: switched on and off, and moved up and down after OK on its move button. */
+    data class Movable(
+        override val label: String,
+        override val sub: String,
+        val checked: Boolean,
+        val onToggle: () -> Unit,
+        val moving: Boolean,
+        val onMoving: (Boolean) -> Unit,
+        val onMove: (Int) -> Unit,
+        /** Another row is lifted: this one steps back. */
+        val dimmed: Boolean,
+        override val key: String,
+    ) : SettingRow {
+        override val enabled: Boolean get() = true
+    }
+
     /** A read-only fact, its value as plain text. */
     data class Info(
         override val label: String,
@@ -261,6 +285,11 @@ fun SettingsScreen(
     // Right out of the categories always lands on the first card, not the nearest one.
     val firstCard = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
+    // The home row lifted with its grip in Settings › Home: Up and Down move it until OK or Back.
+    var movingRow by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(state.category) { movingRow = null }
+    val reduceMotion = LocalReduceMotion.current
+    val moveMargin = with(LocalDensity.current) { 110.dp.roundToPx() }
 
     Box(Modifier.fillMaxSize()) {
         Row(
@@ -315,7 +344,30 @@ fun SettingsScreen(
                     SubtitlePreview(state.profile.subtitleStyle, state.previewImage)
                     Spacer(Modifier.height(18.dp))
                 }
-                val groups = rows(state, viewModel, languageFocus, pinOrigins)
+                val groups = rows(state, viewModel, languageFocus, pinOrigins, movingRow) { movingRow = it }
+                // A lifted home row stays in sight while it moves, with a neighbour above and below it.
+                val homeOrder = state.profile.home.rows
+                LaunchedEffect(homeOrder) {
+                    val row = movingRow ?: return@LaunchedEffect
+                    val keys = groups.flatMap { group -> listOf(group.title) + group.rows.map { "${group.title}/${it.key}" } }
+                    val index = keys.indexOfFirst { it.endsWith("/row-$row") }.takeIf { it >= 0 } ?: return@LaunchedEffect
+                    withFrameNanos { }
+                    val info = listState.layoutInfo
+                    val item = info.visibleItemsInfo.firstOrNull { it.index == index }
+                    val above = item?.let { it.offset - moveMargin - info.viewportStartOffset } ?: 0
+                    val below = item?.let { it.offset + it.size + moveMargin - info.viewportEndOffset } ?: 0
+                    val by = when {
+                        item == null -> null
+                        above < 0 -> above
+                        below > 0 -> below
+                        else -> return@LaunchedEffect
+                    }
+                    when {
+                        by == null -> listState.scrollToItem(index, -moveMargin)
+                        reduceMotion -> listState.scrollBy(by.toFloat())
+                        else -> listState.animateScrollBy(by.toFloat())
+                    }
+                }
                 LazyColumn(
                     state = listState,
                     verticalArrangement = Arrangement.spacedBy(18.dp),
@@ -324,10 +376,12 @@ fun SettingsScreen(
                     groups.forEachIndexed { groupIndex, group ->
                         item(key = "${state.category}/${group.title}") { GroupHeading(group.title, first = groupIndex == 0) }
                         itemsIndexed(group.rows, key = { _, row -> "${state.category}/${group.title}/${row.key}" }) { rowIndex, row ->
+                            // Home rows glide to their new place while one is moved.
+                            val glide = if (row is SettingRow.Movable && !reduceMotion) Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null) else Modifier
                             if (groupIndex == 0 && rowIndex == 0) {
-                                Box(Modifier.focusRequester(firstCard).focusGroup()) { SettingCard(row) }
+                                Box(glide.focusRequester(firstCard).focusGroup()) { SettingCard(row) }
                             } else {
-                                SettingCard(row)
+                                Box(glide) { SettingCard(row) }
                             }
                         }
                     }
@@ -397,6 +451,7 @@ private fun SettingCard(row: SettingRow) {
                 ) },
         )
         is SettingRow.Info -> InfoCard(row.label, row.sub, row.value)
+        is SettingRow.Movable -> MovableCard(row.label, row.sub, row.checked, row.onToggle, row.moving, row.onMoving, row.onMove, row.dimmed)
         is SettingRow.Action -> OptionCard(
             row.label,
             row.sub,
@@ -418,9 +473,11 @@ private fun rows(
     viewModel: SettingsViewModel,
     languageFocus: FocusRequester,
     pinOrigins: PinOrigins,
+    movingRow: String?,
+    onMovingRow: (String?) -> Unit,
 ): List<SettingGroup> = when (state.category) {
     SettingsCategory.Appearance -> appearanceRows(state, viewModel)
-    SettingsCategory.Home -> homeRows(state, viewModel)
+    SettingsCategory.Home -> homeRows(state, viewModel, movingRow, onMovingRow)
     SettingsCategory.Playback -> playbackRows(state, viewModel)
     SettingsCategory.Audio -> audioRows(state, viewModel, languageFocus)
     SettingsCategory.Subtitles -> subtitleRows(state, viewModel, languageFocus)
@@ -479,7 +536,7 @@ private fun appearanceRows(state: SettingsUiState, viewModel: SettingsViewModel)
 }
 
 @Composable
-private fun homeRows(state: SettingsUiState, viewModel: SettingsViewModel): List<SettingGroup> {
+private fun homeRows(state: SettingsUiState, viewModel: SettingsViewModel, moving: String?, onMoving: (String?) -> Unit): List<SettingGroup> {
     val home = state.profile.home
     val sources = listOf(
         SpotlightSource.ContinueWatching to R.string.settings_spot_continue,
@@ -488,6 +545,12 @@ private fun homeRows(state: SettingsUiState, viewModel: SettingsViewModel): List
         SpotlightSource.Random to R.string.settings_spot_random,
     )
     val on = home.spotlightSources.isNotEmpty()
+    // The music rows only exist on servers with a music library.
+    val hasMusic = LibraryKind.Music in LocalLibraryKinds.current
+    val visible = { choice: HomeRowChoice -> hasMusic || (choice.row != HomeRow.RecentAlbums && choice.row != HomeRow.FavoriteSongs) }
+    val libraries by viewModel.latestLibraries.collectAsStateWithLifecycle()
+    val allLibraries by viewModel.libraries.collectAsStateWithLifecycle()
+    val libraryIds = libraries.map { it.id.toString() }
     return listOf(
         SettingGroup(
             stringResource(R.string.settings_group_spotlight),
@@ -534,6 +597,29 @@ private fun homeRows(state: SettingsUiState, viewModel: SettingsViewModel): List
                     enabled = on,
                 ),
             ),
+        ),
+        SettingGroup(
+            stringResource(R.string.settings_group_rows),
+            home.homeRows(libraryIds).filter(visible).mapNotNull { choice ->
+                val row = choice.row ?: return@mapNotNull null
+                val id = choice.id
+                val (label, sub) = rowTexts.getValue(row)
+                SettingRow.Movable(
+                    if (row == HomeRow.Latest) {
+                        stringResource(R.string.home_new_in, libraries.firstOrNull { it.id.toString() == choice.library }?.let { libraryTitle(it, allLibraries) }.orEmpty())
+                    } else {
+                        stringResource(label)
+                    },
+                    stringResource(if (moving == id) R.string.settings_row_moving_sub else sub),
+                    choice.shown,
+                    onToggle = { viewModel.updateHome { it.withRowShown(id, !choice.shown, libraryIds) } },
+                    moving = moving == id,
+                    onMoving = { lifted -> onMoving(if (lifted) id else null) },
+                    onMove = { by -> viewModel.updateHome { it.withRowMoved(id, by, libraryIds, visible) } },
+                    dimmed = moving != null && moving != id,
+                    key = "row-$id",
+                )
+            },
         ),
     )
 }
@@ -999,6 +1085,16 @@ private class PinOrigins {
 
     fun restore(): Boolean = last?.let { runCatching { of(it).requestFocus() }.getOrDefault(false) } == true
 }
+
+/** Name and explanation of each home row in Settings › Home. */
+private val rowTexts = mapOf(
+    HomeRow.ContinueWatching to (R.string.home_continue_watching to R.string.settings_row_continue_sub),
+    HomeRow.Favorites to (R.string.home_favorites to R.string.settings_row_favorites_sub),
+    HomeRow.Latest to (R.string.home_new_in to R.string.settings_row_latest_sub),
+    HomeRow.RecentAlbums to (R.string.home_recent_albums to R.string.settings_row_recent_albums_sub),
+    HomeRow.FavoriteSongs to (R.string.home_favorite_songs to R.string.settings_row_favorite_songs_sub),
+    HomeRow.Libraries to (R.string.home_my_media to R.string.settings_row_libraries_sub),
+)
 
 /** Languages of Glacier itself, each named in its own language. */
 private val UiLanguages = listOf(Language("de", "Deutsch"), Language("en", "English"))

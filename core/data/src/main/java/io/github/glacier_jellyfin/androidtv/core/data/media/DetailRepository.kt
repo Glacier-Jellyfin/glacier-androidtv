@@ -39,6 +39,11 @@ class DetailRepository @Inject constructor(
     /** A title the user marked watched or unwatched: lists showing its state or progress are stale. */
     val playedChanged: SharedFlow<UUID> = _playedChanged.asSharedFlow()
 
+    private val _favoriteChanged = MutableSharedFlow<UUID>(extraBufferCapacity = 8)
+
+    /** A title the user added to or removed from the favorites: lists of favorites are stale. */
+    val favoriteChanged: SharedFlow<UUID> = _favoriteChanged.asSharedFlow()
+
     suspend fun details(id: UUID): ItemDetails = withContext(Dispatchers.IO) {
         val session = requireSession()
         val dto = session.api.libraryApi.getItem(itemId = id, userId = session.userId).content
@@ -288,6 +293,7 @@ class DetailRepository @Inject constructor(
         withContext(Dispatchers.IO) {
             if (favorite) api.markFavoriteItem(itemId = id) else api.unmarkFavoriteItem(itemId = id)
         }
+        _favoriteChanged.tryEmit(id)
     }
 
     private fun cast(session: Session, dto: BaseItemDto): List<CastMember> =

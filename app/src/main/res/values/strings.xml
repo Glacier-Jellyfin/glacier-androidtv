@@ -89,6 +89,7 @@
     <!-- Home -->
     <string name="home_continue_watching">Continue watching</string>
     <string name="home_recent_albums">Recently played</string>
+    <string name="home_favorites">Favorites</string>
     <string name="home_favorite_songs">Favorite songs</string>
     <string name="home_new_in">New in %1$s</string>
     <string name="home_my_media">My media</string>
@@ -536,6 +537,16 @@
     <string name="settings_spot_rotation_sub">Pauses on More info and Favorite, or after picking a title with Left/Right</string>
     <string name="settings_spot_unwatched">Unwatched only</string>
     <string name="settings_spot_unwatched_sub">Hides titles already watched</string>
+    <string name="settings_group_rows">Rows</string>
+    <string name="settings_row_favorites">Favorites</string>
+    <string name="settings_row_favorites_sub">Shows your favorite movies and shows on the home screen</string>
+    <string name="settings_row_continue_sub">Titles you started and the next episodes</string>
+    <string name="settings_row_latest_sub">The newest titles of this library</string>
+    <string name="settings_row_recent_albums_sub">Albums of the songs you heard last</string>
+    <string name="settings_row_favorite_songs_sub">Your favorite songs, ready to play</string>
+    <string name="settings_row_libraries_sub">A card for each of your libraries</string>
+    <string name="settings_row_move">Move row</string>
+    <string name="settings_row_moving_sub">Up and Down move the row. OK or Back puts it down.</string>
     <string name="settings_group_general">General</string>
     <string name="settings_group_seeking">Seeking</string>
     <string name="settings_group_streaming">Streaming</string>

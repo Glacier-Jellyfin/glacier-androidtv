@@ -84,6 +84,7 @@
     <!-- Startseite -->
     <string name="home_continue_watching">Weiter schauen</string>
     <string name="home_recent_albums">Zuletzt gehört</string>
+    <string name="home_favorites">Favoriten</string>
     <string name="home_favorite_songs">Lieblingssongs</string>
     <string name="home_new_in">Neu in %1$s</string>
     <string name="home_my_media">Meine Medien</string>
@@ -530,6 +531,16 @@
     <string name="settings_spot_rotation_sub">Pausiert auf Mehr Infos und Favorit oder nach einem Wechsel mit Links/Rechts</string>
     <string name="settings_spot_unwatched">Nur Ungesehenes</string>
     <string name="settings_spot_unwatched_sub">Blendet bereits gesehene Titel aus</string>
+    <string name="settings_group_rows">Reihen</string>
+    <string name="settings_row_favorites">Favoriten</string>
+    <string name="settings_row_favorites_sub">Zeigt deine Lieblingsfilme und -serien auf der Startseite</string>
+    <string name="settings_row_continue_sub">Angefangene Titel und die nächsten Folgen</string>
+    <string name="settings_row_latest_sub">Die neuesten Titel dieser Bibliothek</string>
+    <string name="settings_row_recent_albums_sub">Alben der zuletzt gehörten Songs</string>
+    <string name="settings_row_favorite_songs_sub">Deine Lieblingssongs zum direkten Abspielen</string>
+    <string name="settings_row_libraries_sub">Eine Karte für jede deiner Bibliotheken</string>
+    <string name="settings_row_move">Reihe verschieben</string>
+    <string name="settings_row_moving_sub">Hoch und Runter verschieben die Reihe. OK oder Zurück legt sie ab.</string>
     <string name="settings_group_general">Allgemein</string>
     <string name="settings_group_seeking">Spulen</string>
     <string name="settings_group_streaming">Streaming</string>

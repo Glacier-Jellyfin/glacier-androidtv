@@ -45,6 +45,16 @@ class HomeRepository @Inject constructor(
      */
     val kinds: StateFlow<List<LibraryKind>> = _kinds.asStateFlow()
 
+    private val _libraries = MutableStateFlow<List<Library>>(emptyList())
+
+    /** The libraries of the server, as on the home screen; known once it loaded. */
+    val libraries: StateFlow<List<Library>> = _libraries.asStateFlow()
+
+    private val _latestLibraries = MutableStateFlow<List<Library>>(emptyList())
+
+    /** The libraries with a "New in" row, for Settings › Home; known once the home screen loaded. */
+    val latestLibraries: StateFlow<List<Library>> = _latestLibraries.asStateFlow()
+
     /** Loads all home rows in parallel for the signed-in profile. */
     suspend fun load(): HomeContent = withContext(Dispatchers.IO) {
         val session = requireSession()
@@ -54,6 +64,7 @@ class HomeRepository @Inject constructor(
         val librariesAsync = async { libraries(session, mapper) }
         val resumeAsync = async { resume(session) }
         val nextUpAsync = async { nextUp(session) }
+        val favoritesAsync = async { runCatching { favorites(session, mapper) }.getOrDefault(emptyList()) }
         val excludesAsync = async {
             session.api.userApi.getCurrentUser().content.configuration?.latestItemsExcludes.orEmpty().toSet()
         }
@@ -61,8 +72,10 @@ class HomeRepository @Inject constructor(
         val libraries = librariesAsync.await()
         _kinds.value = libraries.map { it.kind }.distinct().sorted()
         val excludes = excludesAsync.await()
-        val latest = libraries
-            .filterNot { it.id in excludes }
+        val latestLibraries = libraries.filterNot { it.id in excludes }
+        _libraries.value = libraries
+        _latestLibraries.value = latestLibraries
+        val latest = latestLibraries
             .map { library -> async { library to ageFilter.screen(latest(session, userId, library).map(mapper::item)) } }
             .awaitAll()
             .filter { (_, items) -> items.isNotEmpty() }
@@ -75,6 +88,8 @@ class HomeRepository @Inject constructor(
             libraries = libraries,
             continueWatching = ageFilter.screen(mergeContinueWatching(resumeAsync.await(), nextUpAsync.await()).map(mapper::item)),
             latest = latest,
+            favorites = favoritesAsync.await(),
+            latestLibraries = latestLibraries,
             recentAlbums = recentAlbums,
             favoriteSongs = favoriteSongs,
         )
@@ -97,6 +112,25 @@ class HomeRepository @Inject constructor(
             .content.items.associateBy { it.id }
         return albumIds.mapNotNull { albums[it] }.map(mapper::item)
     }
+
+    /** Favorite movies and shows for their home row, newest first; the row follows a favorite set or removed elsewhere. */
+    suspend fun favorites(): List<MediaItem> = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        favorites(session, MediaMapper(session.api))
+    }
+
+    private suspend fun favorites(session: Session, mapper: MediaMapper): List<MediaItem> =
+        session.api.libraryApi.getItems(
+            userId = session.userId,
+            includeItemTypes = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
+            recursive = true,
+            isFavorite = true,
+            sortBy = listOf(ItemSortBy.DATE_CREATED),
+            sortOrder = listOf(SortOrder.DESCENDING),
+            fields = FIELDS,
+            enableUserData = true,
+            limit = FAVORITES,
+        ).content.items.map(mapper::item).let { ageFilter.screen(it) }
 
     private suspend fun favoriteSongs(session: Session, mapper: MediaMapper): List<MusicTrack> =
         session.api.libraryApi.getItems(
@@ -260,6 +294,7 @@ class HomeRepository @Inject constructor(
         const val ROW_LIMIT = 16
         const val RECENT_SONGS = 200
         const val FAVORITE_SONGS = 100
+        const val FAVORITES = 40
         val FIELDS = listOf(ItemFields.OVERVIEW, ItemFields.GENRES, ItemFields.MEDIA_STREAMS)
     }
 }

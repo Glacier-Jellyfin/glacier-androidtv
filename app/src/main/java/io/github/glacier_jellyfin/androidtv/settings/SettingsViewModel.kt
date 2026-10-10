@@ -18,6 +18,8 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryQuery
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.Library
+import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AppearanceSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.Language
@@ -121,6 +123,7 @@ class SettingsViewModel @Inject constructor(
     private val settings: SettingsRepository,
     private val serverPreferences: ServerPreferencesRepository,
     private val library: LibraryRepository,
+    home: HomeRepository,
     private val parental: ParentalControl,
     private val diagnostics: Diagnostics,
     val updates: UpdateManager,
@@ -133,6 +136,12 @@ class SettingsViewModel @Inject constructor(
     val events = _events.receiveAsFlow()
 
     val pin = PinGate(viewModelScope, parental) { _events.send(it) }
+
+    /** The libraries with a "New in" row, each its own entry in Settings › Home. */
+    val latestLibraries: StateFlow<List<Library>> = home.latestLibraries
+
+    /** All libraries, to tell whether a library is the only one of its kind. */
+    val libraries: StateFlow<List<Library>> = home.libraries
 
     init {
         viewModelScope.launch { settings.settings.collect { profile -> _state.update { it.copy(profile = profile) } } }

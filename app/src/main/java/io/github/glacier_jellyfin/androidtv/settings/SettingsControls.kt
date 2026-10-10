@@ -42,6 +42,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -141,33 +151,136 @@ internal fun OptionCard(
     enabled: Boolean = true,
     trailing: (@Composable () -> Unit)? = null,
     below: (@Composable () -> Unit)? = null,
+    /** Lifted to be moved: larger, tinted and outlined in the accent. */
+    highlighted: Boolean = false,
+    /** Steps back while another card is lifted. */
+    dimmed: Boolean = false,
 ) {
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     // A disabled card has no focusable control, so the card itself takes focus (a lit border
     // only, like InfoCard): otherwise the list could not scroll down past it.
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    val accent = LocalAccent.current.main
+    val lift by animateFloatAsState(if (highlighted && !LocalReduceMotion.current) 1.025f else 1f, tween(160), label = "lift")
+    val fade by animateFloatAsState(
+        when {
+            !enabled -> 0.5f
+            dimmed -> 0.4f
+            else -> 1f
+        },
+        tween(160),
+        label = "fade",
+    )
     Column(
         Modifier
+            .graphicsLayer {
+                scaleX = lift
+                scaleY = lift
+            }
             .fillMaxWidth()
             // Up/Down move card by card, also between a switch on the right and choices on the left.
             .focusGroup()
             .then(if (enabled) Modifier else Modifier.focusable(interactionSource = interaction))
             .clip(shape)
             .background(GlacierColors.GlassFill)
-            .border(if (focused) 2.dp else 1.dp, if (focused) LocalAccent.current.main.copy(alpha = 0.6f) else GlacierColors.GlassBorder, shape)
+            .then(if (highlighted) Modifier.background(accent.copy(alpha = 0.16f)) else Modifier)
+            .border(
+                when {
+                    highlighted -> 3.dp
+                    focused -> 2.dp
+                    else -> 1.dp
+                },
+                when {
+                    highlighted -> accent
+                    focused -> accent.copy(alpha = 0.6f)
+                    else -> GlacierColors.GlassBorder
+                },
+                shape,
+            )
             .padding(horizontal = 30.dp, vertical = 26.dp)
-            .alpha(if (enabled) 1f else 0.5f),
+            .alpha(fade),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(label, style = GlacierText.body(22, FontWeight.SemiBold), color = GlacierColors.Ice)
-                Text(sub, style = GlacierText.body(17), color = GlacierColors.Mist)
+                Text(sub, style = GlacierText.body(17, if (highlighted) FontWeight.SemiBold else FontWeight.Normal), color = if (highlighted) accent else GlacierColors.Mist)
             }
             trailing?.invoke()
         }
         below?.invoke()
+    }
+}
+
+/**
+ * A card with a grip after its switch. OK on the grip lifts the card: Up and
+ * Down then move it ([onMove] -1 or 1); OK or Back puts it down, and so does
+ * focus leaving the grip. The other cards are [dimmed] meanwhile.
+ */
+@Composable
+internal fun MovableCard(
+    label: String,
+    sub: String,
+    checked: Boolean,
+    onToggle: () -> Unit,
+    moving: Boolean,
+    onMoving: (Boolean) -> Unit,
+    onMove: (Int) -> Unit,
+    dimmed: Boolean,
+) {
+    BackHandler(enabled = moving) { onMoving(false) }
+    OptionCard(label, sub, highlighted = moving, dimmed = dimmed, trailing = {
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            ToggleSwitch(checked, onToggle)
+            MoveGrip(
+                moving = moving,
+                onClick = { onMoving(!moving) },
+                modifier = Modifier
+                    .onFocusChanged { if (!it.hasFocus && moving) onMoving(false) }
+                    .onPreviewKeyEvent { event ->
+                        if (!moving) return@onPreviewKeyEvent false
+                        when (event.key) {
+                            Key.DirectionUp, Key.DirectionDown -> {
+                                if (event.type == KeyEventType.KeyDown) onMove(if (event.key == Key.DirectionUp) -1 else 1)
+                                true
+                            }
+                            // Sideways would leave the lifted card behind.
+                            Key.DirectionLeft, Key.DirectionRight -> true
+                            else -> false
+                        }
+                    },
+            )
+        }
+    })
+}
+
+/** The grip: dots only, an accent field around them while focused or lifted. */
+@Composable
+private fun MoveGrip(moving: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val accent = LocalAccent.current.main
+    val shape = RoundedCornerShape(GlacierShapes.RadiusSm)
+    GlacierClickable(
+        onClick = onClick,
+        shape = shape,
+        modifier = modifier,
+    ) { focused ->
+        val lit = focused || moving
+        Box(
+            Modifier
+                .width(36.dp)
+                .height(56.dp)
+                .clip(shape)
+                .background(if (lit) accent else Color.Transparent),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                if (moving) GlacierIcons.Move else GlacierIcons.Grip,
+                contentDescription = stringResource(R.string.settings_row_move),
+                tint = if (lit) GlacierColors.Void else GlacierColors.Mist,
+                modifier = Modifier.size(24.dp),
+            )
+        }
     }
 }
 
