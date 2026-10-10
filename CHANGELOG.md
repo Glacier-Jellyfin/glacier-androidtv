@@ -18,6 +18,12 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-10-10
+
+### Fixed
+- Playing an artist works when their albums have no album artist set. Glacier now plays the songs tagged with the artist
+- The message after failed playback now says what to do next
+
 ## [0.3.3] - 2026-10-10
 
 ### Improved
