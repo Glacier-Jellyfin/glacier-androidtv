@@ -18,6 +18,8 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.5.0-beta.1] - 2026-10-11
+
 ### New
 - Live TV, as a first beta: when your server has Live TV set up, a Live TV page joins the top navigation. It lists your channels with what runs on each now, and shows the focused channel's programme and what comes next (#1)
 - Watch a channel full screen. Up and Down or the channel keys switch channels, OK or Left opens the channel list, Right or Info shows what is on. Type a channel number to jump to it, and the "last channel" key takes you back
