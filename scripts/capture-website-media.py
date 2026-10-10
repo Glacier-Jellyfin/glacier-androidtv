@@ -21,8 +21,8 @@ Before running:
   - the app's language is English and the accent is the default
 
 Needs Python 3.9+, adb and ffmpeg on PATH (or ADB / FFMPEG set). The script
-moves resume points on the demo server so the player shots are reproducible;
-the demo server resets itself regularly anyway.
+moves resume points on the demo server so "Continue watching" and the player
+shots are reproducible. The demo server resets itself regularly anyway.
 
 Usage: scripts/capture-website-media.py [--serial emulator-5554] [--only home,video,...]
 """
@@ -48,7 +48,10 @@ SERVER = "https://demo.jellyfin.org/stable"
 USER = "demo"
 DETAIL_TITLE = "Dracula"
 SHOW_TITLE = "Pioneer One"
-MUSIC_ARTIST = "Binärpilot"
+# The demo server has spelt this artist both ways.
+MUSIC_ARTIST = ("Binärpilot", "Binaerpilot")
+# Movies placed in "Continue watching" before the run, with the share left to watch.
+CONTINUE = {"Night of the Living Dead": 0.3, "King Lear": 0.9, "Jungle Book": 0.6}
 NAV = ["Home", "Movie", "Show", "Music"]
 SHOTS = ["home", "video", "library", "detail", "trickplay", "upnext", "music"]
 
@@ -187,6 +190,13 @@ class Server:
     def first_episode(self, series: dict) -> dict:
         return self.request(f"/Shows/{series['Id']}/Episodes?userId={self.user}")["Items"][0]
 
+    def fill_continue_watching(self) -> None:
+        """The demo server resets itself, so the home row is filled before every run."""
+        for name, left in CONTINUE.items():
+            movie = self.find(name, "Movie")
+            full = self.request(f"/Items/{movie['Id']}?userId={self.user}")
+            self.resume_at(movie, full["RunTimeTicks"] / 10_000_000 * left)
+
     def resume_at(self, item: dict, seconds_before_end: float) -> None:
         full = self.request(f"/Items/{item['Id']}?userId={self.user}")
         ticks = int(full["RunTimeTicks"] - seconds_before_end * 10_000_000)
@@ -210,8 +220,8 @@ class Capture:
         # The first profile has focus; the demo account must be that one.
         self.d.wait_for(USER, exact=True)
         self.d.key("DPAD_CENTER")
-        self.d.wait_for("Continue watching", timeout=45)
-        time.sleep(4)  # artwork
+        self.d.wait_for("Home", timeout=45, exact=True)
+        time.sleep(6)  # rows and artwork
 
     def nav_to(self, label: str) -> None:
         self.d.press_until("DPAD_UP", lambda f: f in NAV, tries=6)
@@ -339,12 +349,18 @@ class Capture:
 
     def upnext(self, server: Server) -> None:
         series = server.find(SHOW_TITLE, "Series")
-        server.resume_at(server.first_episode(series), UPNEXT_RESUME_BEFORE_END_S)
+        episode = server.first_episode(series)
+        server.resume_at(episode, UPNEXT_RESUME_BEFORE_END_S)
         self.start_app()
         self.nav_to("Show")
         self.d.wait_for("title")
         self.open_in_grid(SHOW_TITLE)
         self.d.wait_for("Season 1")
+        # The show's own button follows the server's resume list, which the demo
+        # server leaves empty, so the episode page resumes instead.
+        self.d.press_until("DPAD_DOWN", lambda f: episode["Name"] in f, tries=4)
+        self.d.key("DPAD_CENTER")
+        self.d.wait_for("Resume", exact=True)
         self.d.press_until("DPAD_LEFT", lambda f: f.startswith("Resume"), tries=4)
         self.d.key("DPAD_CENTER")
         self.wait_for_playback()
@@ -361,7 +377,7 @@ class Capture:
         self.d.key("DPAD_RIGHT", "DPAD_CENTER")
         self.d.wait_for("artists")
         self.d.key("DPAD_DOWN")
-        self.d.press_until("DPAD_RIGHT", lambda f: MUSIC_ARTIST in f, tries=8)
+        self.d.press_until("DPAD_RIGHT", lambda f: any(name in f for name in MUSIC_ARTIST), tries=8)
         self.d.key("DPAD_CENTER")
         self.d.press_until("DPAD_LEFT", lambda f: f.startswith("Play"), tries=4)
         self.d.key("DPAD_CENTER")
@@ -391,7 +407,8 @@ def main() -> None:
     size = device.shell("wm size").strip()
     if "1920x1080" not in size:
         sys.exit(f"Expected a 1920x1080 screen, got '{size}'")
-    server = Server() if {"trickplay", "upnext"} & set(wanted) else None
+    server = Server()
+    server.fill_continue_watching()
 
     with tempfile.TemporaryDirectory() as work:
         capture = Capture(device, Path(work))
