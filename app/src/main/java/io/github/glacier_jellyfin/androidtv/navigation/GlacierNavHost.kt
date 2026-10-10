@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.navigation
 
+import io.github.glacier_jellyfin.androidtv.favorites.FavoritesScreen
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -26,7 +27,7 @@ import io.github.glacier_jellyfin.androidtv.trailer.TrailerScreen
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 
 /** Screens without arguments; navigating to one that is already on top does nothing. */
-private val SingleScreens = setOf(ServerListRoute, ServerAddressRoute, HomeRoute, SettingsRoute)
+private val SingleScreens = setOf(ServerListRoute, ServerAddressRoute, HomeRoute, SettingsRoute, FavoritesRoute)
 
 private const val TAG = "Navigation"
 
@@ -77,5 +78,6 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
         composable<SearchRoute> { SearchScreen(onNavigate = navigate) }
         composable<SeerrRoute> { SeerrScreen(onNavigate = navigate) }
         composable<SettingsRoute> { SettingsScreen(onNavigate = navigate) }
+        composable<FavoritesRoute> { FavoritesScreen(onNavigate = navigate) }
     }
 }

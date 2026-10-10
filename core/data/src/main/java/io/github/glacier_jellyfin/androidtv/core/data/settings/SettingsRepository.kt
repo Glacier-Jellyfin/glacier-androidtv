@@ -92,5 +92,7 @@ class SettingsRepository @Inject constructor(
 
     suspend fun updateHome(transform: (HomeSettings) -> HomeSettings) = update { it.copy(home = transform(it.home)) }
 
+    suspend fun updateNavigation(transform: (NavigationSettings) -> NavigationSettings) = update { it.copy(navigation = transform(it.navigation)) }
+
     suspend fun updateSubtitleStyle(transform: (SubtitleStyle) -> SubtitleStyle) = update { it.copy(subtitleStyle = transform(it.subtitleStyle)) }
 }

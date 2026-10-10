@@ -42,6 +42,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.graphics.vector.ImageVector
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.animateFloatAsState
@@ -228,10 +233,17 @@ internal fun MovableCard(
     onMoving: (Boolean) -> Unit,
     onMove: (Int) -> Unit,
     dimmed: Boolean,
+    /** Opens what the row holds, e.g. the cards of "My media": a pill with [configureValue] before the switch. */
+    onConfigure: (() -> Unit)? = null,
+    configureValue: String = "",
+    configureFocus: FocusRequester? = null,
 ) {
     BackHandler(enabled = moving) { onMoving(false) }
     OptionCard(label, sub, highlighted = moving, dimmed = dimmed, trailing = {
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (onConfigure != null) {
+                ValueButton(configureValue, onClick = onConfigure, modifier = configureFocus?.let { Modifier.focusRequester(it) } ?: Modifier)
+            }
             ToggleSwitch(checked, onToggle)
             MoveGrip(
                 moving = moving,
@@ -255,31 +267,126 @@ internal fun MovableCard(
     })
 }
 
-/** The grip: dots only, an accent field around them while focused or lifted. */
+/** The grip: dots only, arrows while lifted. */
 @Composable
-private fun MoveGrip(moving: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun MoveGrip(moving: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) = CardIconButton(
+    icon = if (moving) GlacierIcons.Move else GlacierIcons.Grip,
+    contentDescription = stringResource(R.string.settings_row_move),
+    lit = moving,
+    onClick = onClick,
+    width = 36,
+    height = 56,
+    modifier = modifier,
+)
+
+/** An icon on a card without field or frame; an accent field around it while focused or [lit]. */
+@Composable
+private fun CardIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    lit: Boolean,
+    onClick: () -> Unit,
+    width: Int,
+    height: Int,
+    modifier: Modifier = Modifier,
+) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusSm)
-    GlacierClickable(
-        onClick = onClick,
-        shape = shape,
-        modifier = modifier,
-    ) { focused ->
-        val lit = focused || moving
+    GlacierClickable(onClick = onClick, shape = shape, modifier = modifier) { focused ->
+        val on = focused || lit
         Box(
             Modifier
-                .width(36.dp)
-                .height(56.dp)
+                .width(width.dp)
+                .height(height.dp)
                 .clip(shape)
-                .background(if (lit) accent else Color.Transparent),
+                .background(if (on) accent else Color.Transparent),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                if (moving) GlacierIcons.Move else GlacierIcons.Grip,
-                contentDescription = stringResource(R.string.settings_row_move),
-                tint = if (lit) GlacierColors.Void else GlacierColors.Mist,
-                modifier = Modifier.size(24.dp),
-            )
+            Icon(icon, contentDescription = contentDescription, tint = if (on) GlacierColors.Void else GlacierColors.Mist, modifier = Modifier.size(24.dp))
+        }
+    }
+}
+
+/**
+ * A list in a dialog whose entries are switched on and off and moved like the
+ * home rows, e.g. the cards of "My media". [cards] are label, shown and id;
+ * every entry has [sub] under its label, [movingSub] while lifted. Back or
+ * Done closes it.
+ */
+@Composable
+internal fun ChoicesDialog(
+    title: String,
+    body: String,
+    sub: String,
+    movingSub: String,
+    cards: List<Triple<String, Boolean, String>>,
+    onToggle: (String) -> Unit,
+    onMove: (String, Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    BackHandler(onBack = onDismiss)
+    var moving by remember { mutableStateOf<String?>(null) }
+    val listState = rememberLazyListState()
+    val first = remember { FocusRequester() }
+    val reduceMotion = LocalReduceMotion.current
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        runCatching { first.requestFocus() }
+    }
+    // The lifted card stays in sight while it moves.
+    LaunchedEffect(cards.map { it.third }) {
+        val id = moving ?: return@LaunchedEffect
+        val index = cards.indexOfFirst { it.third == id }.takeIf { it >= 0 } ?: return@LaunchedEffect
+        withFrameNanos { }
+        val info = listState.layoutInfo
+        val item = info.visibleItemsInfo.firstOrNull { it.index == index }
+        if (item == null || item.offset < info.viewportStartOffset || item.offset + item.size > info.viewportEndOffset) {
+            if (reduceMotion) listState.scrollToItem(index) else listState.animateScrollToItem(index)
+        }
+    }
+    Box(Modifier.fillMaxSize().background(Color(0xA805090F)), contentAlignment = Alignment.Center) {
+        val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
+        Column(
+            Modifier
+                .width(980.dp)
+                .heightIn(max = 860.dp)
+                .clip(shape)
+                .background(GlacierColors.Deep)
+                .border(1.dp, GlacierColors.GlassBorder2, shape)
+                .padding(start = 32.dp, end = 32.dp, top = 36.dp, bottom = 32.dp)
+                .focusProperties { onExit = { cancelFocusChange() } }
+                .focusGroup(),
+            verticalArrangement = Arrangement.spacedBy(22.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(title, style = GlacierText.display(30), color = GlacierColors.Ice)
+                Text(body, style = GlacierText.body(19), color = GlacierColors.Mist)
+            }
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.weight(1f, fill = false),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                contentPadding = PaddingValues(vertical = 6.dp),
+            ) {
+                itemsIndexed(cards, key = { _, card -> card.third }) { index, (label, shown, id) ->
+                    val glide = if (reduceMotion) Modifier else Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null)
+                    Box(glide.then(if (index == 0) Modifier.focusRequester(first) else Modifier).focusGroup()) {
+                        MovableCard(
+                            label = label,
+                            sub = if (moving == id) movingSub else sub,
+                            checked = shown,
+                            onToggle = { onToggle(id) },
+                            moving = moving == id,
+                            onMoving = { lifted -> moving = if (lifted) id else null },
+                            onMove = { by -> onMove(id, by) },
+                            dimmed = moving != null && moving != id,
+                        )
+                    }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                PillButton(stringResource(R.string.settings_cards_done), onClick = onDismiss, primary = true)
+            }
         }
     }
 }

@@ -17,6 +17,16 @@ val LibraryKind.title: Int
         LibraryKind.MusicVideos -> R.string.library_music_videos
     }
 
+/** Name of a library kind in the top navigation, e.g. "Film". */
+@get:StringRes
+val LibraryKind.navTitle: Int
+    get() = when (this) {
+        LibraryKind.Movies -> R.string.nav_movies
+        LibraryKind.Shows -> R.string.nav_shows
+        LibraryKind.Music -> R.string.nav_music
+        LibraryKind.MusicVideos -> R.string.nav_music_videos
+    }
+
 /**
  * What a library is called on the home screen ("New in" rows, "My media"): its kind in the app language
  * when it is the only library of that kind in [all], else its name on the

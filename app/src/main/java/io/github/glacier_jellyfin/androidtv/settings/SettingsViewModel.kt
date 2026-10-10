@@ -22,6 +22,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.Library
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AppearanceSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeSettings
+import io.github.glacier_jellyfin.androidtv.core.data.settings.NavigationSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.Language
 import io.github.glacier_jellyfin.androidtv.core.data.settings.PlaybackSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ProfileSettings
@@ -33,6 +34,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
 import io.github.glacier_jellyfin.androidtv.diagnostics.Diagnostics
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogServer
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogShare
+import io.github.glacier_jellyfin.androidtv.navigation.FavoritesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
@@ -192,6 +194,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settings.updateHome(transform) }
     }
 
+    fun updateNavigation(transform: (NavigationSettings) -> NavigationSettings) {
+        viewModelScope.launch { settings.updateNavigation(transform) }
+    }
+
     fun updateSubtitleStyle(transform: (SubtitleStyle) -> SubtitleStyle) {
         viewModelScope.launch { settings.updateSubtitleStyle(transform) }
     }
@@ -284,6 +290,7 @@ class SettingsViewModel @Inject constructor(
                 NavTarget.Home -> _events.send(UiEvent.Navigate(HomeRoute, clearBackStack = true))
                 NavTarget.Search -> _events.send(UiEvent.Navigate(SearchRoute()))
                 is NavTarget.Library -> _events.send(UiEvent.Navigate(LibraryRoute(target.kind.name)))
+                NavTarget.Favorites -> _events.send(UiEvent.Navigate(FavoritesRoute))
                 NavTarget.NowPlaying -> _events.send(UiEvent.Navigate(MusicRoute()))
                 NavTarget.Profile -> {
                     val serverId = sessions.session.value?.server?.id ?: return@launch

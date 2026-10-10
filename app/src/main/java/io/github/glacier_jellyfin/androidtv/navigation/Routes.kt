@@ -79,5 +79,9 @@ data class SearchRoute(val query: String? = null)
 @Serializable
 data class SeerrRoute(val type: String, val tmdbId: Int)
 
+/** Everything marked with the heart. */
+@Serializable
+data object FavoritesRoute
+
 @Serializable
 data object SettingsRoute

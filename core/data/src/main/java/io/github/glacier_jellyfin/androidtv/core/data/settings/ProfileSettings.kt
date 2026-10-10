@@ -21,6 +21,8 @@ data class ProfileSettings(
     val appearance: AppearanceSettings = AppearanceSettings(),
     val home: HomeSettings = HomeSettings(),
     val uiLanguage: UiLanguage = UiLanguage.System,
+    /** Top navigation and the favorites page. */
+    val navigation: NavigationSettings = NavigationSettings(),
     /** Tracks of the last title played, for "use the tracks of the last title". */
     val lastTracks: LastTracks = LastTracks(),
     /** The music player's switches, kept from one time to the next. */
@@ -83,6 +85,8 @@ data class HomeSettings(
     val spotlightUnwatched: Boolean = false,
     /** The home rows in the order picked; read through [homeRows], which also holds rows newer than this list. */
     val rows: List<HomeRowChoice> = DefaultHomeRows,
+    /** The "My media" cards (library ids) in the order picked; read through [arranged]. */
+    val libraryCards: List<Choice> = emptyList(),
 ) {
     /**
      * Every row once, in the order picked, with "New in" once per library of
@@ -100,17 +104,8 @@ data class HomeSettings(
      * skipping rows not [visible] in the settings, e.g. the music rows on a
      * server without music.
      */
-    fun withRowMoved(id: String, by: Int, libraries: List<String>, visible: (HomeRowChoice) -> Boolean = { true }): HomeSettings {
-        val list = arranged(libraries).toMutableList()
-        val from = list.indexOfFirst { it.id == id }
-        if (from < 0 || by == 0) return this
-        val step = if (by < 0) -1 else 1
-        var to = from + step
-        while (to in list.indices && (list[to].isLatestSlot || !visible(list[to]))) to += step
-        if (to !in list.indices) return this
-        list[from] = list[to].also { list[to] = list[from] }
-        return copy(rows = list)
-    }
+    fun withRowMoved(id: String, by: Int, libraries: List<String>, visible: (HomeRowChoice) -> Boolean = { true }): HomeSettings =
+        copy(rows = arranged(libraries).swapped(by, { it.id == id }) { !it.isLatestSlot && visible(it) })
 
     /** [homeRows] with the general "New in" entry kept, so libraries added later have their place. */
     private fun arranged(libraries: List<String>): List<HomeRowChoice> {
@@ -121,6 +116,48 @@ data class HomeSettings(
         val fresh = libraries.filter { it !in own }.map { HomeRowChoice(HomeRow.Latest, library = it) }
         return saved.flatMap { if (it.isLatestSlot) fresh + it else listOf(it) }
     }
+}
+
+/** One entry of a list the profile orders and switches on and off, e.g. a "My media" card. */
+@Serializable
+data class Choice(val id: String = "", val shown: Boolean = true)
+
+/** The entries of [available] (ids, in their default order): the order picked, entries not in it last. */
+fun List<Choice>.arranged(available: List<String>): List<Choice> =
+    (filter { it.id in available } + available.map { Choice(it) }).distinctBy { it.id }
+
+fun List<Choice>.withShown(id: String, shown: Boolean, available: List<String>): List<Choice> =
+    arranged(available).map { if (it.id == id) it.copy(shown = shown) else it }
+
+/** The entry [id] swapped with its neighbour [by] steps away (-1 up, 1 down). */
+fun List<Choice>.withMoved(id: String, by: Int, available: List<String>): List<Choice> =
+    arranged(available).swapped(by, { it.id == id }) { true }
+
+/** Top navigation and the favorites page (Settings › Appearance). */
+@Serializable
+data class NavigationSettings(
+    /** The entries between search and settings: "Home", a library kind's name or "Favorites". */
+    val entries: List<Choice> = emptyList(),
+    /** The rows of the favorites page: [FavoriteRow] names. */
+    val favoriteRows: List<Choice> = emptyList(),
+)
+
+/** The rows of the favorites page, in their default order. */
+@Serializable
+enum class FavoriteRow { Movies, Shows, Episodes, Albums, Artists, Songs }
+
+/**
+ * The entry matching [which] swapped with the nearest entry [by] steps away
+ * (-1 before, 1 after) that is a [target]; unchanged at either end.
+ */
+private fun <T> List<T>.swapped(by: Int, which: (T) -> Boolean, target: (T) -> Boolean): List<T> {
+    val from = indexOfFirst(which)
+    if (from < 0 || by == 0) return this
+    val step = if (by < 0) -1 else 1
+    var to = from + step
+    while (to in indices && !target(this[to])) to += step
+    if (to !in indices) return this
+    return toMutableList().apply { this[from] = this[to].also { this[to] = this[from] } }
 }
 
 /** The rows of the home screen below the spotlight; each shows only when it has something in it. */

@@ -75,6 +75,12 @@
     <string name="nav_movies">Film</string>
     <string name="nav_shows">Serie</string>
     <string name="nav_music">Musik</string>
+    <string name="nav_favorites">Favoriten</string>
+    <string name="favorites_episodes">Folgen</string>
+    <string name="favorites_songs">Songs</string>
+    <string name="favorites_empty">Noch keine Favoriten</string>
+    <string name="favorites_empty_body">Markiere Titel mit dem Herz, dann erscheinen sie hier.</string>
+    <string name="favorites_error">Favoriten konnten nicht geladen werden</string>
     <string name="nav_music_videos">Videos</string>
     <string name="nav_settings">Einstellungen</string>
     <string name="nav_profile">Profil wechseln</string>
@@ -539,6 +545,33 @@
     <string name="settings_row_recent_albums_sub">Alben der zuletzt gehörten Songs</string>
     <string name="settings_row_favorite_songs_sub">Deine Lieblingssongs zum direkten Abspielen</string>
     <string name="settings_row_libraries_sub">Eine Karte für jede deiner Bibliotheken</string>
+    <string name="settings_card_library_sub">Karte unter „Meine Medien“</string>
+    <string name="settings_card_moving_sub">Hoch und Runter verschieben die Karte. OK oder Zurück legt sie ab.</string>
+    <string name="settings_cards_body">Wähle, welche Bibliotheken eine Karte bekommen und in welcher Reihenfolge.</string>
+    <string name="settings_cards_done">Fertig</string>
+    <string name="settings_group_nav">Navigation</string>
+    <string name="settings_nav_home_sub">Spotlight und deine Reihen</string>
+    <string name="settings_nav_library_sub">Alle Bibliotheken dieser Art</string>
+    <string name="settings_nav_favorites_sub">Alles, was du mit dem Herz markiert hast</string>
+    <string name="settings_entry_moving_sub">Hoch und Runter verschieben den Eintrag. OK oder Zurück legt ihn ab.</string>
+    <string name="settings_favorites_body">Wähle, welche Reihen die Seite „Favoriten“ zeigt und in welcher Reihenfolge.</string>
+    <string name="settings_favorite_row_sub">Reihe auf der Seite „Favoriten“</string>
+    <plurals name="settings_cards_count">
+        <item quantity="one">%1$d Karte</item>
+        <item quantity="other">%1$d Karten</item>
+    </plurals>
+    <plurals name="settings_cards_some">
+        <item quantity="one">%1$d von %2$d Karte</item>
+        <item quantity="other">%1$d von %2$d Karten</item>
+    </plurals>
+    <plurals name="settings_rows_count">
+        <item quantity="one">%1$d Reihe</item>
+        <item quantity="other">%1$d Reihen</item>
+    </plurals>
+    <plurals name="settings_rows_some">
+        <item quantity="one">%1$d von %2$d Reihe</item>
+        <item quantity="other">%1$d von %2$d Reihen</item>
+    </plurals>
     <string name="settings_row_move">Reihe verschieben</string>
     <string name="settings_row_moving_sub">Hoch und Runter verschieben die Reihe. OK oder Zurück legt sie ab.</string>
     <string name="settings_group_general">Allgemein</string>

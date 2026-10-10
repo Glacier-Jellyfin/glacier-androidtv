@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -50,6 +51,14 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.favorites.title
+import io.github.glacier_jellyfin.androidtv.ui.navTitle
+import io.github.glacier_jellyfin.androidtv.ui.navTargetOf
+import io.github.glacier_jellyfin.androidtv.ui.navEntryIds
+import io.github.glacier_jellyfin.androidtv.core.data.settings.withShown
+import io.github.glacier_jellyfin.androidtv.core.data.settings.withMoved
+import io.github.glacier_jellyfin.androidtv.core.data.settings.arranged
+import io.github.glacier_jellyfin.androidtv.core.data.settings.FavoriteRow
 import io.github.glacier_jellyfin.androidtv.ui.libraryTitle
 import io.github.glacier_jellyfin.androidtv.UiLocale
 import io.github.glacier_jellyfin.androidtv.core.data.AgeLimit
@@ -186,6 +195,10 @@ private sealed interface SettingRow {
         /** Another row is lifted: this one steps back. */
         val dimmed: Boolean,
         override val key: String,
+        /** A gear before the switch, e.g. for the cards of "My media". */
+        val onConfigure: (() -> Unit)? = null,
+        val configureValue: String = "",
+        val configureFocus: FocusRequester? = null,
     ) : SettingRow {
         override val enabled: Boolean get() = true
     }
@@ -287,6 +300,19 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     // The home row lifted with its grip in Settings › Home: Up and Down move it until OK or Back.
     var movingRow by remember { mutableStateOf<String?>(null) }
+    // A list in a dialog ("My media" cards, favorites rows), opened with the pill on its row;
+    // closing it returns to that pill.
+    var openList by remember { mutableStateOf<ListDialog?>(null) }
+    var lastList by remember { mutableStateOf<ListDialog?>(null) }
+    val listFocus = remember { ListDialog.entries.associateWith { FocusRequester() } }
+    LaunchedEffect(openList) {
+        val closed = lastList
+        if (openList == null && closed != null) {
+            withFrameNanos { }
+            runCatching { listFocus.getValue(closed).requestFocus() }
+        }
+        lastList = openList
+    }
     LaunchedEffect(state.category) { movingRow = null }
     val reduceMotion = LocalReduceMotion.current
     val moveMargin = with(LocalDensity.current) { 110.dp.roundToPx() }
@@ -344,9 +370,9 @@ fun SettingsScreen(
                     SubtitlePreview(state.profile.subtitleStyle, state.previewImage)
                     Spacer(Modifier.height(18.dp))
                 }
-                val groups = rows(state, viewModel, languageFocus, pinOrigins, movingRow) { movingRow = it }
+                val groups = rows(state, viewModel, languageFocus, pinOrigins, movingRow, { movingRow = it }, listFocus) { openList = it }
                 // A lifted home row stays in sight while it moves, with a neighbour above and below it.
-                val homeOrder = state.profile.home.rows
+                val homeOrder = state.profile.home.rows to state.profile.navigation.entries
                 LaunchedEffect(homeOrder) {
                     val row = movingRow ?: return@LaunchedEffect
                     val keys = groups.flatMap { group -> listOf(group.title) + group.rows.map { "${group.title}/${it.key}" } }
@@ -378,11 +404,9 @@ fun SettingsScreen(
                         itemsIndexed(group.rows, key = { _, row -> "${state.category}/${group.title}/${row.key}" }) { rowIndex, row ->
                             // Home rows glide to their new place while one is moved.
                             val glide = if (row is SettingRow.Movable && !reduceMotion) Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null) else Modifier
-                            if (groupIndex == 0 && rowIndex == 0) {
-                                Box(glide.focusRequester(firstCard).focusGroup()) { SettingCard(row) }
-                            } else {
-                                Box(glide) { SettingCard(row) }
-                            }
+                            // Every card has the same frame, so one moved onto or off the first place keeps its focus.
+                            val first = if (groupIndex == 0 && rowIndex == 0) Modifier.focusRequester(firstCard) else Modifier
+                            Box(glide.then(first).focusGroup()) { SettingCard(row) }
                         }
                     }
                 }
@@ -397,6 +421,49 @@ fun SettingsScreen(
             down = categoryFocus.getValue(state.category),
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp),
         )
+
+        when (openList) {
+            ListDialog.LibraryCards -> {
+                val allLibraries by viewModel.libraries.collectAsStateWithLifecycle()
+                val ids = allLibraries.map { it.id.toString() }
+                ChoicesDialog(
+                    title = stringResource(R.string.home_my_media),
+                    body = stringResource(R.string.settings_cards_body),
+                    sub = stringResource(R.string.settings_card_library_sub),
+                    movingSub = stringResource(R.string.settings_card_moving_sub),
+                    cards = state.profile.home.libraryCards.arranged(ids).mapNotNull { card ->
+                        allLibraries.firstOrNull { it.id.toString() == card.id }?.let { Triple(libraryTitle(it, allLibraries), card.shown, card.id) }
+                    },
+                    onToggle = { id ->
+                        viewModel.updateHome { home ->
+                            home.copy(libraryCards = home.libraryCards.withShown(id, !home.libraryCards.arranged(ids).first { it.id == id }.shown, ids))
+                        }
+                    },
+                    onMove = { id, by -> viewModel.updateHome { it.copy(libraryCards = it.libraryCards.withMoved(id, by, ids)) } },
+                    onDismiss = { openList = null },
+                )
+            }
+            ListDialog.FavoriteRows -> {
+                val ids = FavoriteRow.entries.map { it.name }
+                ChoicesDialog(
+                    title = stringResource(R.string.nav_favorites),
+                    body = stringResource(R.string.settings_favorites_body),
+                    sub = stringResource(R.string.settings_favorite_row_sub),
+                    movingSub = stringResource(R.string.settings_row_moving_sub),
+                    cards = state.profile.navigation.favoriteRows.arranged(ids).map { row ->
+                        Triple(stringResource(FavoriteRow.valueOf(row.id).title), row.shown, row.id)
+                    },
+                    onToggle = { id ->
+                        viewModel.updateNavigation { nav ->
+                            nav.copy(favoriteRows = nav.favoriteRows.withShown(id, !nav.favoriteRows.arranged(ids).first { it.id == id }.shown, ids))
+                        }
+                    },
+                    onMove = { id, by -> viewModel.updateNavigation { it.copy(favoriteRows = it.favoriteRows.withMoved(id, by, ids)) } },
+                    onDismiss = { openList = null },
+                )
+            }
+            null -> Unit
+        }
 
         state.languagePicker?.let { target ->
             val server = state.server
@@ -451,7 +518,7 @@ private fun SettingCard(row: SettingRow) {
                 ) },
         )
         is SettingRow.Info -> InfoCard(row.label, row.sub, row.value)
-        is SettingRow.Movable -> MovableCard(row.label, row.sub, row.checked, row.onToggle, row.moving, row.onMoving, row.onMove, row.dimmed)
+        is SettingRow.Movable -> MovableCard(row.label, row.sub, row.checked, row.onToggle, row.moving, row.onMoving, row.onMove, row.dimmed, row.onConfigure, row.configureValue, row.configureFocus)
         is SettingRow.Action -> OptionCard(
             row.label,
             row.sub,
@@ -475,9 +542,11 @@ private fun rows(
     pinOrigins: PinOrigins,
     movingRow: String?,
     onMovingRow: (String?) -> Unit,
+    listFocus: Map<ListDialog, FocusRequester>,
+    onOpenList: (ListDialog) -> Unit,
 ): List<SettingGroup> = when (state.category) {
-    SettingsCategory.Appearance -> appearanceRows(state, viewModel)
-    SettingsCategory.Home -> homeRows(state, viewModel, movingRow, onMovingRow)
+    SettingsCategory.Appearance -> appearanceRows(state, viewModel, movingRow, onMovingRow, listFocus.getValue(ListDialog.FavoriteRows)) { onOpenList(ListDialog.FavoriteRows) }
+    SettingsCategory.Home -> homeRows(state, viewModel, movingRow, onMovingRow, listFocus.getValue(ListDialog.LibraryCards)) { onOpenList(ListDialog.LibraryCards) }
     SettingsCategory.Playback -> playbackRows(state, viewModel)
     SettingsCategory.Audio -> audioRows(state, viewModel, languageFocus)
     SettingsCategory.Subtitles -> subtitleRows(state, viewModel, languageFocus)
@@ -486,8 +555,61 @@ private fun rows(
 }
 
 @Composable
-private fun appearanceRows(state: SettingsUiState, viewModel: SettingsViewModel): List<SettingGroup> {
+private fun appearanceRows(
+    state: SettingsUiState,
+    viewModel: SettingsViewModel,
+    moving: String?,
+    onMoving: (String?) -> Unit,
+    favoritesFocus: FocusRequester,
+    onFavoriteRows: () -> Unit,
+): List<SettingGroup> {
     val appearance = state.profile.appearance
+    val navigation = state.profile.navigation
+    val kinds = LocalLibraryKinds.current
+    val navIds = navEntryIds(kinds)
+    val favoriteIds = FavoriteRow.entries.map { it.name }
+    val favoriteRows = navigation.favoriteRows.arranged(favoriteIds)
+    val shownRows = favoriteRows.count { it.shown }
+    val rowsValue = if (shownRows == favoriteRows.size) {
+        pluralStringResource(R.plurals.settings_rows_count, favoriteRows.size, favoriteRows.size)
+    } else {
+        pluralStringResource(R.plurals.settings_rows_some, favoriteRows.size, shownRows, favoriteRows.size)
+    }
+    val navGroup = SettingGroup(
+        stringResource(R.string.settings_group_nav),
+        navigation.entries.arranged(navIds).mapNotNull { entry ->
+            val target = navTargetOf(entry.id) ?: return@mapNotNull null
+            val id = "nav:${entry.id}"
+            SettingRow.Movable(
+                stringResource(
+                    when (target) {
+                        NavTarget.Home -> R.string.nav_home
+                        NavTarget.Favorites -> R.string.nav_favorites
+                        is NavTarget.Library -> target.kind.navTitle
+                        else -> R.string.nav_home
+                    },
+                ),
+                stringResource(
+                    when {
+                        moving == id -> R.string.settings_entry_moving_sub
+                        target == NavTarget.Home -> R.string.settings_nav_home_sub
+                        target == NavTarget.Favorites -> R.string.settings_nav_favorites_sub
+                        else -> R.string.settings_nav_library_sub
+                    },
+                ),
+                entry.shown,
+                onToggle = { viewModel.updateNavigation { it.copy(entries = it.entries.withShown(entry.id, !entry.shown, navIds)) } },
+                moving = moving == id,
+                onMoving = { lifted -> onMoving(if (lifted) id else null) },
+                onMove = { by -> viewModel.updateNavigation { it.copy(entries = it.entries.withMoved(entry.id, by, navIds)) } },
+                dimmed = moving != null && moving != id,
+                key = "row-$id",
+                onConfigure = onFavoriteRows.takeIf { target == NavTarget.Favorites },
+                configureValue = if (target == NavTarget.Favorites) rowsValue else "",
+                configureFocus = favoritesFocus.takeIf { target == NavTarget.Favorites },
+            )
+        },
+    )
     val names = listOf(
         R.string.settings_accent_crevasse,
         R.string.settings_accent_blueice,
@@ -521,6 +643,7 @@ private fun appearanceRows(state: SettingsUiState, viewModel: SettingsViewModel)
                 ),
             ),
         ),
+        navGroup,
         SettingGroup(
             stringResource(R.string.settings_group_library),
             listOf(
@@ -536,7 +659,14 @@ private fun appearanceRows(state: SettingsUiState, viewModel: SettingsViewModel)
 }
 
 @Composable
-private fun homeRows(state: SettingsUiState, viewModel: SettingsViewModel, moving: String?, onMoving: (String?) -> Unit): List<SettingGroup> {
+private fun homeRows(
+    state: SettingsUiState,
+    viewModel: SettingsViewModel,
+    moving: String?,
+    onMoving: (String?) -> Unit,
+    libraryCardsFocus: FocusRequester,
+    onLibraryCards: () -> Unit,
+): List<SettingGroup> {
     val home = state.profile.home
     val sources = listOf(
         SpotlightSource.ContinueWatching to R.string.settings_spot_continue,
@@ -550,6 +680,14 @@ private fun homeRows(state: SettingsUiState, viewModel: SettingsViewModel, movin
     val visible = { choice: HomeRowChoice -> hasMusic || (choice.row != HomeRow.RecentAlbums && choice.row != HomeRow.FavoriteSongs) }
     val libraries by viewModel.latestLibraries.collectAsStateWithLifecycle()
     val allLibraries by viewModel.libraries.collectAsStateWithLifecycle()
+    // "3 cards", or "2 of 3 cards" once some are switched off.
+    val cards = home.libraryCards.arranged(allLibraries.map { it.id.toString() })
+    val shownCards = cards.count { it.shown }
+    val cardsValue = if (shownCards == cards.size) {
+        pluralStringResource(R.plurals.settings_cards_count, cards.size, cards.size)
+    } else {
+        pluralStringResource(R.plurals.settings_cards_some, cards.size, shownCards, cards.size)
+    }
     val libraryIds = libraries.map { it.id.toString() }
     return listOf(
         SettingGroup(
@@ -618,6 +756,9 @@ private fun homeRows(state: SettingsUiState, viewModel: SettingsViewModel, movin
                     onMove = { by -> viewModel.updateHome { it.withRowMoved(id, by, libraryIds, visible) } },
                     dimmed = moving != null && moving != id,
                     key = "row-$id",
+                    onConfigure = onLibraryCards.takeIf { row == HomeRow.Libraries },
+                    configureValue = if (row == HomeRow.Libraries) cardsValue else "",
+                    configureFocus = libraryCardsFocus.takeIf { row == HomeRow.Libraries },
                 )
             },
         ),
@@ -1085,6 +1226,9 @@ private class PinOrigins {
 
     fun restore(): Boolean = last?.let { runCatching { of(it).requestFocus() }.getOrDefault(false) } == true
 }
+
+/** The lists Settings opens in a dialog from a pill on their row. */
+private enum class ListDialog { LibraryCards, FavoriteRows }
 
 /** Name and explanation of each home row in Settings › Home. */
 private val rowTexts = mapOf(

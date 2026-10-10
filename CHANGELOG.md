@@ -19,6 +19,10 @@ renders the reference separately.
 ## [Unreleased]
 
 ### New
+- A new Favorites page in the top navigation shows everything you marked with the heart: movies, shows, episodes, albums, artists and songs (#1)
+- You can choose which libraries get a card in "My media" and in which order. Open it with the button on the "My media" row in Settings › Home
+- You can arrange the top navigation in Settings › Appearance: hide entries and change their order. Search, settings and your profile always stay
+- The Favorites page shows the rows you pick, in your order. Open them with the button on its entry in Settings › Appearance
 - Your favorite movies and shows have their own row on the home screen (#1)
 - You can hide the rows of the home screen and change their order in Settings › Home. Each library has its own "New in" row
 - Libraries on the home screen are named after their kind in the app language, e.g. "Movies" or "Shows", when the server has only one of that kind

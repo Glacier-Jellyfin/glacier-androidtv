@@ -45,6 +45,8 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
+import io.github.glacier_jellyfin.androidtv.core.data.settings.NavigationSettings
+import io.github.glacier_jellyfin.androidtv.core.data.settings.arranged
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
@@ -54,6 +56,9 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
 
 /** The library kinds the server has (HomeRepository.kinds): one navigation entry each. */
 val LocalLibraryKinds = staticCompositionLocalOf { listOf(LibraryKind.Movies, LibraryKind.Shows, LibraryKind.Music) }
+
+/** The entries between search and settings as Settings › Appearance arranges them; null before they are known. */
+val LocalNavTargets = staticCompositionLocalOf<List<NavTarget>?> { null }
 
 /** A newer app version is known (UpdateManager): the settings gear carries a dot. */
 val LocalUpdatePending = staticCompositionLocalOf { false }
@@ -65,6 +70,8 @@ sealed interface NavTarget {
     data object Search : NavTarget
     data object Home : NavTarget
     data class Library(val kind: LibraryKind) : NavTarget
+    /** Everything marked with the heart. */
+    data object Favorites : NavTarget
     data object Settings : NavTarget
     data object Profile : NavTarget
     /** The full music player, opened from the [MiniPlayer]. */
@@ -73,7 +80,7 @@ sealed interface NavTarget {
 
 /**
  * The floating navigation pill (design: "TOP NAV PILL"): search, home, one
- * entry per library kind the server has, settings and the profile avatar.
+ * entry per library kind the server has, favorites, settings and the profile avatar.
  * While music is loaded the [MiniPlayer] sits at the right edge of the same
  * row; Right from the avatar goes there.
  */
@@ -94,7 +101,10 @@ fun TopNav(
     val profileFocus = remember { FocusRequester() }
     val miniFocus = remember { FocusRequester() }
     val nowPlaying = LocalNowPlaying.current
-    val targets = listOf(NavTarget.Search, NavTarget.Home) + kinds.map(NavTarget::Library) + listOf(NavTarget.Settings, NavTarget.Profile)
+    val middle = LocalNavTargets.current ?: (listOf(NavTarget.Home) + kinds.map(NavTarget::Library) + NavTarget.Favorites)
+    val targets = listOf(NavTarget.Search) + middle + listOf(NavTarget.Settings, NavTarget.Profile)
+    // The page's own entry may be switched off: entering from below lands on search then.
+    val focusTarget = active.takeIf { it in targets } ?: NavTarget.Search
     Box(modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -120,7 +130,7 @@ fun TopNav(
                     down = down,
                     right = miniFocus.takeIf { target == NavTarget.Profile && nowPlaying != null },
                     modifier = when (target) {
-                        active -> Modifier.focusRequester(activeFocus)
+                        focusTarget -> Modifier.focusRequester(activeFocus)
                         NavTarget.Profile -> Modifier.focusRequester(profileFocus)
                         else -> Modifier
                     },
@@ -229,17 +239,8 @@ private fun NavItem(
                 }
             }
             NavTarget.Home -> NavLabel(stringResource(R.string.nav_home), foreground)
-            is NavTarget.Library -> NavLabel(
-                stringResource(
-                    when (target.kind) {
-                        LibraryKind.Movies -> R.string.nav_movies
-                        LibraryKind.Shows -> R.string.nav_shows
-                        LibraryKind.Music -> R.string.nav_music
-                        LibraryKind.MusicVideos -> R.string.nav_music_videos
-                    },
-                ),
-                foreground,
-            )
+            NavTarget.Favorites -> NavLabel(stringResource(R.string.nav_favorites), foreground)
+            is NavTarget.Library -> NavLabel(stringResource(target.kind.navTitle), foreground)
             NavTarget.NowPlaying -> Unit
         }
     }
@@ -249,3 +250,19 @@ private fun NavItem(
 private fun NavLabel(text: String, color: Color) {
     Text(text, style = GlacierText.body(19, FontWeight.SemiBold), color = color)
 }
+
+/** Ids of the entries Settings › Appearance arranges, in their default order. */
+fun navEntryIds(kinds: List<LibraryKind>): List<String> = listOf(NAV_HOME) + kinds.map { it.name } + NAV_FAVORITES
+
+fun navTargetOf(id: String): NavTarget? = when (id) {
+    NAV_HOME -> NavTarget.Home
+    NAV_FAVORITES -> NavTarget.Favorites
+    else -> LibraryKind.entries.firstOrNull { it.name == id }?.let(NavTarget::Library)
+}
+
+/** The entries between search and settings, as [navigation] arranges them. */
+fun navTargets(navigation: NavigationSettings, kinds: List<LibraryKind>): List<NavTarget> =
+    navigation.entries.arranged(navEntryIds(kinds)).filter { it.shown }.mapNotNull { navTargetOf(it.id) }
+
+const val NAV_HOME = "Home"
+const val NAV_FAVORITES = "Favorites"

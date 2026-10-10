@@ -58,6 +58,7 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.ui.libraryTitle
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeRow
+import io.github.glacier_jellyfin.androidtv.core.data.settings.arranged
 import io.github.glacier_jellyfin.androidtv.core.data.media.Library
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
@@ -326,20 +327,25 @@ fun HomeScreen(
                                         }
                                     }
                                 }
-                                HomeRow.Libraries -> if (content.libraries.isNotEmpty()) {
-                                    item(key = "libraries") {
-                                        MediaRow(title = stringResource(R.string.home_my_media)) {
-                                            items(content.libraries, key = { it.id }) { library ->
-                                                // Jellyfin's generated library images carry the name already;
-                                                // a backdrop from the library reads like the design's photo.
-                                                val newest = content.latest.firstOrNull { it.first.id == library.id }?.second?.firstOrNull()
-                                                LibraryCard(
-                                                    name = libraryTitle(library, content.libraries),
-                                                    count = libraryCount(library),
-                                                    imageUrl = newest?.backdropUrl ?: newest?.posterUrl ?: library.imageUrl,
-                                                    onClick = { viewModel.openLibrary(library) },
-                                                    modifier = Modifier.remembered("library-${library.id}"),
-                                                )
+                                HomeRow.Libraries -> {
+                                    val cards = rows.libraryCards.arranged(content.libraries.map { it.id.toString() })
+                                        .filter { it.shown }
+                                        .mapNotNull { card -> content.libraries.firstOrNull { it.id.toString() == card.id } }
+                                    if (cards.isNotEmpty()) {
+                                        item(key = "libraries") {
+                                            MediaRow(title = stringResource(R.string.home_my_media)) {
+                                                items(cards, key = { it.id }) { library ->
+                                                    // Jellyfin's generated library images carry the name already;
+                                                    // a backdrop from the library reads like the design's photo.
+                                                    val newest = content.latest.firstOrNull { it.first.id == library.id }?.second?.firstOrNull()
+                                                    LibraryCard(
+                                                        name = libraryTitle(library, content.libraries),
+                                                        count = libraryCount(library),
+                                                        imageUrl = newest?.backdropUrl ?: newest?.posterUrl ?: library.imageUrl,
+                                                        onClick = { viewModel.openLibrary(library) },
+                                                        modifier = Modifier.remembered("library-${library.id}"),
+                                                    )
+                                                }
                                             }
                                         }
                                     }

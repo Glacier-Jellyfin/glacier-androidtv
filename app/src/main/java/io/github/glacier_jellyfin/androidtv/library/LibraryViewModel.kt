@@ -16,6 +16,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.LibrarySortChoice
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
+import io.github.glacier_jellyfin.androidtv.navigation.FavoritesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
@@ -158,6 +159,7 @@ class LibraryViewModel @Inject constructor(
             }
             NavTarget.Search -> SearchRoute()
             NavTarget.Settings -> SettingsRoute
+            NavTarget.Favorites -> FavoritesRoute
             NavTarget.NowPlaying -> MusicRoute()
             is NavTarget.Library -> if (target.kind == _state.value.query.kind && route.libraryId == null && route.genreId == null) return else LibraryRoute(target.kind.name)
             NavTarget.Profile -> {

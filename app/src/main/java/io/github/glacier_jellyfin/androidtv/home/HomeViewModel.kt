@@ -21,6 +21,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.Library
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.music.MusicController
+import io.github.glacier_jellyfin.androidtv.navigation.FavoritesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
@@ -212,6 +213,7 @@ class HomeViewModel @Inject constructor(
             NavTarget.Search -> navigate(SearchRoute())
             NavTarget.Settings -> navigate(SettingsRoute)
             is NavTarget.Library -> navigate(LibraryRoute(target.kind.name))
+            NavTarget.Favorites -> navigate(FavoritesRoute)
             NavTarget.NowPlaying -> navigate(MusicRoute())
             NavTarget.Profile -> {
                 val serverId = sessions.session.value?.server?.id ?: return

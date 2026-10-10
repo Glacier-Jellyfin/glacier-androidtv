@@ -80,6 +80,12 @@
     <string name="nav_movies">Movie</string>
     <string name="nav_shows">Show</string>
     <string name="nav_music">Music</string>
+    <string name="nav_favorites">Favorites</string>
+    <string name="favorites_episodes">Episodes</string>
+    <string name="favorites_songs">Songs</string>
+    <string name="favorites_empty">No favorites yet</string>
+    <string name="favorites_empty_body">Mark titles with the heart and they show up here.</string>
+    <string name="favorites_error">Favorites could not be loaded</string>
     <string name="nav_music_videos">Videos</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_profile">Switch profile</string>
@@ -545,6 +551,33 @@
     <string name="settings_row_recent_albums_sub">Albums of the songs you heard last</string>
     <string name="settings_row_favorite_songs_sub">Your favorite songs, ready to play</string>
     <string name="settings_row_libraries_sub">A card for each of your libraries</string>
+    <string name="settings_card_library_sub">Card in "My media"</string>
+    <string name="settings_card_moving_sub">Up and Down move the card. OK or Back puts it down.</string>
+    <string name="settings_cards_body">Pick which libraries get a card and in which order.</string>
+    <string name="settings_cards_done">Done</string>
+    <string name="settings_group_nav">Navigation</string>
+    <string name="settings_nav_home_sub">Spotlight and your rows</string>
+    <string name="settings_nav_library_sub">All libraries of this kind</string>
+    <string name="settings_nav_favorites_sub">Everything you marked with the heart</string>
+    <string name="settings_entry_moving_sub">Up and Down move the entry. OK or Back puts it down.</string>
+    <string name="settings_favorites_body">Pick which rows the Favorites page shows and in which order.</string>
+    <string name="settings_favorite_row_sub">Row on the Favorites page</string>
+    <plurals name="settings_cards_count">
+        <item quantity="one">%1$d card</item>
+        <item quantity="other">%1$d cards</item>
+    </plurals>
+    <plurals name="settings_cards_some">
+        <item quantity="one">%1$d of %2$d card</item>
+        <item quantity="other">%1$d of %2$d cards</item>
+    </plurals>
+    <plurals name="settings_rows_count">
+        <item quantity="one">%1$d row</item>
+        <item quantity="other">%1$d rows</item>
+    </plurals>
+    <plurals name="settings_rows_some">
+        <item quantity="one">%1$d of %2$d row</item>
+        <item quantity="other">%1$d of %2$d rows</item>
+    </plurals>
     <string name="settings_row_move">Move row</string>
     <string name="settings_row_moving_sub">Up and Down move the row. OK or Back puts it down.</string>
     <string name="settings_group_general">General</string>

@@ -1,5 +1,8 @@
 package io.github.glacier_jellyfin.androidtv
 
+import io.github.glacier_jellyfin.androidtv.ui.navTargets
+import io.github.glacier_jellyfin.androidtv.ui.LocalNavTargets
+import io.github.glacier_jellyfin.androidtv.core.data.settings.NavigationSettings
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -119,6 +122,10 @@ class StartViewModel @Inject constructor(
     val appearance: StateFlow<AppearanceSettings> = settings.settings
         .map { it.appearance }
         .stateIn(viewModelScope, SharingStarted.Eagerly, settings.settings.value.appearance)
+
+    val navigation: StateFlow<NavigationSettings> = settings.settings
+        .map { it.navigation }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, settings.settings.value.navigation)
 
     /** The signed-in profile's picture for the navigation bar; null when it has none. */
     val profileImage: StateFlow<String?> = sessions.session
@@ -241,6 +248,7 @@ class MainActivity : ComponentActivity() {
             val nowPlaying by startViewModel.nowPlaying.collectAsStateWithLifecycle()
             val profileImage by startViewModel.profileImage.collectAsStateWithLifecycle()
             val libraryKinds by startViewModel.libraryKinds.collectAsStateWithLifecycle()
+            val navigation by startViewModel.navigation.collectAsStateWithLifecycle()
             val update by startViewModel.updates.state.collectAsStateWithLifecycle()
             GlacierTheme(accent = Accent.valueOf(appearance.accent.name), reduceMotion = appearance.reduceMotion) {
                 val toaster = remember { Toaster() }
@@ -251,6 +259,7 @@ class MainActivity : ComponentActivity() {
                     LocalNowPlaying provides nowPlaying,
                     LocalProfileImage provides profileImage,
                     LocalLibraryKinds provides libraryKinds,
+                    LocalNavTargets provides navTargets(navigation, libraryKinds),
                     LocalUpdatePending provides update.pending,
                     LocalMusicProgress provides startViewModel.music.progress,
                 ) {

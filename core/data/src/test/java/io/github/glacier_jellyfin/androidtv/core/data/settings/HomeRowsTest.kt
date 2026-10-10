@@ -71,4 +71,16 @@ class HomeRowsTest {
         assertFalse(rows.first().shown)
         assertEquals(HomeRow.entries.size - 1 + libraries.size, rows.size)
     }
+
+    @Test
+    fun `library cards keep the order picked and add new libraries last`() {
+        val cards = emptyList<Choice>()
+            .withMoved("shows", -1, libraries)
+            .withShown("movies", false, libraries)
+        val arranged = cards.arranged(libraries + "music")
+        assertEquals(listOf("shows", "movies", "music"), arranged.map { it.id })
+        assertFalse(arranged[1].shown)
+        // A library gone from the server is left out.
+        assertEquals(listOf("shows"), cards.arranged(listOf("shows")).map { it.id })
+    }
 }
