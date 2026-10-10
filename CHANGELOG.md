@@ -18,6 +18,8 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-10-10
+
 ### Improved
 - The card for the next episode stays readable on bright scenes. It now has a darker background
 
