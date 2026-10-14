@@ -1,7 +1,9 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Locale
 
@@ -92,5 +94,45 @@ class TracksTest {
         assertEquals("es-ct", Languages.flag("cat"))
         assertNull(Languages.flag("und"))
         assertNull(Languages.flag(null))
+    }
+
+    @Test
+    fun `forced shows in the stream name too`() {
+        assertTrue(forcedByName("German Forced"))
+        assertTrue(forcedByName("Deutsch (erzwungen)"))
+        assertTrue(forcedByName("Signs & Songs"))
+        assertFalse(forcedByName("German Full"))
+        assertFalse(forcedByName("Unforced Errors"))
+        assertFalse(forcedByName(null))
+    }
+
+    private val japanese = Track(index = 1, language = "jpn", codec = "truehd", channels = 2)
+    private val german = Track(index = 2, language = "ger", codec = "ac3", channels = 2)
+    private val full = Track(index = 4, language = "ger", codec = "PGSSUB", channels = null, title = "German Full")
+    private val forced = Track(index = 5, language = "ger", codec = "PGSSUB", channels = null, forced = true, title = "German Forced")
+    private val subtitles = listOf(Track(index = 0, language = "jpn", codec = "subrip", channels = null), full, forced)
+
+    @Test
+    fun `a forced pick under other audio becomes the full track`() {
+        assertEquals(4, fullInsteadOfForced(5, subtitles, japanese, onlyForced = false))
+    }
+
+    @Test
+    fun `a forced pick stays when asked for, under its own audio, or without a full track`() {
+        assertEquals(5, fullInsteadOfForced(5, subtitles, japanese, onlyForced = true))
+        assertEquals(5, fullInsteadOfForced(5, subtitles, german, onlyForced = false))
+        assertEquals(5, fullInsteadOfForced(5, listOf(forced), japanese, onlyForced = false))
+    }
+
+    @Test
+    fun `full picks and no pick stay as they are`() {
+        assertEquals(4, fullInsteadOfForced(4, subtitles, japanese, onlyForced = false))
+        assertNull(fullInsteadOfForced(null, subtitles, japanese, onlyForced = false))
+    }
+
+    @Test
+    fun `the full track without SDH comes first`() {
+        val sdh = full.copy(index = 3, hearingImpaired = true)
+        assertEquals(4, fullInsteadOfForced(5, listOf(sdh, full, forced), japanese, onlyForced = false))
     }
 }

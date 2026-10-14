@@ -2,6 +2,8 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -32,6 +34,7 @@ import javax.inject.Singleton
 class DetailRepository @Inject constructor(
     private val sessions: SessionManager,
     private val ageFilter: AgeFilter,
+    private val serverPreferences: ServerPreferencesRepository,
 ) {
 
     private val _playedChanged = MutableSharedFlow<UUID>(extraBufferCapacity = 8)
@@ -316,12 +319,19 @@ class DetailRepository @Inject constructor(
         val audio = streams.filter { it.type == MediaStreamType.AUDIO }.map { it.toTrack() }
         val subtitles = streams.filter { it.type == MediaStreamType.SUBTITLE }.map { it.toTrack() }
         if (audio.isEmpty() && subtitles.isEmpty()) return null
+        val defaultAudio = source.defaultAudioStreamIndex ?: audio.firstOrNull()?.index
+        val onlyForced = serverPreferences.preferences.value?.subtitleMode == SubtitleMode.OnlyForced
         return TrackChoices(
             audio = audio,
             subtitles = subtitles,
-            defaultAudio = source.defaultAudioStreamIndex ?: audio.firstOrNull()?.index,
+            defaultAudio = defaultAudio,
             // The server uses -1 for "no subtitles".
-            defaultSubtitle = source.defaultSubtitleStreamIndex?.takeIf { it >= 0 },
+            defaultSubtitle = fullInsteadOfForced(
+                source.defaultSubtitleStreamIndex?.takeIf { it >= 0 },
+                subtitles,
+                audio.firstOrNull { it.index == defaultAudio },
+                onlyForced,
+            ),
         )
     }
 

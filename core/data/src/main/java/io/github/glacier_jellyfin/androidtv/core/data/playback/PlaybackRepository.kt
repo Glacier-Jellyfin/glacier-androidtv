@@ -5,8 +5,11 @@ import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.data.media.Track
+import io.github.glacier_jellyfin.androidtv.core.data.media.fullInsteadOfForced
 import io.github.glacier_jellyfin.androidtv.core.data.media.toTrack
+import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleMode
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.DeviceProfiles
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.HlsSegments
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.MediaCapabilityDetector
@@ -159,6 +162,7 @@ class PlaybackRepository @Inject constructor(
     private val sessions: SessionManager,
     private val capabilities: MediaCapabilityDetector,
     private val settings: SettingsRepository,
+    private val serverPreferences: ServerPreferencesRepository,
 ) {
 
     /** Reports must outlive the player screen: "stopped" is sent while it closes. */
@@ -214,6 +218,18 @@ class PlaybackRepository @Inject constructor(
 
         val baseUrl = checkNotNull(api.baseUrl).trimEnd('/')
         val streams = source.mediaStreams.orEmpty()
+        // The server's own pick may be a forced track that shows next to nothing: ask again with the full one.
+        if (subtitleIndex == null) {
+            val serverPick = source.defaultSubtitleStreamIndex?.takeIf { it >= 0 }
+            val audio = streams.firstOrNull { it.type == MediaStreamType.AUDIO && it.index == (audioIndex ?: source.defaultAudioStreamIndex) }
+            val onlyForced = (serverPreferences.preferences.value ?: serverPreferences.refresh())?.subtitleMode == SubtitleMode.OnlyForced
+            val subtitles = streams.filter { it.type == MediaStreamType.SUBTITLE }.map { it.toTrack() }
+            val full = fullInsteadOfForced(serverPick, subtitles, audio?.toTrack(), onlyForced)
+            if (full != null && full != serverPick) {
+                Log.i(TAG, "Subtitles of $itemId: full track $full instead of forced track $serverPick")
+                return@withContext open(itemId, startMs, audioIndex, full, segments)
+            }
+        }
         val (url, method) = when {
             source.supportsDirectPlay -> api.videoApi.getVideoStreamUrl(
                 itemId = itemId,

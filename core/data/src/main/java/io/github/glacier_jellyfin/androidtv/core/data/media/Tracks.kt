@@ -1,6 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import org.jellyfin.sdk.model.api.MediaStream
+import org.jellyfin.sdk.model.api.MediaStreamType
 import java.util.Locale
 
 /** An audio or subtitle stream of a title, as offered in the track picker. */
@@ -24,11 +25,34 @@ internal fun MediaStream.toTrack() = Track(
     language = language,
     codec = codec,
     channels = channels,
-    forced = isForced,
+    forced = isForced || (type == MediaStreamType.SUBTITLE && forcedByName(title)),
     hearingImpaired = isHearingImpaired,
     fallbackTitle = displayTitle ?: title,
     title = title,
 )
+
+/** Some files only say it in the stream name ("German Forced", "Signs & Songs"), without the forced flag. */
+internal fun forcedByName(title: String?): Boolean =
+    title != null && FORCED_NAME.containsMatchIn(title)
+
+private val FORCED_NAME = Regex("(?<![\\p{L}])(forced|erzwungen|signs)(?![\\p{L}])", RegexOption.IGNORE_CASE)
+
+/**
+ * The subtitle to start with when the server picked [pick] on its own. A
+ * forced track only shows signs and foreign lines, so it reads as "no
+ * subtitles" when the audio is in another language: files often mark it as
+ * default, and the server follows that flag. Then the full track of the same
+ * language plays instead. A forced track stays when it was asked for
+ * ([onlyForced]) or when the audio is in its language (a dub with forced signs).
+ */
+fun fullInsteadOfForced(pick: Int?, subtitles: List<Track>, audio: Track?, onlyForced: Boolean): Int? {
+    val picked = subtitles.firstOrNull { it.index == pick } ?: return pick
+    if (!picked.forced || onlyForced) return pick
+    val language = Languages.iso3(picked.language) ?: return pick
+    if (Languages.iso3(audio?.language) == language) return pick
+    val full = subtitles.filter { !it.forced && Languages.iso3(it.language) == language }
+    return (full.firstOrNull { !it.hearingImpaired } ?: full.firstOrNull())?.index ?: pick
+}
 
 /** Audio and subtitle choices of a title, with the server's defaults for this user. */
 data class TrackChoices(

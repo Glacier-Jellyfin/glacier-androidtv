@@ -58,6 +58,7 @@ renders the reference separately.
 - Play in the spotlight on a show now plays its next episode instead of failing
 - Loading and error messages in the players and the trailer view stay readable on bright pictures
 - A movie or episode marked as watched shows as watched right away in the library and on the page of its collection or show
+- Subtitles no longer stay empty when a file marks its forced track as the default. If the audio is in another language, the full track of the same language plays instead. Tracks named Forced or Signs now show as forced in the track picker
 
 ## [0.5.0-beta.1] - 2026-10-11
 
