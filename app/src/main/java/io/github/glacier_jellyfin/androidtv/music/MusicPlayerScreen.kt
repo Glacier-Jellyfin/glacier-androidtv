@@ -84,7 +84,6 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LyricLine
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
-import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackMethod
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierBackground
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
@@ -102,7 +101,6 @@ import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
 import io.github.glacier_jellyfin.androidtv.ui.OverlayCard
-import io.github.glacier_jellyfin.androidtv.ui.audioFormatText
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -125,12 +123,18 @@ fun MusicPlayerScreen(
 
     val sheet by viewModel.musicActions.sheet.collectAsStateWithLifecycle()
     val stationMenu by viewModel.stationMenu.collectAsStateWithLifecycle()
+    val player by viewModel.player.collectAsStateWithLifecycle()
     val playFocus = remember { FocusRequester() }
+    val infoFocus = remember { FocusRequester() }
+    var infoOpen by remember { mutableStateOf(false) }
+    // Nothing left to describe (the queue ended, a radio took over): the panel goes.
+    val songGone = state.current == null || state.radio != null
+    LaunchedEffect(songGone) { if (songGone) infoOpen = false }
     // Also when the options sheet closes: its focus goes with it.
     // Switching radio stations loads each time: the focus stays where it is then.
     val waiting = state.loading && state.radio == null
     LaunchedEffect(waiting, state.failed, sheet == null) {
-        if (waiting || state.failed || sheet != null) return@LaunchedEffect
+        if (waiting || state.failed || sheet != null || infoOpen) return@LaunchedEffect
         withFrameNanos { }
         runCatching { playFocus.requestFocus() }
     }
@@ -151,6 +155,10 @@ fun MusicPlayerScreen(
                         if (event.type == KeyEventType.KeyUp) viewModel.closeStationMenu()
                         return@onPreviewKeyEvent true
                     }
+                    if (infoOpen) {
+                        if (event.type == KeyEventType.KeyUp) infoOpen = false
+                        return@onPreviewKeyEvent true
+                    }
                     if (event.type == KeyEventType.KeyUp) viewModel.close()
                     return@onPreviewKeyEvent true
                 }
@@ -169,7 +177,7 @@ fun MusicPlayerScreen(
             }
             // The menu key on anything but a queue row: options for the song that plays.
             .onKeyEvent { event ->
-                if (event.key != Key.Menu) return@onKeyEvent false
+                if (event.key != Key.Menu || infoOpen) return@onKeyEvent false
                 if (event.type == KeyEventType.KeyUp) viewModel.currentOptions()
                 true
             },
@@ -194,6 +202,8 @@ fun MusicPlayerScreen(
                 state = state,
                 progress = progress,
                 playFocus = playFocus,
+                infoFocus = infoFocus,
+                onInfo = { infoOpen = true },
                 viewModel = viewModel,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
@@ -249,7 +259,18 @@ fun MusicPlayerScreen(
                 runCatching { retryFocus.requestFocus() }
             }
         }
+        if (infoOpen) MusicInfoPanel(state, progress, player, transcodeStatus = viewModel::transcodeStatus, onDismiss = { infoOpen = false })
         MusicActionsSheet(viewModel.musicActions)
+    }
+    // Closing the panel hands focus back to its button.
+    var infoShown by remember { mutableStateOf(false) }
+    LaunchedEffect(infoOpen) {
+        if (infoOpen) {
+            infoShown = true
+        } else if (infoShown) {
+            withFrameNanos { }
+            runCatching { infoFocus.requestFocus() }
+        }
     }
 }
 
@@ -273,38 +294,14 @@ private fun TopBar(state: MusicUiState, track: MusicTrack, modifier: Modifier) {
             )
             Text(state.sourceTitle, style = GlacierText.display(28), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            audioFormatText(track.format, short = true)?.let { StatusPill(it) }
-            state.method?.let { StatusPill(stringResource(it.label())) }
-            val clock by produceState(LocalTime.now().format(ClockFormat)) {
-                while (true) {
-                    value = LocalTime.now().format(ClockFormat)
-                    delay(CLOCK_TICK_MS)
-                }
+        // Format and delivery live in the info panel.
+        val clock by produceState(LocalTime.now().format(ClockFormat)) {
+            while (true) {
+                value = LocalTime.now().format(ClockFormat)
+                delay(CLOCK_TICK_MS)
             }
-            Text(clock, style = GlacierText.mono(20), color = GlacierColors.Mist)
         }
-    }
-}
-
-internal fun PlaybackMethod.label(): Int = when (this) {
-    PlaybackMethod.DirectPlay -> R.string.player_direct_play
-    PlaybackMethod.DirectStream -> R.string.player_direct_stream
-    PlaybackMethod.Transcode -> R.string.player_transcode
-}
-
-@Composable
-internal fun StatusPill(text: String) {
-    Box(
-        Modifier
-            .height(44.dp)
-            .clip(PillShape)
-            .background(GlacierColors.GlassFill)
-            .border(1.dp, GlacierColors.GlassBorder, PillShape)
-            .padding(horizontal = 18.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text, style = GlacierText.body(16).copy(letterSpacing = 0.06.em), color = GlacierColors.Ice, maxLines = 1)
+        Text(clock, style = GlacierText.mono(20), color = GlacierColors.Mist)
     }
 }
 
@@ -336,6 +333,7 @@ private fun NowPlaying(state: MusicUiState, track: MusicTrack) {
             track.artist?.let { Text(it, style = GlacierText.body(26), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis) }
             val album = listOfNotNull(track.album, track.year?.toString()).joinToString(" · ")
             if (album.isNotEmpty()) Text(album, style = GlacierText.body(20), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (state.playsLossless(track)) LosslessBadge(Modifier.padding(top = 4.dp))
         }
     }
 }
@@ -514,6 +512,8 @@ private fun Controls(
     state: MusicUiState,
     progress: MusicProgress,
     playFocus: FocusRequester,
+    infoFocus: FocusRequester,
+    onInfo: () -> Unit,
     viewModel: MusicPlayerViewModel,
     modifier: Modifier,
 ) {
@@ -558,6 +558,7 @@ private fun Controls(
                 on = favorite,
             )
             MusicButton(GlacierIcons.PlaylistAdd, stringResource(R.string.music_options_add_playlist), viewModel::addCurrentToPlaylist)
+            MusicButton(GlacierIcons.Info, stringResource(R.string.player_info), onInfo, modifier = Modifier.focusRequester(infoFocus))
         }
     }
 }

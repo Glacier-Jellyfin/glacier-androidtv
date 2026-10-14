@@ -317,6 +317,7 @@ fun LiveTvScreen(
                                 val requester = remember(key) { requesters.getOrPut(key) { FocusRequester() } }
                                 ChannelRow(
                                     channel = channel,
+                                    upcoming = state.upcoming[channel.id],
                                     nowMs = state.nowMs,
                                     onClick = { viewModel.play(channel) },
                                     onFavorite = { viewModel.toggleFavorite(channel) },
@@ -386,6 +387,8 @@ private fun ChannelRow(
     onFocused: () -> Unit,
     up: FocusRequester?,
     modifier: Modifier = Modifier,
+    /** The programmes loaded for the panel; they may know what the channel list did not. */
+    upcoming: List<LiveProgram>? = null,
 ) {
     val accent = LocalAccent.current.main
     val upFocus = Modifier.focusProperties { if (up != null) this.up = up }
@@ -429,7 +432,7 @@ private fun ChannelRow(
                         modifier = Modifier.weight(1f, fill = false),
                     )
                 }
-                val now = channel.now?.takeIf { it.airsAt(nowMs) }
+                val now = upcoming?.let { nowAndNext(it, nowMs).first } ?: channel.now?.takeIf { it.airsAt(nowMs) }
                 Text(
                     now?.title ?: stringResource(R.string.livetv_no_guide),
                     style = GlacierText.body(20),

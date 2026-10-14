@@ -28,6 +28,8 @@ renders the reference separately.
 - Jellyfin calls radio stations TV channels. A channel that plays with sound and no picture moves to Radio by itself. You can also move channels between Channels and Radio by hand
 - Channels and radio stations have a heart in their card, on the Live TV page and in the radio player
 - A small options mark shows on the focused element when holding OK opens more options. It appears on channels, radio stations, songs, the queue, recordings and programmes in the guide
+- The music player has an Info button like the video player. It shows the song and what comes next, what this device plays and, like for videos, what the server sends and why it converts
+- Songs stored without loss, like FLAC or ALAC, show a Lossless mark in the music player
 
 ### Improved
 - Holding OK in the guide now opens the programme's options. Marking the channel as a favorite is one of them
@@ -42,6 +44,10 @@ renders the reference separately.
 - With many entries in the navigation, it moves aside for the mini player instead of running into it
 - The music screensaver shows the time played and the time left under a wider progress bar. It fades to its next place instead of jumping and keeps away from the screen's edges
 - The channel panel on the Live TV page always shows what comes next. A long description gets shorter for it
+- When the channel panel knows what runs on a channel, its card in the list shows it too
+- When a channel does not play, the player says so over the picture without buttons. Up, Down, the channel list and the programmes keep working, and switching away and back tries again
+- Collections in the movies library show how many of their movies you have not watched yet, and a check mark once you have seen them all
+- The music player and the radio no longer show format and playback badges at the top. They moved to the info panel
 
 ### Fixed
 - Play in the spotlight on a show now plays its next episode instead of failing

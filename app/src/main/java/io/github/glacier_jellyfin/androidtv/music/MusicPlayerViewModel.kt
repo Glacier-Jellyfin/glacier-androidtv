@@ -32,6 +32,7 @@ class MusicPlayerViewModel @Inject constructor(
 
     val state: StateFlow<MusicUiState> = controller.state
     val progress: StateFlow<MusicProgress> = controller.progress
+    val player = controller.player
 
     private val notes = Channel<UiEvent>(Channel.BUFFERED)
     val events: Flow<UiEvent> = merge(controller.events, notes.receiveAsFlow())
@@ -89,6 +90,7 @@ class MusicPlayerViewModel @Inject constructor(
     fun toggleShuffle() = controller.toggleShuffle()
     fun cycleRepeat() = controller.cycleRepeat()
     fun toggleLyrics() = controller.toggleLyrics()
+    suspend fun transcodeStatus() = controller.transcodeStatus()
     fun toggleFavorite() = controller.toggleFavorite()
 
     /** Options for a song of the queue (hold OK, or the menu key). */

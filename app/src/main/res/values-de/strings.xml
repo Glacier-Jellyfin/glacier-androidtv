@@ -97,7 +97,7 @@
     <string name="livetv_paused">Pausiert</string>
     <string name="livetv_no_channel">Diesen Sender gibt es nicht</string>
     <string name="livetv_play_error">Dieser Sender spielt nicht</string>
-    <string name="livetv_play_error_body">Vielleicht ist der Tuner belegt oder der Stream offline. Versuche es noch einmal oder wechsle mit Hoch und Runter den Sender.</string>
+    <string name="livetv_play_error_body">Vielleicht ist der Tuner belegt oder der Stream offline. Für einen neuen Versuch wechsle kurz den Sender und wieder zurück.</string>
     <string name="livetv_recordings">Aufnahmen</string>
     <string name="livetv_watch">Ansehen</string>
     <string name="livetv_record">Aufnehmen</string>
@@ -548,6 +548,12 @@
     <string name="music_track_of">Titel %1$d von %2$d</string>
     <string name="music_queue">Warteschlange</string>
     <string name="music_queue_left">noch %1$s</string>
+    <string name="music_info_song">Titel</string>
+    <string name="music_info_track">Nummer</string>
+    <string name="music_info_track_disc">%1$d · CD %2$d</string>
+    <string name="music_info_file">Datei</string>
+    <string name="music_info_not_lossless">Nicht mehr verlustfrei.</string>
+    <string name="music_lossless">Lossless</string>
     <string name="music_options">Optionen</string>
     <string name="music_options_play_next">Als Nächstes spielen</string>
     <string name="music_options_add_queue">Zur Warteschlange hinzufügen</string>

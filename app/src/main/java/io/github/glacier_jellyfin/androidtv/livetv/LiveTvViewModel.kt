@@ -129,6 +129,8 @@ class LiveTvViewModel @Inject constructor(
     val events = _events.receiveAsFlow()
 
     private var upcomingJob: Job? = null
+    /** The preview the player took over; the panel still shows it until this screen stops. */
+    private var handedOver: Player? = null
     private var previewJob: Job? = null
     private var previewSource: PlaybackSource? = null
     private var previewPlayback: GlacierPlayback? = null
@@ -387,6 +389,8 @@ class LiveTvViewModel @Inject constructor(
      * sound. Not for every channel passed while scrolling: each preview takes a tuner and starts a stream.
      */
     fun schedulePreview() {
+        // Handed to the player, which is about to open: nothing new until this screen comes back.
+        if (handedOver != null) return
         stopPreview()
         val channelId = _state.value.focused ?: return
         previewJob = viewModelScope.launch {
@@ -419,8 +423,12 @@ class LiveTvViewModel @Inject constructor(
         previewSource = null
         previewPlayback = null
         val player = _state.value.preview ?: return
-        player.removeListener(previewListener)
-        player.release()
+        // A stream handed to the player is the player's now; the panel only lets go of it.
+        if (player !== handedOver) {
+            player.removeListener(previewListener)
+            player.release()
+        }
+        handedOver = null
         _state.update { it.copy(preview = null, previewChannel = null, previewShown = false) }
     }
 
@@ -456,23 +464,27 @@ class LiveTvViewModel @Inject constructor(
             navigate(MusicRoute())
             return
         }
-        handOverPreview(channel.id)
         // Any other preview frees its tuner for the player.
-        stopPreview()
+        if (!handOverPreview(channel.id)) stopPreview()
         navigate(LiveTvPlayerRoute(channel.id.toString(), favoritesOnly = favoritesOnly))
     }
 
-    /** The preview of [channelId] already runs: the player takes it over instead of tuning again. */
-    private fun handOverPreview(channelId: UUID) {
-        val created = previewPlayback ?: return
-        val source = previewSource ?: return
-        if (_state.value.previewChannel != channelId) return
+    /**
+     * The preview of [channelId] already runs: the player takes it over instead of tuning again.
+     * The panel keeps showing it until the player shows it: without a surface in between, the
+     * decoder goes on and the picture does not stop.
+     */
+    private fun handOverPreview(channelId: UUID): Boolean {
+        val created = previewPlayback ?: return false
+        val source = previewSource ?: return false
+        if (_state.value.previewChannel != channelId) return false
         previewJob?.cancel()
         created.player.removeListener(previewListener)
         handoff.give(LiveStreamHandoff.Stream(channelId, created, source))
+        handedOver = created.player
         previewPlayback = null
         previewSource = null
-        _state.update { it.copy(preview = null, previewChannel = null, previewShown = false) }
+        return true
     }
 
     fun toggleFavorite(channel: LiveChannel) {

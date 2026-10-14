@@ -102,7 +102,7 @@
     <string name="livetv_paused">Paused</string>
     <string name="livetv_no_channel">No such channel</string>
     <string name="livetv_play_error">This channel does not play</string>
-    <string name="livetv_play_error_body">The tuner may be busy or the stream may be offline. Try again or switch channels with Up and Down.</string>
+    <string name="livetv_play_error_body">The tuner may be busy or the stream may be offline. To try again, switch to another channel and back.</string>
     <string name="livetv_recordings">Recordings</string>
     <string name="livetv_watch">Watch</string>
     <string name="livetv_record">Record</string>
@@ -554,6 +554,12 @@
     <string name="music_track_of">Song %1$d of %2$d</string>
     <string name="music_queue">Queue</string>
     <string name="music_queue_left">%1$s left</string>
+    <string name="music_info_song">Song</string>
+    <string name="music_info_track">Track</string>
+    <string name="music_info_track_disc">%1$d · Disc %2$d</string>
+    <string name="music_info_file">File</string>
+    <string name="music_info_not_lossless">No longer lossless.</string>
+    <string name="music_lossless">Lossless</string>
     <string name="music_options">Options</string>
     <string name="music_options_play_next">Play next</string>
     <string name="music_options_add_queue">Add to queue</string>

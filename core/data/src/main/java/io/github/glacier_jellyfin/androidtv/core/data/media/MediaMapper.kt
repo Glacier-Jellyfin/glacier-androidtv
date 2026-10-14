@@ -14,6 +14,9 @@ private const val TICKS_PER_MS = 10_000L
 private const val TICKS_PER_MINUTE = 600_000_000L
 private const val UHD_MIN_WIDTH = 3200
 
+/** Kinds whose cards count the unwatched titles inside. */
+private val UnwatchedCounted = setOf(ItemKind.Series, ItemKind.Collection)
+
 /** Widths requested from the server; images are scaled down there, not on the TV. */
 private object ImageWidth {
     const val POSTER = 480
@@ -76,9 +79,10 @@ internal class MediaMapper(private val api: ApiClient) {
             progress = dto.userData?.playedPercentage?.let { (it / 100).toFloat() }?.takeIf { it > 0f },
             remainingMinutes = remaining,
             resumePositionMs = position / TICKS_PER_MS,
-            unwatchedCount = dto.userData?.unplayedItemCount?.takeIf { kind == ItemKind.Series && it > 0 },
+            // Collections count their unwatched titles like a show its episodes; all seen, they are played.
+            unwatchedCount = dto.userData?.unplayedItemCount?.takeIf { kind in UnwatchedCounted && it > 0 },
             isFavorite = dto.userData?.isFavorite ?: false,
-            played = dto.userData?.played ?: false,
+            played = dto.userData?.played == true || (kind == ItemKind.Collection && dto.userData?.unplayedItemCount == 0),
             childCount = when (kind) {
                 ItemKind.Genre -> listOfNotNull(dto.movieCount, dto.seriesCount).sum().takeIf { it > 0 }
                 ItemKind.Artist -> dto.albumCount
@@ -106,7 +110,7 @@ internal class MediaMapper(private val api: ApiClient) {
             durationMs = (dto.runTimeTicks ?: 0) / TICKS_PER_MS,
             coverUrl = cover(dto, ImageWidth.COVER_SMALL),
             largeCoverUrl = cover(dto, ImageWidth.COVER_LARGE),
-            format = audio?.let { AudioFormat(it.codec, it.sampleRate, it.bitDepth, it.channels) },
+            format = audio?.let { AudioFormat(it.codec, it.sampleRate, it.bitDepth, it.channels, it.bitRate, dto.container) },
             isFavorite = dto.userData?.isFavorite ?: false,
             playlistItemId = dto.playlistItemId,
         )

@@ -83,16 +83,15 @@ import java.time.format.FormatStyle
 import kotlin.math.roundToInt
 
 /** Good news on the sheet: hardware decoding, direct play, a track passed on as it is. */
-private val InfoOk = Color(0xFF8FD6B0)
+internal val InfoOk = Color(0xFF8FD6B0)
 
 /** Something is converted or does not fit: a transcode, a frame rate the TV does not show evenly. */
-private val InfoWarn = Color(0xFFE9BE74)
+internal val InfoWarn = Color(0xFFE9BE74)
 
-private enum class Tone { Ok, Warn, Plain }
+internal enum class Tone { Ok, Warn, Plain }
 
 private const val TAB_TITLE = 0
 private const val TAB_TECHNICAL = 1
-private const val TAB_SERVER = 2
 
 /**
  * The OSD's info button: the title, what this device plays and what the server
@@ -105,10 +104,10 @@ fun InfoPanel(
     transcodeStatus: suspend () -> TranscodeStatus?,
     onDismiss: () -> Unit,
 ) {
-    BackHandler(onBack = onDismiss)
-    val details = state.details ?: return
-    val focus = remember { FocusRequester() }
-    var tab by remember { mutableIntStateOf(TAB_TITLE) }
+    val details = state.details ?: run {
+        BackHandler(onBack = onDismiss)
+        return
+    }
     val context = LocalContext.current
     val player = state.player
     val stats by produceState<StreamStats?>(null, player) {
@@ -117,6 +116,31 @@ fun InfoPanel(
             delay(1_000)
         }
     }
+    InfoPanelFrame(
+        tabs = listOf(
+            stringResource(if (details.item.kind == ItemKind.Episode) R.string.player_info_episode else R.string.player_info_movie),
+            stringResource(R.string.player_info_technical),
+            stringResource(R.string.player_info_server),
+        ),
+        onDismiss = onDismiss,
+    ) { tab ->
+        when (tab) {
+            TAB_TITLE -> TitleTab(state, details, progress)
+            TAB_TECHNICAL -> TechnicalTab(state, stats)
+            else -> ServerTab(state, stats, transcodeStatus)
+        }
+    }
+}
+
+/**
+ * The info panel's frame, also the music player's: a dimmed screen, a card with
+ * [tabs] on top and the chosen tab's [content]. Left/Right switch tabs, OK or Back closes.
+ */
+@Composable
+internal fun InfoPanelFrame(tabs: List<String>, onDismiss: () -> Unit, content: @Composable (tab: Int) -> Unit) {
+    BackHandler(onBack = onDismiss)
+    val focus = remember { FocusRequester() }
+    var tab by remember { mutableIntStateOf(0) }
     val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
     // Focus stays in the panel: Up/Down must not reach the OSD behind it, and with nowhere to go the first
     // Back reaches the BackHandler instead of being spent on moving focus out.
@@ -144,7 +168,7 @@ fun InfoPanel(
                         }
                         Key.DirectionLeft, Key.DirectionRight -> {
                             if (event.type == KeyEventType.KeyDown) {
-                                tab = (tab + if (event.key == Key.DirectionRight) 1 else -1).coerceIn(TAB_TITLE, TAB_SERVER)
+                                tab = (tab + if (event.key == Key.DirectionRight) 1 else -1).coerceIn(0, tabs.lastIndex)
                             }
                             true
                         }
@@ -155,22 +179,8 @@ fun InfoPanel(
                 .padding(horizontal = 48.dp, vertical = 40.dp),
             verticalArrangement = Arrangement.spacedBy(30.dp),
         ) {
-            GlacierTabs(
-                labels = listOf(
-                    stringResource(if (details.item.kind == ItemKind.Episode) R.string.player_info_episode else R.string.player_info_movie),
-                    stringResource(R.string.player_info_technical),
-                    stringResource(R.string.player_info_server),
-                ),
-                selected = tab,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Box(Modifier.fillMaxWidth().weight(1f)) {
-                when (tab) {
-                    TAB_TITLE -> TitleTab(state, details, progress)
-                    TAB_TECHNICAL -> TechnicalTab(state, stats)
-                    else -> ServerTab(state, stats, transcodeStatus)
-                }
-            }
+            GlacierTabs(labels = tabs, selected = tab, modifier = Modifier.fillMaxWidth())
+            Box(Modifier.fillMaxWidth().weight(1f)) { content(tab) }
         }
     }
     LaunchedEffect(Unit) {
@@ -450,26 +460,33 @@ private fun ServerTab(state: PlayerUiState, stats: StreamStats?, transcodeStatus
     }
     val reasons = file?.transcodeReasons?.ifEmpty { null } ?: status?.reasons.orEmpty()
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatusPill(
-                stringResource(
-                    when (method) {
-                        PlaybackMethod.DirectPlay -> R.string.player_direct_play
-                        PlaybackMethod.DirectStream -> R.string.player_direct_stream
-                        PlaybackMethod.Transcode -> R.string.player_transcode
-                    },
-                ),
-                if (direct) Tone.Ok else Tone.Warn,
-                large = true,
-                modifier = Modifier.padding(end = 14.dp).align(Alignment.CenterVertically),
-            )
-            if (!direct && reasons.isNotEmpty()) {
-                SectionLabel(stringResource(R.string.player_info_why), Modifier.align(Alignment.CenterVertically).padding(end = 4.dp))
-                reasons.forEach { StatusPill(reasonText(it), Tone.Plain, Modifier.align(Alignment.CenterVertically)) }
-            }
-        }
+        DeliveryHeader(method, reasons)
         if (file != null) StreamTable(state, stats, file, status, direct)
-        status?.let { TranscodeCard(it, file) }
+        status?.let { TranscodeCard(it, file?.video?.frameRate) }
+    }
+}
+
+/** How the server delivers, and why it converts when it does. */
+@Composable
+internal fun DeliveryHeader(method: PlaybackMethod, reasons: List<String>) {
+    val direct = method == PlaybackMethod.DirectPlay
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        StatusPill(
+            stringResource(
+                when (method) {
+                    PlaybackMethod.DirectPlay -> R.string.player_direct_play
+                    PlaybackMethod.DirectStream -> R.string.player_direct_stream
+                    PlaybackMethod.Transcode -> R.string.player_transcode
+                },
+            ),
+            if (direct) Tone.Ok else Tone.Warn,
+            large = true,
+            modifier = Modifier.padding(end = 14.dp).align(Alignment.CenterVertically),
+        )
+        if (!direct && reasons.isNotEmpty()) {
+            SectionLabel(stringResource(R.string.player_info_why), Modifier.align(Alignment.CenterVertically).padding(end = 4.dp))
+            reasons.forEach { StatusPill(reasonText(it), Tone.Plain, Modifier.align(Alignment.CenterVertically)) }
+        }
     }
 }
 
@@ -537,6 +554,12 @@ private fun StreamTable(state: PlayerUiState, stats: StreamStats?, file: SourceF
         }
     }
 
+    StreamRowsTable(rows, direct)
+}
+
+/** "File on the server" against "Stream to this device", one row per stream. */
+@Composable
+internal fun StreamRowsTable(rows: List<StreamRow>, direct: Boolean) {
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     Column(Modifier.fillMaxWidth().clip(shape).border(1.dp, GlacierColors.GlassBorder, shape)) {
         Row(Modifier.fillMaxWidth().background(GlacierColors.GlassFill2).padding(vertical = 12.dp)) {
@@ -574,7 +597,7 @@ private fun StreamTable(state: PlayerUiState, stats: StreamStats?, file: SourceF
 private const val STREAM_LABEL_WIDTH = 170
 private const val STREAM_MID_WIDTH = 190
 
-private data class StreamRow(val label: String, val source: String, val change: String?, val tone: Tone, val stream: String?)
+internal data class StreamRow(val label: String, val source: String, val change: String?, val tone: Tone, val stream: String?)
 
 @Composable
 private fun subtitleRow(subtitle: PlaybackSubtitle, direct: Boolean): StreamRow {
@@ -589,8 +612,8 @@ private fun subtitleRow(subtitle: PlaybackSubtitle, direct: Boolean): StreamRow 
 }
 
 @Composable
-private fun TranscodeCard(status: TranscodeStatus, file: SourceFile?) {
-    val sourceFps = file?.video?.frameRate?.takeIf { it > 0 }
+internal fun TranscodeCard(status: TranscodeStatus, sourceFrameRate: Float?) {
+    val sourceFps = sourceFrameRate?.takeIf { it > 0 }
     InfoSurface(Modifier.fillMaxWidth(), padding = 22) {
         Row(horizontalArrangement = Arrangement.spacedBy(56.dp), verticalAlignment = Alignment.CenterVertically) {
             status.framerate?.let { fps ->
@@ -609,7 +632,7 @@ private fun TranscodeCard(status: TranscodeStatus, file: SourceFile?) {
 }
 
 @Composable
-private fun Stat(value: String, label: String) {
+internal fun Stat(value: String, label: String) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(value, style = GlacierText.body(30, FontWeight.Bold), color = GlacierColors.Ice, maxLines = 1, softWrap = false)
         Text(label, style = GlacierText.body(15), color = GlacierColors.Mist, maxLines = 1, softWrap = false)
@@ -618,7 +641,7 @@ private fun Stat(value: String, label: String) {
 
 /** The server's transcode reasons in words; unknown ones keep the server's name. */
 @Composable
-private fun reasonText(reason: String): String = when (reason) {
+internal fun reasonText(reason: String): String = when (reason) {
     "ContainerNotSupported" -> R.string.reason_container
     "VideoCodecNotSupported" -> R.string.reason_video_codec
     "AudioCodecNotSupported" -> R.string.reason_audio_codec
@@ -653,7 +676,7 @@ private fun reasonText(reason: String): String = when (reason) {
 // Building blocks
 
 @Composable
-private fun InfoSurface(modifier: Modifier, padding: Int = 24, content: @Composable () -> Unit) {
+internal fun InfoSurface(modifier: Modifier, padding: Int = 24, content: @Composable () -> Unit) {
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     Box(
         modifier
@@ -666,7 +689,7 @@ private fun InfoSurface(modifier: Modifier, padding: Int = 24, content: @Composa
 
 /** A tile of the technical tab: label and status on top, a big headline, details, then fact rows. */
 @Composable
-private fun InfoCard(
+internal fun InfoCard(
     label: String,
     status: Pair<String, Tone>?,
     headline: String?,
@@ -688,7 +711,7 @@ private fun InfoCard(
 }
 
 @Composable
-private fun FactRow(label: String, value: String, labelWidth: Int = 150, mono: Boolean = false) {
+internal fun FactRow(label: String, value: String, labelWidth: Int = 150, mono: Boolean = false) {
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = GlacierText.body(17), color = GlacierColors.Mist, maxLines = 1, modifier = Modifier.width(labelWidth.dp))
         Text(
@@ -702,12 +725,12 @@ private fun FactRow(label: String, value: String, labelWidth: Int = 150, mono: B
 }
 
 @Composable
-private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
+internal fun SectionLabel(text: String, modifier: Modifier = Modifier) {
     Text(text.uppercase(), style = GlacierText.label(14, 0.08), color = GlacierColors.Mist, maxLines = 1, softWrap = false, modifier = modifier)
 }
 
 @Composable
-private fun StatusPill(text: String, tone: Tone, modifier: Modifier = Modifier, large: Boolean = false) {
+internal fun StatusPill(text: String, tone: Tone, modifier: Modifier = Modifier, large: Boolean = false) {
     val color = tone.color()
     Row(
         modifier
@@ -723,14 +746,14 @@ private fun StatusPill(text: String, tone: Tone, modifier: Modifier = Modifier, 
 }
 
 @Composable
-private fun Tone.color(): Color = when (this) {
+internal fun Tone.color(): Color = when (this) {
     Tone.Ok -> InfoOk
     Tone.Warn -> InfoWarn
     Tone.Plain -> OsdSecondary
 }
 
 @Composable
-private fun InfoBar(fraction: Float, color: Color, modifier: Modifier = Modifier, thickness: Int = 6) {
+internal fun InfoBar(fraction: Float, color: Color, modifier: Modifier = Modifier, thickness: Int = 6) {
     Box(modifier.fillMaxWidth().height(thickness.dp).clip(PillShape).background(GlacierColors.GlassFill2)) {
         Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).fillMaxHeight().clip(PillShape).background(color))
     }

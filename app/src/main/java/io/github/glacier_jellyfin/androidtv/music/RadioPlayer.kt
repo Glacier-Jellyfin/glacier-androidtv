@@ -98,16 +98,13 @@ internal fun BoxScope.RadioPlayer(state: MusicUiState, radio: RadioState, playFo
             )
             Text(stringResource(R.string.livetv_radio), style = GlacierText.display(28), color = GlacierColors.Ice)
         }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            state.method?.let { StatusPill(stringResource(it.label())) }
-            val clock by produceState(LocalTime.now().format(ClockFormat)) {
-                while (true) {
-                    value = LocalTime.now().format(ClockFormat)
-                    delay(CLOCK_TICK_MS)
-                }
+        val clock by produceState(LocalTime.now().format(ClockFormat)) {
+            while (true) {
+                value = LocalTime.now().format(ClockFormat)
+                delay(CLOCK_TICK_MS)
             }
-            Text(clock, style = GlacierText.mono(20), color = GlacierColors.Mist)
         }
+        Text(clock, style = GlacierText.mono(20), color = GlacierColors.Mist)
     }
 
     Row(

@@ -152,8 +152,8 @@ fun LiveTvPlayerScreen(
         unknownNumber = null
     }
     // Closing the list hands the keys back to the picture.
-    LaunchedEffect(listOpen, programsOpen, state.failed) {
-        if (listOpen || programsOpen || state.failed) return@LaunchedEffect
+    LaunchedEffect(listOpen, programsOpen) {
+        if (listOpen || programsOpen) return@LaunchedEffect
         withFrameNanos { }
         runCatching { rootFocus.requestFocus() }
     }
@@ -205,24 +205,18 @@ fun LiveTvPlayerScreen(
                         true
                     }
                     Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-                        when {
-                            typed.isNotEmpty() -> commitNumber()
-                            state.failed -> return@onPreviewKeyEvent false
-                            else -> listOpen = true
-                        }
+                        if (typed.isNotEmpty()) commitNumber() else listOpen = true
                         true
                     }
                     Key.DirectionLeft -> {
-                        if (!state.failed) listOpen = true
-                        !state.failed
+                        listOpen = true
+                        true
                     }
                     Key.DirectionRight, Key.Guide -> {
-                        if (state.failed) return@onPreviewKeyEvent false
                         programsOpen = true
                         true
                     }
                     Key.Info -> {
-                        if (state.failed) return@onPreviewKeyEvent false
                         showBanner()
                         true
                     }
@@ -261,21 +255,12 @@ fun LiveTvPlayerScreen(
             )
         }
 
+        // Only words on the channel's picture: the keys go on as ever, so zapping away and back tries again.
         if (state.failed) {
-            val retryFocus = remember { FocusRequester() }
-            // The last picture of the channel can stand behind it.
             OverlayCard {
                 Text(state.channel?.name ?: stringResource(R.string.nav_live_tv), style = GlacierText.body(21, FontWeight.SemiBold), color = GlacierColors.Mist)
                 Text(stringResource(R.string.livetv_play_error), style = GlacierText.display(30), color = GlacierColors.Ice)
                 Text(stringResource(R.string.livetv_play_error_body), style = GlacierText.body(21), color = GlacierColors.Mist)
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    PillButton(stringResource(R.string.action_retry), onClick = viewModel::retry, primary = true, modifier = Modifier.focusRequester(retryFocus))
-                    PillButton(stringResource(R.string.action_back), onClick = viewModel::stop)
-                }
-            }
-            LaunchedEffect(Unit) {
-                withFrameNanos { }
-                runCatching { retryFocus.requestFocus() }
             }
         }
 

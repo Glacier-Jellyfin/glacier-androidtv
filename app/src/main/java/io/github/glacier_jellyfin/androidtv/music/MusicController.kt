@@ -25,6 +25,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackMethod
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackPosition
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
+import io.github.glacier_jellyfin.androidtv.core.data.playback.TranscodeStatus
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.SongMetadata
@@ -892,6 +893,13 @@ class MusicController @Inject constructor(
         val change = { entry: QueueEntry -> if (entry.track.id == trackId) entry.copy(track = entry.track.copy(isFavorite = favorite)) else entry }
         sourceOrder = sourceOrder.map(change)
         _state.update { it.copy(queue = it.queue.map(change)) }
+    }
+
+    /** What the server's transcoder does for the song that plays; null while it plays directly. */
+    suspend fun transcodeStatus(): TranscodeStatus? {
+        val entry = _state.value.queue.getOrNull(_state.value.index) ?: return null
+        val source = sources[entry.key]?.takeIf { it.method != PlaybackMethod.DirectPlay } ?: return null
+        return playback.transcodeStatus(source)
     }
 
     /** Kept for the profile; the settings flow brings it back into the state. */

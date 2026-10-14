@@ -314,7 +314,7 @@ fun PlayerScreen(
         }
 
         if (state.loading && !state.failed) {
-            OverlayCard(dim = false) {
+            OverlayCard {
                 SpinningDiamond(110)
                 Text(stringResource(R.string.player_loading), style = GlacierText.body(21), color = GlacierColors.Mist)
             }

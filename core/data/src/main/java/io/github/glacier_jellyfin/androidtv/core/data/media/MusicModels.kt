@@ -8,7 +8,16 @@ data class AudioFormat(
     val sampleRate: Int?,
     val bitDepth: Int?,
     val channels: Int?,
-)
+    /** Bits per second of the file; null when the server does not know. */
+    val bitrate: Int? = null,
+    /** The file's container as the server names it: "flac", "mp3", "mov,mp4,m4a,…". */
+    val container: String? = null,
+) {
+    /** Stored without loss: FLAC, ALAC, WAV and the like. */
+    val lossless: Boolean get() = codec?.lowercase()?.let { it in LosslessCodecs || it.startsWith("pcm") || it.startsWith("dsd") } == true
+}
+
+private val LosslessCodecs = setOf("flac", "alac", "ape", "wavpack", "tta", "truehd", "mlp", "wav", "aiff")
 
 /** One song, as album pages, playlists and the music player need it. */
 data class MusicTrack(
