@@ -182,13 +182,13 @@ class LiveTvRepository @Inject constructor(
         settings.update { it.copy(liveTv = it.liveTv.heardAsRadio(channelId.toString())) }
     }
 
-    private val _lastWatched = MutableStateFlow<UUID?>(null)
+    private val _lastWatched = MutableStateFlow<WatchedChannel?>(null)
 
     /** The channel watched last, so the channel list and the guide can land on it again. */
-    val lastWatched: StateFlow<UUID?> = _lastWatched.asStateFlow()
+    val lastWatched: StateFlow<WatchedChannel?> = _lastWatched.asStateFlow()
 
     fun watched(channelId: UUID) {
-        _lastWatched.value = channelId
+        _lastWatched.value = WatchedChannel(channelId, System.currentTimeMillis())
     }
 
     /** All channels in the server's order (by number), TV and radio, each with the programme on air now. */
@@ -445,3 +445,13 @@ class LiveTvRepository @Inject constructor(
 private fun LocalDateTime.toEpochMs(): Long = atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
 private fun Long.toLocalDateTime(): LocalDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(this), ZoneId.systemDefault())
+
+/**
+ * A channel tuned to at [atMs]. Each time counts on its own: back on the same
+ * channel as the trip before, the list still lands on it, whatever was
+ * focused in between.
+ */
+data class WatchedChannel(val channelId: UUID, val atMs: Long) {
+    /** Tells this time apart from every other one. */
+    val key: String get() = "$channelId@$atMs"
+}

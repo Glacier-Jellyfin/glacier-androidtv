@@ -99,6 +99,8 @@ class LiveTvPlayerViewModel @Inject constructor(
     /** The channel tuned to; known before the channel list is. */
     private var tuned: UUID? = null
     private var radioCheck: Job? = null
+    /** The stream handed back to the channel list on leaving; it is the list's now. */
+    private var handedBack: Player? = null
     /** The app went to the background and freed the tuner; coming back tunes again. */
     private var backgrounded = false
     /** When playback last failed and was tuned again by itself. */
@@ -383,15 +385,35 @@ class LiveTvPlayerViewModel @Inject constructor(
     fun stop() {
         if (closing) return
         closing = true
-        stopStream()
+        opening?.cancel()
+        radioCheck?.cancel()
+        if (!handBack()) stopStream()
         _finished.trySend(Unit)
+    }
+
+    /**
+     * Back to the channel list, the stream goes on there as its preview. The picture
+     * stays here until the list shows it, so the decoder does not stop in between.
+     */
+    private fun handBack(): Boolean {
+        val channelId = tuned ?: return false
+        val current = source ?: return false
+        val handed = _state.value.playback ?: return false
+        val player = handed.player
+        if (_state.value.failed || !player.playWhenReady) return false
+        player.removeListener(listener)
+        player.volume = 0f
+        handoff.give(LiveStreamHandoff.Stream(channelId, handed, current))
+        handedBack = player
+        source = null
+        return true
     }
 
     private fun stopStream() {
         source?.let { playback.reportStopped(it, 0) }
         source = null
         started = false
-        _state.value.player?.let {
+        _state.value.player?.takeIf { it !== handedBack }?.let {
             it.removeListener(listener)
             it.release()
         }

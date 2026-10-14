@@ -12,6 +12,7 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveChannel
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveProgram
+import io.github.glacier_jellyfin.androidtv.core.data.media.WatchedChannel
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveRecording
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveRecordings
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveSeriesTimer
@@ -120,7 +121,7 @@ class LiveTvViewModel @Inject constructor(
 ) : ViewModel(), RecordActions {
 
     /** The channel watched last in the player, for the list and the guide to land on. */
-    val lastWatched: StateFlow<UUID?> = repository.lastWatched
+    val lastWatched: StateFlow<WatchedChannel?> = repository.lastWatched
 
     private val _state = MutableStateFlow(LiveTvState(userName = sessions.session.value?.user?.name.orEmpty()))
     val state: StateFlow<LiveTvState> = _state.asStateFlow()
@@ -391,10 +392,14 @@ class LiveTvViewModel @Inject constructor(
     fun schedulePreview() {
         // Handed to the player, which is about to open: nothing new until this screen comes back.
         if (handedOver != null) return
-        stopPreview()
-        val channelId = _state.value.focused ?: return
+        previewJob?.cancel()
+        val channelId = _state.value.focused ?: return stopPreview()
+        // Back on the channel that plays already: it goes on.
+        if (_state.value.preview != null && _state.value.previewChannel == channelId) return
+        // The preview playing goes on until the next one starts, in case the focus comes back to it.
         previewJob = viewModelScope.launch {
             delay(PREVIEW_DELAY_MS)
+            releasePreview()
             val state = _state.value
             if (state.view != LiveTvView.Channels || state.sheet != null || state.focused != channelId) return@launch
             try {
@@ -415,10 +420,35 @@ class LiveTvViewModel @Inject constructor(
         }
     }
 
+    /** Back from the player: the channel it played goes on here as the preview. */
+    fun onStart() {
+        val stream = handoff.takeAny()
+        val state = _state.value
+        if (stream == null || state.view != LiveTvView.Channels || handedOver != null) {
+            stream?.let(handoff::end)
+            schedulePreview()
+            return
+        }
+        stopPreview()
+        previewSource = stream.source
+        previewPlayback = stream.playback
+        val player = stream.playback.player
+        player.volume = 0f
+        player.addListener(previewListener)
+        _state.update { it.copy(preview = player, previewChannel = stream.channelId, previewShown = true) }
+        Log.i(TAG, "Took back the stream of ${stream.channelId}")
+        // The list lands on that channel in a moment; if not, the focused one plays instead.
+        schedulePreview()
+    }
+
     /** Ends the preview and frees its tuner. */
     fun stopPreview() {
         previewJob?.cancel()
         previewJob = null
+        releasePreview()
+    }
+
+    private fun releasePreview() {
         previewSource?.let { playback.reportStopped(it, 0) }
         previewSource = null
         previewPlayback = null

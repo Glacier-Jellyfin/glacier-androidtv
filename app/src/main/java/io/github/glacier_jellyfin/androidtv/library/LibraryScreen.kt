@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -258,9 +259,14 @@ fun LibraryScreen(
                         }
                         state.loading && state.items.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }, key = "loading") {
                             // In the middle of the space the titles will fill: from here down to the grid's bottom edge.
-                            val info = gridState.layoutInfo
-                            val top = info.visibleItemsInfo.firstOrNull { it.key == "loading" }?.offset?.y
-                            val height = top?.let { with(density) { (info.viewportEndOffset - info.afterContentPadding - it).toDp() } }
+                            // Read in a derived state: the layout info changes with every scrolled pixel.
+                            val height by remember {
+                                derivedStateOf {
+                                    val info = gridState.layoutInfo
+                                    val top = info.visibleItemsInfo.firstOrNull { it.key == "loading" }?.offset?.y
+                                    top?.let { with(density) { (info.viewportEndOffset - info.afterContentPadding - it).toDp() } }
+                                }
+                            }
                             Box(
                                 Modifier.fillMaxWidth().height((height ?: LOADER_MIN_HEIGHT.dp).coerceAtLeast(LOADER_MIN_HEIGHT.dp)),
                                 contentAlignment = Alignment.Center,

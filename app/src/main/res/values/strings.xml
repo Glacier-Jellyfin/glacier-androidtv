@@ -83,7 +83,6 @@
     <string name="nav_favorites">Favorites</string>
     <string name="nav_live_tv">Live TV</string>
     <string name="livetv_favorites">Favorites</string>
-    <string name="livetv_favorite">Favorite</string>
     <string name="livetv_favorites_empty">No favorite channels yet</string>
     <string name="livetv_favorites_empty_body">Hold OK on a channel and add it to your favorites.</string>
     <string name="livetv_favorite_added">%1$s is now a favorite</string>

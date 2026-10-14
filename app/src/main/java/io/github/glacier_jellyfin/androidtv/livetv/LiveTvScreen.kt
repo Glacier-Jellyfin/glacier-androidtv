@@ -123,7 +123,7 @@ fun LiveTvScreen(
 
     // The preview's tuner is freed while the page is away (player, other app), and comes back with it.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.stopPreview() }
-    LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.schedulePreview() }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onStart() }
 
     // Back from playing a recording: the list shows what changed meanwhile.
     LaunchedEffect(Unit) { if (state.view == LiveTvView.Recordings) viewModel.loadRecordings() }
@@ -159,16 +159,18 @@ fun LiveTvScreen(
             toggled = false
             return@LaunchedEffect
         }
-        val watchedKey = watched?.toString()
+        val watchedKey = watched?.channelId?.toString()
+        // Once for each time a channel was watched, even the same channel as the time before.
+        val fresh = watched != null && watched?.key != landed
         // Zapped away from the favorites: the list shows all channels again, to land on the one watched.
-        if (watchedKey != null && watchedKey != landed && state.favoritesOnly && shown.none { it.id.toString() == watchedKey } &&
+        if (watchedKey != null && fresh && state.favoritesOnly && shown.none { it.id.toString() == watchedKey } &&
             state.listed?.any { it.id.toString() == watchedKey } == true
         ) {
             viewModel.setFavoritesOnly(false)
             return@LaunchedEffect
         }
-        if (watchedKey != null && watchedKey != landed && shown.any { it.id.toString() == watchedKey }) {
-            landed = watchedKey
+        if (watchedKey != null && fresh && shown.any { it.id.toString() == watchedKey }) {
+            landed = watched?.key
             lastFocus = watchedKey
         }
         if (state.view == LiveTvView.Recordings) return@LaunchedEffect
@@ -344,8 +346,8 @@ fun LiveTvScreen(
                             channel = focused,
                             upcoming = state.upcoming[focused.id],
                             nowMs = state.nowMs,
-                            preview = state.preview?.takeIf { state.previewChannel == focused.id },
-                            previewShown = state.previewShown,
+                            preview = state.preview,
+                            previewShown = state.previewShown && state.previewChannel == focused.id,
                             modifier = Modifier.weight(1f).fillMaxHeight().padding(top = 8.dp, bottom = 36.dp),
                         )
                     }

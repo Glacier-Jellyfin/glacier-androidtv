@@ -78,7 +78,6 @@
     <string name="nav_favorites">Favoriten</string>
     <string name="nav_live_tv">Live-TV</string>
     <string name="livetv_favorites">Favoriten</string>
-    <string name="livetv_favorite">Favorit</string>
     <string name="livetv_favorites_empty">Noch keine Lieblingssender</string>
     <string name="livetv_favorites_empty_body">Halte OK auf einem Sender gedrückt und füge ihn zu deinen Favoriten hinzu.</string>
     <string name="livetv_favorite_added">%1$s ist jetzt ein Favorit</string>

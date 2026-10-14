@@ -56,6 +56,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.GuideCell
 import io.github.glacier_jellyfin.androidtv.core.data.media.HALF_HOUR_MS
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveChannel
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveProgram
+import io.github.glacier_jellyfin.androidtv.core.data.media.WatchedChannel
 import io.github.glacier_jellyfin.androidtv.core.data.media.cellIndexAt
 import io.github.glacier_jellyfin.androidtv.core.data.media.guideCells
 import io.github.glacier_jellyfin.androidtv.core.data.media.halfHourFloor
@@ -91,7 +92,7 @@ private const val PRELOAD_ROWS = 8
 fun GuideGrid(
     channels: List<LiveChannel>,
     /** The channel watched last: the guide moves to it once, at what runs now. */
-    landOn: UUID?,
+    landOn: WatchedChannel?,
     guide: Map<UUID, List<LiveProgram>>,
     fromMs: Long,
     toMs: Long,
@@ -116,10 +117,10 @@ fun GuideGrid(
 
     var landed by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(landOn) {
-        val target = landOn ?: return@LaunchedEffect
-        if (target.toString() == landed) return@LaunchedEffect
-        landed = target.toString()
-        val index = channels.indexOfFirst { it.id == target }
+        val watched = landOn ?: return@LaunchedEffect
+        if (watched.key == landed) return@LaunchedEffect
+        landed = watched.key
+        val index = channels.indexOfFirst { it.id == watched.channelId }
         if (index < 0) return@LaunchedEffect
         row = index
         focusMs = System.currentTimeMillis().coerceAtLeast(fromMs)

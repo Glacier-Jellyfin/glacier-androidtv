@@ -1,5 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.livetv
 
+import android.os.Handler
+import android.os.Looper
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
@@ -8,8 +10,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * A channel stream that already runs, passed from the channel list's preview
- * to the player: the player shows it at once instead of tuning again.
+ * A channel stream that already runs, passed between the channel list's
+ * preview and the player, both ways: the other side shows it at once
+ * instead of tuning again.
  */
 @Singleton
 class LiveStreamHandoff @Inject constructor(
@@ -19,24 +22,40 @@ class LiveStreamHandoff @Inject constructor(
     class Stream(val channelId: UUID, val playback: GlacierPlayback, val source: PlaybackSource)
 
     private var waiting: Stream? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private val timeout = Runnable { waiting?.let(::end) }
 
     fun give(stream: Stream) {
-        drop()
+        waiting?.let(::end)
         waiting = stream
+        // Nobody came for it: its tuner is freed.
+        handler.postDelayed(timeout, TIMEOUT_MS)
     }
 
     /** The stream of [channelId], if one waits; any other one is ended. */
     fun take(channelId: UUID): Stream? {
-        val stream = waiting?.takeIf { it.channelId == channelId }
-        if (stream != null) waiting = null else drop()
-        return stream
+        val stream = waiting ?: return null
+        if (stream.channelId != channelId) {
+            end(stream)
+            return null
+        }
+        return takeAny()
     }
 
-    /** Ends a stream nobody took, so its tuner is freed. */
-    private fun drop() {
-        val stream = waiting ?: return
-        waiting = null
+    /** Whatever stream waits. */
+    fun takeAny(): Stream? {
+        handler.removeCallbacks(timeout)
+        return waiting.also { waiting = null }
+    }
+
+    /** Ends a stream nobody wants, so its tuner is freed. */
+    fun end(stream: Stream) {
+        if (waiting === stream) takeAny()
         playback.reportStopped(stream.source, 0)
         stream.playback.player.release()
+    }
+
+    private companion object {
+        const val TIMEOUT_MS = 5_000L
     }
 }
