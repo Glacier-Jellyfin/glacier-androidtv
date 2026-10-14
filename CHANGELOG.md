@@ -44,7 +44,8 @@ renders the reference separately.
 - While programme data loads, a loader shows instead of "No guide data". Loaders sit in the middle of the space they fill, also in the library
 - Back while connecting to a server stops it and stays on the server list
 - With many entries in the navigation, it moves aside for the mini player instead of running into it
-- New music screensaver. Your queue runs across the screen as a row of covers with the current song in the middle, on a blurred copy of its cover. The row slides on when the song changes, and the picture sways slowly instead of jumping. Title, artist and a progress line sit below
+- New music screensaver. Your queue runs across the screen as a row of covers with the current song in the middle. The row slides on when the song changes, and the picture sways slowly instead of jumping. Title, artist, a progress line and the time of day come with it
+- The music and radio player show the time of day as big as the video player does
 - The channel panel on the Live TV page always shows what comes next. A long description gets shorter for it
 - When the channel panel knows what runs on a channel, its card in the list shows it too
 - When a channel does not play, the player says so over the picture without buttons and shows the channel's logo when it has one. Up, Down, the channel list and the programmes keep working, and switching away and back tries again
