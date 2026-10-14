@@ -47,7 +47,7 @@ renders the reference separately.
 - The music screensaver shows the time played and the time left under a wider progress bar. It fades to its next place instead of jumping and keeps away from the screen's edges
 - The channel panel on the Live TV page always shows what comes next. A long description gets shorter for it
 - When the channel panel knows what runs on a channel, its card in the list shows it too
-- When a channel does not play, the player says so over the picture without buttons. Up, Down, the channel list and the programmes keep working, and switching away and back tries again
+- When a channel does not play, the player says so over the picture without buttons and shows the channel's logo when it has one. Up, Down, the channel list and the programmes keep working, and switching away and back tries again
 - Collections in the movies library show how many of their movies you have not watched yet, and a check mark once you have seen them all
 - The music player and the radio no longer show format and playback badges at the top. They moved to the info panel
 

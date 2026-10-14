@@ -255,12 +255,12 @@ fun LiveTvPlayerScreen(
             )
         }
 
-        // Only words on the channel's picture: the keys go on as ever, so zapping away and back tries again.
+        // Only the channel and a line on its picture: the keys go on as ever, so zapping away and back tries again.
         if (state.failed) {
             OverlayCard {
+                state.channel?.takeIf { it.logoUrl != null }?.let { ChannelLogo(it, Modifier.width(200.dp).height(112.dp), textSize = 36) }
                 Text(state.channel?.name ?: stringResource(R.string.nav_live_tv), style = GlacierText.body(21, FontWeight.SemiBold), color = GlacierColors.Mist)
                 Text(stringResource(R.string.livetv_play_error), style = GlacierText.display(30), color = GlacierColors.Ice)
-                Text(stringResource(R.string.livetv_play_error_body), style = GlacierText.body(21), color = GlacierColors.Mist)
             }
         }
 

@@ -96,7 +96,6 @@
     <string name="livetv_paused">Pausiert</string>
     <string name="livetv_no_channel">Diesen Sender gibt es nicht</string>
     <string name="livetv_play_error">Dieser Sender spielt nicht</string>
-    <string name="livetv_play_error_body">Vielleicht ist der Tuner belegt oder der Stream offline. Für einen neuen Versuch wechsle kurz den Sender und wieder zurück.</string>
     <string name="livetv_recordings">Aufnahmen</string>
     <string name="livetv_watch">Ansehen</string>
     <string name="livetv_record">Aufnehmen</string>

@@ -101,7 +101,6 @@
     <string name="livetv_paused">Paused</string>
     <string name="livetv_no_channel">No such channel</string>
     <string name="livetv_play_error">This channel does not play</string>
-    <string name="livetv_play_error_body">The tuner may be busy or the stream may be offline. To try again, switch to another channel and back.</string>
     <string name="livetv_recordings">Recordings</string>
     <string name="livetv_watch">Watch</string>
     <string name="livetv_record">Record</string>
