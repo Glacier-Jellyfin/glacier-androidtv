@@ -18,6 +18,8 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.5.0-beta.2] - 2026-10-15
+
 ### New
 - Two Live TV rows on the home screen: On now shows what runs on your channels, TV channels lists them by name and logo. Favorites come first, OK tunes in. Turn them on or off and move them in Settings › Home
 - Record Live TV. Press OK on a programme in the guide that has not started yet to record it, or the whole series. Hold OK on any programme for all options, also for what runs now (#1)
