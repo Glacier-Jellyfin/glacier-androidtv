@@ -64,6 +64,7 @@ import io.github.glacier_jellyfin.androidtv.livetv.RowIconButton
 import io.github.glacier_jellyfin.androidtv.livetv.clockText
 import io.github.glacier_jellyfin.androidtv.livetv.minutesLeft
 import io.github.glacier_jellyfin.androidtv.livetv.timeRange
+import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
 import java.time.LocalTime
 import kotlinx.coroutines.delay
 
@@ -238,16 +239,16 @@ private fun StationsPanel(
     val currentFocus = remember { FocusRequester() }
     var focusedInside by remember { mutableStateOf(false) }
     val index = radio.stations.indexOfFirst { it.id == radio.station.id }
-    // The options closed: back on the button that opened them, or on the list when its station moved away.
-    val menuButtons = remember { mutableMapOf<String, FocusRequester>() }
+    // The options closed: back on the station they were about, or on the list when it moved away.
+    val stationFocus = remember { mutableMapOf<String, FocusRequester>() }
     var menuFrom by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(menuOpen) {
         if (menuOpen) return@LaunchedEffect
         val from = menuFrom ?: return@LaunchedEffect
         menuFrom = null
         withFrameNanos { }
-        val button = menuButtons[from]
-        if (button == null || runCatching { button.requestFocus() }.isFailure) runCatching { currentFocus.requestFocus() }
+        val row = stationFocus[from]
+        if (row == null || runCatching { row.requestFocus() }.isFailure) runCatching { currentFocus.requestFocus() }
     }
     LaunchedEffect(index, focusedInside) {
         if (!focusedInside && index >= 0) listState.animateScrollToItem((index - 1).coerceAtLeast(0))
@@ -278,7 +279,7 @@ private fun StationsPanel(
         ) {
             itemsIndexed(radio.stations, key = { _, station -> station.id }) { i, station ->
                 val key = station.id.toString()
-                val menuButton = remember(key) { menuButtons.getOrPut(key) { FocusRequester() } }
+                val rowFocus = remember(key) { stationFocus.getOrPut(key) { FocusRequester() } }
                 StationRow(
                     station = station,
                     nowTitle = station.now?.takeIf { it.airsAt(nowMs) }?.title,
@@ -290,8 +291,7 @@ private fun StationsPanel(
                         menuFrom = key
                         onMenu(station)
                     },
-                    menuFocus = menuButton,
-                    modifier = if (i == index) Modifier.focusRequester(currentFocus) else Modifier,
+                    modifier = Modifier.focusRequester(rowFocus).then(if (i == index) Modifier.focusRequester(currentFocus) else Modifier),
                 )
             }
         }
@@ -307,7 +307,6 @@ private fun StationRow(
     onClick: () -> Unit,
     onFavorite: () -> Unit,
     onMenu: () -> Unit,
-    menuFocus: FocusRequester,
     modifier: Modifier,
 ) {
     val accent = LocalAccent.current.main
@@ -315,7 +314,7 @@ private fun StationRow(
     val focused by interaction.collectIsFocusedAsState()
     var inside by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
-    // One card: the station, its heart and its options; it lights up while any of them has the focus.
+    // One card: the station and its heart; it lights up while either has the focus.
     Row(
         Modifier
             .fillMaxWidth()
@@ -334,31 +333,26 @@ private fun StationRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        StationMain(station, nowTitle, current, playing, interaction, onClick, onMenu, modifier.weight(1f))
+        StationMain(station, nowTitle, current, playing, focused, interaction, onClick, onMenu, modifier.weight(1f))
         RowIconButton(
             if (station.favorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
             stringResource(if (station.favorite) R.string.livetv_favorite_remove else R.string.livetv_favorite_add),
             onFavorite,
+            modifier = Modifier.focusProperties { right = FocusRequester.Cancel },
             on = station.favorite,
-            size = 44,
-        )
-        RowIconButton(
-            GlacierIcons.More,
-            stringResource(R.string.livetv_options),
-            onMenu,
-            modifier = Modifier.focusRequester(menuFocus).focusProperties { right = FocusRequester.Cancel },
             size = 44,
         )
     }
 }
 
-/** The station itself: OK switches to it, holding OK (or the menu key) opens its options. */
+/** The station itself: OK switches to it, holding OK (or the menu key) opens its options; the mark says so. */
 @Composable
 private fun StationMain(
     station: LiveChannel,
     nowTitle: String?,
     current: Boolean,
     playing: Boolean,
+    focused: Boolean,
     interaction: MutableInteractionSource,
     onClick: () -> Unit,
     onMenu: () -> Unit,
@@ -389,5 +383,6 @@ private fun StationMain(
             )
             nowTitle?.let { Text(it, style = GlacierText.body(16), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         }
+        HoldOkMark(focused, accent, size = 26)
     }
 }

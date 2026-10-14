@@ -64,6 +64,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
+import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -425,9 +426,18 @@ private fun GuideBox(cell: GuideCell, loaded: Boolean, focused: Boolean, airing:
         val ink = if (focused) GlacierColors.Void else GlacierColors.Ice
         val soft = if (focused) GlacierColors.Void.copy(alpha = 0.75f) else GlacierColors.Mist
         if (program != null) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (program.recorded) RecordDot(program, Modifier.size(14.dp))
-                Text(program.title, style = GlacierText.body(18, FontWeight.SemiBold), color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    program.title,
+                    style = GlacierText.body(18, FontWeight.SemiBold),
+                    color = ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                // Holding OK opens the programme's options; only on focus, where it takes no room from the others.
+                if (focused) HoldOkMark(true, ink, size = 22)
             }
             Text(clockText(program.startMs), style = GlacierText.body(15), color = soft, maxLines = 1, overflow = TextOverflow.Clip)
         } else if (loaded) {

@@ -100,6 +100,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.onMenuKey
 import io.github.glacier_jellyfin.androidtv.player.formatTime
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
+import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
 import io.github.glacier_jellyfin.androidtv.ui.OverlayCard
 import io.github.glacier_jellyfin.androidtv.ui.audioFormatText
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
@@ -769,6 +770,7 @@ private fun QueueRow(
             )
         }
         Text(formatTime(track.durationMs), style = GlacierText.mono(16), color = GlacierColors.Mist)
+        HoldOkMark(focused, accent, size = 26)
     }
 }
 

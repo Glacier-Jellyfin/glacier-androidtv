@@ -138,7 +138,7 @@
     <string name="livetv_yesterday">Gestern</string>
     <string name="livetv_radio">Radio</string>
     <string name="radio_listen">Anhören</string>
-    <string name="livetv_options">Optionen</string>
+    <string name="hold_ok_hint">OK halten für Optionen</string>
     <string name="livetv_move_radio">Zu Radio verschieben</string>
     <string name="livetv_move_tv">Zu Sendern verschieben</string>
     <string name="livetv_channel_body_tv">Nur Ton? Verschiebe ihn zu Radio. Dort spielt er wie Musik und läuft weiter, während du stöberst.</string>

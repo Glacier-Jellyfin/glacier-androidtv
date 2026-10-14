@@ -57,10 +57,12 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
+import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.ignoreHeldOk
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
+import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
 import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
 
 private val RowShape = RoundedCornerShape(18.dp)
@@ -216,6 +218,7 @@ fun RecordingsView(
                             onClick = { onPlay(entry.recording) },
                             onLongClick = { onRecordingMenu(entry.recording) },
                             modifier = rowModifier,
+                            holdMenu = true,
                         )
                         is Entry.Scheduled -> EntryRow(
                             title = entry.timer.title,
@@ -260,6 +263,8 @@ private fun EntryRow(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Holding OK does more than OK: the mark says so on focus. */
+    holdMenu: Boolean = false,
 ) {
     GlacierClickable(
         onClick = onClick,
@@ -294,6 +299,7 @@ private fun EntryRow(
                     Text(it, style = GlacierText.body(18), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
+            if (holdMenu) HoldOkMark(focused, LocalAccent.current.main)
         }
     }
 }

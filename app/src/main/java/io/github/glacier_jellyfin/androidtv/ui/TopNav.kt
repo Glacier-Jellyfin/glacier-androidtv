@@ -26,6 +26,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.focus.FocusRequester
@@ -110,55 +111,77 @@ fun TopNav(
     val targets = listOf(NavTarget.Search) + middle + listOf(NavTarget.Settings, NavTarget.Profile)
     // The page's own entry may be switched off: entering from below lands on search then.
     val focusTarget = active.takeIf { it in targets } ?: NavTarget.Search
-    Box(modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                // Entering from below lands on the active entry, not the geometrically nearest one.
-                .focusProperties { onEnter = { activeFocus.requestFocus() } }
-                .focusGroup()
-                .dropShadow(PillShape, Shadow(radius = 40.dp, spread = (-14).dp, color = Color.Black.copy(alpha = 0.55f), offset = DpOffset(0.dp, 18.dp)))
-                .clip(PillShape)
-                .background(GlacierColors.Deep.copy(alpha = 0.72f))
-                .background(GlacierColors.GlassFill2)
-                .border(1.dp, GlacierColors.GlassBorder2, PillShape)
-                .padding(7.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            targets.forEach { target ->
-                NavItem(
-                    target = target,
-                    active = target == active,
-                    userName = userName,
-                    onClick = { onSelect(target) },
-                    down = down,
-                    right = miniFocus.takeIf { target == NavTarget.Profile && nowPlaying != null },
-                    modifier = when (target) {
-                        focusTarget -> Modifier.focusRequester(activeFocus)
-                        NavTarget.Profile -> Modifier.focusRequester(profileFocus)
-                        else -> Modifier
-                    },
+    // The pill sits in the middle while there is room. With many entries it moves left, away from the
+    // mini player, but not past the page edge; when even that is not enough, the mini player gets narrower.
+    Layout(
+        modifier = modifier.fillMaxWidth(),
+        content = {
+            Row(
+                modifier = Modifier
+                    // Entering from below lands on the active entry, not the geometrically nearest one.
+                    .focusProperties { onEnter = { activeFocus.requestFocus() } }
+                    .focusGroup()
+                    .dropShadow(PillShape, Shadow(radius = 40.dp, spread = (-14).dp, color = Color.Black.copy(alpha = 0.55f), offset = DpOffset(0.dp, 18.dp)))
+                    .clip(PillShape)
+                    .background(GlacierColors.Deep.copy(alpha = 0.72f))
+                    .background(GlacierColors.GlassFill2)
+                    .border(1.dp, GlacierColors.GlassBorder2, PillShape)
+                    .padding(7.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                targets.forEach { target ->
+                    NavItem(
+                        target = target,
+                        active = target == active,
+                        userName = userName,
+                        onClick = { onSelect(target) },
+                        down = down,
+                        right = miniFocus.takeIf { target == NavTarget.Profile && nowPlaying != null },
+                        modifier = when (target) {
+                            focusTarget -> Modifier.focusRequester(activeFocus)
+                            NavTarget.Profile -> Modifier.focusRequester(profileFocus)
+                            else -> Modifier
+                        },
+                    )
+                }
+            }
+            if (nowPlaying != null) {
+                MiniPlayer(
+                    nowPlaying = nowPlaying,
+                    onClick = { onSelect(NavTarget.NowPlaying) },
+                    modifier = Modifier
+                        .focusRequester(miniFocus)
+                        .focusProperties {
+                            left = profileFocus
+                            if (down != null) this.down = down
+                        },
                 )
             }
-        }
-        if (nowPlaying != null) {
-            MiniPlayer(
-                nowPlaying = nowPlaying,
-                onClick = { onSelect(NavTarget.NowPlaying) },
-                modifier = Modifier
-                    // Where the toast shows, which moves below it meanwhile.
-                    .align(Alignment.TopEnd)
-                    .padding(end = 96.dp)
-                    .focusRequester(miniFocus)
-                    .focusProperties {
-                        left = profileFocus
-                        if (down != null) this.down = down
-                    },
-            )
+        },
+    ) { measurables, constraints ->
+        val width = constraints.maxWidth
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        val pill = measurables[0].measure(loose)
+        val edge = PageEdge.dp.roundToPx()
+        val gap = NAV_MINI_GAP.dp.roundToPx()
+        // Where the toast shows, which moves below it meanwhile.
+        val miniEnd = width - MINI_PLAYER_END.dp.roundToPx()
+        val mini = measurables.getOrNull(1)?.measure(loose.copy(maxWidth = (miniEnd - edge - pill.width - gap).coerceAtLeast(0)))
+        val centred = (width - pill.width) / 2
+        val pillX = if (mini == null) centred else minOf(centred, miniEnd - mini.width - gap - pill.width).coerceAtLeast(edge)
+        layout(width, maxOf(pill.height, mini?.height ?: 0)) {
+            pill.place(pillX, 0)
+            mini?.place(miniEnd - mini.width, 0)
         }
     }
 }
+
+/** Space between the navigation pill and the mini player when they come close. */
+private const val NAV_MINI_GAP = 24
+
+/** The mini player's distance from the right edge of the screen. */
+private const val MINI_PLAYER_END = 96
 
 @Composable
 private fun NavItem(

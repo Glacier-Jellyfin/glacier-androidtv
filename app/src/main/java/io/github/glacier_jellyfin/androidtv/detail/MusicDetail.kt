@@ -55,6 +55,7 @@ import io.github.glacier_jellyfin.androidtv.ui.CardShape
 import io.github.glacier_jellyfin.androidtv.ui.ContinueCard
 import io.github.glacier_jellyfin.androidtv.ui.FactsRow
 import io.github.glacier_jellyfin.androidtv.ui.GridCard
+import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.audioFormatText
@@ -276,7 +277,7 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
     }
 }
 
-/** A song in the two-column list: number, title (with artist in playlists), length. Holding OK opens its options. */
+/** A song in the two-column list: number, title (with artist in playlists), length. Holding OK opens its options; the mark says so. */
 @Composable
 private fun TrackRow(track: MusicTrack, number: Int?, withArtist: Boolean, onClick: () -> Unit, onOptions: () -> Unit, modifier: Modifier) {
     val accent = LocalAccent.current.main
@@ -306,6 +307,7 @@ private fun TrackRow(track: MusicTrack, number: Int?, withArtist: Boolean, onCli
                 }
             }
             Text(formatTime(track.durationMs), style = GlacierText.mono(17), color = GlacierColors.Mist)
+            HoldOkMark(focused, accent, size = 26)
         }
     }
 }

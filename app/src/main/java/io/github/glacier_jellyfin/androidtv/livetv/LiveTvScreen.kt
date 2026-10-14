@@ -3,11 +3,9 @@ package io.github.glacier_jellyfin.androidtv.livetv
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
-import io.github.glacier_jellyfin.androidtv.core.designsystem.onMenuKey
-import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -70,9 +68,12 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
+import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
+import io.github.glacier_jellyfin.androidtv.core.designsystem.onMenuKey
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.FilterChip
+import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
 import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
@@ -370,9 +371,10 @@ fun LiveTvScreen(
 }
 
 /**
- * A channel or station: OK plays it, holding OK opens its options. The heart
- * and the options button sit inside the card at its end; nothing further
- * right takes focus. The card lights up while any of the three has the focus.
+ * A channel or station: OK plays it, holding OK opens its options, which the
+ * mark at the end of the focused card says. The heart sits inside the card
+ * at its end; nothing further right takes focus. The card lights up while
+ * either has the focus.
  */
 @Composable
 private fun ChannelRow(
@@ -442,19 +444,14 @@ private fun ChannelRow(
                     }
                 }
             }
+            HoldOkMark(focused, accent)
         }
         RowIconButton(
             if (channel.favorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
             stringResource(if (channel.favorite) R.string.livetv_favorite_remove else R.string.livetv_favorite_add),
             onFavorite,
-            modifier = upFocus,
-            on = channel.favorite,
-        )
-        RowIconButton(
-            GlacierIcons.More,
-            stringResource(R.string.livetv_options),
-            onMenu,
             modifier = upFocus.focusProperties { right = FocusRequester.Cancel },
+            on = channel.favorite,
         )
     }
 }

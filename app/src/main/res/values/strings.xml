@@ -143,7 +143,7 @@
     <string name="livetv_yesterday">Yesterday</string>
     <string name="livetv_radio">Radio</string>
     <string name="radio_listen">Listen</string>
-    <string name="livetv_options">Options</string>
+    <string name="hold_ok_hint">Hold OK for options</string>
     <string name="livetv_move_radio">Move to Radio</string>
     <string name="livetv_move_tv">Move to Channels</string>
     <string name="livetv_channel_body_tv">Sound only? Move it to Radio. It plays there like music and goes on while you browse.</string>

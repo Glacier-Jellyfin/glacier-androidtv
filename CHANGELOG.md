@@ -26,7 +26,8 @@ renders the reference separately.
 - The channel list plays the focused channel without sound in its preview. When you open that channel, it goes on playing without loading again (#1)
 - Radio. Radio stations of Live TV have their own view on the Live TV page and play like music. They go on while you browse the app, show up in the mini player and switch with Up and Down, next and previous or the channel keys. Pausing frees the tuner
 - Jellyfin calls radio stations TV channels. A channel that plays with sound and no picture moves to Radio by itself. You can also move channels between Channels and Radio by hand
-- Channels and radio stations have a heart and an options button in their card, on the Live TV page and in the radio player
+- Channels and radio stations have a heart in their card, on the Live TV page and in the radio player
+- A small options mark shows on the focused element when holding OK opens more options. It appears on channels, radio stations, songs, the queue, recordings and programmes in the guide
 
 ### Improved
 - Holding OK in the guide now opens the programme's options. Marking the channel as a favorite is one of them
@@ -38,6 +39,7 @@ renders the reference separately.
 - Right closes the channel list in the Live TV player, like Left closes the programmes
 - While programme data loads, a loader shows instead of "No guide data". Loaders sit in the middle of the space they fill, also in the library
 - Back while connecting to a server stops it and stays on the server list
+- With many entries in the navigation, it moves aside for the mini player instead of running into it
 
 ### Fixed
 - Play in the spotlight on a show now plays its next episode instead of failing
