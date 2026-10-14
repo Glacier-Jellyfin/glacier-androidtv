@@ -336,7 +336,7 @@ class MainActivity : ComponentActivity() {
                         crashShare?.let { LogShareScreen(it, onClose = startViewModel::closeCrashShare) }
                         CrashNotice(startViewModel.crashNotice, toaster)
                         ToastHost(toaster)
-                        NowPlayingSaver(saverOn, nowPlaying, startViewModel.music.progress)
+                        NowPlayingSaver(saverOn, nowPlaying, startViewModel.music.state, startViewModel.music.progress)
                     }
                 }
             }

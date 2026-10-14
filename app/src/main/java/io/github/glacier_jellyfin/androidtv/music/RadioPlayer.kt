@@ -65,7 +65,6 @@ import io.github.glacier_jellyfin.androidtv.livetv.clockText
 import io.github.glacier_jellyfin.androidtv.livetv.minutesLeft
 import io.github.glacier_jellyfin.androidtv.livetv.timeRange
 import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
-import java.time.LocalTime
 import kotlinx.coroutines.delay
 
 /**
@@ -98,13 +97,7 @@ internal fun BoxScope.RadioPlayer(state: MusicUiState, radio: RadioState, playFo
             )
             Text(stringResource(R.string.livetv_radio), style = GlacierText.display(28), color = GlacierColors.Ice)
         }
-        val clock by produceState(LocalTime.now().format(ClockFormat)) {
-            while (true) {
-                value = LocalTime.now().format(ClockFormat)
-                delay(CLOCK_TICK_MS)
-            }
-        }
-        Text(clock, style = GlacierText.mono(20), color = GlacierColors.Mist)
+        MusicClock()
     }
 
     Row(

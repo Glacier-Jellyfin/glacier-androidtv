@@ -295,13 +295,7 @@ private fun TopBar(state: MusicUiState, track: MusicTrack, modifier: Modifier) {
             Text(state.sourceTitle, style = GlacierText.display(28), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         // Format and delivery live in the info panel.
-        val clock by produceState(LocalTime.now().format(ClockFormat)) {
-            while (true) {
-                value = LocalTime.now().format(ClockFormat)
-                delay(CLOCK_TICK_MS)
-            }
-        }
-        Text(clock, style = GlacierText.mono(20), color = GlacierColors.Mist)
+        MusicClock()
     }
 }
 
@@ -777,3 +771,15 @@ private fun QueueRow(
 
 internal val ClockFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 internal const val CLOCK_TICK_MS = 10_000L
+
+/** The time of day, as big as in the video player. */
+@Composable
+fun MusicClock(modifier: Modifier = Modifier) {
+    val clock by produceState(LocalTime.now().format(ClockFormat)) {
+        while (true) {
+            value = LocalTime.now().format(ClockFormat)
+            delay(CLOCK_TICK_MS)
+        }
+    }
+    Text(clock, modifier, style = GlacierText.display(34), color = GlacierColors.Ice)
+}
