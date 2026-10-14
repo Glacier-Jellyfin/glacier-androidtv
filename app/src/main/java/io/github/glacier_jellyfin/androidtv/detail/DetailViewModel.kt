@@ -22,7 +22,10 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelection
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelections
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
+import io.github.glacier_jellyfin.androidtv.core.data.settings.RememberedTracks
+import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.rememberedTracks
 import io.github.glacier_jellyfin.androidtv.music.MusicActions
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.music.MusicTarget
@@ -91,6 +94,7 @@ class DetailViewModel @Inject constructor(
     private val shuffle: MusicShuffle,
     private val playback: PlaybackRepository,
     private val settings: SettingsRepository,
+    private val serverPreferences: ServerPreferencesRepository,
     private val parental: ParentalControl,
     private val ageFilter: AgeFilter,
     private val musicPlayback: MusicController,
@@ -165,8 +169,22 @@ class DetailViewModel @Inject constructor(
         }
     }
 
-    private fun selectionOf(details: ItemDetails): TrackSelection? =
-        trackSelections.get(details.item.id) ?: details.tracks?.let { TrackSelection(it.defaultAudio, it.defaultSubtitle) }
+    /**
+     * What plays: a choice made for this title, else the last title's tracks
+     * where they apply (as the player takes them over), else the server's defaults.
+     */
+    private suspend fun selectionOf(details: ItemDetails): TrackSelection? {
+        trackSelections.get(details.item.id)?.let { return it }
+        val tracks = details.tracks ?: return null
+        val preferences = serverPreferences.preferences.value ?: serverPreferences.refresh()
+        val remembered = preferences?.let { rememberedTracks(settings.current().lastTracks, it, tracks) }
+        val subtitle = when (val index = remembered?.subtitle) {
+            null -> tracks.defaultSubtitle
+            RememberedTracks.SUBTITLES_OFF -> null
+            else -> index
+        }
+        return TrackSelection(remembered?.audio ?: tracks.defaultAudio, subtitle)
+    }
 
     private var refreshJob: Job? = null
 

@@ -59,6 +59,7 @@ renders the reference separately.
 - Loading and error messages in the players and the trailer view stay readable on bright pictures
 - A movie or episode marked as watched shows as watched right away in the library and on the page of its collection or show
 - Subtitles no longer stay empty when a file marks its forced track as the default. If the audio is in another language, the full track of the same language plays instead. Tracks named Forced or Signs now show as forced in the track picker
+- The page of an episode or movie shows the audio and subtitles that will play. When the tracks of the last title are taken over, the page shows them too instead of the server's defaults
 
 ## [0.5.0-beta.1] - 2026-10-11
 
