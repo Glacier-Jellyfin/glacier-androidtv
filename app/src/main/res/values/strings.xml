@@ -99,6 +99,9 @@
     <string name="livetv_channels">Channels</string>
     <string name="livetv_guide">Guide</string>
     <string name="livetv_paused">Paused</string>
+    <string name="livetv_go_live">Back to live</string>
+    <string name="livetv_behind_seconds">%1$d s behind live</string>
+    <string name="livetv_behind_minutes">%1$d min behind live</string>
     <string name="livetv_no_channel">No such channel</string>
     <string name="livetv_play_error">This channel does not play</string>
     <string name="livetv_recordings">Recordings</string>

@@ -24,6 +24,7 @@ renders the reference separately.
 - Programmes the server records get a red dot in the guide, two dots when the whole series is recorded
 - A new Recordings view on the Live TV page lists what you recorded, the series you follow and what is planned. OK plays a recording, holding OK lets you delete it. OK on a planned recording or a series lets you cancel it
 - While you watch a channel, Right or the guide key shows what comes next on it. OK on a later programme records it (#1)
+- Pause and rewind Live TV. A pause goes on where you stopped, and you can wind back to the moment you tuned in. The channel banner now has one bar for the programme and what you can wind back. OK, Play/Pause, Menu or the spool keys open it: Left and Right wind back and forth, Down reaches the buttons for Play/Pause, 10 seconds back, 30 seconds ahead and Back to live
 - The channel list plays the focused channel without sound in its preview. When you open that channel, it goes on playing without loading again, and back in the list it goes on as the preview (#1)
 - Radio. Radio stations of Live TV have their own view on the Live TV page and play like music. They go on while you browse the app, show up in the mini player and switch with Up and Down, next and previous or the channel keys. Pausing frees the tuner
 - Jellyfin calls radio stations TV channels. A channel that plays with sound and no picture moves to Radio by itself. You can also move channels between Channels and Radio by hand
@@ -41,6 +42,7 @@ renders the reference separately.
 - Unwatched keeps movies grouped into collections. A collection shows as long as one of its movies is unwatched
 - Back in the Live TV channel list, guide, radio or recordings first goes up to the views at the top. Pressed again, it leaves the page
 - Right closes the channel list in the Live TV player, like Left closes the programmes
+- OK in the Live TV player now shows the controls with Play/Pause. The channel list opens with Left
 - While programme data loads, a loader shows instead of "No guide data". Loaders sit in the middle of the space they fill, also in the library
 - Back while connecting to a server stops it and stays on the server list
 - With many entries in the navigation, it moves aside for the mini player instead of running into it
