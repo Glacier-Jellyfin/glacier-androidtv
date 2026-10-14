@@ -633,6 +633,7 @@ private fun ChannelBanner(state: LiveTvPlayerState, seeking: Boolean, scrubMs: L
     val shift = state.timeshift
     val behind = shift?.takeIf { !it.live }?.behindMs
     Box(Modifier.fillMaxSize()) {
+        Box(Modifier.align(Alignment.TopCenter).osdScrim(top = true))
         Box(Modifier.align(Alignment.BottomCenter).osdScrim(top = false))
         Row(
             Modifier
@@ -711,8 +712,14 @@ private fun ChannelBanner(state: LiveTvPlayerState, seeking: Boolean, scrubMs: L
                     }
                 }
             }
-            Text(clockText(state.nowMs), style = GlacierText.display(34), color = GlacierColors.Ice)
         }
+        // Top right, where the video and music players keep their clock.
+        Text(
+            clockText(state.nowMs),
+            style = GlacierText.display(34),
+            color = GlacierColors.Ice,
+            modifier = Modifier.align(Alignment.TopEnd).padding(end = 80.dp, top = 60.dp),
+        )
     }
 }
 
