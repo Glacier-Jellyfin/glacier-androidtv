@@ -177,6 +177,8 @@
     <string name="home_favorite_songs">Favorite songs</string>
     <string name="home_new_in">New in %1$s</string>
     <string name="home_my_media">My media</string>
+    <string name="home_live_now">On now</string>
+    <string name="home_live_channels">TV channels</string>
     <plurals name="count_titles">
         <item quantity="one">%1$d title</item>
         <item quantity="other">%1$d titles</item>
@@ -644,6 +646,8 @@
     <string name="settings_row_recent_albums_sub">Albums of the songs you heard last</string>
     <string name="settings_row_favorite_songs_sub">Your favorite songs, ready to play</string>
     <string name="settings_row_libraries_sub">A card for each of your libraries</string>
+    <string name="settings_row_live_now_sub">What runs on Live TV now, favorites first</string>
+    <string name="settings_row_live_channels_sub">Your TV channels, favorites first</string>
     <string name="settings_card_library_sub">Card in "My media"</string>
     <string name="settings_card_moving_sub">Up and Down move the card. OK or Back puts it down.</string>
     <string name="settings_cards_body">Pick which libraries get a card and in which order.</string>

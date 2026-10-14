@@ -680,7 +680,15 @@ private fun homeRows(
     val on = home.spotlightSources.isNotEmpty()
     // The music rows only exist on servers with a music library.
     val hasMusic = LibraryKind.Music in LocalLibraryKinds.current
-    val visible = { choice: HomeRowChoice -> hasMusic || (choice.row != HomeRow.RecentAlbums && choice.row != HomeRow.FavoriteSongs) }
+    // The Live TV rows only on servers with Live TV.
+    val hasLiveTv = LocalLiveTv.current
+    val visible = { choice: HomeRowChoice ->
+        when (choice.row) {
+            HomeRow.RecentAlbums, HomeRow.FavoriteSongs -> hasMusic
+            HomeRow.LiveTvOnNow, HomeRow.LiveTvChannels -> hasLiveTv
+            else -> true
+        }
+    }
     val libraries by viewModel.latestLibraries.collectAsStateWithLifecycle()
     val allLibraries by viewModel.libraries.collectAsStateWithLifecycle()
     // "3 cards", or "2 of 3 cards" once some are switched off.
@@ -1241,6 +1249,8 @@ private val rowTexts = mapOf(
     HomeRow.RecentAlbums to (R.string.home_recent_albums to R.string.settings_row_recent_albums_sub),
     HomeRow.FavoriteSongs to (R.string.home_favorite_songs to R.string.settings_row_favorite_songs_sub),
     HomeRow.Libraries to (R.string.home_my_media to R.string.settings_row_libraries_sub),
+    HomeRow.LiveTvOnNow to (R.string.home_live_now to R.string.settings_row_live_now_sub),
+    HomeRow.LiveTvChannels to (R.string.home_live_channels to R.string.settings_row_live_channels_sub),
 )
 
 /** Languages of Glacier itself, each named in its own language. */

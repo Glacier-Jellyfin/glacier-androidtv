@@ -36,6 +36,7 @@ import javax.inject.Singleton
 class HomeRepository @Inject constructor(
     private val sessions: SessionManager,
     private val ageFilter: AgeFilter,
+    private val liveTvRepository: LiveTvRepository,
 ) {
 
     private val _kinds = MutableStateFlow(DefaultKinds)
@@ -89,6 +90,8 @@ class HomeRepository @Inject constructor(
         val hasMusic = libraries.any { it.kind == LibraryKind.Music }
         val recentAlbums = if (hasMusic) runCatching { recentAlbums(session, mapper) }.getOrDefault(emptyList()) else emptyList()
         val favoriteSongs = if (hasMusic) runCatching { favoriteSongs(session, mapper) }.getOrDefault(emptyList()) else emptyList()
+        // Set by libraries(), so known here.
+        val liveChannels = if (_liveTv.value) runCatching { liveChannels() }.getOrDefault(emptyList()) else emptyList()
 
         HomeContent(
             libraries = libraries,
@@ -98,8 +101,13 @@ class HomeRepository @Inject constructor(
             latestLibraries = latestLibraries,
             recentAlbums = recentAlbums,
             favoriteSongs = favoriteSongs,
+            liveChannels = liveChannels,
         )
     }
+
+    /** The TV channels for the Live TV rows, favorites first, otherwise in the server's order. */
+    suspend fun liveChannels(): List<LiveChannel> =
+        liveTvRepository.channels().filterNot { it.radio }.sortedByDescending { it.favorite }
 
     /** Albums of the songs played last: the server keeps the play date on songs, not on albums. */
     private suspend fun recentAlbums(session: Session, mapper: MediaMapper): List<MediaItem> {

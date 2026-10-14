@@ -396,6 +396,7 @@ class LiveTvPlayerViewModel @Inject constructor(
      * stays here until the list shows it, so the decoder does not stop in between.
      */
     private fun handBack(): Boolean {
+        if (!route.handBack) return false
         val channelId = tuned ?: return false
         val current = source ?: return false
         val handed = _state.value.playback ?: return false

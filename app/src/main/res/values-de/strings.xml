@@ -172,6 +172,8 @@
     <string name="home_favorite_songs">Lieblingssongs</string>
     <string name="home_new_in">Neu in %1$s</string>
     <string name="home_my_media">Meine Medien</string>
+    <string name="home_live_now">Läuft gerade</string>
+    <string name="home_live_channels">TV-Sender</string>
     <plurals name="count_titles">
         <item quantity="one">%1$d Titel</item>
         <item quantity="other">%1$d Titel</item>
@@ -638,6 +640,8 @@
     <string name="settings_row_recent_albums_sub">Alben der zuletzt gehörten Songs</string>
     <string name="settings_row_favorite_songs_sub">Deine Lieblingssongs zum direkten Abspielen</string>
     <string name="settings_row_libraries_sub">Eine Karte für jede deiner Bibliotheken</string>
+    <string name="settings_row_live_now_sub">Was gerade im Live-TV läuft, Favoriten zuerst</string>
+    <string name="settings_row_live_channels_sub">Deine TV-Sender, Favoriten zuerst</string>
     <string name="settings_card_library_sub">Karte unter „Meine Medien“</string>
     <string name="settings_card_moving_sub">Hoch und Runter verschieben die Karte. OK oder Zurück legt sie ab.</string>
     <string name="settings_cards_body">Wähle, welche Bibliotheken eine Karte bekommen und in welcher Reihenfolge.</string>

@@ -18,12 +18,14 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepositor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightSource
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.Library
+import io.github.glacier_jellyfin.androidtv.core.data.media.LiveChannel
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.FavoritesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
+import io.github.glacier_jellyfin.androidtv.navigation.LiveTvPlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LiveTvRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
@@ -35,6 +37,7 @@ import io.github.glacier_jellyfin.androidtv.ui.PinGate
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -97,6 +100,24 @@ class HomeViewModel @Inject constructor(
                 _state.update { it.copy(settings = home) }
                 _state.value.content?.let { content -> updateSpotlight(content) }
             }
+        }
+        // "On now" follows the guide: once a programme on the rows is over, the channels load anew.
+        viewModelScope.launch {
+            while (true) {
+                delay(LIVE_CHECK_MS)
+                val channels = _state.value.content?.liveChannels.orEmpty()
+                val now = System.currentTimeMillis()
+                if (channels.any { channel -> channel.now?.let { it.endMs <= now } == true }) refreshLive()
+            }
+        }
+    }
+
+    /** Only the Live TV rows; the rest of the page stays as it is. */
+    private fun refreshLive() {
+        viewModelScope.launch {
+            runCatching { repository.liveChannels() }
+                .onSuccess { channels -> _state.update { it.copy(content = it.content?.copy(liveChannels = channels)) } }
+                .onFailure { Log.w(TAG, "Refreshing Live TV failed", it) }
         }
     }
 
@@ -217,6 +238,9 @@ class HomeViewModel @Inject constructor(
     fun openContinueWatching(item: MediaItem) =
         if (item.kind == ItemKind.Episode) openDetails(item) else play(item)
 
+    /** Tunes in full screen; Back comes back here. */
+    fun playChannel(channel: LiveChannel) = navigate(LiveTvPlayerRoute(channel.id.toString(), handBack = false))
+
     fun openLibrary(library: Library) = navigate(LibraryRoute(library.kind.name, library.id.toString(), title = library.name))
 
     fun onNav(target: NavTarget) {
@@ -242,5 +266,6 @@ class HomeViewModel @Inject constructor(
 
     private companion object {
         const val TAG = "Home"
+        const val LIVE_CHECK_MS = 30_000L
     }
 }

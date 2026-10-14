@@ -90,9 +90,11 @@ data object LiveTvRoute
 /**
  * A Live TV channel, full screen; channel up and down switch to its neighbours.
  * Started from the favorites ([favoritesOnly]), they stay among the favorites.
+ * With [handBack], Back gives the stream to the channel list as its preview;
+ * started from elsewhere (the home screen) nothing takes it, so it stops.
  */
 @Serializable
-data class LiveTvPlayerRoute(val channelId: String, val favoritesOnly: Boolean = false)
+data class LiveTvPlayerRoute(val channelId: String, val favoritesOnly: Boolean = false, val handBack: Boolean = true)
 
 @Serializable
 data object SettingsRoute

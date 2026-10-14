@@ -350,6 +350,35 @@ fun HomeScreen(
                                         }
                                     }
                                 }
+                                HomeRow.LiveTvOnNow -> {
+                                    val airing = content.liveChannels.filter { it.now != null }
+                                    if (airing.isNotEmpty()) item(key = "live-now") {
+                                        val nowMs = rememberLiveClock()
+                                        MediaRow(title = stringResource(R.string.home_live_now)) {
+                                            items(airing, key = { it.id }) { channel ->
+                                                OnNowCard(
+                                                    channel = channel,
+                                                    nowMs = nowMs,
+                                                    onClick = { viewModel.playChannel(channel) },
+                                                    modifier = Modifier.remembered("live-now-${channel.id}"),
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                HomeRow.LiveTvChannels -> if (content.liveChannels.isNotEmpty()) {
+                                    item(key = "live-channels") {
+                                        MediaRow(title = stringResource(R.string.home_live_channels)) {
+                                            items(content.liveChannels, key = { it.id }) { channel ->
+                                                ChannelCard(
+                                                    channel = channel,
+                                                    onClick = { viewModel.playChannel(channel) },
+                                                    modifier = Modifier.remembered("live-channel-${channel.id}"),
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                                 null -> Unit
                             }
                         }

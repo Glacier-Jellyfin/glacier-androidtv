@@ -19,6 +19,7 @@ renders the reference separately.
 ## [Unreleased]
 
 ### New
+- Two Live TV rows on the home screen: On now shows what runs on your channels, TV channels lists them by name and logo. Favorites come first, OK tunes in. Turn them on or off and move them in Settings › Home
 - Record Live TV. Press OK on a programme in the guide that has not started yet to record it, or the whole series. Hold OK on any programme for all options, also for what runs now (#1)
 - Programmes the server records get a red dot in the guide, two dots when the whole series is recorded
 - A new Recordings view on the Live TV page lists what you recorded, the series you follow and what is planned. OK plays a recording, holding OK lets you delete it. OK on a planned recording or a series lets you cancel it

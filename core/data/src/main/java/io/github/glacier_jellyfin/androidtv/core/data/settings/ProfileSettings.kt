@@ -189,7 +189,7 @@ private fun <T> List<T>.swapped(by: Int, which: (T) -> Boolean, target: (T) -> B
 
 /** The rows of the home screen below the spotlight; each shows only when it has something in it. */
 @Serializable
-enum class HomeRow { ContinueWatching, Favorites, Latest, RecentAlbums, FavoriteSongs, Libraries }
+enum class HomeRow { ContinueWatching, Favorites, Latest, RecentAlbums, FavoriteSongs, Libraries, LiveTvOnNow, LiveTvChannels }
 
 /** One home row, switched on or off. */
 @Serializable
