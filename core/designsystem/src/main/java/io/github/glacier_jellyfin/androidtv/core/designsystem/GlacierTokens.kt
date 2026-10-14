@@ -26,14 +26,21 @@ object GlacierColors {
 }
 
 /**
- * The five accents from the design. An accent overrides exactly two colours;
- * adding one is two values and a contrast check against [GlacierColors.Void].
+ * The accents, in spectrum order (red to violet, then the colourless Firn) as
+ * the settings show them. The five from the design are joined by four more
+ * for the hues they leave out, at the same lightness. An accent overrides exactly
+ * two colours; adding one is two values and a contrast check against
+ * [GlacierColors.Void], which is also the text on both of them.
  */
 enum class Accent(val main: Color, val deep: Color) {
+    Alpenglow(Color(0xFFF2909A), Color(0xFFBD6670)),
+    Dawn(Color(0xFFF5AC7E), Color(0xFFBF7A4E)),
+    MidnightSun(Color(0xFFF0D47C), Color(0xFFB39745)),
+    Aurora(Color(0xFF5FE3C0), Color(0xFF2F9E86)),
     Crevasse(Color(0xFF7DC7D9), Color(0xFF4E93A8)),
     BlueIce(Color(0xFF38B6E0), Color(0xFF2186B0)),
-    Aurora(Color(0xFF5FE3C0), Color(0xFF2F9E86)),
     PolarNight(Color(0xFF9FB8F0), Color(0xFF657BBA)),
+    Twilight(Color(0xFFC4A9F2), Color(0xFF8B70C2)),
     Firn(Color(0xFFCFE4EC), Color(0xFF8FB3C2)),
 }
 

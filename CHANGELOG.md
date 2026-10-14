@@ -18,6 +18,9 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### New
+- Four new accent colours: Alpenglow, Dawn, Midnight sun and Twilight. With the five Glacier accents they cover the whole rainbow. Settings shows them in spectrum order, in one row that scrolls when it does not fit
+
 ## [0.5.0-beta.2] - 2026-10-15
 
 ### New

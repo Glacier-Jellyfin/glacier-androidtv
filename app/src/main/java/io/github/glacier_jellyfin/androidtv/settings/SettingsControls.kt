@@ -93,6 +93,9 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
 import io.github.glacier_jellyfin.androidtv.player.subtitleTypeface
 import io.github.glacier_jellyfin.androidtv.player.usesNative
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.layout.layout
 
 /** A category on the left (design `pill()`): accent when focused, tinted when it is the open one. */
 @Composable
@@ -484,10 +487,26 @@ internal data class Swatch(val label: String, val color: Color)
 internal fun SwatchPicker(swatches: List<Swatch>, selected: Int, onSelect: (Int) -> Unit) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
-    Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+    // One line that scrolls when the swatches do not fit. It reaches out over the card's
+    // 30px side padding, so swatches slide to the card edge and the focus scale is not cut.
+    // Entering the line lands on the chosen accent, not the first one.
+    val chosen = remember { FocusRequester() }
+    Row(
+        Modifier
+            .layout { measurable, constraints ->
+                val edge = 30.dp.roundToPx()
+                val placeable = measurable.measure(constraints.copy(maxWidth = constraints.maxWidth + 2 * edge, minWidth = 0))
+                layout(constraints.maxWidth, placeable.height) { placeable.place(-edge, 0) }
+            }
+            .focusProperties { onEnter = { chosen.requestFocus() } }
+            .focusGroup()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 30.dp),
+        horizontalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
         swatches.forEachIndexed { index, swatch ->
             val active = index == selected
-            GlacierCard(onClick = { onSelect(index) }, modifier = Modifier.width(150.dp)) { focused ->
+            GlacierCard(onClick = { onSelect(index) }, modifier = Modifier.width(150.dp).then(if (active) Modifier.focusRequester(chosen) else Modifier)) { focused ->
                 Box(
                     Modifier
                         .fillMaxWidth()

@@ -94,9 +94,12 @@ data class AppearanceSettings(
     val groupCollections: Boolean = true,
 )
 
-/** The design's five accents; the colours themselves live in the design system. */
+/**
+ * The accents in spectrum order; the colours themselves live in the design system.
+ * Stored by name, so the order may change.
+ */
 @Serializable
-enum class AccentColor { Crevasse, BlueIce, Aurora, PolarNight, Firn }
+enum class AccentColor { Alpenglow, Dawn, MidnightSun, Aurora, Crevasse, BlueIce, PolarNight, Twilight, Firn }
 
 /** Settings › Home: what the spotlight at the top of the home screen shows, and which rows appear. */
 @Serializable

@@ -603,12 +603,16 @@
     <string name="settings_group_library">Bibliothek</string>
     <string name="settings_group_spotlight">Spotlight</string>
     <string name="settings_accent">Akzentfarbe</string>
-    <string name="settings_accent_sub">Fünf Glacier-Akzente. Sie färben auch den Verlauf im Hintergrund.</string>
+    <string name="settings_accent_sub">Neun Glacier-Akzente quer durch den Regenbogen. Sie färben auch den Verlauf im Hintergrund.</string>
     <string name="settings_accent_crevasse">Gletscherspalte</string>
     <string name="settings_accent_blueice">Blaueis</string>
     <string name="settings_accent_aurora">Polarlicht</string>
     <string name="settings_accent_polarnight">Polarnacht</string>
     <string name="settings_accent_firn">Firn</string>
+    <string name="settings_accent_alpenglow">Alpenglühen</string>
+    <string name="settings_accent_dawn">Morgenrot</string>
+    <string name="settings_accent_midnightsun">Mitternachtssonne</string>
+    <string name="settings_accent_twilight">Dämmerung</string>
     <string name="settings_density">Dichte der Reihen</string>
     <string name="settings_density_sub">Kartengröße auf der Startseite und im Raster</string>
     <string name="settings_density_comfortable">Komfortabel</string>

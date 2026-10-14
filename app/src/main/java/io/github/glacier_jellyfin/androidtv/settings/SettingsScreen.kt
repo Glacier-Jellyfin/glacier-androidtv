@@ -614,10 +614,14 @@ private fun appearanceRows(
         },
     )
     val names = listOf(
+        R.string.settings_accent_alpenglow,
+        R.string.settings_accent_dawn,
+        R.string.settings_accent_midnightsun,
+        R.string.settings_accent_aurora,
         R.string.settings_accent_crevasse,
         R.string.settings_accent_blueice,
-        R.string.settings_accent_aurora,
         R.string.settings_accent_polarnight,
+        R.string.settings_accent_twilight,
         R.string.settings_accent_firn,
     )
     return listOf(
