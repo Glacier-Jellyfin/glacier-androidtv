@@ -63,4 +63,24 @@ class LiveTvTest {
         assertNull(channelByNumber(channels, "5"))
         assertNull(channelByNumber(channels, "000"))
     }
+
+    private fun timer(id: String, start: Long, end: Long) =
+        LiveTimer(id, null, id, null, null, null, start, end, seriesTimerId = null, recording = false)
+
+    @Test
+    fun `upcoming timers drop finished ones and come soonest first`() {
+        val done = timer("done", 0, 100)
+        val running = timer("running", 50, 200)
+        val later = timer("later", 300, 400)
+        val soon = timer("soon", 200, 300)
+        assertEquals(listOf(running, soon, later), upcomingTimers(listOf(later, done, soon, running), 100))
+    }
+
+    @Test
+    fun `a programme counts as recorded with a timer or a series timer`() {
+        val plain = program("a", 0, 100)
+        assertEquals(false, plain.recorded)
+        assertEquals(true, plain.copy(timerId = "t").recorded)
+        assertEquals(true, plain.copy(seriesTimerId = "s").recorded)
+    }
 }

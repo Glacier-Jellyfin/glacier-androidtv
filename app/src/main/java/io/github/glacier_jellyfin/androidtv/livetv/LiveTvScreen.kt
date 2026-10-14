@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.livetv
 
+import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,12 +37,21 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.compose.ContentFrame
+import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
@@ -61,6 +71,7 @@ import io.github.glacier_jellyfin.androidtv.ui.FilterChip
 import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
+import io.github.glacier_jellyfin.androidtv.ui.ToggleChip
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 
@@ -69,7 +80,8 @@ private val RowShape = RoundedCornerShape(18.dp)
 /**
  * The channels of the server's Live TV: a list with what runs on each now,
  * and beside it the focused channel's programme and what follows. OK
- * watches, holding OK (or the menu key) marks a favorite.
+ * watches, holding OK (or the menu key) marks a favorite. The guide and the
+ * recordings are the other two views.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -82,14 +94,60 @@ fun LiveTvScreen(
     val listFocus = remember { FocusRequester() }
     val chipsFocus = remember { FocusRequester() }
     val gridFocus = remember { FocusRequester() }
+    val recordingsFocus = remember { FocusRequester() }
     val listState = rememberLazyListState()
     // Back from a channel lands on it again; the first time on the first channel.
     var lastFocus by rememberSaveable { mutableStateOf<String?>(null) }
+    /** The row that has the focus right now, if one has. */
+    var focusedRow by remember { mutableStateOf<String?>(null) }
     val requesters = remember { mutableMapOf<String, FocusRequester>() }
     val shown = state.shown
+    // Zapped in the player: back here, the list lands on the channel watched last, once.
+    val watched by viewModel.lastWatched.collectAsStateWithLifecycle()
+    var landed by rememberSaveable { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(shown != null, state.favoritesOnly) {
+    // The preview's tuner is freed while the page is away (player, other app), and comes back with it.
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.stopPreview() }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.schedulePreview() }
+
+    // Back from playing a recording: the list shows what changed meanwhile.
+    LaunchedEffect(Unit) { if (state.view == LiveTvView.Recordings) viewModel.loadRecordings() }
+    // The sheet took the focus along: the guide gets it back (the recordings see to it themselves).
+    var sheetWasOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(state.sheet == null) {
+        if (state.sheet != null) {
+            sheetWasOpen = true
+            return@LaunchedEffect
+        }
+        if (!sheetWasOpen) return@LaunchedEffect
+        sheetWasOpen = false
+        if (state.view == LiveTvView.Guide) {
+            withFrameNanos { }
+            runCatching { gridFocus.requestFocus() }
+        }
+    }
+
+    // The favorites toggle keeps the focus, so it can be switched right back.
+    var toggled by remember { mutableStateOf(false) }
+    LaunchedEffect(shown != null, state.favoritesOnly, watched) {
         if (shown == null) return@LaunchedEffect
+        if (toggled) {
+            toggled = false
+            return@LaunchedEffect
+        }
+        val watchedKey = watched?.toString()
+        // Zapped away from the favorites: the list shows all channels again, to land on the one watched.
+        if (watchedKey != null && watchedKey != landed && state.favoritesOnly && shown.none { it.id.toString() == watchedKey } &&
+            state.channels?.any { it.id.toString() == watchedKey } == true
+        ) {
+            viewModel.setFavoritesOnly(false)
+            return@LaunchedEffect
+        }
+        if (watchedKey != null && watchedKey != landed && shown.any { it.id.toString() == watchedKey }) {
+            landed = watchedKey
+            lastFocus = watchedKey
+        }
+        if (state.view == LiveTvView.Recordings) return@LaunchedEffect
         if (shown.isEmpty()) {
             withFrameNanos { }
             runCatching { chipsFocus.requestFocus() }
@@ -102,8 +160,17 @@ fun LiveTvScreen(
         }
         val index = shown.indexOfFirst { it.id.toString() == lastFocus }.coerceAtLeast(0)
         listState.scrollToItem(index)
-        withFrameNanos { }
-        val restored = requesters[shown[index].id.toString()]?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true
+        // Back from the player the page is still coming in: the row may refuse the focus for a
+        // few frames. And focus coming into the list from outside goes to the row the list had
+        // before (its focus restorer); once inside, the second request reaches the row.
+        val key = shown[index].id.toString()
+        var restored = false
+        for (frame in 0 until FOCUS_FRAMES) {
+            withFrameNanos { }
+            requesters[key]?.let { runCatching { it.requestFocus() } }
+            restored = focusedRow == key
+            if (restored) break
+        }
         if (!restored) runCatching { listFocus.requestFocus() }
     }
 
@@ -131,13 +198,41 @@ fun LiveTvScreen(
                 ) {
                     FilterChip(stringResource(R.string.livetv_channels), active = state.view == LiveTvView.Channels, onClick = { viewModel.setView(LiveTvView.Channels) })
                     FilterChip(stringResource(R.string.livetv_guide), active = state.view == LiveTvView.Guide, onClick = { viewModel.setView(LiveTvView.Guide) })
-                    Spacer(Modifier.width(28.dp))
-                    FilterChip(stringResource(R.string.livetv_all), active = !state.favoritesOnly, onClick = { viewModel.setFavoritesOnly(false) })
-                    FilterChip(stringResource(R.string.livetv_favorites), active = state.favoritesOnly, onClick = { viewModel.setFavoritesOnly(true) })
+                    FilterChip(stringResource(R.string.livetv_recordings), active = state.view == LiveTvView.Recordings, onClick = { viewModel.setView(LiveTvView.Recordings) })
+                    Spacer(Modifier.weight(1f))
+                    // Recordings are not listed by channel: the channel filter has nothing to do there.
+                    if (state.view != LiveTvView.Recordings) {
+                        ToggleChip(
+                            label = stringResource(R.string.livetv_favorites),
+                            on = state.favoritesOnly,
+                            icon = GlacierIcons.Heart,
+                            iconOn = GlacierIcons.HeartFilled,
+                            onClick = {
+                                toggled = true
+                                viewModel.setFavoritesOnly(!state.favoritesOnly)
+                            },
+                        )
+                    }
                 }
-                if (state.view == LiveTvView.Guide && !shown.isNullOrEmpty()) {
+                if (state.view == LiveTvView.Recordings) {
+                    RecordingsView(
+                        recordings = state.recordings,
+                        loading = state.recordingsLoading,
+                        failed = state.recordingsFailed,
+                        nowMs = state.nowMs,
+                        sheetOpen = state.sheet != null,
+                        focus = recordingsFocus,
+                        up = chipsFocus,
+                        onRetry = viewModel::loadRecordings,
+                        onPlay = viewModel::playRecording,
+                        onRecordingMenu = viewModel::openRecording,
+                        onTimer = viewModel::openTimer,
+                        onSeriesTimer = viewModel::openSeriesTimer,
+                    )
+                } else if (state.view == LiveTvView.Guide && !shown.isNullOrEmpty()) {
                     GuideGrid(
                         channels = shown,
+                        landOn = watched,
                         guide = state.guide,
                         fromMs = state.guideFromMs,
                         toMs = state.guideToMs,
@@ -146,7 +241,7 @@ fun LiveTvScreen(
                         up = chipsFocus,
                         onLoad = viewModel::loadGuide,
                         onOpen = viewModel::openProgram,
-                        onFavorite = viewModel::toggleFavorite,
+                        onMenu = viewModel::programMenu,
                         modifier = Modifier.fillMaxSize().padding(bottom = 36.dp),
                     )
                 } else Row(Modifier.fillMaxSize()) {
@@ -183,6 +278,7 @@ fun LiveTvScreen(
                                             if (channel.id == shown.first().id) up = chipsFocus
                                         }
                                         .onFocusChanged {
+                                            if (it.isFocused) focusedRow = key else if (focusedRow == key) focusedRow = null
                                             if (it.isFocused) {
                                                 lastFocus = key
                                                 viewModel.onFocus(channel)
@@ -193,9 +289,17 @@ fun LiveTvScreen(
                         }
                     }
                     Spacer(Modifier.width(56.dp))
-                    val focused = channels.firstOrNull { it.id == state.focused }
+                    // A channel the filter hid gives way to the first one shown.
+                    val focused = shown?.firstOrNull { it.id == state.focused } ?: shown?.firstOrNull()
                     if (focused != null && !shown.isNullOrEmpty()) {
-                        ProgramPanel(focused, state.upcoming[focused.id], state.nowMs, Modifier.weight(1f).padding(top = 8.dp))
+                        ProgramPanel(
+                            channel = focused,
+                            upcoming = state.upcoming[focused.id],
+                            nowMs = state.nowMs,
+                            preview = state.preview?.takeIf { state.previewChannel == focused.id },
+                            previewShown = state.previewShown,
+                            modifier = Modifier.weight(1f).padding(top = 8.dp),
+                        )
                     }
                 }
             }
@@ -207,12 +311,15 @@ fun LiveTvScreen(
             userName = state.userName,
             onSelect = viewModel::onNav,
             down = when {
+                state.view == LiveTvView.Recordings -> if (state.recordings?.isEmpty == false) recordingsFocus else chipsFocus
                 shown.isNullOrEmpty() -> chipsFocus
                 state.view == LiveTvView.Guide -> gridFocus
                 else -> listFocus
             },
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp),
         )
+
+        state.sheet?.let { LiveTvSheetHost(it, state.nowMs, state.channels, viewModel) }
     }
 }
 
@@ -276,7 +383,15 @@ private fun ChannelRow(
 
 /** The focused channel: its programme now, large, and what follows. */
 @Composable
-private fun ProgramPanel(channel: LiveChannel, upcoming: List<LiveProgram>?, nowMs: Long, modifier: Modifier = Modifier) {
+@OptIn(UnstableApi::class)
+private fun ProgramPanel(
+    channel: LiveChannel,
+    upcoming: List<LiveProgram>?,
+    nowMs: Long,
+    preview: Player?,
+    previewShown: Boolean,
+    modifier: Modifier = Modifier,
+) {
     val (fromGuide, next) = upcoming?.let { nowAndNext(it, nowMs) } ?: (null to null)
     val now = fromGuide ?: channel.now?.takeIf { it.airsAt(nowMs) }
     val later = upcoming.orEmpty().filter { it.startMs >= (now?.endMs ?: nowMs) }.drop(1).take(1)
@@ -289,12 +404,20 @@ private fun ProgramPanel(channel: LiveChannel, upcoming: List<LiveProgram>?, now
                 .clip(shape),
             contentAlignment = Alignment.Center,
         ) {
-            val image = now?.imageUrl
-            if (image != null) {
-                Artwork(image, Modifier.fillMaxSize())
-            } else {
-                Box(Modifier.fillMaxSize().background(GlacierColors.GlassFill))
-                ChannelLogo(channel, Modifier.width(260.dp).height(146.dp), textSize = 44)
+            // The preview needs its surface before the first frame can come; the picture covers it until then.
+            // A texture view, so the rounded corners cut the video too.
+            if (preview != null) {
+                Box(Modifier.fillMaxSize().background(Color.Black))
+                ContentFrame(player = preview, modifier = Modifier.fillMaxSize(), surfaceType = SURFACE_TYPE_TEXTURE_VIEW, contentScale = ContentScale.Fit)
+            }
+            if (preview == null || !previewShown) {
+                val image = now?.imageUrl
+                if (image != null) {
+                    Artwork(image, Modifier.fillMaxSize())
+                } else {
+                    Box(Modifier.fillMaxSize().background(if (preview != null) GlacierColors.GlassFill.compositeOver(GlacierColors.Deep) else GlacierColors.GlassFill))
+                    ChannelLogo(channel, Modifier.width(260.dp).height(146.dp), textSize = 44)
+                }
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -320,6 +443,7 @@ private fun ProgramPanel(channel: LiveChannel, upcoming: List<LiveProgram>?, now
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+        RecordMark(now, nowMs)
         now.overview?.let {
             Text(it, style = GlacierText.body(19), color = GlacierColors.Ice.copy(alpha = 0.78f), maxLines = 4, overflow = TextOverflow.Ellipsis)
         }
@@ -328,9 +452,17 @@ private fun ProgramPanel(channel: LiveChannel, upcoming: List<LiveProgram>?, now
             Spacer(Modifier.height(8.dp))
             Text(stringResource(R.string.livetv_next), style = GlacierText.label(15), color = GlacierColors.Mist)
             following.forEach { program ->
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(clockText(program.startMs), style = GlacierText.mono(19), color = GlacierColors.Mist)
-                    Text(program.title, style = GlacierText.body(19), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        program.title,
+                        style = GlacierText.body(19),
+                        color = GlacierColors.Ice,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (program.recorded) RecordDot(program, Modifier.size(16.dp))
                 }
             }
         }
@@ -354,3 +486,6 @@ private fun Message(text: String, body: String, button: String? = null, onClick:
 }
 
 private const val LIST_WIDTH = 1000
+
+/** How many frames a focus request on the list keeps trying while the page comes in. */
+private const val FOCUS_FRAMES = 30

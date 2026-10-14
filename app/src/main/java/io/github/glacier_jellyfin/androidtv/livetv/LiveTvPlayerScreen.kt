@@ -21,9 +21,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -41,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -63,6 +66,7 @@ import androidx.media3.ui.compose.ContentFrame
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveChannel
+import io.github.glacier_jellyfin.androidtv.core.data.media.LiveProgram
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
@@ -71,6 +75,8 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.ignoreHeldOk
 import io.github.glacier_jellyfin.androidtv.player.osdScrim
+import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
+import io.github.glacier_jellyfin.androidtv.ui.OverlayCard
 import kotlinx.coroutines.delay
 
 /** The channel banner hides after this long without input. */
@@ -81,9 +87,9 @@ private const val NUMBER_COMMIT_MS = 1_500L
 
 /**
  * A Live TV channel, full screen. Up and down (or the channel keys) zap,
- * OK and Left open the channel list, Right and Info show the channel
- * banner. Digits tune to a channel number, the "last channel" key goes
- * back to the one before.
+ * OK and Left open the channel list, Right (or the guide key) the
+ * channel's programmes, Info the channel banner. Digits tune to a channel
+ * number, the "last channel" key goes back to the one before.
  */
 @OptIn(UnstableApi::class)
 @Composable
@@ -93,6 +99,7 @@ fun LiveTvPlayerScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(viewModel) { viewModel.finished.collect { onBack() } }
+    CollectEvents(viewModel.events) {}
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onBackground() }
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onForeground() }
     val view = LocalView.current
@@ -104,11 +111,15 @@ fun LiveTvPlayerScreen(
     val rootFocus = remember { FocusRequester() }
     var bannerVisible by remember { mutableStateOf(true) }
     var listOpen by remember { mutableStateOf(false) }
+    var programsOpen by remember { mutableStateOf(false) }
+    /** The programme whose recording sheet is open. */
+    var sheetProgram by remember { mutableStateOf<LiveProgram?>(null) }
     var interaction by remember { mutableIntStateOf(0) }
     var typed by remember { mutableStateOf("") }
     var unknownNumber by remember { mutableStateOf<String?>(null) }
     BackHandler(enabled = listOpen) { listOpen = false }
-    BackHandler(enabled = !listOpen) { viewModel.stop() }
+    BackHandler(enabled = programsOpen && sheetProgram == null) { programsOpen = false }
+    BackHandler(enabled = !listOpen && !programsOpen) { viewModel.stop() }
 
     fun showBanner() {
         bannerVisible = true
@@ -122,8 +133,8 @@ fun LiveTvPlayerScreen(
         showBanner()
     }
 
-    LaunchedEffect(bannerVisible, interaction, state.loading, state.failed, listOpen) {
-        if (bannerVisible && !state.loading && !state.failed && !listOpen) {
+    LaunchedEffect(bannerVisible, interaction, state.loading, state.failed, listOpen, programsOpen) {
+        if (bannerVisible && !state.loading && !state.failed && !listOpen && !programsOpen) {
             delay(BANNER_TIMEOUT_MS)
             bannerVisible = false
         }
@@ -139,8 +150,8 @@ fun LiveTvPlayerScreen(
         unknownNumber = null
     }
     // Closing the list hands the keys back to the picture.
-    LaunchedEffect(listOpen, state.failed) {
-        if (listOpen || state.failed) return@LaunchedEffect
+    LaunchedEffect(listOpen, programsOpen, state.failed) {
+        if (listOpen || programsOpen || state.failed) return@LaunchedEffect
         withFrameNanos { }
         runCatching { rootFocus.requestFocus() }
     }
@@ -151,6 +162,16 @@ fun LiveTvPlayerScreen(
             .background(Color.Black)
             .focusRequester(rootFocus)
             .onPreviewKeyEvent { event ->
+                // The sheet handles its own keys, Back included.
+                if (sheetProgram != null) return@onPreviewKeyEvent false
+                if (programsOpen) {
+                    // Back and Left (towards the picture) close the programmes.
+                    if (event.key == Key.Back || event.key == Key.DirectionLeft) {
+                        if (event.type == KeyEventType.KeyUp) programsOpen = false
+                        return@onPreviewKeyEvent true
+                    }
+                    return@onPreviewKeyEvent false
+                }
                 if (listOpen) {
                     // Compose would turn Back into "exit focus" inside the list; close it instead.
                     if (event.key == Key.Back) {
@@ -192,7 +213,12 @@ fun LiveTvPlayerScreen(
                         if (!state.failed) listOpen = true
                         !state.failed
                     }
-                    Key.DirectionRight, Key.Info, Key.Guide -> {
+                    Key.DirectionRight, Key.Guide -> {
+                        if (state.failed) return@onPreviewKeyEvent false
+                        programsOpen = true
+                        true
+                    }
+                    Key.Info -> {
                         if (state.failed) return@onPreviewKeyEvent false
                         showBanner()
                         true
@@ -220,7 +246,7 @@ fun LiveTvPlayerScreen(
             Box(Modifier.align(Alignment.Center)) { SpinningDiamond(90) }
         }
 
-        AnimatedVisibility(visible = (bannerVisible || state.loading || state.paused) && !state.failed && !listOpen, enter = fadeIn(), exit = fadeOut()) {
+        AnimatedVisibility(visible = (bannerVisible || state.loading || state.paused) && !state.failed && !listOpen && !programsOpen, enter = fadeIn(), exit = fadeOut()) {
             ChannelBanner(state)
         }
 
@@ -234,13 +260,8 @@ fun LiveTvPlayerScreen(
 
         if (state.failed) {
             val retryFocus = remember { FocusRequester() }
-            Column(
-                Modifier
-                    .align(Alignment.Center)
-                    .padding(horizontal = 80.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(28.dp),
-            ) {
+            // The last picture of the channel can stand behind it.
+            OverlayCard {
                 Text(state.channel?.name ?: stringResource(R.string.nav_live_tv), style = GlacierText.body(21, FontWeight.SemiBold), color = GlacierColors.Mist)
                 Text(stringResource(R.string.livetv_play_error), style = GlacierText.display(30), color = GlacierColors.Ice)
                 Text(stringResource(R.string.livetv_play_error_body), style = GlacierText.body(21), color = GlacierColors.Mist)
@@ -262,7 +283,8 @@ fun LiveTvPlayerScreen(
             modifier = Modifier.fillMaxHeight(),
         ) {
             ChannelList(
-                channels = state.channels,
+                channels = state.zapChannels,
+                favoritesOnly = state.zapChannels.size < state.channels.size,
                 current = state.channel,
                 nowMs = state.nowMs,
                 onPick = { channel ->
@@ -271,6 +293,167 @@ fun LiveTvPlayerScreen(
                     showBanner()
                 },
             )
+        }
+
+        AnimatedVisibility(
+            visible = programsOpen,
+            enter = slideInHorizontally { it } + fadeIn(),
+            exit = slideOutHorizontally { it } + fadeOut(),
+            modifier = Modifier.fillMaxHeight().align(Alignment.TopEnd),
+        ) {
+            ProgramList(
+                channel = state.channel,
+                programs = state.programs.filter { it.endMs > state.nowMs },
+                nowMs = state.nowMs,
+                sheetOpen = sheetProgram != null,
+                onPick = { program ->
+                    // What runs now is what plays: the list just closes.
+                    if (program.airsAt(state.nowMs)) programsOpen = false else sheetProgram = program
+                },
+            )
+        }
+
+        val channel = state.channel
+        val program = sheetProgram
+        if (channel != null && program != null) {
+            // The marks may have changed meanwhile: the sheet shows the programme as the list has it now.
+            val current = state.programs.firstOrNull { it.id == program.id } ?: program
+            ProgramSheet(channel, current, state.nowMs, actions = object : RecordActions by viewModel {
+                override fun record(program: LiveProgram) {
+                    sheetProgram = null
+                    viewModel.record(program)
+                }
+
+                override fun recordSeries(program: LiveProgram) {
+                    sheetProgram = null
+                    viewModel.recordSeries(program)
+                }
+
+                override fun cancelTimer(timerId: String, title: String) {
+                    sheetProgram = null
+                    viewModel.cancelTimer(timerId, title)
+                }
+
+                override fun cancelSeriesTimer(seriesTimerId: String, title: String) {
+                    sheetProgram = null
+                    viewModel.cancelSeriesTimer(seriesTimerId, title)
+                }
+            }, onDismiss = { sheetProgram = null })
+        }
+    }
+}
+
+/**
+ * The channel's programmes at the right edge, from what runs now on; the
+ * focus starts there. OK on a later one offers to record it.
+ */
+@Composable
+private fun ProgramList(
+    channel: LiveChannel?,
+    programs: List<LiveProgram>,
+    nowMs: Long,
+    sheetOpen: Boolean,
+    onPick: (LiveProgram) -> Unit,
+) {
+    val firstFocus = remember { FocusRequester() }
+    val requesters = remember { mutableMapOf<String, FocusRequester>() }
+    var focusedId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(programs.isEmpty()) {
+        withFrameNanos { }
+        runCatching { firstFocus.requestFocus() }
+    }
+    // The sheet took the focus along: back on the programme it was about.
+    LaunchedEffect(sheetOpen) {
+        if (sheetOpen) return@LaunchedEffect
+        withFrameNanos { }
+        runCatching { (focusedId?.let { requesters[it] } ?: firstFocus).requestFocus() }
+    }
+    Box(
+        Modifier
+            .fillMaxHeight()
+            .width(720.dp)
+            .background(Brush.horizontalGradient(listOf(GlacierColors.Void.copy(alpha = 0.95f), GlacierColors.Void))),
+    ) {
+        Column(Modifier.fillMaxSize().padding(top = 56.dp)) {
+            Text(
+                stringResource(R.string.livetv_guide),
+                style = GlacierText.display(34),
+                color = GlacierColors.Ice,
+                modifier = Modifier.padding(start = 48.dp),
+            )
+            channel?.let {
+                Text(
+                    listOfNotNull(it.number, it.name).joinToString("  "),
+                    style = GlacierText.body(20),
+                    color = GlacierColors.Mist,
+                    modifier = Modifier.padding(start = 48.dp, top = 4.dp, bottom = 18.dp),
+                )
+            }
+            if (programs.isEmpty()) {
+                Text(
+                    stringResource(R.string.livetv_no_guide),
+                    style = GlacierText.body(20),
+                    color = GlacierColors.Mist,
+                    modifier = Modifier.padding(start = 48.dp).focusRequester(firstFocus).focusable(),
+                )
+                return@Column
+            }
+            LazyColumn(
+                contentPadding = PaddingValues(start = 40.dp, end = 40.dp, top = 8.dp, bottom = 60.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .ignoreHeldOk()
+                    // Focus stays in the list, except for the sheet it opens.
+                    .focusProperties { if (!sheetOpen) onExit = { cancelFocusChange() } }
+                    .focusGroup(),
+            ) {
+                itemsIndexed(programs, key = { _, it -> it.id }) { index, program ->
+                    val airing = program.airsAt(nowMs)
+                    val shape = RoundedCornerShape(14.dp)
+                    val requester = remember(program.id) { requesters.getOrPut(program.id) { FocusRequester() } }
+                    GlacierClickable(
+                        onClick = { onPick(program) },
+                        shape = shape,
+                        scaleOnFocus = false,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(requester)
+                            .then(if (index == 0) Modifier.focusRequester(firstFocus) else Modifier)
+                            .onFocusChanged { if (it.isFocused) focusedId = program.id },
+                    ) { focused ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(shape)
+                                .background(if (focused) GlacierColors.GlassFill2 else Color.Transparent)
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(18.dp),
+                        ) {
+                            Text(clockText(program.startMs), style = GlacierText.mono(19), color = if (airing) LocalAccent.current.main else GlacierColors.Mist)
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    if (airing) LiveBadge()
+                                    Text(
+                                        program.title,
+                                        style = GlacierText.body(20, FontWeight.SemiBold),
+                                        color = GlacierColors.Ice,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false),
+                                    )
+                                    if (program.recorded) RecordDot(program, Modifier.size(16.dp))
+                                }
+                                val details = listOfNotNull(if (airing) null else dayText(program.startMs), program.episodeTitle)
+                                if (details.isNotEmpty()) {
+                                    Text(details.joinToString(" · "), style = GlacierText.body(17), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                                if (airing) ProgramProgress(program.progressAt(nowMs), Modifier.width(220.dp).padding(top = 4.dp), height = 3)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -350,6 +533,7 @@ private fun NumberEntry(text: String, unknown: Boolean, modifier: Modifier = Mod
 @Composable
 private fun ChannelList(
     channels: List<LiveChannel>,
+    favoritesOnly: Boolean,
     current: LiveChannel?,
     nowMs: Long,
     onPick: (LiveChannel) -> Unit,
@@ -370,7 +554,7 @@ private fun ChannelList(
     ) {
         Column(Modifier.fillMaxSize().padding(top = 56.dp)) {
             Text(
-                stringResource(R.string.livetv_channels),
+                stringResource(if (favoritesOnly) R.string.livetv_favorites else R.string.livetv_channels),
                 style = GlacierText.display(34),
                 color = GlacierColors.Ice,
                 modifier = Modifier.padding(start = 48.dp, bottom = 18.dp),

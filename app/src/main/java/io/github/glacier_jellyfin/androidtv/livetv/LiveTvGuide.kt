@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -81,11 +82,14 @@ private const val PRELOAD_ROWS = 8
  * three hour window that follows the focus. One focusable for the whole
  * grid, moved with the keys: Left and Right go from programme to
  * programme, Up and Down change channel at the same time. OK watches a
- * programme on air, holding OK (or the menu key) marks the channel.
+ * programme on air or offers to record a later one, holding OK (or the
+ * menu key) opens everything there is to do with the programme.
  */
 @Composable
 fun GuideGrid(
     channels: List<LiveChannel>,
+    /** The channel watched last: the guide moves to it once, at what runs now. */
+    landOn: UUID?,
     guide: Map<UUID, List<LiveProgram>>,
     fromMs: Long,
     toMs: Long,
@@ -94,7 +98,7 @@ fun GuideGrid(
     up: FocusRequester,
     onLoad: (List<UUID>) -> Unit,
     onOpen: (LiveChannel, LiveProgram?) -> Unit,
-    onFavorite: (LiveChannel) -> Unit,
+    onMenu: (LiveChannel, LiveProgram?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (channels.isEmpty()) return
@@ -107,6 +111,19 @@ fun GuideGrid(
     var heldOk by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+
+    var landed by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(landOn) {
+        val target = landOn ?: return@LaunchedEffect
+        if (target.toString() == landed) return@LaunchedEffect
+        landed = target.toString()
+        val index = channels.indexOfFirst { it.id == target }
+        if (index < 0) return@LaunchedEffect
+        row = index
+        focusMs = System.currentTimeMillis().coerceAtLeast(fromMs)
+        windowStart = fromMs
+        listState.scrollToItem((index - 2).coerceAtLeast(0))
+    }
 
     // The guide moved on to a new half hour: nothing before it is shown any more.
     if (windowStart < fromMs) windowStart = fromMs
@@ -173,10 +190,10 @@ fun GuideGrid(
                             val native = event.nativeKeyEvent
                             if (event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter) {
                                 when (event.type) {
-                                    // Holding OK repeats the key: the first repeat marks the channel, the release does nothing.
+                                    // Holding OK repeats the key: the first repeat opens the menu, the release does nothing.
                                     KeyEventType.KeyDown -> if (native.repeatCount == 1) {
                                         heldOk = true
-                                        onFavorite(channels[row])
+                                        onMenu(channels[row], cell?.program)
                                     }
                                     KeyEventType.KeyUp -> {
                                         if (!heldOk) onOpen(channels[row], cell?.program)
@@ -186,7 +203,7 @@ fun GuideGrid(
                                 return@onKeyEvent true
                             }
                             if (event.key == Key.Menu) {
-                                if (event.type == KeyEventType.KeyUp) onFavorite(channels[row])
+                                if (event.type == KeyEventType.KeyUp) onMenu(channels[row], cell?.program)
                                 return@onKeyEvent true
                             }
                             if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
@@ -266,18 +283,22 @@ private fun GuideDetails(channel: LiveChannel, cell: GuideCell?, nowMs: Long) {
             overflow = TextOverflow.Ellipsis,
         )
         val airing = program != null && program.airsAt(nowMs)
-        Text(
-            listOfNotNull(
-                listOfNotNull(channel.number, channel.name).joinToString(" "),
-                program?.let(::timeRange),
-                program?.takeIf { airing }?.let { minutesLeft(it, nowMs) },
-                program?.episodeTitle,
-            ).joinToString(" · "),
-            style = GlacierText.body(19),
-            color = GlacierColors.Mist,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+            Text(
+                listOfNotNull(
+                    listOfNotNull(channel.number, channel.name).joinToString(" "),
+                    program?.let { if (airing) timeRange(it) else dayAndTime(it.startMs, it.endMs) },
+                    program?.takeIf { airing }?.let { minutesLeft(it, nowMs) },
+                    program?.episodeTitle,
+                ).joinToString(" · "),
+                style = GlacierText.body(19),
+                color = GlacierColors.Mist,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            program?.let { RecordMark(it, nowMs) }
+        }
         program?.overview?.let {
             Text(it, style = GlacierText.body(18), color = GlacierColors.Ice.copy(alpha = 0.78f), maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
@@ -398,7 +419,10 @@ private fun GuideBox(cell: GuideCell, loaded: Boolean, focused: Boolean, airing:
         val ink = if (focused) GlacierColors.Void else GlacierColors.Ice
         val soft = if (focused) GlacierColors.Void.copy(alpha = 0.75f) else GlacierColors.Mist
         if (program != null) {
-            Text(program.title, style = GlacierText.body(18, FontWeight.SemiBold), color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (program.recorded) RecordDot(program, Modifier.size(14.dp))
+                Text(program.title, style = GlacierText.body(18, FontWeight.SemiBold), color = ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
             Text(clockText(program.startMs), style = GlacierText.body(15), color = soft, maxLines = 1, overflow = TextOverflow.Clip)
         } else if (loaded) {
             Text(stringResource(R.string.livetv_no_guide), style = GlacierText.body(16), color = soft, maxLines = 1, overflow = TextOverflow.Ellipsis)

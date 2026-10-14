@@ -45,13 +45,13 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -68,7 +68,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
-import io.github.glacier_jellyfin.androidtv.ui.title
 import io.github.glacier_jellyfin.androidtv.core.data.media.AlphabetLetters
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
@@ -85,22 +84,24 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
+import io.github.glacier_jellyfin.androidtv.player.formatTime
 import io.github.glacier_jellyfin.androidtv.ui.CardShape
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.FilterChip
 import io.github.glacier_jellyfin.androidtv.ui.GridCard
-import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
+import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
+import io.github.glacier_jellyfin.androidtv.ui.ToggleChip
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
-import io.github.glacier_jellyfin.androidtv.ui.showsLock
-import io.github.glacier_jellyfin.androidtv.ui.yearText
 import io.github.glacier_jellyfin.androidtv.ui.ratingText
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
-import io.github.glacier_jellyfin.androidtv.player.formatTime
-import kotlinx.coroutines.launch
+import io.github.glacier_jellyfin.androidtv.ui.showsLock
+import io.github.glacier_jellyfin.androidtv.ui.title
+import io.github.glacier_jellyfin.androidtv.ui.yearText
 import kotlin.math.abs
+import kotlinx.coroutines.launch
 
 private const val HEADER_ITEMS = 2
 private const val ROW_PIVOT = 330
@@ -213,6 +214,7 @@ fun LibraryScreen(
                             state = state,
                             onScope = viewModel::setScope,
                             onFavoritesOnly = viewModel::toggleFavoritesOnly,
+                            onUnwatchedOnly = viewModel::toggleUnwatchedOnly,
                             onSortMenu = viewModel::toggleSortMenu,
                             onSortAnchor = { sortAnchor = it },
                             sortButtonFocus = sortButtonFocus,
@@ -260,9 +262,9 @@ fun LibraryScreen(
                             Text(
                                 stringResource(
                                     when {
-                                        state.query.favoritesOnly -> R.string.library_empty_music_favorites
-                                        state.query.scope == LibraryScope.Favorites -> R.string.library_empty_favorites
-                                        state.query.scope == LibraryScope.Unwatched -> R.string.library_empty_unwatched
+                                        state.query.favoritesOnly && state.query.kind == LibraryKind.Music -> R.string.library_empty_music_favorites
+                                        state.query.favoritesOnly -> R.string.library_empty_favorites
+                                        state.query.unwatchedOnly -> R.string.library_empty_unwatched
                                         else -> R.string.library_empty
                                     },
                                 ),
@@ -338,6 +340,7 @@ private fun Toolbar(
     state: LibraryState,
     onScope: (LibraryScope) -> Unit,
     onFavoritesOnly: () -> Unit,
+    onUnwatchedOnly: () -> Unit,
     onSortMenu: (Boolean) -> Unit,
     onSortAnchor: (Rect) -> Unit,
     sortButtonFocus: FocusRequester,
@@ -362,8 +365,25 @@ private fun Toolbar(
             )
         }
         Spacer(Modifier.weight(1f))
-        // Music has no favorites tab: the heart narrows every tab instead.
-        if (state.query.kind == LibraryKind.Music) FavoritesToggle(on = state.query.favoritesOnly, onClick = onFavoritesOnly)
+        // The filters narrow every tab, so they sit apart from the tabs, by the sort.
+        if (state.query.filterable) {
+            if (state.query.kind != LibraryKind.Music) {
+                ToggleChip(
+                    label = stringResource(R.string.scope_unwatched),
+                    on = state.query.unwatchedOnly,
+                    icon = GlacierIcons.Seen,
+                    iconOn = GlacierIcons.Seen,
+                    onClick = onUnwatchedOnly,
+                )
+            }
+            ToggleChip(
+                label = stringResource(R.string.scope_favorites),
+                on = state.query.favoritesOnly,
+                icon = GlacierIcons.Heart,
+                iconOn = GlacierIcons.HeartFilled,
+                onClick = onFavoritesOnly,
+            )
+        }
         // Genres are always listed by name.
         if (!state.query.listedByName) {
             SortButton(
@@ -372,45 +392,6 @@ private fun Toolbar(
                 modifier = Modifier.focusRequester(sortButtonFocus).onGloballyPositioned { onSortAnchor(it.boundsInRoot()) },
             )
         }
-    }
-}
-
-/** Pill with a heart that switches the music tabs to favorites only; filled and tinted while on. */
-@Composable
-private fun FavoritesToggle(on: Boolean, onClick: () -> Unit) {
-    val accent = LocalAccent.current.main
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    val foreground = when {
-        focused -> GlacierColors.Void
-        on -> GlacierColors.Ice
-        else -> GlacierColors.Mist
-    }
-    Row(
-        Modifier
-            .focusScale(focused)
-            .height(52.dp)
-            .clip(PillShape)
-            .background(
-                when {
-                    focused -> accent
-                    on -> accent.copy(alpha = 0.18f)
-                    else -> GlacierColors.GlassFill
-                },
-            )
-            .border(2.dp, if (focused) accent else if (on) accent.copy(alpha = 0.45f) else Color.Transparent, PillShape)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-            .padding(horizontal = 24.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Icon(
-            if (on) GlacierIcons.HeartFilled else GlacierIcons.Heart,
-            contentDescription = null,
-            tint = if (on && !focused) accent else foreground,
-            modifier = Modifier.size(20.dp),
-        )
-        Text(stringResource(R.string.scope_favorites), style = GlacierText.body(19, FontWeight.SemiBold), color = foreground)
     }
 }
 
@@ -644,8 +625,6 @@ private val LibraryScope.label: Int
         LibraryScope.All -> R.string.scope_all
         LibraryScope.Collections -> R.string.scope_collections
         LibraryScope.Genres -> R.string.scope_genres
-        LibraryScope.Unwatched -> R.string.scope_unwatched
-        LibraryScope.Favorites -> R.string.scope_favorites
         LibraryScope.Albums -> R.string.scope_albums
         LibraryScope.Artists -> R.string.scope_artists
         LibraryScope.Songs -> R.string.scope_songs

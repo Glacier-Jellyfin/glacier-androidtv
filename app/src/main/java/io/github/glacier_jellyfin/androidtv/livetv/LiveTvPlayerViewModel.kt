@@ -10,6 +10,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveChannel
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveProgram
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveTvRepository
@@ -25,6 +26,7 @@ import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.LiveTvPlayerRoute
+import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -42,9 +44,14 @@ import javax.inject.Inject
 data class LiveTvPlayerState(
     /** The channel tuned to, or about to be while zapping. */
     val channel: LiveChannel? = null,
+    /** Every channel, for the number keys. */
     val channels: List<LiveChannel> = emptyList(),
+    /** The channels zapping and the channel list go through: only the favorites when started from them. */
+    val zapChannels: List<LiveChannel> = emptyList(),
     val now: LiveProgram? = null,
     val next: LiveProgram? = null,
+    /** The channel's programmes from now on, for the programme list. */
+    val programs: List<LiveProgram> = emptyList(),
     val player: ExoPlayer? = null,
     val playback: GlacierPlayback? = null,
     /** Until the first frame of the channel can be shown. */
@@ -62,8 +69,9 @@ class LiveTvPlayerViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val repository: LiveTvRepository,
     private val playback: PlaybackRepository,
+    private val handoff: LiveStreamHandoff,
     music: MusicController,
-) : ViewModel() {
+) : ViewModel(), RecordActions {
 
     private val route = savedStateHandle.toRoute<LiveTvPlayerRoute>()
 
@@ -73,6 +81,9 @@ class LiveTvPlayerViewModel @Inject constructor(
     /** Fires when the screen should close. */
     private val _finished = Channel<Unit>(Channel.CONFLATED)
     val finished = _finished.receiveAsFlow()
+
+    private val _events = Channel<UiEvent>(Channel.BUFFERED)
+    val events = _events.receiveAsFlow()
 
     private var source: PlaybackSource? = null
     private var started = false
@@ -136,7 +147,15 @@ class LiveTvPlayerViewModel @Inject constructor(
             try {
                 val channels = repository.channels()
                 val channel = channels.firstOrNull { it.id == channelId }
-                _state.update { it.copy(channels = channels, channel = channels.firstOrNull { c -> c.id == tuned } ?: channel ?: it.channel) }
+                // Only the favorites, when started from them and there are some.
+                val zapChannels = if (route.favoritesOnly) channels.filter { it.favorite }.ifEmpty { channels } else channels
+                _state.update {
+                    it.copy(
+                        channels = channels,
+                        zapChannels = zapChannels,
+                        channel = channels.firstOrNull { c -> c.id == tuned } ?: channel ?: it.channel,
+                    )
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -166,7 +185,7 @@ class LiveTvPlayerViewModel @Inject constructor(
     /** Channel up ([by] 1) or down (-1), wrapping at either end. */
     fun zap(by: Int) {
         val current = tuned ?: return
-        val target = channelAfter(_state.value.channels, current, by) ?: return
+        val target = channelAfter(_state.value.zapChannels, current, by) ?: return
         if (target.id != current) tune(target.id)
     }
 
@@ -198,12 +217,14 @@ class LiveTvPlayerViewModel @Inject constructor(
         val current = tuned
         if (!force && current != null && current != channelId) previous = current
         tuned = channelId
+        repository.watched(channelId)
         val channel = _state.value.channels.firstOrNull { it.id == channelId }
         _state.update {
             it.copy(
                 channel = channel ?: it.channel?.takeIf { c -> c.id == channelId },
                 now = channel?.now,
                 next = null,
+                programs = emptyList(),
                 loading = true,
                 failed = false,
             )
@@ -213,6 +234,20 @@ class LiveTvPlayerViewModel @Inject constructor(
             delay(delayMs)
             stopStream()
             loadGuide(channelId)
+            // The channel list's preview of this channel runs already: it goes on, with sound.
+            val handed = if (force) null else handoff.take(channelId)
+            if (handed != null) {
+                source = handed.source
+                val player = handed.playback.player
+                player.volume = 1f
+                player.addListener(listener)
+                player.playWhenReady = true
+                Log.i(TAG, "Took over the preview of $channelId")
+                _state.update { it.copy(player = player, playback = handed.playback, paused = false) }
+                // Ready before the listener came: what it does then happens now.
+                if (player.playbackState == Player.STATE_READY) listener.onPlaybackStateChanged(Player.STATE_READY)
+                return@launch
+            }
             try {
                 val opened = playback.open(channelId, startMs = 0, audioIndex = null, subtitleIndex = null)
                 source = opened
@@ -236,12 +271,37 @@ class LiveTvPlayerViewModel @Inject constructor(
             try {
                 val programs = repository.programs(channelId, hours = GUIDE_HOURS)
                 val (now, next) = nowAndNext(programs, System.currentTimeMillis())
-                if (tuned == channelId) _state.update { it.copy(now = now, next = next) }
+                if (tuned == channelId) _state.update { it.copy(now = now, next = next, programs = programs.sortedBy { p -> p.startMs }) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Loading the guide of $channelId failed", e)
             }
+        }
+    }
+
+    override fun record(program: LiveProgram) = changeTimers(R.string.livetv_record_added, program.title) { repository.record(program.id) }
+
+    override fun recordSeries(program: LiveProgram) = changeTimers(R.string.livetv_series_added, program.title) { repository.recordSeries(program.id) }
+
+    override fun cancelTimer(timerId: String, title: String) = changeTimers(R.string.livetv_record_removed, title) { repository.cancelTimer(timerId) }
+
+    override fun cancelSeriesTimer(seriesTimerId: String, title: String) =
+        changeTimers(R.string.livetv_series_removed, title) { repository.cancelSeriesTimer(seriesTimerId) }
+
+    /** Makes the change on the server, says so, and shows the programmes with their marks as they are now. */
+    private fun changeTimers(done: Int, title: String, change: suspend () -> Unit) {
+        viewModelScope.launch {
+            try {
+                change()
+                _events.send(UiEvent.Toast(done, listOf(title)))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Changing a recording failed", e)
+                _events.send(UiEvent.Toast(R.string.livetv_record_failed))
+            }
+            tuned?.let(::loadGuide)
         }
     }
 
@@ -305,7 +365,8 @@ class LiveTvPlayerViewModel @Inject constructor(
         const val REPORT_INTERVAL_MS = 10_000L
         /** Zapping rests this long on a channel before its stream opens. */
         const val ZAP_DELAY_MS = 450L
-        const val GUIDE_HOURS = 6L
+        /** How far ahead the programme list reaches. */
+        const val GUIDE_HOURS = 12L
         /** A second failure within this time shows the error instead of tuning again. */
         const val AUTO_RETRY_WINDOW_MS = 60_000L
     }

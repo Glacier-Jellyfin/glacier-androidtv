@@ -116,8 +116,11 @@ class LibraryViewModel @Inject constructor(
         update { it.copy(scope = scope).withKeptSort(kept) }
     }
 
-    /** The heart toggle of the music tabs; it stays on across the tabs. */
+    /** The heart toggle; it stays on across the tabs. */
     fun toggleFavoritesOnly() = update { it.copy(favoritesOnly = !it.favoritesOnly) }
+
+    /** The "Unwatched" toggle of movies and shows; it stays on across the tabs. */
+    fun toggleUnwatchedOnly() = update { it.copy(unwatchedOnly = !it.unwatchedOnly) }
 
     fun toggleSortMenu(open: Boolean = !_state.value.sortMenuOpen) = _state.update { it.copy(sortMenuOpen = open) }
 

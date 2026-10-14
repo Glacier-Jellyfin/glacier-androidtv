@@ -21,7 +21,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /** The filter chips of the library screen. */
-enum class LibraryScope { All, Collections, Genres, Unwatched, Favorites, Albums, Artists, Songs, Playlists }
+enum class LibraryScope { All, Collections, Genres, Albums, Artists, Songs, Playlists }
 
 enum class LibrarySort { DateAdded, Title, Artist, Album, Year, Rating, Runtime }
 
@@ -38,9 +38,14 @@ data class LibraryQuery(
     val descending: Boolean = false,
     /** Design setting "Group movies into collections"; on by default. */
     val groupCollections: Boolean = true,
-    /** The heart toggle of the music tabs: only what the profile marked as favorite. */
+    /** The heart toggle: only what the profile marked as favorite, in every tab. */
     val favoritesOnly: Boolean = false,
+    /** The "Unwatched" toggle of movies and shows. */
+    val unwatchedOnly: Boolean = false,
 ) {
+    /** Genres are listed as they are: the toggles narrow titles, not genres. */
+    val filterable: Boolean get() = scope != LibraryScope.Genres
+
     /** Genres are always listed by name, A to Z, whatever the other scopes sort by. */
     val listedByName: Boolean get() = scope == LibraryScope.Genres
 
@@ -73,11 +78,9 @@ data class LibraryQuery(
 
         fun scopes(kind: LibraryKind, inGenre: Boolean): List<LibraryScope> = when {
             kind == LibraryKind.Music -> listOf(LibraryScope.Albums, LibraryScope.Artists, LibraryScope.Songs, LibraryScope.Playlists)
-            inGenre -> listOf(LibraryScope.All, LibraryScope.Unwatched, LibraryScope.Favorites)
-            kind == LibraryKind.Movies -> listOf(
-                LibraryScope.All, LibraryScope.Collections, LibraryScope.Genres, LibraryScope.Unwatched, LibraryScope.Favorites,
-            )
-            else -> listOf(LibraryScope.All, LibraryScope.Genres, LibraryScope.Unwatched, LibraryScope.Favorites)
+            inGenre -> listOf(LibraryScope.All)
+            kind == LibraryKind.Movies -> listOf(LibraryScope.All, LibraryScope.Collections, LibraryScope.Genres)
+            else -> listOf(LibraryScope.All, LibraryScope.Genres)
         }
     }
 }
@@ -191,7 +194,7 @@ class LibraryRepository @Inject constructor(
     ): BaseItemDtoQueryResult {
         val userId = UUID.fromString(session.user.userId)
         val sortBy = sortBy(query)
-        val favorite = true.takeIf { query.scope == LibraryScope.Favorites || query.favoritesOnly }
+        val favorite = true.takeIf { query.favoritesOnly }
         // Music and playlists have no age ratings worth filtering on.
         val ages = if (query.kind == LibraryKind.Music || query.scope == LibraryScope.Playlists) null else ageFilter.limits()
         val order = listOf(if (query.orderDescending) SortOrder.DESCENDING else SortOrder.ASCENDING)
@@ -229,10 +232,11 @@ class LibraryRepository @Inject constructor(
                 genreIds = listOfNotNull(query.genreId),
                 maxOfficialRating = ages?.maxOfficialRating,
                 hasOfficialRating = ages?.hasOfficialRating,
-                filters = listOfNotNull(ItemFilter.IS_UNPLAYED.takeIf { query.scope == LibraryScope.Unwatched }),
+                filters = listOfNotNull(ItemFilter.IS_UNPLAYED.takeIf { query.unwatchedOnly }),
                 isFavorite = favorite,
+                // Filtered, the titles themselves count: a collection would hide which of its movies match.
                 collapseBoxSetItems = (query.scope == LibraryScope.All && query.kind == LibraryKind.Movies &&
-                    query.groupCollections && query.genreId == null).takeIf { it },
+                    query.groupCollections && query.genreId == null && !query.favoritesOnly && !query.unwatchedOnly).takeIf { it },
                 fields = listOf(ItemFields.CHILD_COUNT, ItemFields.GENRES, ItemFields.SORT_NAME),
                 enableUserData = true,
                 startIndex = start,

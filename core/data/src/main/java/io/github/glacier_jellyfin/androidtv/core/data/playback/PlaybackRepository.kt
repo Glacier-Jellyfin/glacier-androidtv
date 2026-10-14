@@ -166,7 +166,10 @@ class PlaybackRepository @Inject constructor(
 
     private val _stopped = MutableSharedFlow<UUID>(extraBufferCapacity = 8)
 
-    /** A title whose "stopped" report reached the server: resume points and watched state changed. */
+    /**
+     * A title whose "stopped" report reached the server: resume points and watched state changed.
+     * Live TV channels have neither, so they never show up here.
+     */
     val stopped: SharedFlow<UUID> = _stopped.asSharedFlow()
 
     /**
@@ -414,7 +417,7 @@ class PlaybackRepository @Inject constructor(
      * [watched] marks it watched in any case, after the stop so the stop cannot undo it.
      */
     fun reportStopped(source: PlaybackSource, positionMs: Long, failed: Boolean = false, watched: Boolean = false) =
-        report("stopped", onDone = { _stopped.tryEmit(source.itemId) }) {
+        report("stopped", onDone = { if (!source.live) _stopped.tryEmit(source.itemId) }) {
             sessionApi.reportPlaybackStopped(
                 PlaybackStopInfo(
                     itemId = source.itemId,

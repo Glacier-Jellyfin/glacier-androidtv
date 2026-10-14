@@ -63,7 +63,7 @@ class HomeViewModel @Inject constructor(
     private val parental: ParentalControl,
     private val ageFilter: AgeFilter,
     playback: PlaybackRepository,
-    details: DetailRepository,
+    private val details: DetailRepository,
     private val music: MusicController,
     launches: HomeLaunches,
 ) : ViewModel() {
@@ -191,7 +191,18 @@ class HomeViewModel @Inject constructor(
         name = item.title,
         rating = item.officialRating,
         parents = listOfNotNull(item.seriesId),
-    ) { navigate(PlayerRoute(item.id.toString())) }
+    ) {
+        if (item.kind != ItemKind.Series) {
+            navigate(PlayerRoute(item.id.toString()))
+            return@openTitle
+        }
+        // A show has no file of its own: its next episode plays, as on its page. With none
+        // (all watched, say), the page opens to pick one.
+        viewModelScope.launch {
+            val next = runCatching { details.nextEpisode(item.id) }.getOrNull()
+            navigate(if (next != null) PlayerRoute(next.id.toString()) else DetailRoute(item.id.toString()))
+        }
+    }
 
     fun openDetails(item: MediaItem) = navigate(DetailRoute(item.id.toString()))
 

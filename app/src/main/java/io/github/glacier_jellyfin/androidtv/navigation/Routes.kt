@@ -87,9 +87,12 @@ data object FavoritesRoute
 @Serializable
 data object LiveTvRoute
 
-/** A Live TV channel, full screen; channel up and down switch to its neighbours. */
+/**
+ * A Live TV channel, full screen; channel up and down switch to its neighbours.
+ * Started from the favorites ([favoritesOnly]), they stay among the favorites.
+ */
 @Serializable
-data class LiveTvPlayerRoute(val channelId: String)
+data class LiveTvPlayerRoute(val channelId: String, val favoritesOnly: Boolean = false)
 
 @Serializable
 data object SettingsRoute

@@ -108,13 +108,14 @@ import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.FactBadge
 import io.github.glacier_jellyfin.androidtv.ui.KenBurns
 import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
+import io.github.glacier_jellyfin.androidtv.ui.OverlayCard
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.ageRatingText
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import io.github.glacier_jellyfin.androidtv.ui.yearText
-import kotlinx.coroutines.delay
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.delay
 
 /** The OSD hides after this long without input while playing (design: 5 s). */
 private const val OSD_TIMEOUT_MS = 5_000L
@@ -865,45 +866,44 @@ private fun ErrorView(
     val toaster = LocalToaster.current
     val noApp = stringResource(R.string.trailer_no_youtube_app)
     val youTube = state.current as? YouTubeTrailer
-    Box(Modifier.fillMaxSize().background(Color(0xB805090F)), contentAlignment = Alignment.Center) {
-        Column(
-            Modifier.padding(horizontal = 80.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(28.dp),
-        ) {
-            Text(
-                stringResource(if (state.empty) R.string.trailer_none else R.string.trailer_error),
-                style = GlacierText.display(30),
-                color = GlacierColors.Ice,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                val buttons = buildList<Pair<String, () -> Unit>> {
-                    if (!state.empty && state.next != null) add(stringResource(R.string.trailer_next) to onNext)
-                    // Embedding can be switched off per video; the YouTube app still plays those.
-                    if (youTube != null) {
-                        add(
-                            stringResource(R.string.trailer_open_youtube) to {
-                                val intent = Intent(Intent.ACTION_VIEW, "https://www.youtube.com/watch?v=${youTube.videoId}".toUri())
-                                try {
-                                    context.startActivity(intent)
-                                } catch (_: ActivityNotFoundException) {
-                                    toaster.show(noApp)
-                                }
-                            },
-                        )
-                    } else if (!state.empty) {
-                        add(stringResource(R.string.action_retry) to onRetry)
-                    }
-                    add(stringResource(R.string.action_back) to onBack)
-                }
-                buttons.forEachIndexed { index, (label, onClick) ->
-                    PillButton(
-                        label,
-                        onClick = onClick,
-                        primary = index == 0,
-                        modifier = if (index == 0) Modifier.focusRequester(focus) else Modifier,
+    OverlayCard {
+        Text(
+            stringResource(if (state.empty) R.string.trailer_none else R.string.trailer_error),
+            style = GlacierText.display(30),
+            color = GlacierColors.Ice,
+        )
+        Text(
+            stringResource(if (state.empty) R.string.trailer_none_body else R.string.trailer_error_body),
+            style = GlacierText.body(21),
+            color = GlacierColors.Mist,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            val buttons = buildList<Pair<String, () -> Unit>> {
+                if (!state.empty && state.next != null) add(stringResource(R.string.trailer_next) to onNext)
+                // Embedding can be switched off per video; the YouTube app still plays those.
+                if (youTube != null) {
+                    add(
+                        stringResource(R.string.trailer_open_youtube) to {
+                            val intent = Intent(Intent.ACTION_VIEW, "https://www.youtube.com/watch?v=${youTube.videoId}".toUri())
+                            try {
+                                context.startActivity(intent)
+                            } catch (_: ActivityNotFoundException) {
+                                toaster.show(noApp)
+                            }
+                        },
                     )
+                } else if (!state.empty) {
+                    add(stringResource(R.string.action_retry) to onRetry)
                 }
+                add(stringResource(R.string.action_back) to onBack)
+            }
+            buttons.forEachIndexed { index, (label, onClick) ->
+                PillButton(
+                    label,
+                    onClick = onClick,
+                    primary = index == 0,
+                    modifier = if (index == 0) Modifier.focusRequester(focus) else Modifier,
+                )
             }
         }
     }

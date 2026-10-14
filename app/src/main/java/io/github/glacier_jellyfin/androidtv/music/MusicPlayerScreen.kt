@@ -100,11 +100,12 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.onMenuKey
 import io.github.glacier_jellyfin.androidtv.player.formatTime
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
+import io.github.glacier_jellyfin.androidtv.ui.OverlayCard
 import io.github.glacier_jellyfin.androidtv.ui.audioFormatText
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
-import kotlinx.coroutines.delay
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.delay
 
 /** Where the current lyric line sits in the lyrics box (design `lyrFollow`: 40 % from the top). */
 private const val LYRIC_ANCHOR = 0.4f
@@ -211,14 +212,7 @@ fun MusicPlayerScreen(
         }
         if (state.failed) {
             val retryFocus = remember { FocusRequester() }
-            Column(
-                Modifier
-                    .align(Alignment.Center)
-                    .background(Color(0xCC05090F), RoundedCornerShape(GlacierShapes.RadiusLg))
-                    .padding(48.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(28.dp),
-            ) {
+            OverlayCard {
                 Text(stringResource(R.string.player_error), style = GlacierText.display(30), color = GlacierColors.Ice)
                 Text(
                     stringResource(if (state.nothingToPlay) R.string.music_nothing_to_play else R.string.player_error_body),

@@ -29,6 +29,17 @@ class LibraryQueryTest {
     }
 
     @Test
+    fun `unwatched and favorites are filters, not tabs, and leave genres alone`() {
+        assertEquals(
+            listOf(LibraryScope.All, LibraryScope.Collections, LibraryScope.Genres),
+            LibraryQuery.scopes(LibraryKind.Movies, inGenre = false),
+        )
+        assertEquals(listOf(LibraryScope.All, LibraryScope.Genres), LibraryQuery.scopes(LibraryKind.Shows, inGenre = false))
+        assertTrue(LibraryQuery(LibraryKind.Movies).filterable)
+        assertFalse(LibraryQuery(LibraryKind.Movies, scope = LibraryScope.Genres).filterable)
+    }
+
+    @Test
     fun `each tab offers only the sorts that fit it`() {
         assertEquals(
             listOf(LibrarySort.DateAdded, LibrarySort.Title),

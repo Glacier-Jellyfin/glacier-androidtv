@@ -10,7 +10,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -57,6 +56,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.detail.TrackKind
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
+import io.github.glacier_jellyfin.androidtv.ui.OverlayCard
 import kotlinx.coroutines.delay
 
 /** OSD hides after this long without input while playing (agreed: 3 s). */
@@ -314,11 +314,7 @@ fun PlayerScreen(
         }
 
         if (state.loading && !state.failed) {
-            Column(
-                Modifier.align(Alignment.Center),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(24.dp),
-            ) {
+            OverlayCard(dim = false) {
                 SpinningDiamond(110)
                 Text(stringResource(R.string.player_loading), style = GlacierText.body(21), color = GlacierColors.Mist)
             }
@@ -326,13 +322,7 @@ fun PlayerScreen(
 
         if (state.failed) {
             val retryFocus = remember { FocusRequester() }
-            Column(
-                Modifier
-                    .align(Alignment.Center)
-                    .padding(horizontal = 80.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(28.dp),
-            ) {
+            OverlayCard {
                 Text(stringResource(R.string.player_error), style = GlacierText.display(30), color = GlacierColors.Ice)
                 Text(stringResource(R.string.player_error_body), style = GlacierText.body(21), color = GlacierColors.Mist)
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {

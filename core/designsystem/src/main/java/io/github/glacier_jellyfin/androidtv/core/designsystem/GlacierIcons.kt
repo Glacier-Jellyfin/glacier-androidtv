@@ -115,6 +115,11 @@ object GlacierIcons {
     val SeenFilled = filled(CIRCLE, strokeWidth = 1.8f)
     /** Drawn over [SeenFilled] in the button's background colour. */
     val SeenMark = icon(SEEN_CHECK, strokeWidth = 2.1f)
+    /** The red dot of a recording. */
+    val Record = filled("M12 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12z")
+    /** Two dots: a whole series is recorded. */
+    val RecordSeries = filled("M7.5 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9z", "M16.5 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9z")
+    val Trash = icon("M3 6h18", "M8 6V4h8v2", "M19 6l-1 14H6L5 6", "M10 11v5", "M14 11v5")
     val Star = filled("M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z")
 
     private fun icon(vararg paths: String, strokeWidth: Float = 2f): ImageVector =
