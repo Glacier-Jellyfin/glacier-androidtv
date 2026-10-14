@@ -12,10 +12,15 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
+import io.github.glacier_jellyfin.androidtv.core.data.media.LiveChannel
+import io.github.glacier_jellyfin.androidtv.core.data.media.LiveProgram
+import io.github.glacier_jellyfin.androidtv.core.data.media.LiveTvRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.Lyrics
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicShuffle
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
+import io.github.glacier_jellyfin.androidtv.core.data.media.channelAfter
+import io.github.glacier_jellyfin.androidtv.core.data.media.nowAndNext
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackMethod
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackPosition
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
@@ -35,6 +40,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
@@ -78,8 +84,26 @@ data class MusicUiState(
     /** Left/Right on the timeline and the remote's rewind/fast-forward (Settings › Playback). */
     val seekBackMs: Long = 10_000,
     val seekForwardMs: Long = 30_000,
+    /** A radio station plays instead of songs ([MusicController.playRadio]); the queue is empty then. */
+    val radio: RadioState? = null,
 ) {
     val current: MusicTrack? get() = queue.getOrNull(index)?.track
+}
+
+/** The radio that plays: the stations Up and Down switch among, and the one tuned to. */
+data class RadioState(
+    val stations: List<LiveChannel>,
+    val station: LiveChannel,
+    /** The station's programmes from now on, once loaded. */
+    val programs: List<LiveProgram> = emptyList(),
+    /** The programmes arrived (or could not be loaded); until then a loader stands in for them. */
+    val programsLoaded: Boolean = false,
+) {
+    /** The programme on air at [timeMs] and the one after it. */
+    fun nowAndNextAt(timeMs: Long): Pair<LiveProgram?, LiveProgram?> {
+        val (now, next) = nowAndNext(programs, timeMs)
+        return (now ?: station.now?.takeIf { it.airsAt(timeMs) }) to next
+    }
 }
 
 /** Position data, kept apart from [MusicUiState] so ticking only redraws what moves. */
@@ -91,8 +115,19 @@ private class QueueRequest(val startTrackId: String?, val load: suspend () -> Lo
 /** A loaded queue: what it was made from ([ItemKind.Other] for an instant mix, null for loose songs), its title and songs. */
 private data class LoadedQueue(val kind: ItemKind?, val title: String, val tracks: List<MusicTrack>)
 
-/** The song in the mini player. */
-data class NowPlaying(val track: MusicTrack, val playing: Boolean)
+/** What the mini player and the saver show: a song, or a radio station with its programme. */
+data class NowPlaying(
+    val title: String,
+    /** The artist, or the programme on air. */
+    val subtitle: String?,
+    /** The album; the saver's third line. */
+    val detail: String?,
+    val coverUrl: String?,
+    val largeCoverUrl: String?,
+    val playing: Boolean,
+    /** A radio station: a logo instead of a cover, and no end to show progress towards. */
+    val live: Boolean = false,
+)
 
 /**
  * The app's music playback, outliving the player screen: songs keep playing
@@ -106,6 +141,7 @@ class MusicController @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val details: DetailRepository,
     private val music: MusicRepository,
+    private val liveTv: LiveTvRepository,
     private val playback: PlaybackRepository,
     private val shuffleSwitch: MusicShuffle,
     settings: SettingsRepository,
@@ -127,8 +163,17 @@ class MusicController @Inject constructor(
     private val _player = MutableStateFlow<ExoPlayer?>(null)
     val player: StateFlow<ExoPlayer?> = _player.asStateFlow()
 
-    val nowPlaying: StateFlow<NowPlaying?> = state
-        .map { s -> s.current?.let { NowPlaying(it, s.playWhenReady) } }
+    /** Ticks while the radio plays, so [nowPlaying] moves on to the next programme. */
+    private val radioClock = MutableStateFlow(0L)
+
+    val nowPlaying: StateFlow<NowPlaying?> = combine(state, radioClock) { s, _ -> s }
+        .map { s ->
+            s.radio?.let { radio ->
+                val station = radio.station
+                val program = radio.nowAndNextAt(System.currentTimeMillis()).first
+                NowPlaying(station.name, program?.title, null, station.logoUrl, station.logoUrl, s.playWhenReady, live = true)
+            } ?: s.current?.let { NowPlaying(it.title, it.artist, it.album, it.coverUrl, it.largeCoverUrl ?: it.coverUrl, s.playWhenReady) }
+        }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, null)
 
@@ -155,6 +200,53 @@ class MusicController @Inject constructor(
     /** The queue ran out; the last song waits, paused. */
     private var ended = false
     private var idleStop: Job? = null
+
+    /** The radio's own player, kept while switching stations; null while songs play. */
+    private var radioPlayer: ExoPlayer? = null
+    /** The station's live stream on the server; closing it frees the tuner. */
+    private var radioSource: PlaybackSource? = null
+    private var radioStarted = false
+    private var tuneJob: Job? = null
+    private var programsJob: Job? = null
+    private var lastRadioRetry = 0L
+
+    private val radioListener = object : Player.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            when (playbackState) {
+                Player.STATE_READY -> {
+                    _state.update { it.copy(loading = false) }
+                    if (!radioStarted) {
+                        radioStarted = true
+                        radioSource?.let { playback.reportStart(it, radioPosition()) }
+                    }
+                }
+                // A live stream has no end: the server stopped sending.
+                Player.STATE_ENDED -> radioFailed(null)
+                else -> Unit
+            }
+        }
+
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            _state.update { it.copy(playWhenReady = playWhenReady) }
+            if (playWhenReady) idleStop?.cancel() else scheduleIdleStop()
+        }
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            _state.update { it.copy(playing = isPlaying) }
+        }
+
+        override fun onPlayerError(error: PlaybackException) {
+            // Fell behind the live window: on from the live edge.
+            if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
+                radioPlayer?.let {
+                    it.seekToDefaultPosition()
+                    it.prepare()
+                }
+                return
+            }
+            radioFailed(error)
+        }
+    }
 
     private val listener = object : Player.Listener {
         override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
@@ -266,13 +358,204 @@ class MusicController @Inject constructor(
         load()
     }
 
-    /** Loads the last [play] again after it failed. */
+    /** Loads the last [play] again after it failed, or tunes to the radio station again. */
     fun retry() {
-        if (request != null) load()
+        val radio = _state.value.radio
+        if (radio != null) tune(radio.station, delayMs = 0) else if (request != null) load()
+    }
+
+    /**
+     * Radio in place of the music: Live TV's radio [stations], starting on
+     * [stationId]. It plays on through the app like songs; next and previous
+     * switch stations.
+     */
+    fun playRadio(stations: List<LiveChannel>, stationId: UUID) {
+        val station = stations.firstOrNull { it.id == stationId } ?: return
+        if (_state.value.radio?.station?.id == stationId && radioSource != null) {
+            // Already on: the list may have changed (favorites), the stream goes on.
+            _state.update { it.copy(radio = it.radio?.copy(stations = stations)) }
+            return
+        }
+        endQueue()
+        _state.update {
+            it.copy(
+                sourceKind = null,
+                sourceTitle = "",
+                queue = emptyList(),
+                index = 0,
+                lyrics = LyricsState.None,
+                radio = RadioState(stations, station),
+            )
+        }
+        tune(station, delayMs = 0)
+        startRadioTicker()
+    }
+
+    /** The next station ([by] 1) or the one before (-1), wrapping around. */
+    fun zap(by: Int) {
+        val radio = _state.value.radio ?: return
+        val target = channelAfter(radio.stations, radio.station.id, by) ?: return
+        if (target.id != radio.station.id) tune(target)
+    }
+
+    /** A station picked from the list in the player. */
+    fun tuneTo(station: LiveChannel) {
+        if (station.id != _state.value.radio?.station?.id) tune(station, delayMs = 0)
+    }
+
+    /**
+     * Shows [station] at once and opens its stream after a short rest, so
+     * switching through several stations does not open a tuner stream for each.
+     */
+    private fun tune(station: LiveChannel, delayMs: Long = ZAP_DELAY_MS) {
+        liveTv.watched(station.id)
+        _state.update {
+            it.copy(
+                radio = it.radio?.let { r ->
+                    val same = r.station.id == station.id
+                    r.copy(station = station, programs = if (same) r.programs else emptyList(), programsLoaded = same && r.programsLoaded)
+                },
+                loading = true,
+                failed = false,
+                playWhenReady = true,
+            )
+        }
+        loadPrograms(station.id)
+        tuneJob?.cancel()
+        tuneJob = scope.launch {
+            delay(delayMs)
+            stopRadioStream()
+            try {
+                val opened = playback.open(station.id, startMs = 0, audioIndex = null, subtitleIndex = null)
+                radioSource = opened
+                Log.i(TAG, "Tuned to radio ${station.id}: ${opened.method}")
+                val p = radioPlayer ?: startRadioPlayer(opened)
+                val program = _state.value.radio?.nowAndNextAt(System.currentTimeMillis())?.first
+                p.setMediaItem(GlacierPlayer.audioItem(station.id.toString(), opened.url, opened.isHls, SongMetadata(station.name, program?.title, null, station.logoUrl)))
+                p.prepare()
+                p.play()
+                _state.update { it.copy(method = opened.method) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Tuning to radio ${station.id} failed", e)
+                _state.update { it.copy(loading = false, failed = true) }
+            }
+        }
+    }
+
+    private fun startRadioPlayer(source: PlaybackSource): ExoPlayer {
+        val old = activePlayer
+        val p = GlacierPlayer.createAudio(context, source.headers)
+        p.addListener(radioListener)
+        radioPlayer = p
+        // The service moves its session over before the old player goes.
+        _player.value = p
+        old?.let(::release)
+        context.startService(Intent(context, MusicService::class.java))
+        return p
+    }
+
+    /** A stream can stall for a moment (tuner, network): tune again once before giving up. */
+    private fun radioFailed(error: PlaybackException?) {
+        val station = _state.value.radio?.station ?: return
+        val now = System.currentTimeMillis()
+        if (now - lastRadioRetry > AUTO_RETRY_WINDOW_MS) {
+            lastRadioRetry = now
+            Log.w(TAG, "Radio playback failed, tuning again", error)
+            // After the callback, not inside it.
+            scope.launch { tune(station, delayMs = 0) }
+            return
+        }
+        Log.w(TAG, "Radio playback failed", error)
+        radioSource?.let { playback.reportStopped(it, 0, failed = true) }
+        radioSource = null
+        radioStarted = false
+        _state.update { it.copy(loading = false, failed = true) }
+    }
+
+    /** Closes the live stream, so the server frees the tuner; the player stays for the next station. */
+    private fun stopRadioStream() {
+        radioSource?.let { playback.reportStopped(it, 0) }
+        radioSource = null
+        radioStarted = false
+        radioPlayer?.stop()
+    }
+
+    private fun loadPrograms(stationId: UUID) {
+        programsJob?.cancel()
+        programsJob = scope.launch {
+            try {
+                val programs = liveTv.programs(stationId, hours = RADIO_GUIDE_HOURS)
+                _state.update { s -> if (s.radio?.station?.id == stationId) s.copy(radio = s.radio.copy(programs = programs, programsLoaded = true)) else s }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Loading the programmes of radio $stationId failed", e)
+                _state.update { s -> if (s.radio?.station?.id == stationId) s.copy(radio = s.radio.copy(programsLoaded = true)) else s }
+            }
+        }
+    }
+
+    /** Keeps the server's session alive and the programme current. */
+    private fun startRadioTicker() {
+        ticker?.cancel()
+        ticker = scope.launch {
+            while (isActive) {
+                delay(REPORT_INTERVAL_MS)
+                val radio = _state.value.radio ?: break
+                if (radioStarted) radioSource?.let { playback.reportProgress(it, radioPosition()) }
+                val now = radio.nowAndNextAt(System.currentTimeMillis()).first
+                if (now == null || now.endMs <= System.currentTimeMillis()) {
+                    if (programsJob?.isActive != true && radio.programs.isNotEmpty()) loadPrograms(radio.station.id)
+                }
+                // A new programme may be on air: the mini player follows.
+                radioClock.value = System.currentTimeMillis()
+            }
+        }
+    }
+
+    private fun radioPosition() = PlaybackPosition(0, paused = radioPlayer?.isPlaying != true)
+
+    /** Pausing the radio closes its stream; playing tunes in again, live. */
+    private fun pauseRadio() {
+        tuneJob?.cancel()
+        radioPlayer?.pause()
+        _state.update { it.copy(playWhenReady = false, loading = false) }
+        stopRadioStream()
+    }
+
+    /** Leaves the radio for songs: its stream closes, its player goes once the songs' player is there. */
+    private fun endRadio() {
+        if (_state.value.radio == null && radioPlayer == null) return
+        tuneJob?.cancel()
+        programsJob?.cancel()
+        ticker?.cancel()
+        stopRadioStream()
+        radioPlayer = null
+        _state.update { it.copy(radio = null, method = null) }
+    }
+
+    /** Leaves the songs for the radio: the queue goes, its player waits paused for the radio's. */
+    private fun endQueue() {
+        loadJob?.cancel()
+        request = null
+        ended = false
+        if (radioPlayer == null) {
+            // Its pause is not the radio's: the songs' listener goes first.
+            activePlayer?.removeListener(listener)
+            activePlayer?.pause()
+            reportCurrentStopped(null)
+            ticker?.cancel()
+        }
+        sourceOrder = emptyList()
+        sources = emptyMap()
+        _progress.value = MusicProgress()
     }
 
     private fun load() {
         val request = request ?: return
+        endRadio()
         loadJob?.cancel()
         activePlayer?.pause()
         reportCurrentStopped(null)
@@ -360,6 +643,10 @@ class MusicController @Inject constructor(
 
     fun togglePlay() {
         val p = activePlayer ?: return
+        if (_state.value.radio != null) {
+            if (_state.value.playWhenReady) pauseRadio() else retry()
+            return
+        }
         when {
             // After the last song: play it again from the start.
             p.playbackState == Player.STATE_ENDED -> {
@@ -372,10 +659,19 @@ class MusicController @Inject constructor(
     }
 
     fun pause() {
-        activePlayer?.pause()
+        if (_state.value.radio != null) pauseRadio() else activePlayer?.pause()
+    }
+
+    private fun play() {
+        if (_state.value.radio != null) {
+            if (!_state.value.playWhenReady) retry()
+        } else {
+            activePlayer?.play()
+        }
     }
 
     fun next() {
+        if (_state.value.radio != null) return zap(1)
         val p = activePlayer ?: return
         when {
             p.hasNextMediaItem() -> p.seekToNextMediaItem()
@@ -387,12 +683,14 @@ class MusicController @Inject constructor(
 
     /** Within the first 3 s the previous song, else the start of this one (design `mPrev`). */
     fun previous() {
+        if (_state.value.radio != null) return zap(-1)
         val p = activePlayer ?: return
         p.seekToPrevious()
         p.play()
     }
 
     fun seekBy(deltaMs: Long) {
+        if (_state.value.radio != null) return
         val p = activePlayer ?: return
         val duration = p.duration.takeIf { it > 0 } ?: _progress.value.durationMs
         val target = (p.currentPosition + deltaMs).coerceIn(0, (duration - 1).coerceAtLeast(0))
@@ -401,6 +699,7 @@ class MusicController @Inject constructor(
     }
 
     fun seekTo(positionMs: Long) {
+        if (_state.value.radio != null) return
         val p = activePlayer ?: return
         p.seekTo(positionMs)
         p.play()
@@ -408,6 +707,7 @@ class MusicController @Inject constructor(
     }
 
     fun playAt(index: Int) {
+        if (_state.value.radio != null) return
         val p = activePlayer ?: return
         p.seekTo(index, 0)
         p.play()
@@ -423,7 +723,9 @@ class MusicController @Inject constructor(
         if (tracks.isEmpty()) return
         val entries = tracks.map { QueueEntry(nextKey++, it) }
         sources = sources + entries.associate { it.key to playback.audioSource(it.track) }
-        val p = activePlayer
+        // The radio has no queue to add to: the songs replace it.
+        endRadio()
+        val p = activePlayer?.takeIf { request != null || sourceOrder.isNotEmpty() }
         if (p == null) {
             loadJob?.cancel()
             request = null
@@ -475,6 +777,7 @@ class MusicController @Inject constructor(
     }
 
     fun toggleShuffle() {
+        if (_state.value.radio != null) return
         val p = activePlayer ?: return
         val current = _state.value
         val on = !current.shuffle
@@ -502,6 +805,7 @@ class MusicController @Inject constructor(
 
     /** Off → all songs → this song → off (design). */
     fun cycleRepeat() {
+        if (_state.value.radio != null) return
         val repeat = when (_state.value.repeat) {
             RepeatMode.Off -> RepeatMode.All
             RepeatMode.All -> RepeatMode.One
@@ -520,6 +824,7 @@ class MusicController @Inject constructor(
 
     /** The heart in the player: the song that plays becomes a favorite, or stops being one. */
     fun toggleFavorite() {
+        _state.value.radio?.let { return toggleStationFavorite(it.station) }
         val track = _state.value.current ?: return
         val favorite = !track.isFavorite
         setFavorite(track.id, favorite)
@@ -533,6 +838,52 @@ class MusicController @Inject constructor(
                 Log.w(TAG, "Changing the favorite failed", e)
                 setFavorite(track.id, !favorite)
             }
+        }
+    }
+
+    /** A heart in the radio player: the station becomes a favorite of Live TV, or stops being one. */
+    fun toggleStationFavorite(station: LiveChannel) {
+        // The list may hold an older copy of the station.
+        val favorite = !(_state.value.radio?.stations?.firstOrNull { it.id == station.id } ?: station).favorite
+        setStationFavorite(station.id, favorite)
+        scope.launch {
+            try {
+                liveTv.setFavorite(station.id, favorite)
+                _events.tryEmit(UiEvent.Toast(if (favorite) R.string.livetv_favorite_added else R.string.livetv_favorite_removed, listOf(station.name)))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Changing the favorite failed", e)
+                setStationFavorite(station.id, !favorite)
+                toast(R.string.livetv_favorite_failed)
+            }
+        }
+    }
+
+    /**
+     * The station has a picture after all: it moves to Live TV's channels and
+     * leaves the stations. The one that plays goes on until another is picked.
+     */
+    fun moveStationToTv(station: LiveChannel) {
+        scope.launch {
+            try {
+                liveTv.moveChannel(station.id, toRadio = false)
+                _state.update { s ->
+                    s.copy(radio = s.radio?.let { r -> r.copy(stations = r.stations.filter { it.id != station.id || it.id == r.station.id }) })
+                }
+                _events.tryEmit(UiEvent.Toast(R.string.livetv_moved_tv, listOf(station.name)))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Moving ${station.id} to TV failed", e)
+            }
+        }
+    }
+
+    private fun setStationFavorite(stationId: UUID, favorite: Boolean) {
+        val change = { channel: LiveChannel -> if (channel.id == stationId) channel.copy(favorite = favorite) else channel }
+        _state.update { s ->
+            s.copy(radio = s.radio?.let { it.copy(stations = it.stations.map(change), station = change(it.station)) })
         }
     }
 
@@ -558,7 +909,7 @@ class MusicController @Inject constructor(
         if (!ownsKey(keyCode)) return false
         when (keyCode) {
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> togglePlay()
-            KeyEvent.KEYCODE_MEDIA_PLAY -> activePlayer?.play()
+            KeyEvent.KEYCODE_MEDIA_PLAY -> play()
             KeyEvent.KEYCODE_MEDIA_PAUSE -> pause()
             KeyEvent.KEYCODE_MEDIA_NEXT -> next()
             KeyEvent.KEYCODE_MEDIA_PREVIOUS -> previous()
@@ -597,6 +948,7 @@ class MusicController @Inject constructor(
     /** Ends the music: the queue goes, and with it the mini player and the media session. */
     fun stop() {
         idleStop?.cancel()
+        endRadio()
         ended = false
         loadJob?.cancel()
         request = null
@@ -654,6 +1006,7 @@ class MusicController @Inject constructor(
 
     private fun release(p: ExoPlayer) {
         p.removeListener(listener)
+        p.removeListener(radioListener)
         p.release()
     }
 
@@ -668,6 +1021,11 @@ class MusicController @Inject constructor(
         const val TICK_MS = 250L
         const val REPORT_INTERVAL_MS = 10_000L
         const val IDLE_STOP_MS = 10 * 60_000L
+        /** Switching stations rests this long on one before its stream opens (as in Live TV). */
+        const val ZAP_DELAY_MS = 450L
+        /** A second radio failure within this time shows the error instead of tuning again. */
+        const val AUTO_RETRY_WINDOW_MS = 60_000L
+        const val RADIO_GUIDE_HOURS = 6L
         val MediaKeys = setOf(
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
             KeyEvent.KEYCODE_MEDIA_PLAY,

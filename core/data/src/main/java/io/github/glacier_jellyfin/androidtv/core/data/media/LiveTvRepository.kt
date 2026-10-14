@@ -2,18 +2,24 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.settings.LiveTvSettings
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.api.client.extensions.liveTvApi
 import org.jellyfin.sdk.api.client.extensions.userDataApi
 import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.ChannelType
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
@@ -37,6 +43,8 @@ data class LiveChannel(
     val logoUrl: String?,
     val favorite: Boolean,
     val now: LiveProgram?,
+    /** A radio station: sound only, played like music. */
+    val radio: Boolean = false,
 )
 
 /** One programme of the guide. Times are epoch milliseconds. */
@@ -157,7 +165,22 @@ fun channelByNumber(channels: List<LiveChannel>, number: String): LiveChannel? =
 @Singleton
 class LiveTvRepository @Inject constructor(
     private val sessions: SessionManager,
+    private val settings: SettingsRepository,
 ) {
+
+    /** Which channels are radio, as this profile found out or chose; see [LiveTvSettings]. */
+    val radioMarks: Flow<LiveTvSettings> = settings.settings.map { it.liveTv }.distinctUntilChanged()
+
+    /** Moves [channelId] to the radio stations, or back to the TV channels. */
+    suspend fun moveChannel(channelId: UUID, toRadio: Boolean) {
+        settings.update { it.copy(liveTv = it.liveTv.moved(channelId.toString(), toRadio)) }
+    }
+
+    /** [channelId] played with sound and no picture: from now on it lists as a radio station. */
+    suspend fun heardAsRadio(channelId: UUID) {
+        if (settings.current().liveTv.isRadio(channelId.toString(), serverSaysRadio = false)) return
+        settings.update { it.copy(liveTv = it.liveTv.heardAsRadio(channelId.toString())) }
+    }
 
     private val _lastWatched = MutableStateFlow<UUID?>(null)
 
@@ -168,10 +191,11 @@ class LiveTvRepository @Inject constructor(
         _lastWatched.value = channelId
     }
 
-    /** All channels in the server's order (by number), each with the programme on air now. */
+    /** All channels in the server's order (by number), TV and radio, each with the programme on air now. */
     suspend fun channels(): List<LiveChannel> = withContext(Dispatchers.IO) {
         val session = requireSession()
         val api = session.api
+        val marks = settings.current().liveTv
         api.liveTvApi.getLiveTvChannels(
             userId = session.userId,
             enableImages = true,
@@ -180,7 +204,7 @@ class LiveTvRepository @Inject constructor(
             enableUserData = true,
             addCurrentProgram = true,
             fields = listOf(ItemFields.OVERVIEW),
-        ).content.items.map { it.toChannel(api) }
+        ).content.items.map { it.toChannel(api, marks) }
     }
 
     /** The programmes of [channelId] from what airs now to [hours] ahead. */
@@ -363,7 +387,7 @@ class LiveTvRepository @Inject constructor(
         return api.imageApi.getItemImageUrl(itemId = item, imageType = type, tag = tag, maxWidth = PROGRAM_WIDTH)
     }
 
-    private fun BaseItemDto.toChannel(api: ApiClient) = LiveChannel(
+    private fun BaseItemDto.toChannel(api: ApiClient, marks: LiveTvSettings) = LiveChannel(
         id = id,
         number = channelNumber?.takeIf { it.isNotBlank() },
         name = name.orEmpty(),
@@ -372,6 +396,7 @@ class LiveTvRepository @Inject constructor(
         },
         favorite = userData?.isFavorite == true,
         now = currentProgram?.toProgram(api, channel = id),
+        radio = marks.isRadio(id.toString(), serverSaysRadio = channelType == ChannelType.RADIO),
     )
 
     private fun BaseItemDto.toProgram(api: ApiClient, channel: UUID? = null): LiveProgram? {

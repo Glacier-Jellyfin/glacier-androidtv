@@ -80,7 +80,7 @@
     <string name="livetv_favorites">Favoriten</string>
     <string name="livetv_favorite">Favorit</string>
     <string name="livetv_favorites_empty">Noch keine Lieblingssender</string>
-    <string name="livetv_favorites_empty_body">Halte OK auf einem Sender gedrückt, um ihn zum Favoriten zu machen.</string>
+    <string name="livetv_favorites_empty_body">Halte OK auf einem Sender gedrückt und füge ihn zu deinen Favoriten hinzu.</string>
     <string name="livetv_favorite_added">%1$s ist jetzt ein Favorit</string>
     <string name="livetv_favorite_removed">%1$s ist kein Favorit mehr</string>
     <string name="livetv_favorite_failed">Der Favorit konnte nicht gespeichert werden.</string>
@@ -136,6 +136,25 @@
     <string name="livetv_today">Heute</string>
     <string name="livetv_tomorrow">Morgen</string>
     <string name="livetv_yesterday">Gestern</string>
+    <string name="livetv_radio">Radio</string>
+    <string name="radio_listen">Anhören</string>
+    <string name="livetv_options">Optionen</string>
+    <string name="livetv_move_radio">Zu Radio verschieben</string>
+    <string name="livetv_move_tv">Zu Sendern verschieben</string>
+    <string name="livetv_channel_body_tv">Nur Ton? Verschiebe ihn zu Radio. Dort spielt er wie Musik und läuft weiter, während du stöberst.</string>
+    <string name="livetv_channel_body_radio">Mit Bild? Verschiebe ihn zu den Sendern, um ihn im Vollbild zu sehen.</string>
+    <string name="livetv_moved_radio">%1$s ist jetzt unter Radio</string>
+    <string name="livetv_moved_tv">%1$s ist jetzt unter Sender</string>
+    <string name="radio_stations">Sender</string>
+    <plurals name="radio_station_count">
+        <item quantity="one">%1$d Sender</item>
+        <item quantity="other">%1$d Sender</item>
+    </plurals>
+    <string name="radio_tuning">Wird eingestellt</string>
+    <string name="radio_previous">Vorheriger Sender</string>
+    <string name="radio_next">Nächster Sender</string>
+    <string name="radio_error">Dieser Sender spielt nicht</string>
+    <string name="radio_error_body">Vielleicht ist der Tuner belegt oder der Stream offline. Versuche es noch einmal oder wähle einen anderen Sender.</string>
     <string name="favorites_episodes">Folgen</string>
     <string name="favorites_songs">Songs</string>
     <string name="favorites_empty">Noch keine Favoriten</string>

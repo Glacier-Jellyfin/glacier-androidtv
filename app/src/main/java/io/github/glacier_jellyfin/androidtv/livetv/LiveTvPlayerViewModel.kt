@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -26,6 +27,7 @@ import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.LiveTvPlayerRoute
+import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -52,6 +54,8 @@ data class LiveTvPlayerState(
     val next: LiveProgram? = null,
     /** The channel's programmes from now on, for the programme list. */
     val programs: List<LiveProgram> = emptyList(),
+    /** The programmes of the channel arrived (or could not be loaded); until then a loader stands in for them. */
+    val guideLoaded: Boolean = false,
     val player: ExoPlayer? = null,
     val playback: GlacierPlayback? = null,
     /** Until the first frame of the channel can be shown. */
@@ -70,7 +74,7 @@ class LiveTvPlayerViewModel @Inject constructor(
     private val repository: LiveTvRepository,
     private val playback: PlaybackRepository,
     private val handoff: LiveStreamHandoff,
-    music: MusicController,
+    private val music: MusicController,
 ) : ViewModel(), RecordActions {
 
     private val route = savedStateHandle.toRoute<LiveTvPlayerRoute>()
@@ -94,6 +98,7 @@ class LiveTvPlayerViewModel @Inject constructor(
     private var previous: UUID? = null
     /** The channel tuned to; known before the channel list is. */
     private var tuned: UUID? = null
+    private var radioCheck: Job? = null
     /** The app went to the background and freed the tuner; coming back tunes again. */
     private var backgrounded = false
     /** When playback last failed and was tuned again by itself. */
@@ -106,6 +111,7 @@ class LiveTvPlayerViewModel @Inject constructor(
                 if (!started) {
                     started = true
                     source?.let { playback.reportStart(it, position()) }
+                    checkForRadio()
                 }
             }
         }
@@ -145,7 +151,8 @@ class LiveTvPlayerViewModel @Inject constructor(
         val channelId = UUID.fromString(route.channelId)
         viewModelScope.launch {
             try {
-                val channels = repository.channels()
+                // Radio plays in the music player: zapping and numbers stay among the TV channels.
+                val channels = repository.channels().filterNot { it.radio }
                 val channel = channels.firstOrNull { it.id == channelId }
                 // Only the favorites, when started from them and there are some.
                 val zapChannels = if (route.favoritesOnly) channels.filter { it.favorite }.ifEmpty { channels } else channels
@@ -225,6 +232,7 @@ class LiveTvPlayerViewModel @Inject constructor(
                 now = channel?.now,
                 next = null,
                 programs = emptyList(),
+                guideLoaded = false,
                 loading = true,
                 failed = false,
             )
@@ -265,17 +273,54 @@ class LiveTvPlayerViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Jellyfin's own tuners call radio stations TV channels too. One that
+     * plays with sound and no picture is radio: it moves to the radio
+     * stations, and when the player was opened on it, the music player
+     * takes over. Checked a moment after the start, once the tracks settled.
+     */
+    private fun checkForRadio() {
+        val channelId = tuned ?: return
+        radioCheck?.cancel()
+        radioCheck = viewModelScope.launch {
+            delay(RADIO_CHECK_MS)
+            val player = _state.value.player ?: return@launch
+            if (tuned != channelId || closing || !player.isPlaying) return@launch
+            val tracks = player.currentTracks
+            if (!tracks.containsType(C.TRACK_TYPE_AUDIO) || tracks.containsType(C.TRACK_TYPE_VIDEO)) return@launch
+            Log.i(TAG, "$channelId plays without a picture: radio")
+            try {
+                repository.heardAsRadio(channelId)
+                // While zapping it only moves for next time; the zapping goes on.
+                if (channelId.toString() != route.channelId || previous != null) return@launch
+                val stations = repository.channels().filter { it.radio }
+                    .let { all -> if (route.favoritesOnly) all.filter { it.favorite }.ifEmpty { all } else all }
+                if (stations.none { it.id == channelId } || tuned != channelId || closing) return@launch
+                closing = true
+                opening?.cancel()
+                stopStream()
+                music.playRadio(stations, channelId)
+                _events.send(UiEvent.Navigate(MusicRoute(), replace = true))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Moving $channelId to radio failed", e)
+            }
+        }
+    }
+
     private fun loadGuide(channelId: UUID) {
         guide?.cancel()
         guide = viewModelScope.launch {
             try {
                 val programs = repository.programs(channelId, hours = GUIDE_HOURS)
                 val (now, next) = nowAndNext(programs, System.currentTimeMillis())
-                if (tuned == channelId) _state.update { it.copy(now = now, next = next, programs = programs.sortedBy { p -> p.startMs }) }
+                if (tuned == channelId) _state.update { it.copy(now = now, next = next, programs = programs.sortedBy { p -> p.startMs }, guideLoaded = true) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Loading the guide of $channelId failed", e)
+                if (tuned == channelId) _state.update { it.copy(guideLoaded = true) }
             }
         }
     }
@@ -369,5 +414,7 @@ class LiveTvPlayerViewModel @Inject constructor(
         const val GUIDE_HOURS = 12L
         /** A second failure within this time shows the error instead of tuning again. */
         const val AUTO_RETRY_WINDOW_MS = 60_000L
+        /** How long a channel plays before its tracks count: a picture may come a little after the sound. */
+        const val RADIO_CHECK_MS = 2_000L
     }
 }

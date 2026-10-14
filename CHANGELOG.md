@@ -24,12 +24,20 @@ renders the reference separately.
 - A new Recordings view on the Live TV page lists what you recorded, the series you follow and what is planned. OK plays a recording, holding OK lets you delete it. OK on a planned recording or a series lets you cancel it
 - While you watch a channel, Right or the guide key shows what comes next on it. OK on a later programme records it (#1)
 - The channel list plays the focused channel without sound in its preview. When you open that channel, it goes on playing without loading again (#1)
+- Radio. Radio stations of Live TV have their own view on the Live TV page and play like music. They go on while you browse the app, show up in the mini player and switch with Up and Down, next and previous or the channel keys. Pausing frees the tuner
+- Jellyfin calls radio stations TV channels. A channel that plays with sound and no picture moves to Radio by itself. You can also move channels between Channels and Radio by hand
+- Channels and radio stations have a heart and an options button in their card, on the Live TV page and in the radio player
 
 ### Improved
 - Holding OK in the guide now opens the programme's options. Marking the channel as a favorite is one of them
 - After switching channels in the player, Back lands on the channel you watched last, in the channel list and in the guide (#1)
 - Favorites on the Live TV page is now a toggle on the right, in the channel list and in the guide. Channels started from your favorites switch only among your favorites. If you type the number of another channel, the list shows all channels again when you go back
 - Movies and shows filter by Unwatched and Favorites with toggles on the right, next to the sort. They work together and with All and Collections, like the heart in music
+- Unwatched keeps movies grouped into collections. A collection shows as long as one of its movies is unwatched
+- Back in the Live TV channel list, guide, radio or recordings first goes up to the views at the top. Pressed again, it leaves the page
+- Right closes the channel list in the Live TV player, like Left closes the programmes
+- While programme data loads, a loader shows instead of "No guide data". Loaders sit in the middle of the space they fill, also in the library
+- Back while connecting to a server stops it and stays on the server list
 
 ### Fixed
 - Play in the spotlight on a show now plays its next episode instead of failing

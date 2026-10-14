@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -43,7 +44,8 @@ class ServerAddressViewModel @Inject constructor(
             viewModelScope.launch { _events.send(UiEvent.Toast(R.string.address_invalid)) }
             return
         }
-        viewModelScope.launch {
+        connectJob?.cancel()
+        connectJob = viewModelScope.launch {
             _state.update { it.copy(connecting = input) }
             when (val result = finder.resolve(input)) {
                 ResolveResult.NotFound -> {
@@ -64,11 +66,23 @@ class ServerAddressViewModel @Inject constructor(
     fun confirmUnsupported(connect: Boolean) {
         val server = _state.value.confirmUnsupported ?: return
         _state.update { it.copy(confirmUnsupported = null) }
-        if (connect) viewModelScope.launch {
-            _state.update { it.copy(connecting = server.name) }
-            finish(server)
+        if (connect) {
+            connectJob?.cancel()
+            connectJob = viewModelScope.launch {
+                _state.update { it.copy(connecting = server.name) }
+                finish(server)
+            }
         }
     }
+
+    /** Back while connecting: the address stays, as if "Connect" had not been pressed. */
+    fun cancelConnect() {
+        connectJob?.cancel()
+        connectJob = null
+        _state.update { it.copy(connecting = null) }
+    }
+
+    private var connectJob: Job? = null
 
     private suspend fun finish(server: ServerInfo) {
         val route = connector.connect(server)

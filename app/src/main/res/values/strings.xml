@@ -85,7 +85,7 @@
     <string name="livetv_favorites">Favorites</string>
     <string name="livetv_favorite">Favorite</string>
     <string name="livetv_favorites_empty">No favorite channels yet</string>
-    <string name="livetv_favorites_empty_body">Hold OK on a channel to make it a favorite.</string>
+    <string name="livetv_favorites_empty_body">Hold OK on a channel and add it to your favorites.</string>
     <string name="livetv_favorite_added">%1$s is now a favorite</string>
     <string name="livetv_favorite_removed">%1$s is no longer a favorite</string>
     <string name="livetv_favorite_failed">The favorite could not be saved.</string>
@@ -141,6 +141,25 @@
     <string name="livetv_today">Today</string>
     <string name="livetv_tomorrow">Tomorrow</string>
     <string name="livetv_yesterday">Yesterday</string>
+    <string name="livetv_radio">Radio</string>
+    <string name="radio_listen">Listen</string>
+    <string name="livetv_options">Options</string>
+    <string name="livetv_move_radio">Move to Radio</string>
+    <string name="livetv_move_tv">Move to Channels</string>
+    <string name="livetv_channel_body_tv">Sound only? Move it to Radio. It plays there like music and goes on while you browse.</string>
+    <string name="livetv_channel_body_radio">Has a picture? Move it to Channels to watch it full screen.</string>
+    <string name="livetv_moved_radio">%1$s is now under Radio</string>
+    <string name="livetv_moved_tv">%1$s is now under Channels</string>
+    <string name="radio_stations">Stations</string>
+    <plurals name="radio_station_count">
+        <item quantity="one">%1$d station</item>
+        <item quantity="other">%1$d stations</item>
+    </plurals>
+    <string name="radio_tuning">Tuning in</string>
+    <string name="radio_previous">Previous station</string>
+    <string name="radio_next">Next station</string>
+    <string name="radio_error">This station does not play</string>
+    <string name="radio_error_body">The tuner may be busy or the stream may be offline. Try again or pick another station.</string>
     <string name="favorites_episodes">Episodes</string>
     <string name="favorites_songs">Songs</string>
     <string name="favorites_empty">No favorites yet</string>

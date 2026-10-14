@@ -57,7 +57,7 @@ private const val DRIFT_MS = 20_000L
 @Composable
 fun NowPlayingSaver(visible: Boolean, nowPlaying: NowPlaying?, progress: StateFlow<MusicProgress>) {
     AnimatedVisibility(visible = visible && nowPlaying != null, enter = fadeIn(tween(1200)), exit = fadeOut(tween(300))) {
-        val track = nowPlaying?.track ?: return@AnimatedVisibility
+        val playing = nowPlaying ?: return@AnimatedVisibility
         BoxWithConstraints(Modifier.fillMaxSize().background(GlacierColors.Void)) {
             val blockWidth = 1040
             val blockHeight = 320
@@ -77,11 +77,13 @@ fun NowPlayingSaver(visible: Boolean, nowPlaying: NowPlaying?, progress: StateFl
                 horizontalArrangement = Arrangement.spacedBy(44.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Artwork(track.largeCoverUrl ?: track.coverUrl, Modifier.size(blockHeight.dp).clip(RoundedCornerShape(GlacierShapes.RadiusLg)))
+                val cover = Modifier.size(blockHeight.dp).clip(RoundedCornerShape(GlacierShapes.RadiusLg))
+                if (playing.live) StationLogo(playing.largeCoverUrl, playing.title, cover, textSize = 64) else Artwork(playing.largeCoverUrl, cover)
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(track.title, style = GlacierText.display(46), color = GlacierColors.Ice, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    track.artist?.let { Text(it, style = GlacierText.body(26, FontWeight.Medium), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                    track.album?.let { Text(it, style = GlacierText.body(22), color = GlacierColors.Mist.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    Text(playing.title, style = GlacierText.display(46), color = GlacierColors.Ice, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    playing.subtitle?.let { Text(it, style = GlacierText.body(26, FontWeight.Medium), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    playing.detail?.let { Text(it, style = GlacierText.body(22), color = GlacierColors.Mist.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    if (playing.live) return@Column
                     val position by progress.collectAsState()
                     val fraction = if (position.durationMs > 0) position.positionMs.toFloat() / position.durationMs else 0f
                     Box(Modifier.padding(top = 18.dp).width(520.dp).height(4.dp).clip(PillShape).background(GlacierColors.GlassFill2)) {

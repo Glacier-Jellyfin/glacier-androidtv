@@ -50,6 +50,16 @@ class LibraryQueryTest {
     }
 
     @Test
+    fun `unwatched keeps movies grouped into collections, favorites and genres do not`() {
+        assertTrue(LibraryQuery(LibraryKind.Movies, unwatchedOnly = true).unwatchedGrouped)
+        assertFalse(LibraryQuery(LibraryKind.Movies, unwatchedOnly = true, favoritesOnly = true).unwatchedGrouped)
+        assertFalse(LibraryQuery(LibraryKind.Movies, unwatchedOnly = true, groupCollections = false).unwatchedGrouped)
+        assertFalse(LibraryQuery(LibraryKind.Movies, unwatchedOnly = true, genreId = java.util.UUID.randomUUID()).unwatchedGrouped)
+        assertFalse(LibraryQuery(LibraryKind.Shows, unwatchedOnly = true).unwatchedGrouped)
+        assertFalse(LibraryQuery(LibraryKind.Movies).unwatchedGrouped)
+    }
+
+    @Test
     fun `rail letters ignore case and accents`() {
         assertEquals('E', railLetter("étoile"))
         assertEquals('B', railLetter(" bend"))

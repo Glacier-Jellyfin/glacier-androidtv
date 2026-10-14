@@ -27,6 +27,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -34,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -41,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Text
+import coil3.compose.AsyncImage
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
@@ -88,8 +91,7 @@ fun MiniPlayer(nowPlaying: NowPlaying, onClick: () -> Unit, modifier: Modifier =
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
-    val track = nowPlaying.track
-    val label = stringResource(R.string.nav_now_playing, track.title)
+    val label = stringResource(R.string.nav_now_playing, nowPlaying.title)
     DisposableEffect(Unit) {
         MiniPlayerOnScreen.enter()
         onDispose { MiniPlayerOnScreen.leave() }
@@ -110,7 +112,8 @@ fun MiniPlayer(nowPlaying: NowPlaying, onClick: () -> Unit, modifier: Modifier =
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Artwork(track.coverUrl, Modifier.size(56.dp).clip(RoundedCornerShape(GlacierShapes.RadiusSm)))
+            val cover = Modifier.size(56.dp).clip(RoundedCornerShape(GlacierShapes.RadiusSm))
+            if (nowPlaying.live) StationLogo(nowPlaying.coverUrl, nowPlaying.title, cover, textSize = 17) else Artwork(nowPlaying.coverUrl, cover)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     EqualizerBars(accent, moving = nowPlaying.playing)
@@ -121,18 +124,19 @@ fun MiniPlayer(nowPlaying: NowPlaying, onClick: () -> Unit, modifier: Modifier =
                     )
                 }
                 Text(
-                    track.title,
+                    nowPlaying.title,
                     style = GlacierText.body(19, FontWeight.SemiBold),
                     color = if (focused) accent else GlacierColors.Ice,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                track.artist?.let {
+                nowPlaying.subtitle?.let {
                     Text(it, style = GlacierText.body(15), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
-        LocalMusicProgress.current?.let { flow ->
+        // A station has no end to show progress towards.
+        LocalMusicProgress.current?.takeUnless { nowPlaying.live }?.let { flow ->
             val progress by flow.collectAsState()
             val fraction = if (progress.durationMs > 0) progress.positionMs.toFloat() / progress.durationMs else 0f
             Box(
@@ -141,6 +145,28 @@ fun MiniPlayer(nowPlaying: NowPlaying, onClick: () -> Unit, modifier: Modifier =
                     .fillMaxWidth(fraction.coerceIn(0f, 1f))
                     .height(3.dp)
                     .background(accent),
+            )
+        }
+    }
+}
+
+/**
+ * A radio station's logo, whole, on a glass tile; without one, the first
+ * letters of its [name] stand in.
+ */
+@Composable
+fun StationLogo(url: String?, name: String, modifier: Modifier = Modifier, textSize: Int = 24) {
+    var failed by remember(url) { mutableStateOf(false) }
+    Box(modifier.background(GlacierColors.GlassFill2), contentAlignment = Alignment.Center) {
+        if (url == null || failed) {
+            Text(name.take(3).uppercase(), style = GlacierText.display(textSize), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Clip)
+        } else {
+            AsyncImage(
+                model = url,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                onError = { failed = true },
+                modifier = Modifier.fillMaxSize().padding(6.dp),
             )
         }
     }

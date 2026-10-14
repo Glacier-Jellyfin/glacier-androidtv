@@ -123,10 +123,13 @@ fun MusicPlayerScreen(
     BackHandler { viewModel.close() }
 
     val sheet by viewModel.musicActions.sheet.collectAsStateWithLifecycle()
+    val stationMenu by viewModel.stationMenu.collectAsStateWithLifecycle()
     val playFocus = remember { FocusRequester() }
     // Also when the options sheet closes: its focus goes with it.
-    LaunchedEffect(state.loading, state.failed, sheet == null) {
-        if (state.loading || state.failed || sheet != null) return@LaunchedEffect
+    // Switching radio stations loads each time: the focus stays where it is then.
+    val waiting = state.loading && state.radio == null
+    LaunchedEffect(waiting, state.failed, sheet == null) {
+        if (waiting || state.failed || sheet != null) return@LaunchedEffect
         withFrameNanos { }
         runCatching { playFocus.requestFocus() }
     }
@@ -143,6 +146,10 @@ fun MusicPlayerScreen(
                         if (event.type == KeyEventType.KeyUp) viewModel.musicActions.back()
                         return@onPreviewKeyEvent true
                     }
+                    if (stationMenu != null) {
+                        if (event.type == KeyEventType.KeyUp) viewModel.closeStationMenu()
+                        return@onPreviewKeyEvent true
+                    }
                     if (event.type == KeyEventType.KeyUp) viewModel.close()
                     return@onPreviewKeyEvent true
                 }
@@ -151,6 +158,8 @@ fun MusicPlayerScreen(
                     Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause -> viewModel.togglePlay()
                     Key.MediaNext -> viewModel.next()
                     Key.MediaPrevious -> viewModel.previous()
+                    Key.ChannelUp -> viewModel.zap(1)
+                    Key.ChannelDown -> viewModel.zap(-1)
                     Key.MediaRewind -> viewModel.seekBy(-state.seekBackMs)
                     Key.MediaFastForward -> viewModel.seekBy(state.seekForwardMs)
                     else -> return@onPreviewKeyEvent false
@@ -165,8 +174,11 @@ fun MusicPlayerScreen(
             },
     ) {
         val current = state.current
+        val radio = state.radio
         GlacierBackground {}
-        if (current != null) {
+        if (radio != null) {
+            RadioPlayer(state, radio, playFocus, viewModel)
+        } else if (current != null) {
             TopBar(state, current, Modifier.padding(start = 96.dp, end = 96.dp, top = 60.dp))
             Box(Modifier.padding(start = 96.dp).width(1064.dp)) {
                 AnimatedContent(state.lyricsOn, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "lyrics") { lyricsOn ->
@@ -200,7 +212,8 @@ fun MusicPlayerScreen(
             )
         }
 
-        if (state.loading && !state.failed) {
+        // The radio says so in its status line, without covering the stations.
+        if (state.loading && !state.failed && radio == null) {
             Column(
                 Modifier.align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -213,9 +226,15 @@ fun MusicPlayerScreen(
         if (state.failed) {
             val retryFocus = remember { FocusRequester() }
             OverlayCard {
-                Text(stringResource(R.string.player_error), style = GlacierText.display(30), color = GlacierColors.Ice)
+                Text(stringResource(if (radio != null) R.string.radio_error else R.string.player_error), style = GlacierText.display(30), color = GlacierColors.Ice)
                 Text(
-                    stringResource(if (state.nothingToPlay) R.string.music_nothing_to_play else R.string.player_error_body),
+                    stringResource(
+                        when {
+                            radio != null -> R.string.radio_error_body
+                            state.nothingToPlay -> R.string.music_nothing_to_play
+                            else -> R.string.player_error_body
+                        },
+                    ),
                     style = GlacierText.body(21),
                     color = GlacierColors.Mist,
                 )
@@ -267,14 +286,14 @@ private fun TopBar(state: MusicUiState, track: MusicTrack, modifier: Modifier) {
     }
 }
 
-private fun PlaybackMethod.label(): Int = when (this) {
+internal fun PlaybackMethod.label(): Int = when (this) {
     PlaybackMethod.DirectPlay -> R.string.player_direct_play
     PlaybackMethod.DirectStream -> R.string.player_direct_stream
     PlaybackMethod.Transcode -> R.string.player_transcode
 }
 
 @Composable
-private fun StatusPill(text: String) {
+internal fun StatusPill(text: String) {
     Box(
         Modifier
             .height(44.dp)
@@ -322,7 +341,7 @@ private fun NowPlaying(state: MusicUiState, track: MusicTrack) {
 
 /** Three bars bouncing while music plays (design `gEq`); still when paused. */
 @Composable
-private fun Equalizer(playing: Boolean) {
+internal fun Equalizer(playing: Boolean) {
     val accent = LocalAccent.current.main
     val transition = rememberInfiniteTransition(label = "eq")
     val bars = listOf(700 to 0, 900 to 400, 600 to 200).map { (duration, offset) ->
@@ -586,7 +605,7 @@ private fun SeekBar(progress: MusicProgress, seekBackMs: Long, seekForwardMs: Lo
  * [on]; with [label] a pill with icon and text (design `mp.controls`).
  */
 @Composable
-private fun MusicButton(
+internal fun MusicButton(
     icon: ImageVector,
     description: String,
     onClick: () -> Unit,
@@ -753,5 +772,5 @@ private fun QueueRow(
     }
 }
 
-private val ClockFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-private const val CLOCK_TICK_MS = 10_000L
+internal val ClockFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+internal const val CLOCK_TICK_MS = 10_000L

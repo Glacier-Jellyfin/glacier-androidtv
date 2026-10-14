@@ -1,7 +1,13 @@
 package io.github.glacier_jellyfin.androidtv.livetv
 
+import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
+import io.github.glacier_jellyfin.androidtv.core.designsystem.onMenuKey
+import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,7 +64,6 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveChannel
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveProgram
 import io.github.glacier_jellyfin.androidtv.core.data.media.nowAndNext
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
@@ -80,8 +85,9 @@ private val RowShape = RoundedCornerShape(18.dp)
 /**
  * The channels of the server's Live TV: a list with what runs on each now,
  * and beside it the focused channel's programme and what follows. OK
- * watches, holding OK (or the menu key) marks a favorite. The guide and the
- * recordings are the other two views.
+ * watches, holding OK (or the menu key) marks a favorite. The guide, the
+ * recordings and the radio stations are the other views; a station plays
+ * in the music player.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -106,6 +112,14 @@ fun LiveTvScreen(
     val watched by viewModel.lastWatched.collectAsStateWithLifecycle()
     var landed by rememberSaveable { mutableStateOf<String?>(null) }
 
+    // Back from inside a view (the long guide above all) first goes up to the chips; from there it leaves the page.
+    var contentFocused by remember { mutableStateOf(false) }
+    val contentFocus = Modifier.onFocusChanged { contentFocused = it.hasFocus }
+    val activeChip = remember { FocusRequester() }
+    BackHandler(enabled = contentFocused && state.sheet == null) {
+        runCatching { activeChip.requestFocus() }.onFailure { runCatching { chipsFocus.requestFocus() } }
+    }
+
     // The preview's tuner is freed while the page is away (player, other app), and comes back with it.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.stopPreview() }
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.schedulePreview() }
@@ -121,9 +135,18 @@ fun LiveTvScreen(
         }
         if (!sheetWasOpen) return@LaunchedEffect
         sheetWasOpen = false
-        if (state.view == LiveTvView.Guide) {
-            withFrameNanos { }
-            runCatching { gridFocus.requestFocus() }
+        when (state.view) {
+            LiveTvView.Guide -> {
+                withFrameNanos { }
+                runCatching { gridFocus.requestFocus() }
+            }
+            // Back on the row the sheet came from; the list's first one when it moved to the other list.
+            LiveTvView.Channels, LiveTvView.Radio -> {
+                withFrameNanos { }
+                val row = lastFocus?.let { requesters[it] }
+                if (row == null || runCatching { row.requestFocus() }.isFailure || focusedRow != lastFocus) runCatching { listFocus.requestFocus() }
+            }
+            LiveTvView.Recordings -> Unit
         }
     }
 
@@ -138,7 +161,7 @@ fun LiveTvScreen(
         val watchedKey = watched?.toString()
         // Zapped away from the favorites: the list shows all channels again, to land on the one watched.
         if (watchedKey != null && watchedKey != landed && state.favoritesOnly && shown.none { it.id.toString() == watchedKey } &&
-            state.channels?.any { it.id.toString() == watchedKey } == true
+            state.listed?.any { it.id.toString() == watchedKey } == true
         ) {
             viewModel.setFavoritesOnly(false)
             return@LaunchedEffect
@@ -185,7 +208,7 @@ fun LiveTvScreen(
                 onClick = viewModel::load,
             )
             channels == null -> Unit
-            channels.isEmpty() -> Message(text = stringResource(R.string.livetv_empty), body = stringResource(R.string.livetv_empty_body))
+            channels.isEmpty() && state.stations.isEmpty() -> Message(text = stringResource(R.string.livetv_empty), body = stringResource(R.string.livetv_empty_body))
             else -> Column(Modifier.fillMaxSize().padding(start = PageEdge.dp, end = PageEdge.dp, top = 150.dp)) {
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(stringResource(R.string.nav_live_tv), style = GlacierText.display(50), color = GlacierColors.Ice)
@@ -196,9 +219,35 @@ fun LiveTvScreen(
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                     modifier = Modifier.padding(top = 22.dp, bottom = 22.dp).focusRequester(chipsFocus).focusRestorer(),
                 ) {
-                    FilterChip(stringResource(R.string.livetv_channels), active = state.view == LiveTvView.Channels, onClick = { viewModel.setView(LiveTvView.Channels) })
-                    FilterChip(stringResource(R.string.livetv_guide), active = state.view == LiveTvView.Guide, onClick = { viewModel.setView(LiveTvView.Guide) })
-                    FilterChip(stringResource(R.string.livetv_recordings), active = state.view == LiveTvView.Recordings, onClick = { viewModel.setView(LiveTvView.Recordings) })
+                    // A tuner with radio only has no TV to list or guide.
+                    if (channels.isNotEmpty()) {
+                        FilterChip(
+                            stringResource(R.string.livetv_channels),
+                            active = state.view == LiveTvView.Channels,
+                            onClick = { viewModel.setView(LiveTvView.Channels) },
+                            modifier = if (state.view == LiveTvView.Channels) Modifier.focusRequester(activeChip) else Modifier,
+                        )
+                        FilterChip(
+                            stringResource(R.string.livetv_guide),
+                            active = state.view == LiveTvView.Guide,
+                            onClick = { viewModel.setView(LiveTvView.Guide) },
+                            modifier = if (state.view == LiveTvView.Guide) Modifier.focusRequester(activeChip) else Modifier,
+                        )
+                    }
+                    if (state.stations.isNotEmpty()) {
+                        FilterChip(
+                            stringResource(R.string.livetv_radio),
+                            active = state.view == LiveTvView.Radio,
+                            onClick = { viewModel.setView(LiveTvView.Radio) },
+                            modifier = if (state.view == LiveTvView.Radio) Modifier.focusRequester(activeChip) else Modifier,
+                        )
+                    }
+                    FilterChip(
+                        stringResource(R.string.livetv_recordings),
+                        active = state.view == LiveTvView.Recordings,
+                        onClick = { viewModel.setView(LiveTvView.Recordings) },
+                        modifier = if (state.view == LiveTvView.Recordings) Modifier.focusRequester(activeChip) else Modifier,
+                    )
                     Spacer(Modifier.weight(1f))
                     // Recordings are not listed by channel: the channel filter has nothing to do there.
                     if (state.view != LiveTvView.Recordings) {
@@ -228,6 +277,7 @@ fun LiveTvScreen(
                         onRecordingMenu = viewModel::openRecording,
                         onTimer = viewModel::openTimer,
                         onSeriesTimer = viewModel::openSeriesTimer,
+                        modifier = contentFocus,
                     )
                 } else if (state.view == LiveTvView.Guide && !shown.isNullOrEmpty()) {
                     GuideGrid(
@@ -242,9 +292,9 @@ fun LiveTvScreen(
                         onLoad = viewModel::loadGuide,
                         onOpen = viewModel::openProgram,
                         onMenu = viewModel::programMenu,
-                        modifier = Modifier.fillMaxSize().padding(bottom = 36.dp),
+                        modifier = Modifier.fillMaxSize().padding(bottom = 36.dp).then(contentFocus),
                     )
-                } else Row(Modifier.fillMaxSize()) {
+                } else Row(Modifier.fillMaxSize().then(contentFocus)) {
                     if (shown.isNullOrEmpty()) {
                         Column(Modifier.width(LIST_WIDTH.dp).padding(top = 40.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text(stringResource(R.string.livetv_favorites_empty), style = GlacierText.display(30), color = GlacierColors.Ice)
@@ -268,22 +318,18 @@ fun LiveTvScreen(
                                     channel = channel,
                                     nowMs = state.nowMs,
                                     onClick = { viewModel.play(channel) },
-                                    onLongClick = { viewModel.toggleFavorite(channel) },
+                                    onFavorite = { viewModel.toggleFavorite(channel) },
+                                    onMenu = { viewModel.channelMenu(channel) },
+                                    // The panel follows the row, also while its buttons have the focus.
+                                    onFocused = {
+                                        lastFocus = key
+                                        viewModel.onFocus(channel)
+                                    },
+                                    // The chips sit above the list; focus search would pass them for the navigation.
+                                    up = chipsFocus.takeIf { channel.id == shown.first().id },
                                     modifier = Modifier
                                         .focusRequester(requester)
-                                        // Nothing to the right takes focus; the panel only follows it.
-                                        .focusProperties {
-                                            right = FocusRequester.Cancel
-                                            // The chips sit above the list; focus search would pass them for the navigation.
-                                            if (channel.id == shown.first().id) up = chipsFocus
-                                        }
-                                        .onFocusChanged {
-                                            if (it.isFocused) focusedRow = key else if (focusedRow == key) focusedRow = null
-                                            if (it.isFocused) {
-                                                lastFocus = key
-                                                viewModel.onFocus(channel)
-                                            }
-                                        },
+                                        .onFocusChanged { if (it.isFocused) focusedRow = key else if (focusedRow == key) focusedRow = null },
                                 )
                             }
                         }
@@ -298,7 +344,7 @@ fun LiveTvScreen(
                             nowMs = state.nowMs,
                             preview = state.preview?.takeIf { state.previewChannel == focused.id },
                             previewShown = state.previewShown,
-                            modifier = Modifier.weight(1f).padding(top = 8.dp),
+                            modifier = Modifier.weight(1f).fillMaxHeight().padding(top = 8.dp, bottom = 80.dp),
                         )
                     }
                 }
@@ -319,31 +365,51 @@ fun LiveTvScreen(
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp),
         )
 
-        state.sheet?.let { LiveTvSheetHost(it, state.nowMs, state.channels, viewModel) }
+        state.sheet?.let { LiveTvSheetHost(it, state.nowMs, state.all, viewModel) }
     }
 }
 
+/**
+ * A channel or station: OK plays it, holding OK opens its options. The heart
+ * and the options button sit inside the card at its end; nothing further
+ * right takes focus. The card lights up while any of the three has the focus.
+ */
 @Composable
 private fun ChannelRow(
     channel: LiveChannel,
     nowMs: Long,
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    onFavorite: () -> Unit,
+    onMenu: () -> Unit,
+    onFocused: () -> Unit,
+    up: FocusRequester?,
     modifier: Modifier = Modifier,
 ) {
     val accent = LocalAccent.current.main
-    GlacierClickable(
-        onClick = onClick,
-        onLongClick = onLongClick,
-        shape = RowShape,
-        scaleOnFocus = false,
-        modifier = modifier.fillMaxWidth(),
-    ) { focused ->
+    val upFocus = Modifier.focusProperties { if (up != null) this.up = up }
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    var inside by remember { mutableStateOf(false) }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .onFocusChanged {
+                inside = it.hasFocus
+                if (it.hasFocus) onFocused()
+            }
+            .focusFrame(focused, RowShape)
+            .clip(RowShape)
+            .background(if (inside) GlacierColors.GlassFill2 else GlacierColors.GlassFill)
+            .padding(end = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         Row(
-            Modifier
-                .fillMaxWidth()
-                .clip(RowShape)
-                .background(if (focused) GlacierColors.GlassFill2 else GlacierColors.GlassFill)
+            modifier
+                .then(upFocus)
+                .weight(1f)
+                .onMenuKey(onMenu)
+                .combinedClickable(interactionSource = interaction, indication = null, onLongClick = onMenu, onClick = onClick)
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(22.dp),
@@ -360,7 +426,6 @@ private fun ChannelRow(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
-                    if (channel.favorite) Icon(GlacierIcons.HeartFilled, contentDescription = stringResource(R.string.livetv_favorite), tint = accent, modifier = Modifier.size(20.dp))
                 }
                 val now = channel.now?.takeIf { it.airsAt(nowMs) }
                 Text(
@@ -378,6 +443,19 @@ private fun ChannelRow(
                 }
             }
         }
+        RowIconButton(
+            if (channel.favorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
+            stringResource(if (channel.favorite) R.string.livetv_favorite_remove else R.string.livetv_favorite_add),
+            onFavorite,
+            modifier = upFocus,
+            on = channel.favorite,
+        )
+        RowIconButton(
+            GlacierIcons.More,
+            stringResource(R.string.livetv_options),
+            onMenu,
+            modifier = upFocus.focusProperties { right = FocusRequester.Cancel },
+        )
     }
 }
 
@@ -432,7 +510,12 @@ private fun ProgramPanel(
             )
         }
         if (now == null) {
-            Text(stringResource(R.string.livetv_no_guide), style = GlacierText.display(32), color = GlacierColors.Ice)
+            // The channel's programmes are still on their way.
+            if (upcoming == null) {
+                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { SpinningDiamond(56) }
+            } else {
+                Text(stringResource(R.string.livetv_no_guide), style = GlacierText.display(32), color = GlacierColors.Ice)
+            }
             return@Column
         }
         Text(now.title, style = GlacierText.display(34), color = GlacierColors.Ice, maxLines = 2, overflow = TextOverflow.Ellipsis)

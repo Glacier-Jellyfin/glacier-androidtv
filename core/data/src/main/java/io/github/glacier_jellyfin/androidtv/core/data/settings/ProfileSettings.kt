@@ -29,7 +29,34 @@ data class ProfileSettings(
     val music: MusicSettings = MusicSettings(),
     /** The library sort last picked, keyed by library kind name (Movies, Shows, ...). */
     val librarySorts: Map<String, LibrarySortChoice> = emptyMap(),
+    val liveTv: LiveTvSettings = LiveTvSettings(),
 )
+
+/**
+ * Which Live TV channels are radio. Jellyfin's own tuners (M3U, HDHomeRun)
+ * call every channel TV, so the app keeps what it found out itself.
+ */
+@Serializable
+data class LiveTvSettings(
+    /** Channel ids that played without a picture, or were moved to radio by hand. */
+    val radio: Set<String> = emptySet(),
+    /** Channel ids moved to TV by hand: they stay TV, whatever the server or a playback says. */
+    val tv: Set<String> = emptySet(),
+) {
+    /** Radio or TV: the user's choice first, then what a playback found, then what the server says. */
+    fun isRadio(channelId: String, serverSaysRadio: Boolean): Boolean = when (channelId) {
+        in tv -> false
+        in radio -> true
+        else -> serverSaysRadio
+    }
+
+    /** Moved by hand to radio, or to TV. */
+    fun moved(channelId: String, toRadio: Boolean): LiveTvSettings =
+        if (toRadio) copy(radio = radio + channelId, tv = tv - channelId) else copy(radio = radio - channelId, tv = tv + channelId)
+
+    /** A playback found no picture: radio, unless the user said TV. */
+    fun heardAsRadio(channelId: String): LiveTvSettings = if (channelId in tv) this else copy(radio = radio + channelId)
+}
 
 /** One library kind's sort, kept from one time to the next. */
 @Serializable

@@ -6,10 +6,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.artistApi
 import org.jellyfin.sdk.api.client.extensions.genreApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
+import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemDtoQueryResult
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ItemFields
@@ -43,6 +46,17 @@ data class LibraryQuery(
     /** The "Unwatched" toggle of movies and shows. */
     val unwatchedOnly: Boolean = false,
 ) {
+    /**
+     * Movies grouped into collections, and only the unwatched ones. Jellyfin does
+     * not group once a played filter is in the query, so the app does it.
+     */
+    val unwatchedGrouped: Boolean
+        get() = unwatchedOnly && groupsCollections
+
+    /** The movies tab shows collections in place of their movies. Filtered, the titles themselves count, except for unwatched. */
+    val groupsCollections: Boolean
+        get() = scope == LibraryScope.All && kind == LibraryKind.Movies && groupCollections && genreId == null && !favoritesOnly
+
     /** Genres are listed as they are: the toggles narrow titles, not genres. */
     val filterable: Boolean get() = scope != LibraryScope.Genres
 
@@ -106,6 +120,12 @@ class LibraryRepository @Inject constructor(
     suspend fun page(query: LibraryQuery, start: Int, limit: Int): LibraryPage = withContext(Dispatchers.IO) {
         val session = requireSession()
         val mapper = MediaMapper(session.api)
+        if (query.unwatchedGrouped) {
+            // The first page is a fresh look: something may have been watched meanwhile.
+            val all = unwatchedGrouped(session, query, fresh = start == 0)
+            val items = all.drop(start).take(limit)
+            return@withContext LibraryPage(ageFilter.mark(items.map(mapper::item)), all.size)
+        }
         val result = fetch(session, query, start = start, limit = limit)
         LibraryPage(ageFilter.mark(result.items.map(mapper::item)), result.totalRecordCount)
     }
@@ -117,6 +137,7 @@ class LibraryRepository @Inject constructor(
     suspend fun availableLetters(query: LibraryQuery): Set<Char> = withContext(Dispatchers.IO) {
         val session = requireSession()
         if (query.scope == LibraryScope.Songs) return@withContext songNames(session, query).mapTo(mutableSetOf(), ::railLetter)
+        if (query.unwatchedGrouped) return@withContext unwatchedGrouped(session, query).mapTo(mutableSetOf()) { railLetter(it.sortName ?: it.name.orEmpty()) }
         AlphabetLetters.map { letter ->
             async {
                 val count = if (letter == '#') {
@@ -138,6 +159,9 @@ class LibraryRepository @Inject constructor(
         val session = requireSession()
         if (query.scope == LibraryScope.Songs) {
             return@withContext songNames(session, query).indexOfFirst { railLetter(it) == letter }.coerceAtLeast(0)
+        }
+        if (query.unwatchedGrouped) {
+            return@withContext unwatchedGrouped(session, query).indexOfFirst { railLetter(it.sortName ?: it.name.orEmpty()) == letter }.coerceAtLeast(0)
         }
         suspend fun before(bound: String) = fetch(session, query, start = 0, limit = 0, nameLessThan = bound).totalRecordCount
         if (!query.orderDescending) {
@@ -184,6 +208,32 @@ class LibraryRepository @Inject constructor(
         return all
     }
 
+    /** The last [unwatchedGrouped] list, the query it belongs to, and when it was fetched. */
+    private var unwatchedCache: Triple<LibraryQuery, Long, List<BaseItemDto>>? = null
+    private val unwatchedLock = Mutex()
+
+    /**
+     * The movies tab grouped into collections, without what was watched: the
+     * whole grouped list, page by page at once, less the movies watched and the
+     * collections whose movies were all watched (the server marks those played).
+     * Kept for the next pages and the A–Z rail; [fresh] fetches it again unless
+     * it was fetched a moment ago (the first page and the rail load together).
+     */
+    private suspend fun unwatchedGrouped(session: Session, query: LibraryQuery, fresh: Boolean = false): List<BaseItemDto> = unwatchedLock.withLock {
+        unwatchedCache?.let { (cached, at, items) ->
+            val recent = System.currentTimeMillis() - at < UNWATCHED_FRESH_MS
+            if (cached == query && (!fresh || recent)) return@withLock items
+        }
+        val first = fetch(session, query, start = 0, limit = NAMES_PAGE, grouped = true)
+        val total = first.totalRecordCount.coerceAtMost(MAX_SONG_NAMES)
+        val rest = coroutineScope {
+            (NAMES_PAGE until total step NAMES_PAGE).map { start -> async { fetch(session, query, start = start, limit = NAMES_PAGE, grouped = true).items } }.awaitAll()
+        }
+        val unwatched = (first.items + rest.flatten()).filter { it.userData?.played != true }
+        unwatchedCache = Triple(query, System.currentTimeMillis(), unwatched)
+        unwatched
+    }
+
     private suspend fun fetch(
         session: Session,
         query: LibraryQuery,
@@ -191,6 +241,8 @@ class LibraryRepository @Inject constructor(
         limit: Int,
         nameStartsWith: String? = null,
         nameLessThan: String? = null,
+        /** For [unwatchedGrouped]: grouped into collections, without the played filter the server would not group with. */
+        grouped: Boolean = false,
     ): BaseItemDtoQueryResult {
         val userId = UUID.fromString(session.user.userId)
         val sortBy = sortBy(query)
@@ -232,11 +284,10 @@ class LibraryRepository @Inject constructor(
                 genreIds = listOfNotNull(query.genreId),
                 maxOfficialRating = ages?.maxOfficialRating,
                 hasOfficialRating = ages?.hasOfficialRating,
-                filters = listOfNotNull(ItemFilter.IS_UNPLAYED.takeIf { query.unwatchedOnly }),
+                filters = listOfNotNull(ItemFilter.IS_UNPLAYED.takeIf { query.unwatchedOnly && !grouped }),
                 isFavorite = favorite,
                 // Filtered, the titles themselves count: a collection would hide which of its movies match.
-                collapseBoxSetItems = (query.scope == LibraryScope.All && query.kind == LibraryKind.Movies &&
-                    query.groupCollections && query.genreId == null && !query.favoritesOnly && !query.unwatchedOnly).takeIf { it },
+                collapseBoxSetItems = (grouped || (query.groupsCollections && !query.unwatchedOnly)).takeIf { it },
                 fields = listOf(ItemFields.CHILD_COUNT, ItemFields.GENRES, ItemFields.SORT_NAME),
                 enableUserData = true,
                 startIndex = start,
@@ -283,6 +334,8 @@ class LibraryRepository @Inject constructor(
 
     private companion object {
         const val NAMES_PAGE = 2000
+        /** The grid's first page and the A–Z rail ask for [unwatchedGrouped] together: one fetch serves both. */
+        const val UNWATCHED_FRESH_MS = 3_000L
         /** Beyond this many songs the rail covers only the first ones. */
         const val MAX_SONG_NAMES = 40_000
     }

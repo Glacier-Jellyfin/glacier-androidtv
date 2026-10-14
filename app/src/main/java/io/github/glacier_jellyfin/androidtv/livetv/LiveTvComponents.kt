@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -21,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
@@ -33,6 +35,7 @@ import coil3.compose.AsyncImage
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveChannel
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveProgram
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
@@ -189,3 +192,32 @@ private val LiveRed = Color(0xFFE5484D)
 
 /** Brighter than [LiveRed], for dots and text on glass. */
 val RecordRed = Color(0xFFFF5A5F)
+
+/**
+ * A round button at the end of a channel row (the heart, the options). The
+ * accent when focused, a tinted icon when [on].
+ */
+@Composable
+fun RowIconButton(icon: ImageVector, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, on: Boolean = false, size: Int = 56) {
+    val accent = LocalAccent.current.main
+    GlacierClickable(onClick = onClick, shape = CircleShape, modifier = modifier, contentAlignment = Alignment.Center) { focused ->
+        Box(
+            Modifier
+                .size(size.dp)
+                .clip(CircleShape)
+                .background(if (focused) accent else GlacierColors.GlassFill),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                icon,
+                contentDescription = description,
+                tint = when {
+                    focused -> GlacierColors.Void
+                    on -> accent
+                    else -> GlacierColors.Ice
+                },
+                modifier = Modifier.size((size * 0.42f).dp),
+            )
+        }
+    }
+}

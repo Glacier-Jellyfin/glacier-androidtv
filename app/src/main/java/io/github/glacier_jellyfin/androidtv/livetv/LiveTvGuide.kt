@@ -62,6 +62,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.halfHourFloor
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
+import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -171,7 +172,7 @@ fun GuideGrid(
     }
 
     Column(modifier) {
-        GuideDetails(channels[row], cell, nowMs)
+        GuideDetails(channels[row], cell, nowMs, loaded = channels[row].id in guide)
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val timeline = maxWidth - CHANNEL_COLUMN.dp
             val perMs = timeline / WINDOW_MS.toFloat()
@@ -272,9 +273,14 @@ private fun keepColumn(cell: GuideCell?, windowStart: Long): Long? = cell?.let {
 
 /** What the focus rests on, above the grid: title, channel, time and a short overview. */
 @Composable
-private fun GuideDetails(channel: LiveChannel, cell: GuideCell?, nowMs: Long) {
+private fun GuideDetails(channel: LiveChannel, cell: GuideCell?, nowMs: Long, loaded: Boolean) {
     val program = cell?.program
     Column(Modifier.fillMaxWidth().height(158.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // The channel's row is still loading: a loader, not "no guide data".
+        if (program == null && !loaded) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(48) }
+            return@Column
+        }
         Text(
             program?.title ?: stringResource(R.string.livetv_no_guide),
             style = GlacierText.display(32),

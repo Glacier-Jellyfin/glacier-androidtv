@@ -76,6 +76,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.ignoreHeldOk
 import io.github.glacier_jellyfin.androidtv.player.osdScrim
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
+import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.OverlayCard
 import kotlinx.coroutines.delay
 
@@ -94,12 +95,13 @@ private const val NUMBER_COMMIT_MS = 1_500L
 @OptIn(UnstableApi::class)
 @Composable
 fun LiveTvPlayerScreen(
+    onNavigate: (UiEvent.Navigate) -> Unit,
     onBack: () -> Unit,
     viewModel: LiveTvPlayerViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(viewModel) { viewModel.finished.collect { onBack() } }
-    CollectEvents(viewModel.events) {}
+    CollectEvents(viewModel.events, onNavigate)
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onBackground() }
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onForeground() }
     val view = LocalView.current
@@ -174,7 +176,8 @@ fun LiveTvPlayerScreen(
                 }
                 if (listOpen) {
                     // Compose would turn Back into "exit focus" inside the list; close it instead.
-                    if (event.key == Key.Back) {
+                    // Right (towards the picture) closes it too, as Left closes the programmes.
+                    if (event.key == Key.Back || event.key == Key.DirectionRight) {
                         if (event.type == KeyEventType.KeyUp) listOpen = false
                         return@onPreviewKeyEvent true
                     }
@@ -304,6 +307,7 @@ fun LiveTvPlayerScreen(
             ProgramList(
                 channel = state.channel,
                 programs = state.programs.filter { it.endMs > state.nowMs },
+                loading = !state.guideLoaded,
                 nowMs = state.nowMs,
                 sheetOpen = sheetProgram != null,
                 onPick = { program ->
@@ -351,6 +355,7 @@ fun LiveTvPlayerScreen(
 private fun ProgramList(
     channel: LiveChannel?,
     programs: List<LiveProgram>,
+    loading: Boolean,
     nowMs: Long,
     sheetOpen: Boolean,
     onPick: (LiveProgram) -> Unit,
@@ -390,12 +395,16 @@ private fun ProgramList(
                 )
             }
             if (programs.isEmpty()) {
-                Text(
-                    stringResource(R.string.livetv_no_guide),
-                    style = GlacierText.body(20),
-                    color = GlacierColors.Mist,
-                    modifier = Modifier.padding(start = 48.dp).focusRequester(firstFocus).focusable(),
-                )
+                // Still on its way: a loader, not "no guide data". Either way it holds the focus.
+                if (loading) {
+                    Box(
+                        Modifier.fillMaxSize().padding(bottom = 56.dp).focusRequester(firstFocus).focusable(),
+                        contentAlignment = Alignment.Center,
+                    ) { SpinningDiamond(56) }
+                } else {
+                    val holder = Modifier.padding(start = 48.dp).focusRequester(firstFocus).focusable()
+                    Text(stringResource(R.string.livetv_no_guide), style = GlacierText.body(20), color = GlacierColors.Mist, modifier = holder)
+                }
                 return@Column
             }
             LazyColumn(
@@ -481,13 +490,17 @@ private fun ChannelBanner(state: LiveTvPlayerState) {
                     Text(channel.name, style = GlacierText.body(22, FontWeight.SemiBold), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (state.paused) Text(stringResource(R.string.livetv_paused), style = GlacierText.body(20), color = GlacierColors.Mist)
                 }
-                Text(
-                    now?.title ?: stringResource(R.string.livetv_no_guide),
-                    style = GlacierText.display(40),
-                    color = GlacierColors.Ice,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (now == null && !state.guideLoaded) {
+                    Box(Modifier.fillMaxWidth().height(56.dp), contentAlignment = Alignment.Center) { SpinningDiamond(48) }
+                } else {
+                    Text(
+                        now?.title ?: stringResource(R.string.livetv_no_guide),
+                        style = GlacierText.display(40),
+                        color = GlacierColors.Ice,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 if (now != null) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                         ProgramProgress(now.progressAt(state.nowMs), Modifier.width(520.dp), height = 6)

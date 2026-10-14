@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.setup
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -81,6 +82,8 @@ fun ServerAddressScreen(
         keyboardType = KeyboardType.Uri,
     )
 
+    // Back while connecting stops it and stays here; the server is not opened afterwards.
+    BackHandler(enabled = state.connecting != null) { viewModel.cancelConnect() }
     state.connecting?.let { BusyOverlay(stringResource(R.string.setup_connecting, it)) }
     state.confirmUnsupported?.let { server -> UnsupportedServerDialog(server, viewModel::confirmUnsupported) }
 }

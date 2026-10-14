@@ -24,6 +24,7 @@ import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
+import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.FavoritesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
@@ -42,6 +43,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -50,12 +52,14 @@ import java.util.UUID
 import javax.inject.Inject
 
 /** The views of the Live TV page. */
-enum class LiveTvView { Channels, Guide, Recordings }
+enum class LiveTvView { Channels, Guide, Recordings, Radio }
 
 /** The options sheet over the page. */
 sealed interface LiveTvSheet {
     /** A guide programme: record it (or the series), and from a held OK also watch it or mark the channel. */
     data class Program(val channel: LiveChannel, val program: LiveProgram, val more: Boolean) : LiveTvSheet
+    /** A channel or station of the list: favorite, and radio or TV. */
+    data class Channel(val channel: LiveChannel) : LiveTvSheet
     data class Recording(val recording: LiveRecording) : LiveTvSheet
     data class ConfirmDelete(val recording: LiveRecording) : LiveTvSheet
     data class Timer(val timer: LiveTimer) : LiveTvSheet
@@ -65,7 +69,9 @@ sealed interface LiveTvSheet {
 data class LiveTvState(
     val loading: Boolean = true,
     val failed: Boolean = false,
+    /** The TV channels; radio stations are in [stations]. */
     val channels: List<LiveChannel>? = null,
+    val stations: List<LiveChannel> = emptyList(),
     /** Only the channels marked with the heart. */
     val favoritesOnly: Boolean = false,
     /** The clock the programme times and progress bars follow. */
@@ -92,7 +98,15 @@ data class LiveTvState(
     /** The preview has a picture to show; until then (and for radio) the panel keeps its image. */
     val previewShown: Boolean = false,
 ) {
-    val shown: List<LiveChannel>? get() = if (favoritesOnly) channels?.filter { it.favorite } else channels
+    /** What the list of the view holds: the radio stations or the TV channels. */
+    val listed: List<LiveChannel>? get() = if (view == LiveTvView.Radio) stations else channels
+
+    val shown: List<LiveChannel>? get() = if (favoritesOnly) listed?.filter { it.favorite } else listed
+
+    /** Everything, TV and radio, as the server lists it. */
+    val all: List<LiveChannel> get() = channels.orEmpty() + stations
+
+    fun withChannels(all: List<LiveChannel>): LiveTvState = copy(channels = all.filterNot { it.radio }, stations = all.filter { it.radio })
 }
 
 @HiltViewModel
@@ -101,6 +115,7 @@ class LiveTvViewModel @Inject constructor(
     private val repository: LiveTvRepository,
     private val playback: PlaybackRepository,
     private val handoff: LiveStreamHandoff,
+    private val music: MusicController,
     private val sessions: SessionManager,
 ) : ViewModel(), RecordActions {
 
@@ -133,6 +148,8 @@ class LiveTvViewModel @Inject constructor(
 
     init {
         load()
+        // A channel moved to radio or TV (here, or found out by the player): the lists follow.
+        viewModelScope.launch { repository.radioMarks.drop(1).collect { refresh() } }
         viewModelScope.launch {
             while (isActive) {
                 delay(CLOCK_TICK_MS)
@@ -144,7 +161,7 @@ class LiveTvViewModel @Inject constructor(
                     _state.update { it.copy(guide = emptyMap(), guideFromMs = halfHourFloor(now), guideToMs = halfHourFloor(now) + GUIDE_SPAN_MS) }
                 }
                 // A programme ended: the guide moved on.
-                if (_state.value.channels?.any { channel -> channel.now?.let { it.endMs <= now } == true } == true) refresh()
+                if (_state.value.all.any { channel -> channel.now?.let { it.endMs <= now } == true }) refresh()
                 // A recording started or finished.
                 val recordings = _state.value.recordings
                 if (recordings != null && recordings.scheduled.any { it.startMs in (now - CLOCK_TICK_MS)..now || it.endMs <= now }) loadRecordings()
@@ -156,7 +173,13 @@ class LiveTvViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(loading = true, failed = false) }
             runCatching { repository.channels() }
-                .onSuccess { channels -> _state.update { it.copy(loading = false, channels = channels, nowMs = System.currentTimeMillis()) } }
+                .onSuccess { channels ->
+                    _state.update { state ->
+                        val loaded = state.withChannels(channels).copy(loading = false, nowMs = System.currentTimeMillis())
+                        // A server with radio only opens on it.
+                        if (loaded.channels.isNullOrEmpty() && loaded.stations.isNotEmpty() && state.channels == null) loaded.copy(view = LiveTvView.Radio) else loaded
+                    }
+                }
                 .onFailure { error ->
                     Log.w(TAG, "Loading channels failed", error)
                     _state.update { it.copy(loading = false, failed = true) }
@@ -168,7 +191,7 @@ class LiveTvViewModel @Inject constructor(
     private fun refresh() {
         viewModelScope.launch {
             runCatching { repository.channels() }
-                .onSuccess { channels -> _state.update { it.copy(channels = channels, upcoming = emptyMap()) } }
+                .onSuccess { channels -> _state.update { it.withChannels(channels).copy(upcoming = emptyMap()) } }
                 .onFailure { Log.w(TAG, "Refreshing channels failed", it) }
             _state.value.focused?.let(::loadUpcoming)
         }
@@ -231,6 +254,19 @@ class LiveTvViewModel @Inject constructor(
             toggleFavorite(channel)
         } else {
             _state.update { it.copy(sheet = LiveTvSheet.Program(channel, program, more = true)) }
+        }
+    }
+
+    /** Held OK on a channel or station of the list. */
+    fun channelMenu(channel: LiveChannel) = _state.update { it.copy(sheet = LiveTvSheet.Channel(channel)) }
+
+    /** Moves [channel] to the radio stations, or back to the TV channels; the lists follow [LiveTvRepository.radioMarks]. */
+    fun moveChannel(channel: LiveChannel) {
+        closeSheet()
+        val toRadio = !channel.radio
+        viewModelScope.launch {
+            repository.moveChannel(channel.id, toRadio)
+            _events.send(UiEvent.Toast(if (toRadio) R.string.livetv_moved_radio else R.string.livetv_moved_tv, listOf(channel.name)))
         }
     }
 
@@ -329,7 +365,7 @@ class LiveTvViewModel @Inject constructor(
                 _state.update { it.copy(guide = it.guide + ids.associateWith { id -> programs[id].orEmpty() }) }
             }
             val channels = repository.channels()
-            _state.update { it.copy(channels = channels, upcoming = emptyMap()) }
+            _state.update { it.withChannels(channels).copy(upcoming = emptyMap()) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -404,15 +440,26 @@ class LiveTvViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Loading the programmes of $channelId failed", e)
+                // The panel says there is nothing instead of loading on.
+                _state.update { it.copy(upcoming = it.upcoming + (channelId to emptyList())) }
             }
         }
     }
 
     fun play(channel: LiveChannel) {
+        val favoritesOnly = _state.value.favoritesOnly && channel.favorite
+        if (channel.radio) {
+            stopPreview()
+            // Started from the favorites, the radio switches only among them.
+            val stations = _state.value.stations.let { all -> if (favoritesOnly) all.filter { it.favorite } else all }
+            music.playRadio(stations, channel.id)
+            navigate(MusicRoute())
+            return
+        }
         handOverPreview(channel.id)
         // Any other preview frees its tuner for the player.
         stopPreview()
-        navigate(LiveTvPlayerRoute(channel.id.toString(), favoritesOnly = _state.value.favoritesOnly && channel.favorite))
+        navigate(LiveTvPlayerRoute(channel.id.toString(), favoritesOnly = favoritesOnly))
     }
 
     /** The preview of [channelId] already runs: the player takes it over instead of tuning again. */
@@ -431,8 +478,8 @@ class LiveTvViewModel @Inject constructor(
     fun toggleFavorite(channel: LiveChannel) {
         closeSheet()
         // The sheet may hold an older copy of the channel.
-        val favorite = !(_state.value.channels?.firstOrNull { it.id == channel.id } ?: channel).favorite
-        _state.update { state -> state.copy(channels = state.channels?.map { if (it.id == channel.id) it.copy(favorite = favorite) else it }) }
+        val favorite = !(_state.value.all.firstOrNull { it.id == channel.id } ?: channel).favorite
+        setFavorite(channel.id, favorite)
         viewModelScope.launch {
             try {
                 repository.setFavorite(channel.id, favorite)
@@ -441,10 +488,15 @@ class LiveTvViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Changing the favorite failed", e)
-                _state.update { state -> state.copy(channels = state.channels?.map { if (it.id == channel.id) it.copy(favorite = !favorite) else it }) }
+                setFavorite(channel.id, !favorite)
                 _events.send(UiEvent.Toast(R.string.livetv_favorite_failed))
             }
         }
+    }
+
+    private fun setFavorite(channelId: UUID, favorite: Boolean) {
+        val change = { channel: LiveChannel -> if (channel.id == channelId) channel.copy(favorite = favorite) else channel }
+        _state.update { state -> state.copy(channels = state.channels?.map(change), stations = state.stations.map(change)) }
     }
 
     fun onNav(target: NavTarget) {

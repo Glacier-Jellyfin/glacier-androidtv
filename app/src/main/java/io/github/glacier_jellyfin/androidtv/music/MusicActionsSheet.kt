@@ -2,10 +2,12 @@ package io.github.glacier_jellyfin.androidtv.music
 
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -124,7 +126,8 @@ private fun Playlists(sheet: MusicSheet.Playlists, actions: MusicActions) {
     val first = remember { FocusRequester() }
     val playlists = sheet.playlists
     if (playlists == null) {
-        SpinningDiamond(70)
+        // In the middle of where the playlists will be listed.
+        Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) { SpinningDiamond(70) }
         return
     }
     // Room around the buttons so the focused one can grow without being cut off.

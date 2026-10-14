@@ -256,7 +256,14 @@ fun LibraryScreen(
                             }
                         }
                         state.loading && state.items.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }, key = "loading") {
-                            Box(Modifier.fillMaxWidth().padding(top = 80.dp), contentAlignment = Alignment.Center) { SpinningDiamond(90) }
+                            // In the middle of the space the titles will fill: from here down to the grid's bottom edge.
+                            val info = gridState.layoutInfo
+                            val top = info.visibleItemsInfo.firstOrNull { it.key == "loading" }?.offset?.y
+                            val height = top?.let { with(density) { (info.viewportEndOffset - info.afterContentPadding - it).toDp() } }
+                            Box(
+                                Modifier.fillMaxWidth().height((height ?: LOADER_MIN_HEIGHT.dp).coerceAtLeast(LOADER_MIN_HEIGHT.dp)),
+                                contentAlignment = Alignment.Center,
+                            ) { SpinningDiamond(90) }
                         }
                         state.complete && state.items.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
                             Text(
@@ -641,3 +648,6 @@ private val LibrarySort.label: Int
         LibrarySort.Rating -> R.string.sort_rating
         LibrarySort.Runtime -> R.string.sort_runtime
     }
+
+/** The grid's loader is at least this tall before the grid has measured where it sits. */
+private const val LOADER_MIN_HEIGHT = 360

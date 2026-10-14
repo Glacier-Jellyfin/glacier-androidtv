@@ -383,6 +383,39 @@ fun ProgramSheet(channel: LiveChannel, program: LiveProgram, nowMs: Long, action
     }
 }
 
+/** A channel's or station's sheet on its own, for the radio player: play it, mark it, move it. */
+@Composable
+fun ChannelSheet(channel: LiveChannel, onPlay: () -> Unit, onFavorite: () -> Unit, onMove: () -> Unit, onDismiss: () -> Unit) {
+    SheetFrame(onDismiss) {
+        val first = remember(channel.id) { FocusRequester() }
+        ChannelChoices(channel, first, onPlay, onFavorite, onMove)
+        FocusOnStart(first)
+    }
+}
+
+/** A channel's name and choices: watch or listen, the heart, and moving it between TV and radio. */
+@Composable
+private fun ChannelChoices(channel: LiveChannel, first: FocusRequester, onPlay: () -> Unit, onFavorite: () -> Unit, onMove: () -> Unit) {
+    Header(
+        title = listOfNotNull(channel.number, channel.name).joinToString("  "),
+        subtitle = channel.now?.title,
+        body = stringResource(if (channel.radio) R.string.livetv_channel_body_radio else R.string.livetv_channel_body_tv),
+    )
+    Options {
+        Option(if (channel.radio) R.string.radio_listen else R.string.livetv_watch, GlacierIcons.Play, first, onPlay)
+        Option(
+            if (channel.favorite) R.string.livetv_favorite_remove else R.string.livetv_favorite_add,
+            if (channel.favorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
+            onClick = onFavorite,
+        )
+        Option(
+            if (channel.radio) R.string.livetv_move_tv else R.string.livetv_move_radio,
+            if (channel.radio) GlacierIcons.Film else GlacierIcons.Speaker,
+            onClick = onMove,
+        )
+    }
+}
+
 /**
  * A programme's title and choices: record it or its series, or stop that. With [onWatch]
  * it can be watched while it airs, with [favorite] the channel marked.
@@ -450,6 +483,20 @@ fun LiveTvSheetHost(sheet: LiveTvSheet, nowMs: Long, channels: List<LiveChannel>
                 favorite = if (sheet.more) (channels?.firstOrNull { it.id == sheet.channel.id } ?: sheet.channel).favorite else null,
                 onFavorite = { viewModel.toggleFavorite(sheet.channel) },
             )
+            is LiveTvSheet.Channel -> {
+                // The sheet holds the channel as it was when it opened.
+                val channel = channels?.firstOrNull { it.id == sheet.channel.id } ?: sheet.channel
+                ChannelChoices(
+                    channel = channel,
+                    first = first,
+                    onPlay = {
+                        viewModel.closeSheet()
+                        viewModel.play(channel)
+                    },
+                    onFavorite = { viewModel.toggleFavorite(channel) },
+                    onMove = { viewModel.moveChannel(channel) },
+                )
+            }
             is LiveTvSheet.Recording -> {
                 val recording = sheet.recording
                 Header(

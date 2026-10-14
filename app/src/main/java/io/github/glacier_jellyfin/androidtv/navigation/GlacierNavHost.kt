@@ -82,6 +82,6 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
         composable<SettingsRoute> { SettingsScreen(onNavigate = navigate) }
         composable<FavoritesRoute> { FavoritesScreen(onNavigate = navigate) }
         composable<LiveTvRoute> { LiveTvScreen(onNavigate = navigate) }
-        composable<LiveTvPlayerRoute> { LiveTvPlayerScreen(onBack = back) }
+        composable<LiveTvPlayerRoute> { LiveTvPlayerScreen(onNavigate = navigate, onBack = back) }
     }
 }

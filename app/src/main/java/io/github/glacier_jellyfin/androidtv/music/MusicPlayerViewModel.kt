@@ -5,12 +5,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.glacier_jellyfin.androidtv.core.data.media.LiveChannel
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicRepository
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.receiveAsFlow
 import java.util.UUID
@@ -59,6 +62,27 @@ class MusicPlayerViewModel @Inject constructor(
     fun togglePlay() = controller.togglePlay()
     fun next() = controller.next()
     fun previous() = controller.previous()
+    fun zap(by: Int) = controller.zap(by)
+    fun tuneTo(station: LiveChannel) = controller.tuneTo(station)
+    fun toggleStationFavorite(station: LiveChannel) = controller.toggleStationFavorite(station)
+
+    private val _stationMenu = MutableStateFlow<LiveChannel?>(null)
+
+    /** The station whose options are open in the radio player. */
+    val stationMenu: StateFlow<LiveChannel?> = _stationMenu.asStateFlow()
+
+    fun openStationMenu(station: LiveChannel) {
+        _stationMenu.value = station
+    }
+
+    fun closeStationMenu() {
+        _stationMenu.value = null
+    }
+
+    fun moveStationToTv(station: LiveChannel) {
+        closeStationMenu()
+        controller.moveStationToTv(station)
+    }
     fun seekBy(deltaMs: Long) = controller.seekBy(deltaMs)
     fun seekTo(positionMs: Long) = controller.seekTo(positionMs)
     fun playAt(index: Int) = controller.playAt(index)

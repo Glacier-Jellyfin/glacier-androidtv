@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -105,13 +106,23 @@ class ServerListViewModel @Inject constructor(
         if (connect) connect(server)
     }
 
+    private var connectJob: Job? = null
+
     private fun connect(server: ServerInfo) {
-        viewModelScope.launch {
+        connectJob?.cancel()
+        connectJob = viewModelScope.launch {
             _state.update { it.copy(connecting = server.name) }
             val route = connector.connect(server)
             _state.update { it.copy(connecting = null) }
             _events.send(UiEvent.Navigate(route))
         }
+    }
+
+    /** Back while connecting: the list stays, as if no server had been picked. */
+    fun cancelConnect() {
+        connectJob?.cancel()
+        connectJob = null
+        _state.update { it.copy(connecting = null) }
     }
 
     private fun DiscoveredServer.toEntry() = ServerEntry(server, publicUserCount, latencyMillis)
