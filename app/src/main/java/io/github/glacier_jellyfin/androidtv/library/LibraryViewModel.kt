@@ -1,5 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.library
 
+import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
+import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -65,6 +67,8 @@ class LibraryViewModel @Inject constructor(
     private val sessions: SessionManager,
     private val settings: SettingsRepository,
     private val music: MusicController,
+    details: DetailRepository,
+    playback: PlaybackRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<LibraryRoute>()
@@ -88,6 +92,7 @@ class LibraryViewModel @Inject constructor(
 
     private var loadJob: Job? = null
     private var lettersJob: Job? = null
+    private var refreshJob: Job? = null
 
     init {
         // The kept sort comes from the settings file, which may not be read yet right after start.
@@ -97,6 +102,31 @@ class LibraryViewModel @Inject constructor(
                 .getOrNull()
             if (kept != null) _state.update { it.copy(query = it.query.withKeptSort(kept)) }
             reload()
+        }
+        // Marked watched (here, on a detail page or by watching it): the grid shows it at once,
+        // also while it waits behind the detail page.
+        viewModelScope.launch { details.playedChanged.collect { refresh() } }
+        viewModelScope.launch { playback.stopped.collect { refresh() } }
+    }
+
+    /**
+     * What is loaded, loaded again in place: the grid keeps its scroll and focus.
+     * Unwatched drops what was watched meanwhile.
+     */
+    private fun refresh() {
+        val current = _state.value
+        if (current.items.isEmpty() || loadJob?.isActive == true) return
+        val query = current.query
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
+            try {
+                val page = repository.page(query, start = 0, limit = current.items.size)
+                _state.update { if (it.query == query && loadJob?.isActive != true) it.copy(items = page.items, total = page.total) else it }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Refreshing the library failed", e)
+            }
         }
     }
 

@@ -40,10 +40,13 @@ renders the reference separately.
 - While programme data loads, a loader shows instead of "No guide data". Loaders sit in the middle of the space they fill, also in the library
 - Back while connecting to a server stops it and stays on the server list
 - With many entries in the navigation, it moves aside for the mini player instead of running into it
+- The music screensaver shows the time played and the time left under a wider progress bar. It fades to its next place instead of jumping and keeps away from the screen's edges
+- The channel panel on the Live TV page always shows what comes next. A long description gets shorter for it
 
 ### Fixed
 - Play in the spotlight on a show now plays its next episode instead of failing
 - Loading and error messages in the players and the trailer view stay readable on bright pictures
+- A movie or episode marked as watched shows as watched right away in the library and on the page of its collection or show
 
 ## [0.5.0-beta.1] - 2026-10-11
 

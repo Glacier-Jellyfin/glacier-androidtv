@@ -122,6 +122,9 @@ class DetailViewModel @Inject constructor(
         load()
         viewModelScope.launch { shuffle.on.collect { on -> _state.update { it.copy(shuffle = on) } } }
         viewModelScope.launch { playback.stopped.collect(::refresh) }
+        // Something else marked watched or not (a movie of this collection, an episode of this show):
+        // the page follows. This page's own item it already shows as changed.
+        viewModelScope.launch { repository.playedChanged.collect { id -> if (id != itemId) refresh(id) } }
     }
 
     fun load() {

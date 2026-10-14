@@ -345,7 +345,7 @@ fun LiveTvScreen(
                             nowMs = state.nowMs,
                             preview = state.preview?.takeIf { state.previewChannel == focused.id },
                             previewShown = state.previewShown,
-                            modifier = Modifier.weight(1f).fillMaxHeight().padding(top = 8.dp, bottom = 80.dp),
+                            modifier = Modifier.weight(1f).fillMaxHeight().padding(top = 8.dp, bottom = 36.dp),
                         )
                     }
                 }
@@ -525,7 +525,15 @@ private fun ProgramPanel(
         )
         RecordMark(now, nowMs)
         now.overview?.let {
-            Text(it, style = GlacierText.body(19), color = GlacierColors.Ice.copy(alpha = 0.78f), maxLines = 4, overflow = TextOverflow.Ellipsis)
+            // The description gives way, so what comes next always fits below it.
+            Text(
+                it,
+                style = GlacierText.body(19),
+                color = GlacierColors.Ice.copy(alpha = 0.78f),
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
         }
         val following = listOfNotNull(next) + later
         if (following.isNotEmpty()) {
