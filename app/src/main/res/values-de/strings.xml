@@ -95,6 +95,7 @@
     <string name="livetv_guide">Programm</string>
     <string name="livetv_paused">Pausiert</string>
     <string name="livetv_go_live">Zurück zu live</string>
+    <string name="livetv_info_program">Sendung</string>
     <string name="livetv_behind_seconds">%1$d Sek. hinter Live</string>
     <string name="livetv_behind_minutes">%1$d Min. hinter Live</string>
     <string name="livetv_no_channel">Diesen Sender gibt es nicht</string>

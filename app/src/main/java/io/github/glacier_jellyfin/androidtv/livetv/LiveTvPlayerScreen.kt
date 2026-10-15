@@ -116,10 +116,11 @@ private const val NUMBER_COMMIT_MS = 1_500L
  * programmes. Digits tune to a channel number, the "last channel" key
  * goes back to the one before.
  *
- * OK, Play/Pause, Menu, Info and the spool keys open the controls at the
+ * OK, Play/Pause, Menu and the spool keys open the controls at the
  * bottom: Play/Pause and, when the server kept the channel since tuning
  * in, the time bar. There Left/Right wind back and forth, Down reaches the
- * buttons and Back closes it.
+ * buttons and Back closes it. The last button, like the Info key, opens
+ * the info panel.
  */
 @OptIn(UnstableApi::class)
 @Composable
@@ -145,6 +146,8 @@ fun LiveTvPlayerScreen(
     var programsOpen by remember { mutableStateOf(false) }
     /** The programme whose recording sheet is open. */
     var sheetProgram by remember { mutableStateOf<LiveProgram?>(null) }
+    /** The info panel is open; it takes the keys, Back included. */
+    var infoOpen by remember { mutableStateOf(false) }
     var interaction by remember { mutableIntStateOf(0) }
     var typed by remember { mutableStateOf("") }
     var unknownNumber by remember { mutableStateOf<String?>(null) }
@@ -193,7 +196,7 @@ fun LiveTvPlayerScreen(
 
     // Newer Android hands Back to the dispatcher on its own, older only as a key: each
     // press must act once, so the key's release only acts when the dispatcher did not.
-    BackHandler(enabled = sheetProgram == null) {
+    BackHandler(enabled = sheetProgram == null && !infoOpen) {
         backHandledAt = SystemClock.uptimeMillis()
         backDown = false
         back()
@@ -211,6 +214,7 @@ fun LiveTvPlayerScreen(
         TimeControl.Play,
         TimeControl.Forward.takeIf { state.timeshift != null },
         TimeControl.Live.takeIf { state.timeshift?.live == false },
+        TimeControl.Info,
     )
 
     fun moveControl(by: Int) {
@@ -231,9 +235,9 @@ fun LiveTvPlayerScreen(
         showBanner()
     }
 
-    LaunchedEffect(bannerVisible, interaction, state.loading, state.failed, listOpen, programsOpen, state.paused) {
-        // Paused, the time bar stays: Play goes on from there.
-        if (bannerVisible && !state.loading && !state.failed && !listOpen && !programsOpen && !(seeking && state.paused)) {
+    LaunchedEffect(bannerVisible, interaction, state.loading, state.failed, listOpen, programsOpen, infoOpen, state.paused) {
+        // Paused, the time bar stays: Play goes on from there. Behind the info panel, it waits for its return.
+        if (bannerVisible && !state.loading && !state.failed && !listOpen && !programsOpen && !infoOpen && !(seeking && state.paused)) {
             delay(BANNER_TIMEOUT_MS)
             bannerVisible = false
             closeSeeking()
@@ -265,9 +269,9 @@ fun LiveTvPlayerScreen(
         delay(NUMBER_COMMIT_MS)
         unknownNumber = null
     }
-    // Closing the list hands the keys back to the picture.
-    LaunchedEffect(listOpen, programsOpen) {
-        if (listOpen || programsOpen) return@LaunchedEffect
+    // Closing the list or the info panel hands the keys back to the picture.
+    LaunchedEffect(listOpen, programsOpen, infoOpen) {
+        if (listOpen || programsOpen || infoOpen) return@LaunchedEffect
         withFrameNanos { }
         runCatching { rootFocus.requestFocus() }
     }
@@ -278,8 +282,8 @@ fun LiveTvPlayerScreen(
             .background(Color.Black)
             .focusRequester(rootFocus)
             .onPreviewKeyEvent { event ->
-                // The sheet handles its own keys, Back included.
-                if (sheetProgram != null) return@onPreviewKeyEvent false
+                // The sheet and the info panel handle their own keys, Back included.
+                if (sheetProgram != null || infoOpen) return@onPreviewKeyEvent false
                 // Compose would turn Back into "exit focus" inside the lists: it is taken here.
                 if (event.key == Key.Back) {
                     if (event.type == KeyEventType.KeyDown) {
@@ -335,6 +339,7 @@ fun LiveTvPlayerScreen(
                                 }
                                 control == TimeControl.Back -> scrub(-state.seekBackMs, fromButton = true)
                                 control == TimeControl.Forward -> scrub(state.seekForwardMs, fromButton = true)
+                                control == TimeControl.Info -> infoOpen = true
                                 control == TimeControl.Bar && scrubMs != null -> commitScrub()
                                 else -> viewModel.togglePlay()
                             }
@@ -373,7 +378,11 @@ fun LiveTvPlayerScreen(
                         programsOpen = true
                         true
                     }
-                    Key.Info, Key.Menu -> {
+                    Key.Info -> {
+                        infoOpen = true
+                        true
+                    }
+                    Key.Menu -> {
                         openSeeking()
                         true
                     }
@@ -502,6 +511,8 @@ fun LiveTvPlayerScreen(
                 }
             }, onDismiss = { sheetProgram = null })
         }
+
+        if (infoOpen) LiveTvInfoPanel(state, transcodeStatus = viewModel::transcodeStatus, onDismiss = { infoOpen = false })
     }
 }
 
@@ -701,6 +712,8 @@ private fun ChannelBanner(state: LiveTvPlayerState, seeking: Boolean, scrubMs: L
                         if (shift?.live == false) {
                             TimeLabelButton(GlacierIcons.SkipForward, stringResource(R.string.livetv_go_live), selected = control == TimeControl.Live)
                         }
+                        // At the end, like the video and music players' info button.
+                        TimeButton(GlacierIcons.Info, stringResource(R.string.player_info), selected = control == TimeControl.Info)
                     }
                 } else {
                     state.next?.let { next ->
@@ -873,7 +886,7 @@ private val SecondsClock: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm
 private fun secondsClockText(timeMs: Long): String = Instant.ofEpochMilli(timeMs).atZone(ZoneId.systemDefault()).format(SecondsClock)
 
 /** Where the keys are while the time bar is open. */
-private enum class TimeControl { Bar, Back, Play, Forward, Live }
+private enum class TimeControl { Bar, Back, Play, Forward, Live, Info }
 
 
 /** The digits typed on the remote, or a number no channel has. */

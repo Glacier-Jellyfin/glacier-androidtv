@@ -19,9 +19,11 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LiveTvRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.channelAfter
 import io.github.glacier_jellyfin.androidtv.core.data.media.channelByNumber
 import io.github.glacier_jellyfin.androidtv.core.data.media.nowAndNext
+import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackMethod
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackPosition
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
+import io.github.glacier_jellyfin.androidtv.core.data.playback.TranscodeStatus
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
@@ -60,6 +62,8 @@ data class LiveTvPlayerState(
     val guideLoaded: Boolean = false,
     val player: ExoPlayer? = null,
     val playback: GlacierPlayback? = null,
+    /** How the server sends the channel, for the info panel. */
+    val source: PlaybackSource? = null,
     /** Until the first frame of the channel can be shown. */
     val loading: Boolean = true,
     val failed: Boolean = false,
@@ -112,6 +116,10 @@ class LiveTvPlayerViewModel @Inject constructor(
     val events = _events.receiveAsFlow()
 
     private var source: PlaybackSource? = null
+        set(value) {
+            field = value
+            _state.update { it.copy(source = value) }
+        }
     private var started = false
     private var closing = false
     private var opening: Job? = null
@@ -402,6 +410,10 @@ class LiveTvPlayerViewModel @Inject constructor(
             tuned?.let(::loadGuide)
         }
     }
+
+    /** The server's transcoder for the channel; null when it sends the stream as it is or does not say. */
+    suspend fun transcodeStatus(): TranscodeStatus? =
+        source?.takeIf { it.method != PlaybackMethod.DirectPlay }?.let { playback.transcodeStatus(it) }
 
     /** A pause goes on where it stopped: the server keeps recording the channel meanwhile. */
     fun togglePlay() {

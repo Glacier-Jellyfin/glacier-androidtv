@@ -12,6 +12,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.ui.SubtitleView
@@ -51,6 +53,36 @@ data class SideloadedSubtitle(
  * arrives as Media3 cues.
  */
 class GlacierPlayback(val player: ExoPlayer, private val ass: AssHandler) {
+
+    /** The video decoder Media3 picked, for the info panels; also known when the stream changed hands. */
+    var videoDecoder: String? = null
+        private set
+    var audioDecoder: String? = null
+        private set
+    /** How the sound leaves the device: the audio track Media3 set up. */
+    var audioTrackConfig: AudioSink.AudioTrackConfig? = null
+        private set
+
+    init {
+        addDecoderListener()
+    }
+
+    @OptIn(UnstableApi::class)
+    private fun addDecoderListener() {
+        player.addAnalyticsListener(object : AnalyticsListener {
+            override fun onVideoDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
+                videoDecoder = decoderName
+            }
+
+            override fun onAudioDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
+                audioDecoder = decoderName
+            }
+
+            override fun onAudioTrackInitialized(eventTime: AnalyticsListener.EventTime, audioTrackConfig: AudioSink.AudioTrackConfig) {
+                this@GlacierPlayback.audioTrackConfig = audioTrackConfig
+            }
+        })
+    }
 
     @OptIn(UnstableApi::class)
     fun attachAss(subtitleView: SubtitleView) {

@@ -42,7 +42,7 @@ import io.github.glacier_jellyfin.androidtv.player.InfoBar
 import io.github.glacier_jellyfin.androidtv.player.InfoCard
 import io.github.glacier_jellyfin.androidtv.player.InfoPanelFrame
 import io.github.glacier_jellyfin.androidtv.player.InfoSurface
-import io.github.glacier_jellyfin.androidtv.player.MAX_BUFFER_SECONDS
+import io.github.glacier_jellyfin.androidtv.player.BufferRow
 import io.github.glacier_jellyfin.androidtv.player.OsdSecondary
 import io.github.glacier_jellyfin.androidtv.player.SectionLabel
 import io.github.glacier_jellyfin.androidtv.player.StreamStats
@@ -204,22 +204,7 @@ private fun TechnicalTab(state: MusicUiState, track: MusicTrack, stats: StreamSt
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             )
         }
-        InfoSurface(Modifier.fillMaxWidth(), padding = 20) {
-            Row(horizontalArrangement = Arrangement.spacedBy(28.dp), verticalAlignment = Alignment.CenterVertically) {
-                SectionLabel(stringResource(R.string.player_info_buffer))
-                val seconds = stats?.bufferSeconds ?: 0
-                InfoBar(seconds.toFloat() / MAX_BUFFER_SECONDS, LocalAccent.current.main, Modifier.weight(1f), thickness = 8)
-                Text(
-                    stringResource(R.string.player_info_seconds, seconds.toInt()),
-                    style = GlacierText.body(18, FontWeight.SemiBold),
-                    color = GlacierColors.Ice,
-                    softWrap = false,
-                )
-                stats?.bandwidth?.let(::bitrateText)?.let {
-                    Text(stringResource(R.string.player_info_bandwidth, it), style = GlacierText.body(18), color = OsdSecondary, softWrap = false)
-                }
-            }
-        }
+        BufferRow(stats)
     }
 }
 

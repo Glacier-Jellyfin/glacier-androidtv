@@ -20,6 +20,7 @@ renders the reference separately.
 
 ### New
 - Four new accent colours: Alpenglow, Dawn, Midnight sun and Twilight. With the five Glacier accents they cover the whole rainbow. Settings shows them in spectrum order, in one row that scrolls when it does not fit
+- The Live TV player has an Info button like the video and music players. It shows the programme and what comes next, what this device plays and what the server sends and why it converts. It sits at the end of the controls, and the Info key on the remote opens it too
 
 ### Fixed
 - When the server ends a Live TV stream, the channel now starts again by itself. Before, the picture stopped and stayed on screen
