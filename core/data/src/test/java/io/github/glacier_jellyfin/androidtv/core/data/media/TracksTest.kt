@@ -118,6 +118,7 @@ class TracksTest {
         assertEquals(listOf("AC3 2.0"), described.facts)
         assertEquals(listOf(TrackMark.AudioDescription), described.marks)
         assertTrue(audioDescriptionByName("Hörfilm"))
+        assertTrue(audioDescriptionByName("Deutsch Hörfilmfassung"))
         assertFalse(audioDescriptionByName("Advanced"))
         assertTrue(commentaryByName("Audiokommentar"))
     }
@@ -163,6 +164,8 @@ class TracksTest {
         assertEquals("CH", regionOf("ger", "Schweizerdeutsch"))
         assertNull(regionOf("ger", "German AT"))
         assertEquals("AR", regionOf("spa", "Argentina"))
+        assertEquals("be", Languages.flag("dut", "BE"))
+        assertEquals("de", Languages.flag("de-LI"))
         assertEquals("Hant", regionOf("chi", "Chinese (Traditional)"))
         assertEquals("Hans", regionOf("zh-Hans", null))
         assertEquals("tw", Languages.flag("chi", "Hant"))

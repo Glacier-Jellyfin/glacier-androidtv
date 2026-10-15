@@ -86,7 +86,7 @@ private val CAPTION_CODECS = setOf("eia_608", "eia_708", "cc_dec")
 private val COMMENTARY_WORDS = listOf("director's commentary", "audiokommentar", "commentary", "kommentar")
 private val DESCRIPTION_WORDS = listOf(
     "audio descriptions", "audio description", "audiodescriptions", "audiodescription", "audiodeskription",
-    "descriptive audio", "descriptive", "described", "visually impaired", "sehbehindert", "hörfilm", "ad",
+    "descriptive audio", "descriptive", "described", "visually impaired", "sehbehindert", "hörfilmfassung", "hörfilm", "ad",
 )
 
 /**
@@ -232,7 +232,8 @@ object Languages {
         val variant = region ?: region(value)
         if (variant != null) {
             regionFlags[iso2(value) + "-" + variant.lowercase()]?.let { return it }
-            if (variant.length == 2 && variant.all { it.isLetter() }) return variant.lowercase()
+            // A region without a flag file ("de-LI") keeps the language's flag.
+            variant.lowercase().takeIf { it in countryFlags }?.let { return it }
         }
         return flags[iso3(value)]
     }
@@ -260,6 +261,15 @@ object Languages {
         "sqi" to "al", "srp" to "rs", "swa" to "ke", "swe" to "se", "tam" to "in", "tel" to "in", "tgl" to "ph",
         "tha" to "th", "tur" to "tr", "ukr" to "ua", "urd" to "pk", "uzb" to "uz", "vie" to "vn", "yue" to "hk",
         "zho" to "cn", "zul" to "za",
+    )
+
+    /** The countries in the app's flags/ assets, for regions that bring their own flag. */
+    private val countryFlags = setOf(
+        "al", "am", "ar", "at", "au", "az", "ba", "bd", "be", "bg", "br", "by", "ca", "ch", "cn", "cz", "de", "dk",
+        "ee", "es", "et", "fi", "fr", "gb", "ge", "gr", "hk", "hr", "hu", "id", "ie", "il", "in", "ir", "is", "it",
+        "jp", "ke", "kh", "kr", "kz", "la", "lk", "lt", "lu", "lv", "mk", "mm", "mn", "mt", "mx", "my", "nl", "no",
+        "np", "ph", "pk", "pl", "pt", "ro", "rs", "ru", "sa", "se", "si", "sk", "so", "th", "tr", "tw", "ua", "us",
+        "uz", "vn", "za",
     )
 
     private val regionFlags = mapOf(

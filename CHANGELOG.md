@@ -18,6 +18,10 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### Fixed
+- Belgian, Swiss, Austrian, Australian and Argentinian language variants show their flag. In 0.5.0-beta.4 the flag stayed empty
+- Audio tracks named "Hörfilmfassung" carry the audio description mark
+
 ## [0.5.0-beta.4] - 2026-10-15
 
 ### Improved
