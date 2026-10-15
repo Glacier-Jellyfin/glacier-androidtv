@@ -18,6 +18,8 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.5.0-beta.4] - 2026-10-15
+
 ### Improved
 - Audio and subtitle tracks read the same as in the Glacier web plugin. Each row shows the language, with the format and the track's name in a quieter second line. Default and external tracks say so there too
 - Forced, hearing impaired, closed caption, commentary and audio description tracks carry a mark at the end of the row. Glacier also finds them by the track's name when the file does not flag them. The audio and subtitle buttons on the detail page show the mark as an icon next to the language
