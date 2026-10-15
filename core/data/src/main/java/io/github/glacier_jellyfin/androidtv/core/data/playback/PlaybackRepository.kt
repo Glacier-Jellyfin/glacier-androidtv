@@ -188,6 +188,10 @@ class PlaybackRepository @Inject constructor(
         val device = capabilities.capabilities.let { detected ->
             playback.audioChannels.max?.let { detected.copy(maxAudioChannels = minOf(detected.maxAudioChannels, it)) } ?: detected
         }
+        // The server only takes the streams asked for when the source is named too
+        // (MediaInfoHelper.SetDeviceSpecificData); otherwise a transcode carries its own default
+        // audio. A title's main source has the item's id.
+        var sourceId = itemId.toString().replace("-", "").takeIf { audioIndex != null || subtitleIndex != null }
         suspend fun playbackInfo(bitrate: Int) = api.mediaInfoApi.getPostedPlaybackInfo(
             itemId = itemId,
             data = PlaybackInfoDto(
@@ -197,6 +201,7 @@ class PlaybackRepository @Inject constructor(
                 startTimeTicks = startMs * TICKS_PER_MS,
                 audioStreamIndex = audioIndex,
                 subtitleStreamIndex = subtitleIndex,
+                mediaSourceId = sourceId,
                 deviceProfile = DeviceProfiles.build(device, bitrate, playback.subtitleBurnIn, segments ?: HlsSegments.preferredFor(device)),
                 enableDirectPlay = true,
                 enableDirectStream = true,
@@ -210,6 +215,11 @@ class PlaybackRepository @Inject constructor(
         // The bitrate setting only caps transcodes (design): ask without it first, so a
         // file above the cap still plays directly, and again with it when the server transcodes.
         var info = playbackInfo(AUTO_BITRATE)
+        // Several versions where the first is not named after the item: ask without the source.
+        if (sourceId != null && info.errorCode == null && info.mediaSources.isEmpty()) {
+            sourceId = null
+            info = playbackInfo(AUTO_BITRATE)
+        }
         val cap = playback.maxBitrate.bitsPerSecond
         if (cap != null && info.errorCode == null && info.mediaSources.firstOrNull()?.supportsDirectPlay == false) {
             info = playbackInfo(cap)
@@ -273,7 +283,8 @@ class PlaybackRepository @Inject constructor(
             liveStreamId = source.liveStreamId,
             method = method,
             headers = mapOf("Authorization" to authorization(session)),
-            audioIndex = audioIndex ?: source.defaultAudioStreamIndex,
+            // A stream carries the audio the server put in it, whatever was asked for.
+            audioIndex = streamAudio?.toIntOrNull() ?: audioIndex ?: source.defaultAudioStreamIndex,
             // The server's default follows the user's subtitle mode; -1 means off.
             subtitleIndex = (subtitleIndex ?: source.defaultSubtitleStreamIndex)?.takeIf { it >= 0 },
             audioTracks = streams.filter { it.type == MediaStreamType.AUDIO && !it.isExternal }.map { it.toTrack() },
