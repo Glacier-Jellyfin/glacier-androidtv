@@ -136,11 +136,15 @@ internal fun isSoftwareDecoder(name: String): Boolean =
 data class AudioOutput(val passthrough: String?, val channels: Int)
 
 @OptIn(UnstableApi::class)
-internal fun audioOutput(config: AudioSink.AudioTrackConfig) = AudioOutput(
-    passthrough = if (Util.isEncodingLinearPcm(config.encoding)) {
+internal fun audioOutput(config: AudioSink.AudioTrackConfig) = audioOutput(config.encoding, config.channelConfig)
+
+/** The same from an audio track's [encoding] (C.ENCODING_*) and [channelMask]. */
+@OptIn(UnstableApi::class)
+internal fun audioOutput(encoding: Int, channelMask: Int) = AudioOutput(
+    passthrough = if (Util.isEncodingLinearPcm(encoding)) {
         null
     } else {
-        when (config.encoding) {
+        when (encoding) {
             C.ENCODING_AC3 -> "AC3"
             C.ENCODING_E_AC3 -> "EAC3"
             C.ENCODING_E_AC3_JOC -> "EAC3 Atmos"
@@ -151,7 +155,7 @@ internal fun audioOutput(config: AudioSink.AudioTrackConfig) = AudioOutput(
             else -> "Bitstream"
         }
     },
-    channels = Integer.bitCount(config.channelConfig),
+    channels = Integer.bitCount(channelMask),
 )
 
 /** The TV's current picture mode and the HDR formats it takes. */

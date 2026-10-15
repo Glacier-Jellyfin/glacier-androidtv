@@ -59,8 +59,11 @@ class GlacierPlayback(val player: ExoPlayer, private val ass: AssHandler) {
         private set
     var audioDecoder: String? = null
         private set
-    /** How the sound leaves the device: the audio track Media3 set up. */
-    var audioTrackConfig: AudioSink.AudioTrackConfig? = null
+    /** How the sound leaves the device: the audio track's encoding (C.ENCODING_*), null until it is set up. */
+    var audioEncoding: Int? = null
+        private set
+    /** The audio track's channel mask (AudioFormat.CHANNEL_OUT_*). */
+    var audioChannelMask: Int = 0
         private set
 
     init {
@@ -79,7 +82,8 @@ class GlacierPlayback(val player: ExoPlayer, private val ass: AssHandler) {
             }
 
             override fun onAudioTrackInitialized(eventTime: AnalyticsListener.EventTime, audioTrackConfig: AudioSink.AudioTrackConfig) {
-                this@GlacierPlayback.audioTrackConfig = audioTrackConfig
+                audioEncoding = audioTrackConfig.encoding
+                audioChannelMask = audioTrackConfig.channelConfig
             }
         })
     }

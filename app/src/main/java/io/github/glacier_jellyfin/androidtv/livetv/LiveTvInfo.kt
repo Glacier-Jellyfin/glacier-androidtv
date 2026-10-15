@@ -92,7 +92,7 @@ private fun GlacierPlayback.liveStats(context: android.content.Context) = LiveSt
     stream = player.streamStats(context),
     videoDecoder = videoDecoder,
     audioDecoder = audioDecoder,
-    output = audioTrackConfig?.let(::audioOutput),
+    output = audioEncoding?.let { audioOutput(it, audioChannelMask) },
 )
 
 @Composable
