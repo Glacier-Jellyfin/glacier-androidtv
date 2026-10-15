@@ -253,7 +253,14 @@ class PlaybackRepository @Inject constructor(
             else -> error("Server offered neither direct play nor a transcode")
         }
         val reasons = source.transcodingUrl?.takeIf { method != PlaybackMethod.DirectPlay }?.let { TRANSCODE_REASONS.find(it)?.groupValues?.get(1) }
-        Log.i(TAG, "Playing $itemId: $method, container ${source.container}, ${source.bitrate} bit/s" + reasons?.let { ", because $it" }.orEmpty())
+        // The tracks asked for, and for a stream the server builds the audio it was told to put in.
+        val streamAudio = source.transcodingUrl?.takeIf { method != PlaybackMethod.DirectPlay }?.let { AUDIO_STREAM_INDEX.find(it)?.groupValues?.get(1) }
+        Log.i(
+            TAG,
+            "Playing $itemId: $method, container ${source.container}, ${source.bitrate} bit/s" + reasons?.let { ", because $it" }.orEmpty() +
+                ", audio ${audioIndex ?: "default " + source.defaultAudioStreamIndex}, subtitles ${subtitleIndex ?: "default " + source.defaultSubtitleStreamIndex}" +
+                streamAudio?.let { ", stream audio $it" }.orEmpty(),
+        )
         if (Log.verbose) Log.d(TAG, "Streams of $itemId: " + streams.joinToString { it.describe() })
         PlaybackSource(
             itemId = itemId,
@@ -509,5 +516,7 @@ class PlaybackRepository @Inject constructor(
 
         /** The server's reasons in a transcode URL, e.g. "VideoCodecNotSupported,AudioChannelsNotSupported". */
         val TRANSCODE_REASONS = Regex("[?&]TranscodeReasons=([^&]+)")
+        /** The audio stream a transcode URL tells the server to use. */
+        val AUDIO_STREAM_INDEX = Regex("[?&]AudioStreamIndex=([^&]+)", RegexOption.IGNORE_CASE)
     }
 }

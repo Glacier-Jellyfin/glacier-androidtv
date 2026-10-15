@@ -321,17 +321,15 @@ class DetailRepository @Inject constructor(
         if (audio.isEmpty() && subtitles.isEmpty()) return null
         val defaultAudio = mainInsteadOfExtra(source.defaultAudioStreamIndex ?: audio.firstOrNull()?.index, audio)
         val onlyForced = serverPreferences.preferences.value?.subtitleMode == SubtitleMode.OnlyForced
+        // The server uses -1 for "no subtitles".
+        val serverSubtitle = source.defaultSubtitleStreamIndex?.takeIf { it >= 0 }
         return TrackChoices(
             audio = audio,
             subtitles = subtitles,
             defaultAudio = defaultAudio,
-            // The server uses -1 for "no subtitles".
-            defaultSubtitle = fullInsteadOfForced(
-                source.defaultSubtitleStreamIndex?.takeIf { it >= 0 },
-                subtitles,
-                audio.firstOrNull { it.index == defaultAudio },
-                onlyForced,
-            ),
+            defaultSubtitle = fullInsteadOfForced(serverSubtitle, subtitles, audio.firstOrNull { it.index == defaultAudio }, onlyForced),
+            serverSubtitle = serverSubtitle,
+            onlyForced = onlyForced,
         )
     }
 

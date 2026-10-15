@@ -21,6 +21,7 @@ renders the reference separately.
 ### Fixed
 - Belgian, Swiss, Austrian, Australian and Argentinian language variants show their flag. In 0.5.0-beta.4 the flag stayed empty
 - Audio tracks named "Hörfilmfassung" carry the audio description mark
+- A title starts with the audio and subtitle tracks its detail page shows. Before, it could start with other subtitles, such as the forced ones, when the audio came from the last title
 
 ## [0.5.0-beta.4] - 2026-10-15
 

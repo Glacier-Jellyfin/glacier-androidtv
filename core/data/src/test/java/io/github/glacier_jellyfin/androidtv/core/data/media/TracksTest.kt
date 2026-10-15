@@ -259,6 +259,19 @@ class TracksTest {
     }
 
     @Test
+    fun `the subtitle follows the audio it plays under`() {
+        val choices = TrackChoices(
+            audio = listOf(japanese, german),
+            subtitles = subtitles,
+            defaultAudio = 1,
+            defaultSubtitle = 4,
+            serverSubtitle = 5,
+        )
+        assertEquals(4, choices.subtitleFor(1))
+        assertEquals(5, choices.subtitleFor(2))
+    }
+
+    @Test
     fun `the full track without SDH comes first`() {
         val sdh = full.copy(index = 3, hearingImpaired = true)
         assertEquals(4, fullInsteadOfForced(5, listOf(sdh, full, forced), japanese, onlyForced = false))

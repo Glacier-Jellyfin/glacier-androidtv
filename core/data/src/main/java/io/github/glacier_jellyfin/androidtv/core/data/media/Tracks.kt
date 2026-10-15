@@ -188,7 +188,19 @@ data class TrackChoices(
     val defaultAudio: Int?,
     /** Null means subtitles off. */
     val defaultSubtitle: Int?,
-)
+    /** The server's own subtitle pick, before a forced pick became the full track. */
+    val serverSubtitle: Int? = defaultSubtitle,
+    /** The user's subtitle mode is "only forced". */
+    val onlyForced: Boolean = false,
+) {
+    /**
+     * The subtitle to start with under [audio], as the player works it out: the
+     * server's pick, but the full track when that pick is forced and the audio
+     * is in another language.
+     */
+    fun subtitleFor(audio: Int?): Int? =
+        fullInsteadOfForced(serverSubtitle, subtitles, this.audio.firstOrNull { it.index == audio }, onlyForced)
+}
 
 object Languages {
     /**

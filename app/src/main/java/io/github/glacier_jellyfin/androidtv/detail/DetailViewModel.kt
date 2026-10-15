@@ -178,12 +178,14 @@ class DetailViewModel @Inject constructor(
         val tracks = details.tracks ?: return null
         val preferences = serverPreferences.preferences.value ?: serverPreferences.refresh()
         val remembered = preferences?.let { rememberedTracks(settings.current().lastTracks, it, tracks) }
+        val audio = remembered?.audio ?: tracks.defaultAudio
         val subtitle = when (val index = remembered?.subtitle) {
-            null -> tracks.defaultSubtitle
+            // Under the last title's audio, not the server's default: a forced pick stays forced under its own language.
+            null -> tracks.subtitleFor(audio)
             RememberedTracks.SUBTITLES_OFF -> null
             else -> index
         }
-        return TrackSelection(remembered?.audio ?: tracks.defaultAudio, subtitle)
+        return TrackSelection(audio, subtitle)
     }
 
     private var refreshJob: Job? = null
@@ -339,6 +341,10 @@ class DetailViewModel @Inject constructor(
             ItemKind.Series -> current.nextEpisode ?: current.episodes.firstOrNull() ?: return
             ItemKind.Collection -> collectionNext() ?: return
             else -> item
+        }
+        // The tracks the chips show are the ones that play: the player takes them instead of working them out again.
+        if (target.id == item.id && trackSelections.get(item.id) == null) {
+            current.selection?.let { trackSelections.set(item.id, it) }
         }
         navigate(PlayerRoute(target.id.toString(), fromStart))
     }
