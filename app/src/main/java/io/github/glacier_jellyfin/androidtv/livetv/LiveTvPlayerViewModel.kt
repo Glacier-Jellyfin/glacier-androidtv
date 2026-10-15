@@ -138,6 +138,15 @@ class LiveTvPlayerViewModel @Inject constructor(
                     checkForRadio()
                     logTimeshift()
                 }
+            } else if (playbackState == Player.STATE_ENDED && !closing) {
+                // A channel has no end: the server stopped the stream, its tuner or source dropped.
+                if (started) {
+                    Log.i(TAG, "The server ended the stream of $tuned, tuning again")
+                    retry()
+                } else {
+                    Log.w(TAG, "The stream of $tuned ended before it played")
+                    fail()
+                }
             }
         }
 
@@ -172,10 +181,14 @@ class LiveTvPlayerViewModel @Inject constructor(
                 return
             }
             Log.w(TAG, "Live TV playback failed", error)
-            source?.let { playback.reportStopped(it, 0, failed = true) }
-            source = null
-            _state.update { it.copy(failed = true, loading = false) }
+            fail()
         }
+    }
+
+    private fun fail() {
+        source?.let { playback.reportStopped(it, 0, failed = true) }
+        source = null
+        _state.update { it.copy(failed = true, loading = false) }
     }
 
     init {
@@ -283,7 +296,7 @@ class LiveTvPlayerViewModel @Inject constructor(
             stopStream()
             loadGuide(channelId)
             // The channel list's preview of this channel runs already: it goes on, with sound.
-            val handed = if (force) null else handoff.take(channelId)
+            val handed = if (force) null else handoff.take(channelId)?.takeIf(handoff::alive)
             if (handed != null) {
                 source = handed.source
                 val player = handed.playback.player
@@ -426,12 +439,15 @@ class LiveTvPlayerViewModel @Inject constructor(
         if (shift != _state.value.timeshift) _state.update { it.copy(timeshift = shift) }
     }
 
-    /** Says once per channel whether it can be wound back, and if not, what the stream lacks. */
+    /**
+     * Says once per channel whether it can be wound back, and if not, what the stream lacks.
+     * At the start the server has kept only a few seconds, so winding back often comes a little later.
+     */
     private fun logTimeshift() {
         val player = _state.value.player ?: return
         val timeline = player.currentTimeline
         val window = if (timeline.isEmpty) null else timeline.getWindow(player.currentMediaItemIndex, Timeline.Window())
-        val verdict = if (timeshiftOf(player) != null) "available" else "not available"
+        val verdict = if (timeshiftOf(player) != null) "available" else "not available yet"
         Log.i(
             TAG,
             "Timeshift $verdict: hls ${source?.isHls}, dynamic ${window?.isDynamic}, live ${window?.isLive}, " +
@@ -484,7 +500,7 @@ class LiveTvPlayerViewModel @Inject constructor(
         val current = source ?: return false
         val handed = _state.value.playback ?: return false
         val player = handed.player
-        if (_state.value.failed || !player.playWhenReady) return false
+        if (_state.value.failed || !player.playWhenReady || player.playbackState == Player.STATE_ENDED) return false
         player.removeListener(listener)
         player.volume = 0f
         // The list previews what runs now, not where the viewer wound back to.

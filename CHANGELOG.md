@@ -21,6 +21,13 @@ renders the reference separately.
 ### New
 - Four new accent colours: Alpenglow, Dawn, Midnight sun and Twilight. With the five Glacier accents they cover the whole rainbow. Settings shows them in spectrum order, in one row that scrolls when it does not fit
 
+### Fixed
+- When the server ends a Live TV stream, the channel now starts again by itself. Before, the picture stopped and stayed on screen
+- The preview in the channel list also starts again when the server ends it. Opening a channel whose preview had ended no longer loads forever
+- Back from the player on a slower device, the channel list keeps playing the channel you watched. Before, it loaded it again
+- After you remove the last recording, the focus stays on Recordings instead of jumping to the top bar
+- The queue card in the music info panel shows the time left in full
+
 ## [0.5.0-beta.2] - 2026-10-15
 
 ### New

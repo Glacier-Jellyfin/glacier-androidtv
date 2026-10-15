@@ -2,6 +2,8 @@ package io.github.glacier_jellyfin.androidtv.livetv
 
 import android.os.Handler
 import android.os.Looper
+import androidx.media3.common.Player
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
@@ -48,6 +50,18 @@ class LiveStreamHandoff @Inject constructor(
         return waiting.also { waiting = null }
     }
 
+    /**
+     * Whether [stream] still plays. One the server ended or that failed is ended here,
+     * and the taker tunes again instead of showing a stream that never moves.
+     */
+    fun alive(stream: Stream): Boolean {
+        val player = stream.playback.player
+        if (player.playbackState != Player.STATE_ENDED && player.playerError == null) return true
+        Log.i(TAG, "The stream of ${stream.channelId} ended before it was taken")
+        end(stream)
+        return false
+    }
+
     /** Ends a stream nobody wants, so its tuner is freed. */
     fun end(stream: Stream) {
         if (waiting === stream) takeAny()
@@ -56,6 +70,7 @@ class LiveStreamHandoff @Inject constructor(
     }
 
     private companion object {
+        const val TAG = "LiveStreamHandoff"
         const val TIMEOUT_MS = 5_000L
     }
 }

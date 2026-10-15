@@ -159,7 +159,7 @@ private fun QueueCard(state: MusicUiState, progress: MusicProgress, modifier: Mo
     val before = state.queue.take(state.index).sumOf { it.track.durationMs }
     val left = total - before - progress.positionMs
     InfoSurface(modifier.height(122.dp), padding = 16) {
-        Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)) {
+        Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically)) {
             SectionLabel(stringResource(R.string.music_queue))
             Text(
                 stringResource(R.string.music_track_of, state.index + 1, state.queue.size),

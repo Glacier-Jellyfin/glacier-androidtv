@@ -274,7 +274,7 @@ fun LiveTvScreen(
                         nowMs = state.nowMs,
                         sheetOpen = state.sheet != null,
                         focus = recordingsFocus,
-                        up = chipsFocus,
+                        up = activeChip,
                         onRetry = viewModel::loadRecordings,
                         onPlay = viewModel::playRecording,
                         onRecordingMenu = viewModel::openRecording,

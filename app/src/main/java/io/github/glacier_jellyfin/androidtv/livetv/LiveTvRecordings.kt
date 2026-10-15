@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -105,6 +106,8 @@ fun RecordingsView(
     onSeriesTimer: (LiveSeriesTimer) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // The list showed entries: when the last one goes, the focus would fall to the top bar.
+    var hadEntries by remember { mutableStateOf(false) }
     when {
         recordings == null && loading -> {
             Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(90) }
@@ -125,6 +128,13 @@ fun RecordingsView(
         }
         recordings == null -> return
         recordings.isEmpty -> {
+            // The last entry went away: the focus goes up to the views instead.
+            LaunchedEffect(Unit) {
+                if (!hadEntries) return@LaunchedEffect
+                hadEntries = false
+                withFrameNanos { }
+                runCatching { up.requestFocus() }
+            }
             Column(modifier.width(LIST_WIDTH.dp).padding(top = 40.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(stringResource(R.string.livetv_recordings_empty), style = GlacierText.display(30), color = GlacierColors.Ice)
                 Text(stringResource(R.string.livetv_recordings_empty_body), style = GlacierText.body(20), color = GlacierColors.Mist)
@@ -133,6 +143,7 @@ fun RecordingsView(
         }
     }
     val data = recordings ?: return
+    SideEffect { hadEntries = true }
     val sections = listOf(
         R.string.livetv_recorded to data.recorded.map { Entry.Recorded(it) },
         // The few series before the many episodes they plan.

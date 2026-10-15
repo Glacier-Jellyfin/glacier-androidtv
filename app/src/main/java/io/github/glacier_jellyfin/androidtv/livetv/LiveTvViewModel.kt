@@ -140,6 +140,15 @@ class LiveTvViewModel @Inject constructor(
             _state.update { it.copy(previewShown = true) }
         }
 
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState != Player.STATE_ENDED) return
+            // The server ended the stream: one that played starts again, one that never did goes away.
+            val played = _state.value.previewShown
+            Log.i(TAG, "The server ended the preview of ${_state.value.previewChannel}" + if (played) ", starting it again" else "")
+            stopPreview()
+            if (played) schedulePreview()
+        }
+
         override fun onPlayerError(error: PlaybackException) {
             // A preview is a nicety: it just goes away.
             Log.w(TAG, "The preview failed", error)
@@ -422,7 +431,7 @@ class LiveTvViewModel @Inject constructor(
 
     /** Back from the player: the channel it played goes on here as the preview. */
     fun onStart() {
-        val stream = handoff.takeAny()
+        val stream = handoff.takeAny()?.takeIf(handoff::alive)
         val state = _state.value
         if (stream == null || state.view != LiveTvView.Channels || handedOver != null) {
             stream?.let(handoff::end)
@@ -437,8 +446,12 @@ class LiveTvViewModel @Inject constructor(
         player.addListener(previewListener)
         _state.update { it.copy(preview = player, previewChannel = stream.channelId, previewShown = true) }
         Log.i(TAG, "Took back the stream of ${stream.channelId}")
-        // The list lands on that channel in a moment; if not, the focused one plays instead.
-        schedulePreview()
+        // The list lands on that channel in a moment, slower devices take a while for it. Only if
+        // it does not, the focused one plays instead: landing would stop the stream just taken.
+        previewJob = viewModelScope.launch {
+            delay(LANDING_MS)
+            if (_state.value.focused != stream.channelId) schedulePreview()
+        }
     }
 
     /** Ends the preview and frees its tuner. */
@@ -506,6 +519,8 @@ class LiveTvViewModel @Inject constructor(
      */
     private fun handOverPreview(channelId: UUID): Boolean {
         val created = previewPlayback ?: return false
+        // Ended or failed meanwhile: the player tunes again.
+        if (created.player.playbackState == Player.STATE_ENDED || created.player.playerError != null) return false
         val source = previewSource ?: return false
         if (_state.value.previewChannel != channelId) return false
         previewJob?.cancel()
@@ -569,6 +584,8 @@ class LiveTvViewModel @Inject constructor(
         const val UPCOMING_HOURS = 6L
         /** Like zapping in the player: passing channels quickly opens no stream for each. */
         const val PREVIEW_DELAY_MS = 450L
+        /** How long the list may take to land on the channel back from the player. */
+        const val LANDING_MS = 2_000L
     }
 }
 
