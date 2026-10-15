@@ -319,7 +319,7 @@ class DetailRepository @Inject constructor(
         val audio = streams.filter { it.type == MediaStreamType.AUDIO }.map { it.toTrack() }
         val subtitles = streams.filter { it.type == MediaStreamType.SUBTITLE }.map { it.toTrack() }
         if (audio.isEmpty() && subtitles.isEmpty()) return null
-        val defaultAudio = source.defaultAudioStreamIndex ?: audio.firstOrNull()?.index
+        val defaultAudio = mainInsteadOfExtra(source.defaultAudioStreamIndex ?: audio.firstOrNull()?.index, audio)
         val onlyForced = serverPreferences.preferences.value?.subtitleMode == SubtitleMode.OnlyForced
         return TrackChoices(
             audio = audio,

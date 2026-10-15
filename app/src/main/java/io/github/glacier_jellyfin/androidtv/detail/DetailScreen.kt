@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,6 +37,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -402,7 +405,7 @@ internal fun SeenButton(played: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun TrackChips(state: DetailState, details: ItemDetails, viewModel: DetailViewModel) {
+private fun RowScope.TrackChips(state: DetailState, details: ItemDetails, viewModel: DetailViewModel) {
     val tracks = details.tracks ?: return
     val audioFocus = remember { FocusRequester() }
     val subtitleFocus = remember { FocusRequester() }
@@ -421,13 +424,42 @@ private fun TrackChips(state: DetailState, details: ItemDetails, viewModel: Deta
         runCatching { (if (kind == TrackKind.Audio) audioFocus else subtitleFocus).requestFocus() }
     }
     ActionDivider()
-    if (tracks.audio.isNotEmpty()) {
-        val (label, flag) = trackChipLabel(tracks.audio.firstOrNull { it.index == state.selection?.audio }, subtitle = false)
-        TrackChip(label, flag, audio = true, onClick = { viewModel.openTracks(TrackKind.Audio) }, modifier = Modifier.focusRequester(audioFocus))
+    val audio = tracks.audio.takeIf { it.isNotEmpty() }?.let { list ->
+        trackChipContent(list.firstOrNull { it.index == state.selection?.audio }, subtitle = false)
     }
-    val (label, flag) = trackChipLabel(tracks.subtitles.firstOrNull { it.index == state.selection?.subtitle }, subtitle = true)
-    TrackChip(label, flag, audio = false, onClick = { viewModel.openTracks(TrackKind.Subtitles) }, modifier = Modifier.focusRequester(subtitleFocus))
+    val subtitles = trackChipContent(tracks.subtitles.firstOrNull { it.index == state.selection?.subtitle }, subtitle = true)
+    // The row may be short (episodes): the chips keep their width while they fit, else they share the rest in halves.
+    Layout(
+        content = {
+            if (audio != null) {
+                TrackChip(audio, audio = true, onClick = { viewModel.openTracks(TrackKind.Audio) }, modifier = Modifier.focusRequester(audioFocus))
+            }
+            TrackChip(subtitles, audio = false, onClick = { viewModel.openTracks(TrackKind.Subtitles) }, modifier = Modifier.focusRequester(subtitleFocus))
+        },
+        modifier = Modifier.weight(1f, fill = false),
+    ) { chips, constraints ->
+        val gap = CHIP_GAP.roundToPx() * (chips.size - 1)
+        val natural = chips.map { it.maxIntrinsicWidth(constraints.maxHeight) }
+        val room = (constraints.maxWidth - gap).coerceAtLeast(0)
+        // Too wide together: a chip under an equal share keeps its width, the wider one gets what is left.
+        val share = room / chips.size
+        val small = natural.filter { it <= share }
+        val rest = (room - small.sum()) / (chips.size - small.size).coerceAtLeast(1)
+        val widths = if (natural.sum() <= room) natural else natural.map { if (it <= share) it else rest }
+        val placeables = chips.mapIndexed { i, chip -> chip.measure(Constraints.fixedWidth(widths[i])) }
+        val height = placeables.maxOf { it.height }
+        layout(placeables.sumOf { it.width } + gap, height) {
+            var x = 0
+            placeables.forEach { chip ->
+                chip.placeRelative(x, (height - chip.height) / 2)
+                x += chip.width + CHIP_GAP.roundToPx()
+            }
+        }
+    }
 }
+
+/** The action row's spacing, kept between the two track chips. */
+private val CHIP_GAP = 14.dp
 
 @Composable
 private fun TrackSheet(kind: TrackKind, state: DetailState, details: ItemDetails, viewModel: DetailViewModel) {

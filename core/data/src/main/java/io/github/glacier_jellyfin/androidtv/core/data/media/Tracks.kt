@@ -14,28 +14,155 @@ data class Track(
     val channels: Int?,
     val forced: Boolean = false,
     val hearingImpaired: Boolean = false,
+    /** Closed captions: the dialogue with sounds, often from a TV broadcast. */
+    val closedCaptions: Boolean = false,
     /** The server's own description, used when the language is unknown. */
     val fallbackTitle: String? = null,
     /** The stream's name in the file ("German (CR/ASS)", "Commentary"), if it has one. */
     val title: String? = null,
+    /** The language's variant as a region code ("CA", "BR", "419") or a script ("Hant"), from the language tag or the stream name. */
+    val region: String? = null,
+    /** The codec's profile ("DTS-HD MA", "Dolby TrueHD + Dolby Atmos"). */
+    val profile: String? = null,
+    /** Marked as default in the file. */
+    val default: Boolean = false,
+    /** A file next to the video, not a stream in it. */
+    val external: Boolean = false,
+    /** An audio commentary, known from the stream name only. */
+    val commentary: Boolean = false,
+    /** An audio description for the blind, known from the stream name only. */
+    val audioDescription: Boolean = false,
+) {
+    /** Commentary and audio description are extras, never the track to start with on their own. */
+    val extra: Boolean get() = commentary || audioDescription
+}
+
+internal fun MediaStream.toTrack(): Track {
+    val subtitle = type == MediaStreamType.SUBTITLE
+    val audio = type == MediaStreamType.AUDIO
+    val captions = subtitle && (closedCaptionsByName(title) || codec?.lowercase() in CAPTION_CODECS)
+    return Track(
+        index = index,
+        language = cantoneseOr(language, title),
+        codec = codec,
+        channels = channels,
+        forced = isForced || (subtitle && forcedByName(title)),
+        // The server's hearing impaired flag on a track named CC means its closed captions.
+        hearingImpaired = (isHearingImpaired && !captions) || (subtitle && hearingImpairedByName(title)),
+        closedCaptions = captions,
+        fallbackTitle = displayTitle ?: title,
+        title = title,
+        profile = profile,
+        region = regionOf(language, title),
+        default = isDefault,
+        external = isExternal,
+        commentary = audio && commentaryByName(title),
+        audioDescription = audio && audioDescriptionByName(title),
+    )
+}
+
+// Some files only say it in the stream name, without the stream's flag. The
+// Glacier web plugin reads names the same way (glacier-details.js).
+
+/** "German Forced", "Signs & Songs". */
+internal fun forcedByName(title: String?): Boolean = hasWord(title, FORCED_WORDS)
+
+/** "English SDH", "Hörgeschädigt". */
+internal fun hearingImpairedByName(title: String?): Boolean = hasWord(title, SDH_WORDS)
+
+/** "English CC", "Closed Captions". */
+internal fun closedCaptionsByName(title: String?): Boolean = hasWord(title, CC_WORDS)
+
+/** "Director's Commentary", "Audiokommentar". */
+internal fun commentaryByName(title: String?): Boolean = hasWord(title, COMMENTARY_WORDS)
+
+/** "Audio Description", "Hörfilm", "AD". */
+internal fun audioDescriptionByName(title: String?): Boolean = hasWord(title, DESCRIPTION_WORDS)
+
+private val FORCED_WORDS = listOf("forced", "erzwungen", "signs")
+private val SDH_WORDS = listOf("sdh", "hörgeschädigt", "hearing impaired")
+private val CC_WORDS = listOf("closed captions", "closed caption", "cc")
+private val CAPTION_CODECS = setOf("eia_608", "eia_708", "cc_dec")
+private val COMMENTARY_WORDS = listOf("director's commentary", "audiokommentar", "commentary", "kommentar")
+private val DESCRIPTION_WORDS = listOf(
+    "audio descriptions", "audio description", "audiodescriptions", "audiodescription", "audiodeskription",
+    "descriptive audio", "descriptive", "described", "visually impaired", "sehbehindert", "hörfilm", "ad",
 )
 
-internal fun MediaStream.toTrack() = Track(
-    index = index,
-    language = language,
-    codec = codec,
-    channels = channels,
-    forced = isForced || (type == MediaStreamType.SUBTITLE && forcedByName(title)),
-    hearingImpaired = isHearingImpaired,
-    fallbackTitle = displayTitle ?: title,
-    title = title,
+/**
+ * Variants of a language and the words stream names use for them ("BTM CA",
+ * "Portuguese (Brazilian)"). Only words that fit the stream's language count:
+ * "CA" on a French track is Canada.
+ */
+private val REGIONS = mapOf(
+    "fra" to listOf(
+        "CA" to listOf("canada", "canadian", "kanada", "kanadisch", "québec", "quebec", "québécois", "quebecois", "vfq", "ca"),
+        "BE" to listOf("belgique", "belgian", "belgium", "belgisch", "belgien", "vfb"),
+        "CH" to listOf("suisse", "swiss", "schweiz", "schweizer"),
+        "FR" to listOf("france", "frankreich", "parisian", "european", "vff", "fr"),
+    ),
+    "por" to listOf(
+        "BR" to listOf("brazil", "brazilian", "brasil", "brasilien", "brasilianisch", "br"),
+        "PT" to listOf("portugal", "european", "europeu", "pt"),
+    ),
+    "spa" to listOf(
+        "AR" to listOf("argentina", "argentine", "argentinian", "argentinien", "argentinisch", "rioplatense"),
+        "419" to listOf("latin america", "latin american", "latam", "latino", "lateinamerika", "lateinamerikanisch", "419", "la"),
+        "MX" to listOf("mexico", "méxico", "mexican", "mexikanisch", "mx"),
+        "ES" to listOf("spain", "españa", "castilian", "castellano", "kastilisch", "european", "es"),
+    ),
+    "eng" to listOf(
+        "US" to listOf("american", "amerikanisch", "usa", "us"),
+        "GB" to listOf("british", "britisch", "uk", "gb"),
+        "AU" to listOf("australian", "australia", "australien", "australisch"),
+        "CA" to listOf("canadian", "canada", "kanada", "kanadisch"),
+    ),
+    "deu" to listOf(
+        "AT" to listOf("austrian", "austria", "österreich", "österreichisch"),
+        "CH" to listOf("swiss", "schweiz", "schweizer", "schweizerdeutsch", "schwiizerdütsch", "ch"),
+    ),
+    "nld" to listOf(
+        "BE" to listOf("flemish", "vlaams", "flämisch", "belgian", "belgium", "belgië", "belgien", "belgisch", "be"),
+    ),
+    // Chinese names its script, not a country: traditional and simplified (USER's call).
+    "zho" to listOf(
+        "Hant" to listOf("traditional", "traditionell", "hant", "繁體", "繁体"),
+        "Hans" to listOf("simplified", "vereinfacht", "hans", "简体", "簡體"),
+        "TW" to listOf("taiwan", "tw"),
+        "HK" to listOf("hong kong", "hongkong", "hk"),
+        "CN" to listOf("mainland", "cn"),
+    ),
 )
 
-/** Some files only say it in the stream name ("German Forced", "Signs & Songs"), without the forced flag. */
-internal fun forcedByName(title: String?): Boolean =
-    title != null && FORCED_NAME.containsMatchIn(title)
+/** A Chinese track named Cantonese is in Cantonese ("yue"), a language of its own. */
+internal fun cantoneseOr(language: String?, title: String?): String? =
+    if (Languages.iso3(language) == "zho" && hasWord(title, CANTONESE_WORDS)) "yue" else language
 
-private val FORCED_NAME = Regex("(?<![\\p{L}])(forced|erzwungen|signs)(?![\\p{L}])", RegexOption.IGNORE_CASE)
+private val CANTONESE_WORDS = listOf("cantonese", "kantonesisch", "yue", "粵語", "粤语")
+
+/** The region of a track's language: from a tag ("pt-BR"), else from words in its name. */
+internal fun regionOf(language: String?, title: String?): String? {
+    Languages.region(language)?.let { return it }
+    val regions = REGIONS[Languages.iso3(language)] ?: return null
+    return regions.firstOrNull { (_, words) -> hasWord(title, words) }?.first
+}
+
+/** The words that named [region] in a stream name, so the facts leave them out. */
+private fun regionWords(language: String?, region: String?): List<String> =
+    REGIONS[Languages.iso3(language)]?.firstOrNull { it.first == region }?.second.orEmpty()
+
+/**
+ * The audio track to start with when the server picked [pick] on its own.
+ * Files sometimes mark a commentary or audio description as default. Then
+ * the main track of the same language plays, else the first main track.
+ */
+fun mainInsteadOfExtra(pick: Int?, audio: List<Track>): Int? {
+    val picked = audio.firstOrNull { it.index == pick } ?: return pick
+    if (!picked.extra) return pick
+    val main = audio.filter { !it.extra }
+    val language = Languages.iso3(picked.language)
+    return (main.firstOrNull { language != null && Languages.iso3(it.language) == language } ?: main.firstOrNull())?.index ?: pick
+}
 
 /**
  * The subtitle to start with when the server picked [pick] on its own. A
@@ -51,7 +178,7 @@ fun fullInsteadOfForced(pick: Int?, subtitles: List<Track>, audio: Track?, onlyF
     val language = Languages.iso3(picked.language) ?: return pick
     if (Languages.iso3(audio?.language) == language) return pick
     val full = subtitles.filter { !it.forced && Languages.iso3(it.language) == language }
-    return (full.firstOrNull { !it.hearingImpaired } ?: full.firstOrNull())?.index ?: pick
+    return (full.firstOrNull { !it.hearingImpaired && !it.closedCaptions } ?: full.firstOrNull())?.index ?: pick
 }
 
 /** Audio and subtitle choices of a title, with the server's defaults for this user. */
@@ -73,6 +200,8 @@ object Languages {
         "dut" to "nld", "fre" to "fra", "geo" to "kat", "ger" to "deu", "gre" to "ell", "ice" to "isl",
         "mac" to "mkd", "mao" to "mri", "may" to "msa", "per" to "fas", "rum" to "ron", "slo" to "slk",
         "tib" to "bod", "wel" to "cym",
+        // Not ISO 639-2, but what some tools write for Brazilian Portuguese.
+        "pob" to "por",
     )
 
     private val byIso3: Map<String, Locale> by lazy {
@@ -81,21 +210,41 @@ object Languages {
 
     /** Normalises "ger" / "deu" / "de" to the ISO 639-2/T code, or null if unknown. */
     fun iso3(code: String?): String? {
-        val value = code?.trim()?.lowercase()?.takeIf { it.isNotEmpty() && it != "und" } ?: return null
+        // A tag's region ("pt-BR") does not change the language.
+        val value = code?.trim()?.lowercase()?.replace('_', '-')?.substringBefore('-')?.takeIf { it.isNotEmpty() && it != "und" } ?: return null
         if (value.length == 2) return Locale.forLanguageTag(value).isO3Language.takeIf { it.isNotEmpty() }
         val normal = bibliographic[value] ?: value
-        return normal.takeIf { byIso3.containsKey(it) }
+        return normal.takeIf { byIso3.containsKey(it) || it in withoutIso2 }
     }
+
+    /** Languages Java knows only by their three-letter code. */
+    private val withoutIso2 = setOf("yue")
+
+    private fun locale(iso3: String): Locale? = byIso3[iso3] ?: iso3.takeIf { it in withoutIso2 }?.let(Locale::forLanguageTag)
 
     /**
      * Flag for a language, as a file name in the app's flags/ assets ("gb",
      * "es-ct"): the country most people link with it. Region tags win
      * ("pt-BR" is Brazil). Null for languages without a clear country.
      */
-    fun flag(code: String?): String? {
+    fun flag(code: String?, region: String? = null): String? {
         val value = code?.trim()?.lowercase()?.replace('_', '-') ?: return null
-        regionFlags[value]?.let { return it }
-        return flags[iso3(value.substringBefore('-'))]
+        val variant = region ?: region(value)
+        if (variant != null) {
+            regionFlags[iso2(value) + "-" + variant.lowercase()]?.let { return it }
+            if (variant.length == 2 && variant.all { it.isLetter() }) return variant.lowercase()
+        }
+        return flags[iso3(value)]
+    }
+
+    /** The region or script of a language tag ("pt-BR" is "BR", "es-419" is "419", "zh-Hant" is "Hant"), or null without one. */
+    fun region(code: String?): String? {
+        val value = code?.trim()?.replace('_', '-') ?: return null
+        if (value.equals("pob", ignoreCase = true)) return "BR"
+        val part = value.split('-').drop(1).firstOrNull { part ->
+            (part.length in 2..4 && part.all { it.isLetter() }) || (part.length == 3 && part.all { it.isDigit() })
+        } ?: return null
+        return if (part.length == 4) part.lowercase().replaceFirstChar { it.uppercase() } else part.uppercase()
     }
 
     private val flags = mapOf(
@@ -115,16 +264,28 @@ object Languages {
 
     private val regionFlags = mapOf(
         "en-us" to "us", "es-419" to "mx", "es-mx" to "mx", "fr-ca" to "ca", "pt-br" to "br", "zh-hk" to "hk",
-        "zh-tw" to "tw",
+        "zh-tw" to "tw", "zh-hant" to "tw", "zh-hans" to "cn",
     )
 
     /** Two-letter code for compact labels ("de"), or null if unknown. */
     fun iso2(code: String?): String? = iso3(code)?.let { byIso3[it]?.language }
 
-    /** Language name in the display language, e.g. "Deutsch" / "German". */
-    fun name(code: String?, display: Locale = Locale.getDefault()): String? {
-        val iso3 = iso3(code) ?: return null
-        val name = byIso3[iso3]?.getDisplayLanguage(display)?.takeIf { it.isNotEmpty() } ?: return null
+    /**
+     * Language name in the display language, e.g. "Deutsch" / "German"; with
+     * a [region] (or one in the tag) "Französisch (Kanada)".
+     */
+    fun name(code: String?, display: Locale = Locale.getDefault(), region: String? = null): String? {
+        val language = iso3(code)?.let(::locale) ?: return null
+        // The country the language's flag stands for needs no name: "Französisch", not "Französisch (Frankreich)".
+        val variant = (region ?: region(code))?.takeUnless { it.equals(flags[iso3(code)], ignoreCase = true) }
+        val locale = variant?.let {
+            runCatching {
+                val builder = Locale.Builder().setLanguage(language.language)
+                if (it.length == 4) builder.setScript(it) else builder.setRegion(it)
+                builder.build()
+            }.getOrNull()
+        } ?: language
+        val name = locale.getDisplayName(display).takeIf { it.isNotEmpty() } ?: return null
         return name.replaceFirstChar { it.titlecase(display) }
     }
 }
@@ -149,40 +310,128 @@ fun subtitleFormat(codec: String?): String? = when (val c = codec?.lowercase()) 
     else -> c.uppercase()
 }
 
+/** What sets a track apart beyond its language, shown as pills. */
+enum class TrackMark { Forced, HearingImpaired, ClosedCaptions, Commentary, AudioDescription }
+
 /**
- * Small facts shown next to a track's language in the picker. Audio: the
- * format ("2.0 (AC3)") and the stream name when it says something new
- * ("Commentary"). Subtitles: the stream name without what the label already
- * says ("German (CR/ASS)(forced)" becomes "CR/ASS"), and the format unless
- * the name already contains it.
+ * A track as the pickers show it, the same way as the Glacier web plugin:
+ * [name] is the language in the display language, [facts] the quieter
+ * second line, [marks] the pills. External and default follow the facts in
+ * the UI, which has the words for them.
  */
-fun trackBadges(track: Track, subtitle: Boolean, locales: List<Locale>): List<String> {
+data class TrackDescription(val name: String, val facts: List<String>, val marks: List<TrackMark>)
+
+/**
+ * Audio facts: the format ("DTS-HD MA 5.1"), then the stream name where it
+ * says more ("Director's Cut", not "DTS 5.1 @ 768 kbps" or "Stereo").
+ * Subtitle facts: the stream name without what the row already says
+ * ("German (CR/ASS)(forced)" becomes "CR/ASS"), then the format unless the
+ * name has it. Without a language the stream name leads, else the format.
+ */
+fun describeTrack(track: Track, subtitle: Boolean, locales: List<Locale>): TrackDescription {
     val languageNames = (locales + Locale.ENGLISH).mapNotNull { Languages.name(track.language, it) }.distinct()
-    return if (subtitle) {
-        val known = languageNames + listOf("forced", "erzwungen") + if (track.hearingImpaired) listOf("SDH", "CC") else emptyList()
-        val name = cleanTrackTitle(track.title, known)
-        val format = subtitleFormat(track.codec)
-        listOfNotNull(name, format?.takeUnless { name != null && name.contains(it, ignoreCase = true) })
-    } else {
-        val format = listOfNotNull(channelLayout(track.channels), codecName(track.codec)?.let { "($it)" })
-            .joinToString(" ")
-            .takeIf { it.isNotEmpty() }
-        // Names like "DTS 5.1 @ 768 kbps" or "Stereo" only repeat the format.
-        val name = cleanTrackTitle(track.title, languageNames + listOf("stereo", "mono", "surround"))
-            ?.takeIf { title -> title.none { it.isDigit() } && title.count { it.isLetter() } >= 3 }
-        listOfNotNull(format, name)
+    val marks = buildList {
+        if (subtitle && track.forced) add(TrackMark.Forced)
+        if (subtitle && track.hearingImpaired) add(TrackMark.HearingImpaired)
+        if (subtitle && track.closedCaptions) add(TrackMark.ClosedCaptions)
+        if (!subtitle && track.commentary) add(TrackMark.Commentary)
+        if (!subtitle && track.audioDescription) add(TrackMark.AudioDescription)
     }
+    var title: String?
+    var format: String?
+    if (subtitle) {
+        // "Full" only says the track is not the forced one, which the missing mark already says.
+        val known = languageNames + regionWords(track.language, track.region) +
+            listOf("forced", "erzwungen", "full", "vollständig", "komplett") +
+            (if (track.hearingImpaired) SDH_WORDS else emptyList()) +
+            if (track.closedCaptions) CC_WORDS else emptyList()
+        title = cleanTrackTitle(track.title, known)
+        format = subtitleFormat(track.codec)
+    } else {
+        // The format is in the facts already: "BTM TrueHD Atmos" says "BTM".
+        val codec = audioFormat(track.codec, track.profile, channels = null)
+        val known = languageNames + regionWords(track.language, track.region) + listOf("stereo", "mono", "surround") +
+            listOfNotNull(codec) + codec?.split(' ').orEmpty() +
+            (if (track.commentary) COMMENTARY_WORDS else emptyList()) +
+            if (track.audioDescription) DESCRIPTION_WORDS else emptyList()
+        // Names like "DTS 5.1 @ 768 kbps" only repeat the format.
+        title = cleanTrackTitle(track.title, known)?.takeIf { name -> name.none { it.isDigit() } && name.count { it.isLetter() } >= 3 }
+        format = audioFormat(track.codec, track.profile, track.channels)
+    }
+    var name = Languages.name(track.language, locales.firstOrNull() ?: Locale.getDefault(), track.region)
+    if (name == null) {
+        name = title ?: format ?: track.fallbackTitle ?: "—"
+        if (name == title) title = null else format = null
+    }
+    val facts = if (subtitle) {
+        listOfNotNull(title, format?.takeUnless { title != null && title.contains(it, ignoreCase = true) })
+    } else {
+        listOfNotNull(format, title)
+    }
+    return TrackDescription(name, facts, marks)
+}
+
+/**
+ * The audio format as people know it, then the channels: "DTS-HD MA 5.1",
+ * "TrueHD Atmos 7.1", "AAC 2.0". DTS names its kind in the profile.
+ */
+fun audioFormat(codec: String?, profile: String?, channels: Int?): String? {
+    val c = codec?.lowercase().orEmpty()
+    val p = profile?.trim().orEmpty()
+    var name = if (c.startsWith("pcm")) "PCM" else codecName(codec)
+    if (p.isNotEmpty() && (c == "dts" || c == "dca")) {
+        name = p
+    } else if (name != null && p.contains("atmos", ignoreCase = true)) {
+        name += " Atmos"
+    }
+    return listOfNotNull(name, channelLayout(channels)).joinToString(" ").takeIf { it.isNotEmpty() }
 }
 
 /** [title] without the [known] words, empty brackets and stray separators; null when nothing is left. */
 internal fun cleanTrackTitle(title: String?, known: List<String>): String? {
     var text = title ?: return null
-    known.forEach { word -> text = text.replace(Regex("(?<![\\p{L}])" + Regex.escape(word) + "(?![\\p{L}])", RegexOption.IGNORE_CASE), " ") }
-    text = text.replace(Regex("[(\\[]\\s*[)\\]]"), " ")
-        .replace(Regex("[()\\[\\]]"), " ")
-        .replace(Regex("\\s+"), " ")
+    known.forEach { word -> text = replaceWord(text, word) }
+    text = text.replace(EMPTY_BRACKETS, " ")
+        .replace(BRACKETS, " ")
+        .replace(SPACES, " ")
         .trim(' ', '-', '_', '·', ',', '/', '|', ':', '.')
     return text.takeIf { it.isNotEmpty() }
+}
+
+private val EMPTY_BRACKETS = Regex("[(\\[]\\s*[)\\]]")
+private val BRACKETS = Regex("[()\\[\\]]")
+private val SPACES = Regex("\\s+")
+
+// Whole words, ignoring case, found without Regex: a pattern with \p{L} and
+// IGNORE_CASE takes about 20 ms to compile on a Fire TV, so one per word and
+// track held the track sheet back for seconds.
+
+/** Whether [text] holds one of [words] as a whole word ("ad" in "German AD", not in "Advanced"). */
+private fun hasWord(text: String?, words: List<String>): Boolean =
+    text != null && words.any { wordAt(text, it, 0) >= 0 }
+
+/** [text] with every whole-word [word] replaced by a space. */
+private fun replaceWord(text: String, word: String): String {
+    val out = StringBuilder()
+    var from = 0
+    while (true) {
+        val at = wordAt(text, word, from)
+        if (at < 0) break
+        out.append(text, from, at).append(' ')
+        from = at + word.length
+    }
+    return out.append(text, from, text.length).toString()
+}
+
+/** Where [word] next stands as a whole word in [text] from [from] on, or -1. */
+private fun wordAt(text: String, word: String, from: Int): Int {
+    var at = text.indexOf(word, from, ignoreCase = true)
+    while (at >= 0) {
+        val end = at + word.length
+        if ((at == 0 || !text[at - 1].isLetter()) && (end == text.length || !text[end].isLetter())) return at
+        at = text.indexOf(word, at + 1, ignoreCase = true)
+    }
+    return -1
 }
 
 /** Short codec names as the design writes them: "DTS", "AAC", "EAC3", "TrueHD". */

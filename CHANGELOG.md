@@ -18,6 +18,16 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### Improved
+- Audio and subtitle tracks read the same as in the Glacier web plugin. Each row shows the language, with the format and the track's name in a quieter second line. Default and external tracks say so there too
+- Forced, hearing impaired, closed caption, commentary and audio description tracks carry a mark at the end of the row. Glacier also finds them by the track's name when the file does not flag them. The audio and subtitle buttons on the detail page show the mark as an icon next to the language
+- Language variants show their region and flag, such as French (Canada), Portuguese (Brazil) or Dutch (Belgium). Chinese shows its script, traditional or simplified, and Cantonese tracks are named as such. Glacier reads all this from the language tag or the track's name. The usual variant of a language, such as French from France, shows no addition
+- Audio formats are named in full, such as DTS-HD MA 5.1 or TrueHD Atmos 7.1
+- A commentary or audio description track is no longer picked on its own because the file marks it as default. The main track of the same language plays instead
+
+### Fixed
+- The track sheet opens at once on titles with many audio or subtitle tracks. Before, it could take several seconds on a Fire TV
+
 ## [0.5.0-beta.3] - 2026-10-15
 
 ### New

@@ -6,6 +6,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.data.media.Track
 import io.github.glacier_jellyfin.androidtv.core.data.media.fullInsteadOfForced
+import io.github.glacier_jellyfin.androidtv.core.data.media.mainInsteadOfExtra
 import io.github.glacier_jellyfin.androidtv.core.data.media.toTrack
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
@@ -218,6 +219,15 @@ class PlaybackRepository @Inject constructor(
 
         val baseUrl = checkNotNull(api.baseUrl).trimEnd('/')
         val streams = source.mediaStreams.orEmpty()
+        // The server's own audio pick may be a commentary the file marked as default: ask again with the main track.
+        if (audioIndex == null) {
+            val serverPick = source.defaultAudioStreamIndex
+            val main = mainInsteadOfExtra(serverPick, streams.filter { it.type == MediaStreamType.AUDIO }.map { it.toTrack() })
+            if (main != null && main != serverPick) {
+                Log.i(TAG, "Audio of $itemId: main track $main instead of extra track $serverPick")
+                return@withContext open(itemId, startMs, main, subtitleIndex, segments)
+            }
+        }
         // The server's own pick may be a forced track that shows next to nothing: ask again with the full one.
         if (subtitleIndex == null) {
             val serverPick = source.defaultSubtitleStreamIndex?.takeIf { it >= 0 }

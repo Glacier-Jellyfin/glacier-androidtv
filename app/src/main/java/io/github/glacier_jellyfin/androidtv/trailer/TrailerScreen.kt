@@ -500,9 +500,9 @@ private fun TrailerOsd(
 private fun SubtitlePanel(state: TrailerUiState, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
     val off = stringResource(R.string.track_off)
     val languages = listOf<String?>(null) + state.subtitleTracks.map { it.language }
-    val rows = listOf(TrackRow(off, null, emptyList(), off)) + state.subtitleTracks.map { track ->
+    val rows = listOf(TrackRow(off, null)) + state.subtitleTracks.map { track ->
         val name = subtitleName(track)
-        TrackRow(name, Languages.flag(track.language), emptyList(), name)
+        TrackRow(name, Languages.flag(track.language))
     }
     TrackPanel(
         title = stringResource(R.string.track_subtitles),

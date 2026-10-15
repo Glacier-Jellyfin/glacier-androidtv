@@ -291,8 +291,13 @@
     <string name="track_audio">Audio track</string>
     <string name="track_subtitles">Subtitles</string>
     <string name="track_off">Off</string>
-    <string name="track_forced">forced</string>
-    <string name="track_sdh" translatable="false">SDH</string>
+    <string name="track_forced">Forced</string>
+    <string name="track_sdh">SDH</string>
+    <string name="track_cc" translatable="false">CC</string>
+    <string name="track_commentary">Commentary</string>
+    <string name="track_audio_description">Audio description</string>
+    <string name="track_external">External</string>
+    <string name="track_default">Default</string>
     <string name="track_next_playback">Applies to the next playback</string>
     <string name="track_audio_set">Audio track: %1$s</string>
     <string name="track_subtitles_set">Subtitles: %1$s</string>

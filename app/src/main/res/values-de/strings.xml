@@ -286,7 +286,12 @@
     <string name="track_audio">Tonspur</string>
     <string name="track_subtitles">Untertitel</string>
     <string name="track_off">Aus</string>
-    <string name="track_forced">erzwungen</string>
+    <string name="track_forced">Erzwungen</string>
+    <string name="track_sdh">Hörgeschädigt</string>
+    <string name="track_commentary">Kommentar</string>
+    <string name="track_audio_description">Audiodeskription</string>
+    <string name="track_external">Extern</string>
+    <string name="track_default">Standard</string>
     <string name="track_next_playback">Gilt für die nächste Wiedergabe</string>
     <string name="track_audio_set">Tonspur: %1$s</string>
     <string name="track_subtitles_set">Untertitel: %1$s</string>

@@ -6,8 +6,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -15,6 +13,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,6 +44,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -53,11 +57,10 @@ import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.CastMember
 import io.github.glacier_jellyfin.androidtv.core.data.media.Languages
-import io.github.glacier_jellyfin.androidtv.core.data.media.trackBadges
+import io.github.glacier_jellyfin.androidtv.core.data.media.TrackMark
+import io.github.glacier_jellyfin.androidtv.core.data.media.describeTrack
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.Track
-import io.github.glacier_jellyfin.androidtv.core.data.media.channelLayout
-import io.github.glacier_jellyfin.androidtv.core.data.media.codecName
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierCard
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
@@ -73,65 +76,79 @@ import io.github.glacier_jellyfin.androidtv.ui.MarqueeText
 import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 
 /**
- * One line of [TrackPanel]: [label] with its [flag] and [badges];
- * [full] is the complete name for the confirmation toast.
+ * One line of [TrackPanel]: [label] with its [flag], the quieter [facts]
+ * below it and the [marks] as pills; [full] is the name for the
+ * confirmation toast.
  */
-data class TrackRow(val label: String, val flag: String?, val badges: List<String>, val full: String)
+data class TrackRow(
+    val label: String,
+    val flag: String?,
+    val facts: String? = null,
+    val marks: List<String> = emptyList(),
+    val full: String = label,
+)
 
 /** Rows for [TrackPanel] and the stream index behind each; subtitles start with "Off" (index null). */
 data class TrackOptions(val rows: List<TrackRow>, val indices: List<Int?>)
 
 @Composable
 fun trackOptions(tracks: List<Track>, subtitle: Boolean): TrackOptions {
-    val locale = LocalConfiguration.current.locales[0]
-    val off = stringResource(R.string.track_off)
-    val rows = (if (subtitle) listOf(TrackRow(off, null, emptyList(), off)) else emptyList()) +
-        tracks.map { track ->
-            val full = trackLabel(track, subtitle)
-            // Audio rows show the format as a badge, so the label keeps just the language.
-            val label = if (subtitle) full else Languages.name(track.language, locale) ?: full
-            TrackRow(label, Languages.flag(track.language), trackBadges(track, subtitle, listOf(locale)), full)
-        }
+    val rows = (if (subtitle) listOf(TrackRow(stringResource(R.string.track_off), null)) else emptyList()) +
+        tracks.map { trackRow(it, subtitle) }
     val indices = (if (subtitle) listOf<Int?>(null) else emptyList()) + tracks.map { it.index }
     return TrackOptions(rows, indices)
 }
 
-/** "Deutsch 5.1 (DTS)" for audio, "Englisch SDH" / "Deutsch (erzwungen)" for subtitles. */
+/** A track as the web plugin shows it: "Deutsch", below it "DTS-HD MA 5.1 · Standard", pills "Kommentar". */
 @Composable
-fun trackLabel(track: Track, subtitle: Boolean): String {
-    val locale = LocalConfiguration.current.locales[0]
-    val name = Languages.name(track.language, locale)
-    return if (!subtitle) {
-        // Without a language, channels and codec say more than the server's own description.
-        listOfNotNull(name, channelLayout(track.channels), codecName(track.codec)?.let { "($it)" })
-            .joinToString(" ")
-            .ifEmpty { track.fallbackTitle ?: "—" }
-    } else {
-        val language = name ?: track.fallbackTitle ?: "—"
-        buildString {
-            append(language)
-            if (track.forced) append(" (").append(stringResource(R.string.track_forced)).append(')')
-            if (track.hearingImpaired) append(' ').append(stringResource(R.string.track_sdh))
-        }
-    }
+fun trackRow(track: Track, subtitle: Boolean): TrackRow {
+    val description = describeTrack(track, subtitle, listOf(LocalConfiguration.current.locales[0]))
+    val marks = description.marks.map { stringResource(it.label) }
+    val facts = description.facts +
+        listOfNotNull(
+            stringResource(R.string.track_external).takeIf { track.external },
+            stringResource(R.string.track_default).takeIf { track.default },
+        )
+    return TrackRow(
+        label = description.name,
+        flag = Languages.flag(track.language, track.region),
+        facts = facts.joinToString(" · ").ifEmpty { null },
+        marks = marks,
+        full = (listOf(description.name) + marks).joinToString(" · "),
+    )
 }
 
-/** The short chip form: with a flag, the language name is left out ("5.1 (DTS)"). */
-@Composable
-fun trackChipLabel(track: Track?, subtitle: Boolean): Pair<String, String?> {
-    if (track == null) return stringResource(R.string.track_off) to null
-    val iso = Languages.flag(track.language)
-    val full = trackLabel(track, subtitle)
-    if (iso == null) return full to null
-    val locale = LocalConfiguration.current.locales[0]
-    val language = Languages.name(track.language, locale).orEmpty()
-    // The flag already says the language: a plain subtitle shows what tells it apart ("CR/ASS", "PGS").
-    if (subtitle && !track.forced && !track.hearingImpaired) {
-        trackBadges(track, subtitle = true, locales = listOf(locale)).firstOrNull()?.let { return it to iso }
+private val TrackMark.label: Int
+    get() = when (this) {
+        TrackMark.Forced -> R.string.track_forced
+        TrackMark.HearingImpaired -> R.string.track_sdh
+        TrackMark.ClosedCaptions -> R.string.track_cc
+        TrackMark.Commentary -> R.string.track_commentary
+        TrackMark.AudioDescription -> R.string.track_audio_description
     }
-    val rest = full.removePrefix(language).trim().removeSurrounding("(", ")")
-    return (rest.ifEmpty { language }.replaceFirstChar { it.uppercase() }) to iso
+
+/** The name and its marks: "Deutsch · Erzwungen". */
+@Composable
+fun trackLabel(track: Track, subtitle: Boolean): String = trackRow(track, subtitle).full
+
+/** What a track chip shows: the language (or the track's name) with its flag, the marks as icons. */
+data class TrackChipContent(val label: String, val flag: String?, val marks: List<TrackMark> = emptyList())
+
+@Composable
+fun trackChipContent(track: Track?, subtitle: Boolean): TrackChipContent {
+    if (track == null) return TrackChipContent(stringResource(R.string.track_off), null)
+    val description = describeTrack(track, subtitle, listOf(LocalConfiguration.current.locales[0]))
+    return TrackChipContent(description.name, Languages.flag(track.language, track.region), description.marks)
 }
+
+private val TrackMark.icon: ImageVector
+    get() = when (this) {
+        TrackMark.Forced -> GlacierIcons.Signpost
+        TrackMark.HearingImpaired -> GlacierIcons.EarOff
+        TrackMark.ClosedCaptions -> GlacierIcons.ClosedCaption
+        TrackMark.Commentary -> GlacierIcons.Comment
+        TrackMark.AudioDescription -> GlacierIcons.AudioDescription
+    }
 
 /**
  * A language's flag in the design's style (27×18 in a rounded mist outline),
@@ -164,7 +181,7 @@ fun LanguageFlag(flag: String, modifier: Modifier = Modifier, width: Int = 24, h
  * light glass with a clear edge so it stays readable over a bright backdrop.
  */
 @Composable
-fun TrackChip(label: String, flag: String?, audio: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun TrackChip(content: TrackChipContent, audio: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -182,8 +199,19 @@ fun TrackChip(label: String, flag: String?, audio: Boolean, onClick: () -> Unit,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Icon(if (audio) GlacierIcons.Speaker else GlacierIcons.Subtitles, contentDescription = null, tint = foreground, modifier = Modifier.size(19.dp))
-        if (flag != null) LanguageFlag(flag)
-        Text(label, style = GlacierText.body(17), color = foreground)
+        content.flag?.let { LanguageFlag(it) }
+        // Episode pages leave the chips little room: one line, cut short, the mark icons keep their place.
+        Text(
+            content.label,
+            style = GlacierText.body(17),
+            color = foreground,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        content.marks.forEach { mark ->
+            Icon(mark.icon, contentDescription = stringResource(mark.label), tint = foreground, modifier = Modifier.size(19.dp))
+        }
     }
 }
 
@@ -228,12 +256,17 @@ fun TrackPanel(
                 Text(title, style = GlacierText.display(27), color = GlacierColors.Ice)
                 Text(subtitle, style = GlacierText.body(17), color = GlacierColors.Mist)
             }
-            Column(
-                // The focused option grows by 2 %; the vertical padding keeps it from being clipped by the scroll area.
-                Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(vertical = 4.dp),
+            // Lazy: a title with 30 subtitles would build every row, flag and all, before the sheet shows.
+            // It opens a few rows above the current track, so that one is built and gets the focus.
+            val list = rememberLazyListState(initialFirstVisibleItemIndex = (selected - 3).coerceAtLeast(0))
+            LazyColumn(
+                Modifier.weight(1f, fill = false),
+                state = list,
+                // The focused option grows by 2 %; the vertical padding keeps it from being clipped by the list.
+                contentPadding = PaddingValues(vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                options.forEachIndexed { index, row ->
+                itemsIndexed(options) { index, row ->
                     TrackOption(
                         row = row,
                         selected = index == selected,
@@ -244,7 +277,11 @@ fun TrackPanel(
             }
         }
     }
-    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    LaunchedEffect(Unit) {
+        // The list builds its rows while measuring, after this effect starts.
+        withFrameNanos { }
+        runCatching { focus.requestFocus() }
+    }
 }
 
 @Composable
@@ -268,13 +305,24 @@ private fun TrackOption(row: TrackRow, selected: Boolean, onClick: () -> Unit, m
             .background(if (focused) accent else GlacierColors.GlassFill)
             .border(2.dp, if (focused) accent else GlacierColors.GlassBorder, shape)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         if (row.flag != null) LanguageFlag(row.flag, width = 27, height = 18)
-        Text(row.label, style = GlacierText.body(19), color = foreground, modifier = Modifier.weight(1f))
-        row.badges.forEach { TrackBadge(it, focused) }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(row.label, style = GlacierText.body(19), color = foreground)
+            row.facts?.let {
+                Text(
+                    it,
+                    style = GlacierText.body(15),
+                    color = if (focused) GlacierColors.Void.copy(alpha = 0.7f) else GlacierColors.Mist,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        row.marks.forEach { TrackBadge(it, focused) }
         // The check keeps its place on every row, so the badges line up whether a row is selected or not.
         Box(Modifier.size(22.dp)) {
             if (selected) Icon(GlacierIcons.Check, contentDescription = null, tint = foreground, modifier = Modifier.size(22.dp))
@@ -282,7 +330,7 @@ private fun TrackOption(row: TrackRow, selected: Boolean, onClick: () -> Unit, m
     }
 }
 
-/** A fact about a track ("2.0 (AC3)", "CR/ASS") at the end of its row. */
+/** A mark of a track ("Erzwungen", "Kommentar") at the end of its row. */
 @Composable
 private fun TrackBadge(text: String, focused: Boolean) {
     Box(

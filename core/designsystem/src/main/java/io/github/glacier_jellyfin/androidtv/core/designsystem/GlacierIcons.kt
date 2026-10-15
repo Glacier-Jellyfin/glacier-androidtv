@@ -109,7 +109,32 @@ object GlacierIcons {
         "M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z",
         "M7 13h4", "M15 13h2", "M7 9h2", "M13 9h4",
     )
-    private const val CIRCLE = "M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"
+    // Marks of a track (TrackMark).
+    /** Forced subtitles: mostly signs (Lucide signpost). */
+    val Signpost = icon(
+        "M12 13v8", "M12 3v3",
+        "M18 6a2 2 0 0 1 1.387.56l2.307 2.22a1 1 0 0 1 0 1.44l-2.307 2.22A2 2 0 0 1 18 13H6a2 2 0 0 1-1.387-.56l-2.306-2.22a1 1 0 0 1 0-1.44l2.306-2.22A2 2 0 0 1 6 6z",
+    )
+    /** Subtitles for the hearing impaired (Lucide ear-off). */
+    val EarOff = icon(
+        "M6 18.5a3.5 3.5 0 1 0 7 0c0-1.57.92-2.52 2.04-3.46",
+        "M6 8.5c0-.75.13-1.47.36-2.14",
+        "M8.8 3.15A6.5 6.5 0 0 1 19 8.5c0 1.63-.44 2.81-1.09 3.76",
+        "M12.5 6A2.5 2.5 0 0 1 15 8.5M10 13a2 2 0 0 0 1.82-1.18",
+        "M2 2l20 20",
+    )
+    /** Closed captions (Lucide closed-caption). */
+    val ClosedCaption = icon("M10 9.17a3 3 0 1 0 0 5.66", "M17 9.17a3 3 0 1 0 0 5.66", "M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z")
+    /** An audio commentary. */
+    val Comment = icon("M7.9 20A9 9 0 1 0 4 16.1L2 22Z")
+    /** An audio description for the blind (Lucide ad). */
+    val AudioDescription = icon(
+        "M10 13H6",
+        "M10 15v-4a2 2 0 0 0-4 0v4",
+        "M14 14.5a.5.5 0 0 0 .5.5h1a2.5 2.5 0 0 0 2.5-2.5v-1A2.5 2.5 0 0 0 15.5 9h-1a.5.5 0 0 0-.5.5z",
+        "M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z",
+    )
+    private const val CIRCLE ="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"
     private const val SEEN_CHECK = "M8.2 12.3l2.5 2.6 5.1-5.4"
     val Seen = icon(CIRCLE, SEEN_CHECK, strokeWidth = 1.9f)
     val SeenFilled = filled(CIRCLE, strokeWidth = 1.8f)
