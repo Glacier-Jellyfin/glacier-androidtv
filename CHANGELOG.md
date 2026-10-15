@@ -18,6 +18,8 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.5.0-beta.6] - 2026-10-15
+
 ### Fixed
 - A transcoded title plays the audio track the detail page shows. Before, the server could send the track played last time or its default, such as German instead of Japanese
 
