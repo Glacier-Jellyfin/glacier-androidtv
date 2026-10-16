@@ -47,6 +47,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
+import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
@@ -65,6 +66,7 @@ import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 import io.github.glacier_jellyfin.androidtv.ui.ratingText
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
+import io.github.glacier_jellyfin.androidtv.ui.yearText
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 
@@ -109,8 +111,14 @@ fun CollectionDetail(state: DetailState, details: ItemDetails, viewModel: Detail
                                         color = accent,
                                     )
                                 }
+                                val shows = items.count { it.kind == ItemKind.Series }
+                                val kindLabel = when {
+                                    shows == 0 -> stringResource(R.string.library_movies)
+                                    shows == items.size -> stringResource(R.string.library_shows)
+                                    else -> null
+                                }
                                 Text(
-                                    stringResource(R.string.library_movies) + " · " + pluralStringResource(R.plurals.count_titles, items.size, items.size),
+                                    listOfNotNull(kindLabel, pluralStringResource(R.plurals.count_titles, items.size, items.size)).joinToString(" · "),
                                     style = GlacierText.body(19),
                                     color = GlacierColors.Mist,
                                 )
@@ -174,7 +182,13 @@ fun CollectionDetail(state: DetailState, details: ItemDetails, viewModel: Detail
                 if (items.isNotEmpty()) {
                     item(key = "movies") {
                         MediaRow(
-                            title = stringResource(R.string.collection_movies),
+                            title = stringResource(
+                                when {
+                                    items.none { it.kind == ItemKind.Series } -> R.string.collection_movies
+                                    items.all { it.kind == ItemKind.Series } -> R.string.collection_shows
+                                    else -> R.string.collection_titles
+                                },
+                            ),
                             subtitle = stringResource(R.string.collection_chronological),
                             bottomPadding = 110,
                             modifier = Modifier.padding(top = 46.dp),
@@ -194,7 +208,8 @@ private fun CollectionFacts(collection: MediaItem, items: List<MediaItem>) {
     val accent = LocalAccent.current.main
     val ratings = items.mapNotNull { it.communityRating }
     val years = items.mapNotNull { it.year }
-    val minutes = items.sumOf { it.runtimeMinutes ?: 0 }
+    // A show's runtime is one episode's: only movies add up to a total.
+    val minutes = items.filter { it.kind != ItemKind.Series }.sumOf { it.runtimeMinutes ?: 0 }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
         if (ratings.isNotEmpty()) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -236,15 +251,17 @@ private fun PosterStack(items: List<MediaItem>) {
     }
 }
 
-/** Movie of a collection: poster with its watched state, title and "year · runtime". */
+/** Title of a collection: poster with its watched state, title and "year · runtime", or the years a show ran and its unwatched episodes. */
 @Composable
 private fun CollectionCard(item: MediaItem, onClick: () -> Unit) {
+    val show = item.kind == ItemKind.Series
     GridCard(
         imageUrl = item.posterUrl,
         title = item.title,
-        caption = listOfNotNull(item.year?.toString(), item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }).joinToString(" · "),
+        caption = if (show) yearText(item) else listOfNotNull(item.year?.toString(), item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }).joinToString(" · "),
         onClick = onClick,
         watched = item.played,
+        count = item.unwatchedCount.takeIf { show && !item.played },
         locked = item.showsLock(),
     )
 }

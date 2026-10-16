@@ -295,9 +295,9 @@ class DetailViewModel @Inject constructor(
         _state.update { it.copy(collectionItems = items) }
     }
 
-    /** Design: a collection plays the movie in progress, else the first one not yet watched. */
+    /** Design: a collection plays the title in progress, else the first one not yet watched. People or seasons in it do not play. */
     fun collectionNext(): MediaItem? {
-        val items = _state.value.collectionItems
+        val items = _state.value.collectionItems.filter { it.kind in PLAYABLE_IN_COLLECTION }
         return items.firstOrNull { it.progress != null } ?: items.firstOrNull { !it.played } ?: items.firstOrNull()
     }
 
@@ -339,7 +339,7 @@ class DetailViewModel @Inject constructor(
         val item = current.item ?: return
         val target = when (item.kind) {
             ItemKind.Series -> current.nextEpisode ?: current.episodes.firstOrNull() ?: return
-            ItemKind.Collection -> collectionNext() ?: return
+            ItemKind.Collection -> collectionNext()?.also { if (it.kind == ItemKind.Series) return playShow(it) } ?: return
             else -> item
         }
         // The tracks the chips show are the ones that play: the player takes them instead of working them out again.
@@ -347,6 +347,16 @@ class DetailViewModel @Inject constructor(
             current.selection?.let { trackSelections.set(item.id, it) }
         }
         navigate(PlayerRoute(target.id.toString(), fromStart))
+    }
+
+    /** A show of a collection plays where it stands; with nothing left to watch its page opens. */
+    private fun playShow(show: MediaItem) {
+        viewModelScope.launch {
+            val episode = runCatching { repository.nextEpisode(show.id) }
+                .onFailure { Log.w(TAG, "Loading the next episode failed", it) }
+                .getOrNull()
+            if (episode != null) navigate(PlayerRoute(episode.id.toString())) else openItem(show)
+        }
     }
 
     /** A video of the page (an artist's music video, a playlist's video), the rest of them following it. */
@@ -497,5 +507,6 @@ class DetailViewModel @Inject constructor(
 
     private companion object {
         const val TAG = "Detail"
+        val PLAYABLE_IN_COLLECTION = setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode, ItemKind.MusicVideo)
     }
 }

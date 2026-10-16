@@ -34,7 +34,10 @@ class LibraryQueryTest {
             listOf(LibraryScope.All, LibraryScope.Collections, LibraryScope.Genres),
             LibraryQuery.scopes(LibraryKind.Movies, inGenre = false),
         )
-        assertEquals(listOf(LibraryScope.All, LibraryScope.Genres), LibraryQuery.scopes(LibraryKind.Shows, inGenre = false))
+        assertEquals(
+            listOf(LibraryScope.All, LibraryScope.Collections, LibraryScope.Genres),
+            LibraryQuery.scopes(LibraryKind.Shows, inGenre = false),
+        )
         assertTrue(LibraryQuery(LibraryKind.Movies).filterable)
         assertFalse(LibraryQuery(LibraryKind.Movies, scope = LibraryScope.Genres).filterable)
     }
@@ -57,6 +60,13 @@ class LibraryQueryTest {
         assertFalse(LibraryQuery(LibraryKind.Movies, unwatchedOnly = true, genreId = java.util.UUID.randomUUID()).unwatchedGrouped)
         assertFalse(LibraryQuery(LibraryKind.Shows, unwatchedOnly = true).unwatchedGrouped)
         assertFalse(LibraryQuery(LibraryKind.Movies).unwatchedGrouped)
+    }
+
+    @Test
+    fun `only the collections tab of shows narrows to collections holding a show`() {
+        assertTrue(LibraryQuery(LibraryKind.Shows, scope = LibraryScope.Collections).showCollections)
+        assertFalse(LibraryQuery(LibraryKind.Movies, scope = LibraryScope.Collections).showCollections)
+        assertFalse(LibraryQuery(LibraryKind.Shows).showCollections)
     }
 
     @Test

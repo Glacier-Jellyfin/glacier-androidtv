@@ -309,6 +309,8 @@
     <string name="collection_mark_all">Alle als gesehen</string>
     <string name="collection_unmark_all">Alle als ungesehen</string>
     <string name="collection_movies">Filme in dieser Sammlung</string>
+    <string name="collection_shows">Serien in dieser Sammlung</string>
+    <string name="collection_titles">Titel in dieser Sammlung</string>
     <string name="collection_chronological">chronologisch</string>
     <string name="favorite_tag">Favorit</string>
     <string name="person_born">geb. %1$s</string>

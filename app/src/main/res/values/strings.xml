@@ -315,6 +315,8 @@
     <string name="collection_mark_all">Mark all watched</string>
     <string name="collection_unmark_all">Mark all unwatched</string>
     <string name="collection_movies">Movies in this collection</string>
+    <string name="collection_shows">Shows in this collection</string>
+    <string name="collection_titles">Titles in this collection</string>
     <string name="collection_chronological">chronological</string>
     <string name="favorite_tag">Favorite</string>
     <string name="person_born">b. %1$s</string>

@@ -7,6 +7,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.artistApi
@@ -53,6 +55,10 @@ data class LibraryQuery(
     val unwatchedGrouped: Boolean
         get() = unwatchedOnly && groupsCollections
 
+    /** The collections tab of shows lists only the collections that hold a show. */
+    val showCollections: Boolean
+        get() = scope == LibraryScope.Collections && kind == LibraryKind.Shows
+
     /** The movies tab shows collections in place of their movies. Filtered, the titles themselves count, except for unwatched. */
     val groupsCollections: Boolean
         get() = scope == LibraryScope.All && kind == LibraryKind.Movies && groupCollections && genreId == null && !favoritesOnly
@@ -93,7 +99,7 @@ data class LibraryQuery(
         fun scopes(kind: LibraryKind, inGenre: Boolean): List<LibraryScope> = when {
             kind == LibraryKind.Music -> listOf(LibraryScope.Albums, LibraryScope.Artists, LibraryScope.Songs, LibraryScope.Playlists)
             inGenre -> listOf(LibraryScope.All)
-            kind == LibraryKind.Movies -> listOf(LibraryScope.All, LibraryScope.Collections, LibraryScope.Genres)
+            kind == LibraryKind.Movies || kind == LibraryKind.Shows -> listOf(LibraryScope.All, LibraryScope.Collections, LibraryScope.Genres)
             else -> listOf(LibraryScope.All, LibraryScope.Genres)
         }
     }
@@ -234,6 +240,49 @@ class LibraryRepository @Inject constructor(
         unwatched
     }
 
+    /** The last [showCollectionIds], the user they belong to, and when they were found. */
+    private var showCollectionsCache: Triple<String, Long, List<UUID>>? = null
+    private val showCollectionsLock = Mutex()
+
+    /**
+     * Collections that hold at least one show. The server groups only movies into
+     * collections and cannot filter collections by what they hold, so each collection
+     * is asked for its shows, a few at a time. Collections change rarely: the answer is
+     * kept for a while.
+     */
+    private suspend fun showCollectionIds(session: Session): List<UUID> = showCollectionsLock.withLock {
+        val userId = UUID.fromString(session.user.userId)
+        showCollectionsCache?.let { (user, at, ids) ->
+            if (user == session.user.userId && System.currentTimeMillis() - at < SHOW_COLLECTIONS_FRESH_MS) return@withLock ids
+        }
+        val collections = session.api.libraryApi.getItems(
+            userId = userId,
+            recursive = true,
+            includeItemTypes = listOf(BaseItemKind.BOX_SET),
+            enableImages = false,
+            enableUserData = false,
+        ).content.items.map { it.id }
+        val limit = Semaphore(SHOW_COLLECTIONS_PARALLEL)
+        val ids = coroutineScope {
+            collections.map { id ->
+                async {
+                    limit.withPermit {
+                        val shows = session.api.libraryApi.getItems(
+                            userId = userId,
+                            parentId = id,
+                            includeItemTypes = listOf(BaseItemKind.SERIES),
+                            limit = 0,
+                            enableTotalRecordCount = true,
+                        ).content.totalRecordCount
+                        id.takeIf { shows > 0 }
+                    }
+                }
+            }.awaitAll().filterNotNull()
+        }
+        showCollectionsCache = Triple(session.user.userId, System.currentTimeMillis(), ids)
+        ids
+    }
+
     private suspend fun fetch(
         session: Session,
         query: LibraryQuery,
@@ -250,6 +299,9 @@ class LibraryRepository @Inject constructor(
         // Music and playlists have no age ratings worth filtering on.
         val ages = if (query.kind == LibraryKind.Music || query.scope == LibraryScope.Playlists) null else ageFilter.limits()
         val order = listOf(if (query.orderDescending) SortOrder.DESCENDING else SortOrder.ASCENDING)
+        val only = if (query.showCollections) showCollectionIds(session) else emptyList()
+        // Asked without ids, the server would list every collection.
+        if (query.showCollections && only.isEmpty()) return BaseItemDtoQueryResult(items = emptyList(), totalRecordCount = 0, startIndex = 0)
         return when (query.scope) {
             LibraryScope.Genres -> session.api.genreApi.getGenres(
                 userId = userId,
@@ -279,6 +331,7 @@ class LibraryRepository @Inject constructor(
             else -> session.api.libraryApi.getItems(
                 userId = userId,
                 parentId = if (query.scope == LibraryScope.Playlists) null else query.libraryId,
+                ids = only,
                 recursive = true,
                 includeItemTypes = listOf(itemTypeFor(query)),
                 genreIds = listOfNotNull(query.genreId),
@@ -336,6 +389,10 @@ class LibraryRepository @Inject constructor(
         const val NAMES_PAGE = 2000
         /** The grid's first page and the A–Z rail ask for [unwatchedGrouped] together: one fetch serves both. */
         const val UNWATCHED_FRESH_MS = 3_000L
+        /** How long the collections holding shows are trusted before they are looked up again. */
+        const val SHOW_COLLECTIONS_FRESH_MS = 5 * 60_000L
+        /** Collections asked for their shows at once. */
+        const val SHOW_COLLECTIONS_PARALLEL = 8
         /** Beyond this many songs the rail covers only the first ones. */
         const val MAX_SONG_NAMES = 40_000
     }
