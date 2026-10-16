@@ -41,9 +41,16 @@
 - The TV switches to the frame rate of the video, so films play without judder
 - Extended audio codec support via FFmpeg (DTS, TrueHD and more) for more
   direct playback, and surround sound that stays surround over HDMI ARC
+- Live TV: channels with a live preview, a programme guide, recordings of
+  programmes and series, pause and rewind, and radio stations that play like
+  music
 - Music that keeps playing while you browse, with a mini player, queue,
   playlists, lyrics, instant mix and music videos
 - Local and YouTube trailers with subtitles, and theme songs on detail pages
+- A Favorites page with everything you marked with the heart, in the rows you
+  pick
+- Audio and subtitle tracks named in full, with their region and flag and
+  marks for forced, commentary, audio description or sing-along tracks
 - Audio and subtitle preferences synced with your Jellyfin account
 - Android TV home screen: "Watch next" and three optional channels (not on
   Fire TV)

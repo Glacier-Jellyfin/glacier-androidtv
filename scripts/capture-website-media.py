@@ -6,10 +6,14 @@ website/assets/screenshots/:
 
   home.jpg, library.jpg, detail.jpg, player-trickplay.jpg, player-upnext.jpg,
   music.jpg,
-  demo.mp4 and demo.webm (the hero video)
+  demo.mp4 and demo.webm (the hero video), demo.gif (the same for the README)
 
 Everything comes from the public Jellyfin demo server, whose library is public
 domain, so the pictures may be published. Never capture another server.
+
+livetv.jpg and livetv-guide.jpg do not come from this script. The demo server
+has no Live TV, so the maintainer approved shots from their own server, taken
+by hand on the emulator (English, default accent, scaled like the others).
 
 Before running:
   - an emulator with a 1920x1080 TV image is running (adb sees one device, or
@@ -52,7 +56,7 @@ SHOW_TITLE = "Pioneer One"
 MUSIC_ARTIST = ("Binärpilot", "Binaerpilot")
 # Movies placed in "Continue watching" before the run, with the share left to watch.
 CONTINUE = {"Night of the Living Dead": 0.3, "King Lear": 0.9, "Jungle Book": 0.6}
-NAV = ["Home", "Movie", "Show", "Music"]
+NAV = ["Home", "Favorites", "Movie", "Show", "Music"]
 SHOTS = ["home", "video", "library", "detail", "trickplay", "upnext", "music"]
 
 # The up-next card appears 30 s before the end (UpNextMode.FALLBACK_MS); the
@@ -293,12 +297,13 @@ class Capture:
         k("DPAD_RIGHT", pause=1.4)
         k("DPAD_UP", pause=0.7)
         k("DPAD_UP", pause=0.8)
+        k("DPAD_RIGHT", pause=0.25)  # Favorites, passed on the way
         k("DPAD_RIGHT", pause=0.6)
         k("DPAD_CENTER", pause=3.6)  # the library opens with the first card focused
         k("DPAD_RIGHT", pause=0.8)
         k("DPAD_RIGHT", pause=1.0)
         k("DPAD_CENTER", pause=3.8)
-        k("DPAD_DOWN", pause=1.8)
+        k("DPAD_DOWN", pause=2.6)
         self.d.shell("pkill -INT screenrecord")
         recorder.wait(timeout=30)
         time.sleep(1)
@@ -311,7 +316,11 @@ class Capture:
                      "-crf", "27", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(OUT / "demo.mp4")])
         self.encode(["-ss", "1", "-i", str(raw), "-vf", scale, "-an", "-c:v", "libvpx-vp9", "-crf", "40",
                      "-b:v", "0", "-row-mt", "1", str(OUT / "demo.webm")])
-        print("  demo.mp4, demo.webm")
+        # The README shows the same animation as a GIF.
+        self.encode(["-i", str(OUT / "demo.mp4"), "-vf",
+                     "fps=15,scale=800:450:flags=lanczos,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle",
+                     str(OUT / "demo.gif")])
+        print("  demo.mp4, demo.webm, demo.gif")
 
     def library(self) -> None:
         self.start_app()
