@@ -18,20 +18,50 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-16
+
 ### New
-- Sing-along subtitles carry a mark with a microphone icon. Glacier finds them by the track's name, such as Sing-Along, Karaoke or Lyrics
-- Shows have a Collections tab like movies. It lists the collections that hold shows, and a collection page plays a show from its next episode
+- Live TV. When your server has Live TV set up, a Live TV page joins the top navigation. It lists your channels with what runs on each now and what comes next. The focused channel plays without sound as a preview (#1)
+- Watch a channel full screen. Up and Down or the channel keys switch channels, Left opens the channel list, Right or the guide key shows what comes next. Type a channel number to jump to it, and the "last channel" key takes you back
+- Pause and rewind Live TV. A pause goes on where you stopped, and you can wind back to the moment you tuned in. OK, Play/Pause, Menu or the spool keys open the controls
+- A programme guide shows three hours of every channel at a time. OK watches what is on now or records a later programme
+- Record Live TV. Record a programme or the whole series from the guide or the player. Hold OK on a programme for all options (#1)
+- The Recordings view on the Live TV page lists what you recorded, the series you follow and what is planned. Programmes the server records carry a red dot in the guide
+- Radio. Radio stations have their own view on the Live TV page and play like music. They go on while you browse the app and show up in the mini player. A channel with sound and no picture moves to Radio by itself, and you can move channels by hand
+- Favorite channels and radio stations with the heart, and show only your favorites with the toggle on the right
+- Two Live TV rows for the home screen: On now and TV channels. Turn them on or off and move them in Settings › Home
+- The music player and the Live TV player have an Info button like the video player. It shows what plays, what this device plays and what the server sends
+- Songs stored without loss, like FLAC or ALAC, show a Lossless mark in the music player
+- A small options mark shows on the focused element when holding OK opens more options
+- Shows have a Collections tab like movies. A collection page plays a show from its next episode
 - A collection with mixed content shows one row per kind: movies, shows, seasons, episodes, music videos, music, artists and people. A new setting under Appearance puts movies and shows in one row
-- Show cards in the library count their unwatched episodes
+- Movies and shows filter by Unwatched and Favorites with toggles next to the sort. They work together and with All and Collections
+- Collections and show cards in the library count what you have not watched yet. A check mark shows once you have seen everything
+- Four new accent colours: Alpenglow, Dawn, Midnight sun and Twilight. Settings shows all accents in spectrum order
+- Forced, hearing impaired, closed caption, commentary, audio description and sing-along tracks carry a mark. Glacier also finds them by the track's name when the file does not flag them
 
 ### Improved
+- Audio and subtitle tracks read the same as in the Glacier web plugin. Each row shows the language, with the format and the track's name in a quieter second line
+- Language variants show their region and flag, such as French (Canada) or Portuguese (Brazil). Chinese shows its script, and Cantonese tracks are named as such
+- Audio formats are named in full, such as DTS-HD MA 5.1 or TrueHD Atmos 7.1
+- A commentary or audio description track is no longer picked on its own because the file marks it as default. The main track of the same language plays instead
+- Back in a library or on the Live TV page first goes up to the tabs at the top. Pressed again, it leaves the page
+- New music screensaver. Your queue runs across the screen as a row of covers with the current song in the middle
+- The music player shows the time of day as big as the video player does. Format and playback badges moved to the info panel
+- With many entries in the navigation, it moves aside for the mini player
+- Loaders sit in the middle of the space they fill, also in the library
+- Back while connecting to a server stops it and stays on the server list
 - Settings › Appearance lists the navigation entries last, after the library options
-- Back in a library first goes up to the tabs at the top, such as All, Collections and Genres. Pressed again, it leaves the page
 
 ### Fixed
+- A title starts with the audio and subtitle tracks its detail page shows. Before, it could start with other tracks, such as forced subtitles, or with the server's default audio when transcoding
+- Subtitles no longer stay empty when a file marks its forced track as the default. Tracks named Forced or Signs now show as forced
+- On Fire TV a title no longer fails to start when the TV switches its frame rate. Glacier waits a moment and plays on
+- Play in the spotlight on a show now plays its next episode instead of failing
+- A movie or episode marked as watched shows as watched right away in the library and on the page of its collection or show
 - A collection page counts only what can be watched. Songs, people and the like no longer add to the seen count, the total runtime or the genres
 - A season in a collection opens its show on that season
-- On Fire TV a title no longer fails to start when the TV switches its frame rate. Glacier waits a moment and plays on
+- Loading and error messages in the players and the trailer view stay readable on bright pictures
 
 ## [0.5.0-beta.6] - 2026-10-15
 
