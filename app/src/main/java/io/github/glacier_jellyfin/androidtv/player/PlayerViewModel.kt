@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
+import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.audio.AudioSink
@@ -173,6 +174,8 @@ class PlayerViewModel @Inject constructor(
     private var tracksPending = false
     /** Set once fMP4 segments failed for this title: it plays from MPEG-TS segments from then on. */
     private var segments: HlsSegments? = null
+    /** Output failures already recovered from for this title. */
+    private var outputRecoveries = 0
 
     @OptIn(UnstableApi::class)
     private val decoders = object : AnalyticsListener {
@@ -235,6 +238,20 @@ class PlayerViewModel @Inject constructor(
                 reopen(audio = _state.value.audioIndex, subtitle = _state.value.subtitleIndex)
                 return
             }
+            // While the TV changes picture mode it drops the audio link for a moment, which kills the AudioTrack,
+            // and Fire TV's decoder can refuse the new video surface. A fresh player plays on once the switch is over.
+            // Preparing the old one again can leave it stuck.
+            val player = _state.value.player
+            if (player != null && error.isOutputFailure() && outputRecoveries < MAX_OUTPUT_RECOVERIES) {
+                outputRecoveries++
+                Log.w(TAG, "Output failed, opening again ($outputRecoveries)", error)
+                _state.update { it.copy(loading = true) }
+                viewModelScope.launch {
+                    delay(OUTPUT_RECOVERY_DELAY_MS)
+                    if (_state.value.player === player) reopen(audio = _state.value.audioIndex, subtitle = _state.value.subtitleIndex)
+                }
+                return
+            }
             Log.w(TAG, "Playback failed", error)
             source?.let { playback.reportStopped(it, currentPositionMs(), failed = true) }
             _state.update { it.copy(failed = true, loading = false) }
@@ -261,6 +278,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun load() {
+        outputRecoveries = 0
         val selection = trackSelections.get(itemId)
         // A choice made on the detail page wins; "off" there is sent as -1 so the server does not pick one.
         open(startMs = null, audio = selection?.audio, subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE }, fromLastTitle = selection == null)
@@ -405,6 +423,7 @@ class PlayerViewModel @Inject constructor(
         itemId = item.id
         fromStart = false
         segments = null
+        outputRecoveries = 0
         autoSkipped.clear()
         _state.update {
             it.copy(
@@ -632,6 +651,16 @@ class PlayerViewModel @Inject constructor(
         /** The server's "no subtitles". */
         const val NO_SUBTITLE = -1
         /** How Media3 reports a segment it cannot parse; the negative start time arrives as an unexpected loader failure. */
+        const val MAX_OUTPUT_RECOVERIES = 3
+        /** Long enough for the TV to finish switching its picture mode. */
+        const val OUTPUT_RECOVERY_DELAY_MS = 1_500L
+
+        /** A dead AudioTrack, or a runtime error such as a decoder refusing its new surface or a player stuck after either. */
+        @OptIn(UnstableApi::class)
+        fun PlaybackException.isOutputFailure() =
+            errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED ||
+                errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED ||
+                (this is ExoPlaybackException && type == ExoPlaybackException.TYPE_UNEXPECTED)
         val FMP4_ERRORS = setOf(
             PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
             PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,

@@ -22,6 +22,9 @@ renders the reference separately.
 - Sing-along subtitles carry a mark with a microphone icon. Glacier finds them by the track's name, such as Sing-Along, Karaoke or Lyrics
 - Shows have a Collections tab like movies. It lists the collections that hold shows, and a collection page plays a show from its next episode
 
+### Fixed
+- On Fire TV a title no longer fails to start when the TV switches its frame rate. Glacier waits a moment and plays on
+
 ## [0.5.0-beta.6] - 2026-10-15
 
 ### Fixed
