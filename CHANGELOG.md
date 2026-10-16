@@ -18,6 +18,9 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### New
+- Sing-along subtitles carry a mark with a microphone icon. Glacier finds them by the track's name, such as Sing-Along, Karaoke or Lyrics
+
 ## [0.5.0-beta.6] - 2026-10-15
 
 ### Fixed
