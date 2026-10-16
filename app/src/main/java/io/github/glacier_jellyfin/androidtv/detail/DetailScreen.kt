@@ -239,6 +239,7 @@ private fun EpisodeDetail(state: DetailState, details: ItemDetails, viewModel: D
     val episode = details.item
     val listState = rememberLazyListState()
     val playFocus = remember { FocusRequester() }
+    var initialFocusDone by rememberSaveable(details.item.id) { mutableStateOf(false) }
     val locale = LocalConfiguration.current.locales[0]
 
     Box(Modifier.fillMaxSize().background(ImagePageGround)) {
@@ -293,8 +294,10 @@ private fun EpisodeDetail(state: DetailState, details: ItemDetails, viewModel: D
                         }
                     }
                     LaunchedEffect(episode.id) {
-                        withFrameNanos { }
-                        runCatching { playFocus.requestFocus() }
+                        if (!initialFocusDone) {
+                            withFrameNanos { }
+                            initialFocusDone = runCatching { playFocus.requestFocus() }.isSuccess
+                        }
                     }
                 }
                 if (state.episodes.size > 1) {

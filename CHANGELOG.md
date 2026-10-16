@@ -21,8 +21,15 @@ renders the reference separately.
 ### New
 - Sing-along subtitles carry a mark with a microphone icon. Glacier finds them by the track's name, such as Sing-Along, Karaoke or Lyrics
 - Shows have a Collections tab like movies. It lists the collections that hold shows, and a collection page plays a show from its next episode
+- A collection with mixed content shows one row per kind: movies, shows, seasons, episodes, music videos, music, artists and people. A new setting under Appearance puts movies and shows in one row
+- Show cards in the library count their unwatched episodes
+
+### Improved
+- Settings › Appearance lists the navigation entries last, after the library options
 
 ### Fixed
+- A collection page counts only what can be watched. Songs, people and the like no longer add to the seen count, the total runtime or the genres
+- A season in a collection opens its show on that season
 - On Fire TV a title no longer fails to start when the TV switches its frame rate. Glacier waits a moment and plays on
 
 ## [0.5.0-beta.6] - 2026-10-15

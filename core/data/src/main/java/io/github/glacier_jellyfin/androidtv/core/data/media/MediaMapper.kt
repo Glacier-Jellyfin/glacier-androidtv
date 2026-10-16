@@ -15,7 +15,7 @@ private const val TICKS_PER_MINUTE = 600_000_000L
 private const val UHD_MIN_WIDTH = 3200
 
 /** Kinds whose cards count the unwatched titles inside. */
-private val UnwatchedCounted = setOf(ItemKind.Series, ItemKind.Collection)
+private val UnwatchedCounted = setOf(ItemKind.Series, ItemKind.Season, ItemKind.Collection)
 
 /** Widths requested from the server; images are scaled down there, not on the TV. */
 private object ImageWidth {
@@ -41,6 +41,7 @@ internal class MediaMapper(private val api: ApiClient) {
         val kind = when (dto.type) {
             BaseItemKind.MOVIE -> ItemKind.Movie
             BaseItemKind.SERIES -> ItemKind.Series
+            BaseItemKind.SEASON -> ItemKind.Season
             BaseItemKind.EPISODE -> ItemKind.Episode
             BaseItemKind.MUSIC_ALBUM -> ItemKind.Album
             BaseItemKind.BOX_SET -> ItemKind.Collection
@@ -49,6 +50,7 @@ internal class MediaMapper(private val api: ApiClient) {
             BaseItemKind.PLAYLIST -> ItemKind.Playlist
             BaseItemKind.MUSIC_VIDEO -> ItemKind.MusicVideo
             BaseItemKind.AUDIO -> ItemKind.Song
+            BaseItemKind.PERSON -> ItemKind.Person
             else -> ItemKind.Other
         }
         val runtimeTicks = dto.runTimeTicks

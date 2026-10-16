@@ -318,6 +318,21 @@
     <string name="collection_shows">Shows in this collection</string>
     <string name="collection_titles">Titles in this collection</string>
     <string name="collection_chronological">chronological</string>
+    <string name="collection_row_movies">Movies</string>
+    <string name="collection_row_shows">Shows</string>
+    <string name="collection_row_videos">Movies and shows</string>
+    <string name="collection_row_seasons">Seasons</string>
+    <string name="collection_row_episodes">Episodes</string>
+    <string name="collection_row_music_videos">Music videos</string>
+    <string name="collection_row_music">Music</string>
+    <string name="collection_row_artists">Artists</string>
+    <string name="collection_row_people">People</string>
+    <string name="collection_row_more">More</string>
+    <plurals name="collection_more">
+        <item quantity="one">%1$d more</item>
+        <item quantity="other">%1$d more</item>
+    </plurals>
+    <string name="collection_play_music">Play music</string>
     <string name="favorite_tag">Favorite</string>
     <string name="person_born">b. %1$s</string>
     <plurals name="person_titles">
@@ -636,6 +651,8 @@
     <string name="settings_reduce_motion_sub">Focus without scaling, border and sheen only · still backdrops</string>
     <string name="settings_group_sets">Group movies into collections</string>
     <string name="settings_group_sets_sub">Movies that belong together show up in the library as one collection card instead of one by one</string>
+    <string name="settings_collection_together">Movies and shows together in collections</string>
+    <string name="settings_collection_together_sub">A collection shows its movies and shows in one row instead of two</string>
     <string name="settings_spot_source">Content</string>
     <string name="settings_spot_source_sub">Mixed together · Continue watching comes first</string>
     <string name="settings_spot_source_off">Nothing chosen · the spotlight is off</string>

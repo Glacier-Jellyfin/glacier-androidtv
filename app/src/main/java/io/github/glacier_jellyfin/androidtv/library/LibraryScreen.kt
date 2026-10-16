@@ -239,8 +239,8 @@ fun LibraryScreen(
                                 else -> CardShape.Poster
                             },
                             watched = item.played && item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode, ItemKind.MusicVideo, ItemKind.Collection),
-                            // A collection counts what is left to watch; its size is in the caption.
-                            count = item.unwatchedCount.takeIf { item.kind == ItemKind.Collection },
+                            // Collections and shows count what is left to watch; a collection's size is in the caption.
+                            count = item.unwatchedCount.takeIf { item.kind == ItemKind.Collection || item.kind == ItemKind.Series },
                             locked = item.showsLock(),
                             modifier = focus.onFocusChanged {
                                 if (it.isFocused) {

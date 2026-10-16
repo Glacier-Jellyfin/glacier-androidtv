@@ -104,6 +104,12 @@ class DetailViewModel @Inject constructor(
 
     /** Theme song area known from the route, before the page has loaded. */
     val routeThemeArea: String? = savedStateHandle.toRoute<DetailRoute>().themeArea
+
+    /** The season a show opens on, when its page was opened for one (a season in a collection). */
+    private val routeSeasonId: UUID? = savedStateHandle.toRoute<DetailRoute>().seasonId?.let(UUID::fromString)
+
+    /** Settings › Appearance: a collection's movies and shows in one row. */
+    val collectionMoviesWithShows: Boolean get() = settings.settings.value.appearance.collectionMoviesWithShows
     private var themeSongLoaded = false
 
     private val _state = MutableStateFlow(DetailState())
@@ -269,7 +275,8 @@ class DetailViewModel @Inject constructor(
     private suspend fun loadSeries(details: ItemDetails) {
         val seasons = repository.seasons(details.item.id)
         val regular = seasons.filter { it.number != 0 }.ifEmpty { seasons }
-        val season = regular.firstOrNull { (it.unwatchedCount ?: 0) > 0 } ?: regular.lastOrNull()
+        val season = seasons.firstOrNull { it.id == routeSeasonId }
+            ?: regular.firstOrNull { (it.unwatchedCount ?: 0) > 0 } ?: regular.lastOrNull()
         val next = runCatching { repository.nextEpisode(details.item.id) }.getOrNull()
         _state.update { it.copy(seasons = seasons, nextEpisode = next) }
         season?.let { selectSeason(it, details.item.id) }
@@ -300,6 +307,44 @@ class DetailViewModel @Inject constructor(
         val items = _state.value.collectionItems.filter { it.kind in PLAYABLE_IN_COLLECTION }
         return items.firstOrNull { it.progress != null } ?: items.firstOrNull { !it.played } ?: items.firstOrNull()
     }
+
+    /** A collection with nothing to watch plays its music: songs, albums and playlists in their order. */
+    fun collectionHasMusic(): Boolean = _state.value.collectionItems.any { it.kind in MusicInCollection }
+
+    private fun playCollectionMusic(from: MediaItem? = null) {
+        val collection = _state.value.item ?: return
+        val items = _state.value.collectionItems.filter { it.kind in MusicInCollection }
+        if (items.isEmpty()) return
+        viewModelScope.launch {
+            runCatching {
+                val songs = music.tracks(items.filter { it.kind == ItemKind.Song }.map { it.id }).associateBy { it.id }
+                items.flatMap { item ->
+                    when (item.kind) {
+                        ItemKind.Song -> listOfNotNull(songs[item.id])
+                        ItemKind.Album -> music.albumTracks(item.id)
+                        else -> music.playlistTracks(item.id)
+                    }
+                }
+            }
+                .onSuccess { tracks ->
+                    if (tracks.isEmpty()) return@onSuccess
+                    musicPlayback.playTracks(null, collection.title, tracks, startTrackId = from?.id?.toString())
+                    navigate(MusicRoute())
+                }
+                .onFailure { Log.w(TAG, "Loading the collection's music failed", it) }
+        }
+    }
+
+    /** A song of a collection plays with the collection's music around it. */
+    fun playCollectionSong(song: MediaItem) = playCollectionMusic(from = song)
+
+    /** A season of a collection opens its show on that season. */
+    fun openSeason(season: MediaItem) {
+        val seriesId = season.seriesId ?: return openItem(season)
+        navigate(DetailRoute(seriesId.toString(), themeArea = seriesId.toString(), seasonId = season.id.toString()))
+    }
+
+    fun openPerson(person: MediaItem) = navigate(PersonRoute(person.id.toString(), fromTitle = _state.value.item?.title))
 
     fun selectSeason(season: Season) {
         val seriesId = _state.value.item?.id ?: return
@@ -339,7 +384,7 @@ class DetailViewModel @Inject constructor(
         val item = current.item ?: return
         val target = when (item.kind) {
             ItemKind.Series -> current.nextEpisode ?: current.episodes.firstOrNull() ?: return
-            ItemKind.Collection -> collectionNext()?.also { if (it.kind == ItemKind.Series) return playShow(it) } ?: return
+            ItemKind.Collection -> collectionNext()?.also { if (it.kind == ItemKind.Series) return playShow(it) } ?: return playCollectionMusic()
             else -> item
         }
         // The tracks the chips show are the ones that play: the player takes them instead of working them out again.
@@ -441,6 +486,7 @@ class DetailViewModel @Inject constructor(
 
     fun togglePlayed() {
         val item = _state.value.item ?: return
+        if (item.kind == ItemKind.Collection) return toggleCollectionPlayed(item)
         val played = !item.played
         // The server drops the resume point both ways; the resume button and the episode row follow at once.
         val marked: (MediaItem) -> MediaItem = { it.copy(played = played, progress = null, remainingMinutes = null, resumePositionMs = 0) }
@@ -469,6 +515,30 @@ class DetailViewModel @Inject constructor(
                     updateItem { item }
                     _state.update { state -> state.copy(episodes = state.episodes.map { if (it.id == item.id) item else it }) }
                 }
+        }
+    }
+
+    /**
+     * A collection is seen when everything in it to watch is. Music, people and the like in it stay as they are,
+     * so a mixed collection marks its titles one by one; the server would mark its songs too.
+     */
+    private fun toggleCollectionPlayed(collection: MediaItem) {
+        val items = _state.value.collectionItems
+        val watchable = items.filter { it.kind in WatchableInCollection }
+        if (watchable.isEmpty()) return
+        val played = !watchable.all { it.played }
+        val mixed = watchable.size < items.size
+        _state.update { state ->
+            state.copy(collectionItems = state.collectionItems.map { if (it.kind in WatchableInCollection) it.copy(played = played) else it })
+        }
+        viewModelScope.launch {
+            runCatching {
+                if (mixed) watchable.forEach { repository.setPlayed(it.id, played) } else repository.setPlayed(collection.id, played)
+            }
+                .onSuccess { toast(if (played) R.string.marked_watched else R.string.marked_unwatched) }
+                .onFailure { Log.w(TAG, "Marking the collection failed", it) }
+            val details = _state.value.details ?: return@launch
+            runCatching { loadCollection(details) }.onFailure { Log.w(TAG, "Reloading the collection failed", it) }
         }
     }
 

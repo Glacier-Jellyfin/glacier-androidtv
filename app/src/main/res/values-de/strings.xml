@@ -312,6 +312,21 @@
     <string name="collection_shows">Serien in dieser Sammlung</string>
     <string name="collection_titles">Titel in dieser Sammlung</string>
     <string name="collection_chronological">chronologisch</string>
+    <string name="collection_row_movies">Filme</string>
+    <string name="collection_row_shows">Serien</string>
+    <string name="collection_row_videos">Filme und Serien</string>
+    <string name="collection_row_seasons">Staffeln</string>
+    <string name="collection_row_episodes">Folgen</string>
+    <string name="collection_row_music_videos">Musikvideos</string>
+    <string name="collection_row_music">Musik</string>
+    <string name="collection_row_artists">Künstler</string>
+    <string name="collection_row_people">Personen</string>
+    <string name="collection_row_more">Weitere</string>
+    <plurals name="collection_more">
+        <item quantity="one">%1$d weiterer</item>
+        <item quantity="other">%1$d weitere</item>
+    </plurals>
+    <string name="collection_play_music">Musik abspielen</string>
     <string name="favorite_tag">Favorit</string>
     <string name="person_born">geb. %1$s</string>
     <plurals name="person_titles">
@@ -630,6 +645,8 @@
     <string name="settings_reduce_motion_sub">Fokus ohne Skalierung, nur Rand und Glanz · ruhende Hintergrundbilder</string>
     <string name="settings_group_sets">Filme in Sammlungen gruppieren</string>
     <string name="settings_group_sets_sub">Zusammengehörige Filme erscheinen in der Bibliothek als eine Sammlungskarte statt einzeln</string>
+    <string name="settings_collection_together">Filme und Serien in Sammlungen zusammen</string>
+    <string name="settings_collection_together_sub">Eine Sammlung zeigt ihre Filme und Serien in einer Reihe statt in zwei</string>
     <string name="settings_spot_source">Inhalte</string>
     <string name="settings_spot_source_sub">Zusammengemischt · Weiterschauen steht vorne</string>
     <string name="settings_spot_source_off">Nichts gewählt · das Spotlight ist aus</string>

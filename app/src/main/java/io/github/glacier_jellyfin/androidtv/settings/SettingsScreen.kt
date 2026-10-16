@@ -650,7 +650,6 @@ private fun appearanceRows(
                 ),
             ),
         ),
-        navGroup,
         SettingGroup(
             stringResource(R.string.settings_group_library),
             listOf(
@@ -660,8 +659,15 @@ private fun appearanceRows(
                     appearance.groupCollections,
                     onToggle = { viewModel.updateAppearance { it.copy(groupCollections = !it.groupCollections) } },
                 ),
+                SettingRow.Toggle(
+                    stringResource(R.string.settings_collection_together),
+                    stringResource(R.string.settings_collection_together_sub),
+                    appearance.collectionMoviesWithShows,
+                    onToggle = { viewModel.updateAppearance { it.copy(collectionMoviesWithShows = !it.collectionMoviesWithShows) } },
+                ),
             ),
         ),
+        navGroup,
     )
 }
 

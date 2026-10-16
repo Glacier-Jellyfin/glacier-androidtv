@@ -92,6 +92,8 @@ data class AppearanceSettings(
     val reduceMotion: Boolean = false,
     /** Movies of a collection show up in the library as one collection card. */
     val groupCollections: Boolean = true,
+    /** A collection page lists its movies and shows in one row instead of one row each. */
+    val collectionMoviesWithShows: Boolean = false,
 )
 
 /**

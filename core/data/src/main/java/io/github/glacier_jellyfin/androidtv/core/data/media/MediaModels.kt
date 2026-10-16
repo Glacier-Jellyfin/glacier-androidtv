@@ -13,7 +13,7 @@ data class Library(
     val imageUrl: String?,
 )
 
-enum class ItemKind { Movie, Series, Episode, Album, Collection, Genre, Artist, Playlist, MusicVideo, Song, Other }
+enum class ItemKind { Movie, Series, Season, Episode, Album, Collection, Genre, Artist, Playlist, MusicVideo, Song, Person, Other }
 
 /** Resolution and dynamic range, as far as the server reports them. */
 data class VideoQuality(val uhd: Boolean, val hdr: HdrFormat?)

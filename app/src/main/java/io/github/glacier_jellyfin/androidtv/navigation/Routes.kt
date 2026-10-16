@@ -38,9 +38,12 @@ data class LibraryRoute(
     val genreId: String? = null,
 )
 
-/** [themeArea] is the show of an episode opened from its show, known before the page loads (theme song). */
+/**
+ * [themeArea] is the show of an episode opened from its show, known before the page loads (theme song).
+ * [seasonId] opens a show on that season instead of the first one with something unwatched.
+ */
 @Serializable
-data class DetailRoute(val itemId: String, val themeArea: String? = null)
+data class DetailRoute(val itemId: String, val themeArea: String? = null, val seasonId: String? = null)
 
 /** The video player; with [queueOf] (a playlist, or an artist for its music videos) the next video follows. */
 @Serializable
