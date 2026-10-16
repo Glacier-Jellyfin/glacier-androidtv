@@ -26,6 +26,7 @@ renders the reference separately.
 
 ### Improved
 - Settings › Appearance lists the navigation entries last, after the library options
+- Back in a library first goes up to the tabs at the top, such as All, Collections and Genres. Pressed again, it leaves the page
 
 ### Fixed
 - A collection page counts only what can be watched. Songs, people and the like no longer add to the seen count, the total runtime or the genres

@@ -150,6 +150,18 @@ fun LibraryScreen(
         }
     }
     val songsTitle = stringResource(R.string.scope_songs)
+    // Back among the cards or on the A–Z rail first goes up to the tabs. Pressed again, it leaves the page.
+    val activeChip = remember { FocusRequester() }
+    var inContent by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    BackHandler(enabled = inContent) {
+        scope.launch {
+            // The toolbar is a grid item and not composed while the grid is scrolled down.
+            gridState.scrollToItem(0)
+            withFrameNanos { }
+            runCatching { activeChip.requestFocus() }.onFailure { runCatching { sortButtonFocus.requestFocus() } }
+        }
+    }
 
     // Load the next page when the grid gets within three rows of the end.
     LaunchedEffect(gridState, state.items.size) {
@@ -209,9 +221,14 @@ fun LibraryScreen(
                 ) {
                     item(span = { GridItemSpan(maxLineSpan) }, key = "title") { Header(state) }
                     item(span = { GridItemSpan(maxLineSpan) }, key = "chips") {
-                        val scope = rememberCoroutineScope()
+                        val toolbarScope = rememberCoroutineScope()
                         Toolbar(
-                            modifier = Modifier.onFocusChanged { if (it.hasFocus) scope.launch { gridState.animateScrollToItem(0) } },
+                            modifier = Modifier.onFocusChanged {
+                                if (it.hasFocus) {
+                                    inContent = false
+                                    toolbarScope.launch { gridState.animateScrollToItem(0) }
+                                }
+                            },
                             state = state,
                             onScope = viewModel::setScope,
                             onFavoritesOnly = viewModel::toggleFavoritesOnly,
@@ -219,6 +236,7 @@ fun LibraryScreen(
                             onSortMenu = viewModel::toggleSortMenu,
                             onSortAnchor = { sortAnchor = it },
                             sortButtonFocus = sortButtonFocus,
+                            activeChip = activeChip,
                         )
                     }
                     itemsIndexed(state.items, key = { _, item -> item.id }) { index, item ->
@@ -244,6 +262,7 @@ fun LibraryScreen(
                             locked = item.showsLock(),
                             modifier = focus.onFocusChanged {
                                 if (it.isFocused) {
+                                    inContent = true
                                     focusedIndex = index
                                     lastFocusId = id
                                 }
@@ -299,6 +318,7 @@ fun LibraryScreen(
                     current = current,
                     onLetter = viewModel::jumpToLetter,
                     modifier = Modifier
+                        .onFocusChanged { if (it.hasFocus) inContent = true }
                         .focusProperties {
                             val target = jumpTarget
                             if (target != null && gridState.layoutInfo.visibleItemsInfo.any { it.index == HEADER_ITEMS + target }) {
@@ -327,7 +347,10 @@ fun LibraryScreen(
             userName = state.userName,
             onSelect = viewModel::onNav,
             down = gridFocus,
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 34.dp)
+                .onFocusChanged { if (it.hasFocus) inContent = false },
         )
     }
 }
@@ -358,8 +381,8 @@ private fun Toolbar(
     onSortMenu: (Boolean) -> Unit,
     onSortAnchor: (Rect) -> Unit,
     sortButtonFocus: FocusRequester,
+    activeChip: FocusRequester,
 ) {
-    val activeChip = remember { FocusRequester() }
     Row(
         modifier
             // Moving into the toolbar lands on the active filter, not the geometrically nearest chip.
