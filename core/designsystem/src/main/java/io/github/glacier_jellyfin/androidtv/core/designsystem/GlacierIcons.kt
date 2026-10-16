@@ -125,6 +125,12 @@ object GlacierIcons {
     )
     /** Closed captions (Lucide closed-caption). */
     val ClosedCaption = icon("M10 9.17a3 3 0 1 0 0 5.66", "M17 9.17a3 3 0 1 0 0 5.66", "M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z")
+    /** Sing-along subtitles: song lyrics (Lucide mic-vocal). */
+    val MicVocal = icon(
+        "m11 7.601-5.994 8.19a1 1 0 0 0 .1 1.298l.817.818a1 1 0 0 0 1.314.087L15.09 12",
+        "M16.5 21.174C15.5 20.5 14.372 20 13 20c-2.058 0-3.928 2.356-6 2-2.072-.356-2.775-3.369-1.5-4.5",
+        "M16 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10z",
+    )
     /** An audio commentary. */
     val Comment = icon("M7.9 20A9 9 0 1 0 4 16.1L2 22Z")
     /** An audio description for the blind (Lucide ad). */

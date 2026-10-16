@@ -16,6 +16,8 @@ data class Track(
     val hearingImpaired: Boolean = false,
     /** Closed captions: the dialogue with sounds, often from a TV broadcast. */
     val closedCaptions: Boolean = false,
+    /** Song lyrics to sing along to, known from the stream name only. */
+    val singAlong: Boolean = false,
     /** The server's own description, used when the language is unknown. */
     val fallbackTitle: String? = null,
     /** The stream's name in the file ("German (CR/ASS)", "Commentary"), if it has one. */
@@ -50,6 +52,7 @@ internal fun MediaStream.toTrack(): Track {
         // The server's hearing impaired flag on a track named CC means its closed captions.
         hearingImpaired = (isHearingImpaired && !captions) || (subtitle && hearingImpairedByName(title)),
         closedCaptions = captions,
+        singAlong = subtitle && singAlongByName(title),
         fallbackTitle = displayTitle ?: title,
         title = title,
         profile = profile,
@@ -73,6 +76,9 @@ internal fun hearingImpairedByName(title: String?): Boolean = hasWord(title, SDH
 /** "English CC", "Closed Captions". */
 internal fun closedCaptionsByName(title: String?): Boolean = hasWord(title, CC_WORDS)
 
+/** "Sing-Along", "Karaoke", "Lyrics". */
+internal fun singAlongByName(title: String?): Boolean = hasWord(title, SING_ALONG_WORDS)
+
 /** "Director's Commentary", "Audiokommentar". */
 internal fun commentaryByName(title: String?): Boolean = hasWord(title, COMMENTARY_WORDS)
 
@@ -82,6 +88,9 @@ internal fun audioDescriptionByName(title: String?): Boolean = hasWord(title, DE
 private val FORCED_WORDS = listOf("forced", "erzwungen", "signs")
 private val SDH_WORDS = listOf("sdh", "hörgeschädigt", "hearing impaired")
 private val CC_WORDS = listOf("closed captions", "closed caption", "cc")
+private val SING_ALONG_WORDS = listOf(
+    "sing along", "sing-along", "singalong", "sing-a-long", "karaoke", "lyrics", "songtext", "songtexte", "liedtext", "liedtexte", "mitsingen",
+)
 private val CAPTION_CODECS = setOf("eia_608", "eia_708", "cc_dec")
 private val COMMENTARY_WORDS = listOf("director's commentary", "audiokommentar", "commentary", "kommentar")
 private val DESCRIPTION_WORDS = listOf(
@@ -178,7 +187,7 @@ fun fullInsteadOfForced(pick: Int?, subtitles: List<Track>, audio: Track?, onlyF
     val language = Languages.iso3(picked.language) ?: return pick
     if (Languages.iso3(audio?.language) == language) return pick
     val full = subtitles.filter { !it.forced && Languages.iso3(it.language) == language }
-    return (full.firstOrNull { !it.hearingImpaired && !it.closedCaptions } ?: full.firstOrNull())?.index ?: pick
+    return (full.firstOrNull { !it.hearingImpaired && !it.closedCaptions && !it.singAlong } ?: full.firstOrNull())?.index ?: pick
 }
 
 /** Audio and subtitle choices of a title, with the server's defaults for this user. */
@@ -333,7 +342,7 @@ fun subtitleFormat(codec: String?): String? = when (val c = codec?.lowercase()) 
 }
 
 /** What sets a track apart beyond its language, shown as pills. */
-enum class TrackMark { Forced, HearingImpaired, ClosedCaptions, Commentary, AudioDescription }
+enum class TrackMark { Forced, HearingImpaired, ClosedCaptions, SingAlong, Commentary, AudioDescription }
 
 /**
  * A track as the pickers show it, the same way as the Glacier web plugin:
@@ -356,6 +365,7 @@ fun describeTrack(track: Track, subtitle: Boolean, locales: List<Locale>): Track
         if (subtitle && track.forced) add(TrackMark.Forced)
         if (subtitle && track.hearingImpaired) add(TrackMark.HearingImpaired)
         if (subtitle && track.closedCaptions) add(TrackMark.ClosedCaptions)
+        if (subtitle && track.singAlong) add(TrackMark.SingAlong)
         if (!subtitle && track.commentary) add(TrackMark.Commentary)
         if (!subtitle && track.audioDescription) add(TrackMark.AudioDescription)
     }
@@ -366,7 +376,8 @@ fun describeTrack(track: Track, subtitle: Boolean, locales: List<Locale>): Track
         val known = languageNames + regionWords(track.language, track.region) +
             listOf("forced", "erzwungen", "full", "vollständig", "komplett") +
             (if (track.hearingImpaired) SDH_WORDS else emptyList()) +
-            if (track.closedCaptions) CC_WORDS else emptyList()
+            (if (track.closedCaptions) CC_WORDS else emptyList()) +
+            if (track.singAlong) SING_ALONG_WORDS else emptyList()
         title = cleanTrackTitle(track.title, known)
         format = subtitleFormat(track.codec)
     } else {

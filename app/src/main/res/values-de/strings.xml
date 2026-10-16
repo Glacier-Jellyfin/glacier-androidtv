@@ -288,6 +288,7 @@
     <string name="track_off">Aus</string>
     <string name="track_forced">Erzwungen</string>
     <string name="track_sdh">Hörgeschädigt</string>
+    <string name="track_sing_along">Sing-Along</string>
     <string name="track_commentary">Kommentar</string>
     <string name="track_audio_description">Audiodeskription</string>
     <string name="track_external">Extern</string>

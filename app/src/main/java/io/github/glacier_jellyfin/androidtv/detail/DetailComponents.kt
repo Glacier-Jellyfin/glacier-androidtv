@@ -123,6 +123,7 @@ private val TrackMark.label: Int
         TrackMark.Forced -> R.string.track_forced
         TrackMark.HearingImpaired -> R.string.track_sdh
         TrackMark.ClosedCaptions -> R.string.track_cc
+        TrackMark.SingAlong -> R.string.track_sing_along
         TrackMark.Commentary -> R.string.track_commentary
         TrackMark.AudioDescription -> R.string.track_audio_description
     }
@@ -146,6 +147,7 @@ private val TrackMark.icon: ImageVector
         TrackMark.Forced -> GlacierIcons.Signpost
         TrackMark.HearingImpaired -> GlacierIcons.EarOff
         TrackMark.ClosedCaptions -> GlacierIcons.ClosedCaption
+        TrackMark.SingAlong -> GlacierIcons.MicVocal
         TrackMark.Commentary -> GlacierIcons.Comment
         TrackMark.AudioDescription -> GlacierIcons.AudioDescription
     }

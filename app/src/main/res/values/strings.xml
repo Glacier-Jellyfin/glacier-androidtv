@@ -294,6 +294,7 @@
     <string name="track_forced">Forced</string>
     <string name="track_sdh">SDH</string>
     <string name="track_cc" translatable="false">CC</string>
+    <string name="track_sing_along">Sing-along</string>
     <string name="track_commentary">Commentary</string>
     <string name="track_audio_description">Audio description</string>
     <string name="track_external">External</string>

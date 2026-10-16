@@ -234,6 +234,18 @@ class TracksTest {
         assertFalse(forcedByName(null))
     }
 
+    @Test
+    fun `sing-along shows in the stream name`() {
+        assertTrue(singAlongByName("English Sing-Along"))
+        assertTrue(singAlongByName("Deutsch (Singalong)"))
+        assertTrue(singAlongByName("Songtexte"))
+        assertFalse(singAlongByName("Signs & Songs"))
+        assertFalse(singAlongByName(null))
+        val track = sub("German Sing Along", "subrip").copy(singAlong = true)
+        assertEquals(listOf(TrackMark.SingAlong), describeTrack(track, true, de).marks)
+        assertEquals(listOf("SRT"), facts(track, true))
+    }
+
     private val japanese = Track(index = 1, language = "jpn", codec = "truehd", channels = 2)
     private val german = Track(index = 2, language = "ger", codec = "ac3", channels = 2)
     private val full = Track(index = 4, language = "ger", codec = "PGSSUB", channels = null, title = "German Full")
