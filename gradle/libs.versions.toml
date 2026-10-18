@@ -20,7 +20,7 @@ media3 = "1.11.1"
 # libass for ASS/SSA subtitles (MIT); 0.5.x is built against Media3 1.8 and works with 1.11.
 libass-android = "0.5.1"
 # Generated from the 12.1 API; its minimum supported server is still 12.0.
-jellyfin-sdk = "1.9.1"
+jellyfin-sdk = "1.9.2"
 # QR codes for downloading the log on the local network (MIT).
 qrcodegen = "1.8.0"
 # Android TV home screen channels and "Watch next".
