@@ -2,7 +2,7 @@
 agp = "9.4.1"
 # AGP 9 compiles Kotlin itself (built-in Kotlin). Declaring the Kotlin Gradle
 # plugin in the root build lifts the compiler above AGP's bundled default.
-kotlin = "2.4.20"
+kotlin = "2.4.21"
 ksp = "2.3.12"
 hilt = "2.60.1"
 hilt-viewmodel-compose = "1.4.0"
