@@ -40,13 +40,13 @@ jobs:
         run: scripts/check-ffmpeg-apk.sh app/build/outputs/apk/staging/app-staging.apk
 
       # For local builds on machines that cannot run scripts/build-ffmpeg.sh (see core/ffmpeg/README.md).
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ffmpeg-android
           path: core/ffmpeg/src/main/jni/ffmpeg/
           retention-days: 30
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: reports
