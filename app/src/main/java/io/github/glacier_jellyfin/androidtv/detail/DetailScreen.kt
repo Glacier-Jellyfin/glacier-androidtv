@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.detail
 
+import android.text.format.Formatter
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -50,6 +51,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -66,6 +68,7 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
+import io.github.glacier_jellyfin.androidtv.core.data.media.versionLabels
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
@@ -90,6 +93,7 @@ import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 import io.github.glacier_jellyfin.androidtv.ui.PinDialog
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.player.serverCodecText
 import io.github.glacier_jellyfin.androidtv.ui.qualityText
 import io.github.glacier_jellyfin.androidtv.ui.rememberEdgeSpec
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
@@ -409,7 +413,10 @@ internal fun SeenButton(played: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun RowScope.TrackChips(state: DetailState, details: ItemDetails, viewModel: DetailViewModel) {
-    val tracks = details.tracks ?: return
+    val tracks = details.tracks
+    val versions = details.versions
+    if (tracks == null && versions.isEmpty()) return
+    val versionFocus = remember { FocusRequester() }
     val audioFocus = remember { FocusRequester() }
     val subtitleFocus = remember { FocusRequester() }
     // Closing the sheet hands focus back to the chip that opened it; left alone,
@@ -424,31 +431,51 @@ private fun RowScope.TrackChips(state: DetailState, details: ItemDetails, viewMo
         val kind = opened ?: return@LaunchedEffect
         opened = null
         withFrameNanos { }
-        runCatching { (if (kind == TrackKind.Audio) audioFocus else subtitleFocus).requestFocus() }
+        val focus = when (kind) {
+            TrackKind.Version -> versionFocus
+            TrackKind.Audio -> audioFocus
+            TrackKind.Subtitles -> subtitleFocus
+        }
+        runCatching { focus.requestFocus() }
     }
     ActionDivider()
-    val audio = tracks.audio.takeIf { it.isNotEmpty() }?.let { list ->
+    val theatrical = stringResource(R.string.version_theatrical)
+    val labels = remember(versions, theatrical) { versionLabels(versions, theatrical) }
+    val version = state.selection?.versionId?.let { labels[it] }
+    // A size ("2160p") always fits; the name of a cut may be long.
+    val cutNames = versions.any { it.edition != null }
+    val audio = tracks?.audio?.takeIf { it.isNotEmpty() }?.let { list ->
         trackChipContent(list.firstOrNull { it.index == state.selection?.audio }, subtitle = false)
     }
-    val subtitles = trackChipContent(tracks.subtitles.firstOrNull { it.index == state.selection?.subtitle }, subtitle = true)
+    val subtitles = tracks?.let { trackChipContent(it.subtitles.firstOrNull { track -> track.index == state.selection?.subtitle }, subtitle = true) }
     // The row may be short (episodes): the chips keep their width while they fit, else they share the rest in halves.
+    // The version chip ("2160p") is short and keeps its width: the track chips give way. A cut's name stops at a width.
     Layout(
         content = {
-            if (audio != null) {
-                TrackChip(audio, audio = true, onClick = { viewModel.openTracks(TrackKind.Audio) }, modifier = Modifier.focusRequester(audioFocus))
+            if (version != null) {
+                TrackChip(TrackChipContent(version, null), icon = null, onClick = { viewModel.openTracks(TrackKind.Version) }, modifier = Modifier.focusRequester(versionFocus))
             }
-            TrackChip(subtitles, audio = false, onClick = { viewModel.openTracks(TrackKind.Subtitles) }, modifier = Modifier.focusRequester(subtitleFocus))
+            if (audio != null) {
+                TrackChip(audio, icon = GlacierIcons.Speaker, onClick = { viewModel.openTracks(TrackKind.Audio) }, modifier = Modifier.focusRequester(audioFocus))
+            }
+            if (subtitles != null) {
+                TrackChip(subtitles, icon = GlacierIcons.Subtitles, onClick = { viewModel.openTracks(TrackKind.Subtitles) }, modifier = Modifier.focusRequester(subtitleFocus))
+            }
         },
         modifier = Modifier.weight(1f, fill = false),
     ) { chips, constraints ->
         val gap = CHIP_GAP.roundToPx() * (chips.size - 1)
         val natural = chips.map { it.maxIntrinsicWidth(constraints.maxHeight) }
-        val room = (constraints.maxWidth - gap).coerceAtLeast(0)
+        val versionMax = if (cutNames) VERSION_CHIP_MAX.roundToPx() else Int.MAX_VALUE
+        val fixed = if (version != null) natural.first().coerceAtMost(versionMax) else 0
+        val shared = if (version != null) natural.drop(1) else natural
+        val room = (constraints.maxWidth - gap - fixed).coerceAtLeast(0)
         // Too wide together: a chip under an equal share keeps its width, the wider one gets what is left.
-        val share = room / chips.size
-        val small = natural.filter { it <= share }
-        val rest = (room - small.sum()) / (chips.size - small.size).coerceAtLeast(1)
-        val widths = if (natural.sum() <= room) natural else natural.map { if (it <= share) it else rest }
+        val share = room / shared.size.coerceAtLeast(1)
+        val small = shared.filter { it <= share }
+        val rest = (room - small.sum()) / (shared.size - small.size).coerceAtLeast(1)
+        val sharedWidths = if (shared.sum() <= room) shared else shared.map { if (it <= share) it else rest }
+        val widths = if (version != null) listOf(fixed) + sharedWidths else sharedWidths
         val placeables = chips.mapIndexed { i, chip -> chip.measure(Constraints.fixedWidth(widths[i])) }
         val height = placeables.maxOf { it.height }
         layout(placeables.sumOf { it.width } + gap, height) {
@@ -461,28 +488,79 @@ private fun RowScope.TrackChips(state: DetailState, details: ItemDetails, viewMo
     }
 }
 
-/** The action row's spacing, kept between the two track chips. */
+/** The widest a version chip with a cut's name gets ("Director's Cut" fits). */
+private val VERSION_CHIP_MAX = 240.dp
+
+/** The action row's spacing, kept between the track chips. */
 private val CHIP_GAP = 14.dp
 
 @Composable
 private fun TrackSheet(kind: TrackKind, state: DetailState, details: ItemDetails, viewModel: DetailViewModel) {
+    if (kind == TrackKind.Version) return VersionSheet(state, details, viewModel)
     val tracks = details.tracks ?: return
     val audio = kind == TrackKind.Audio
     val list = if (audio) tracks.audio else tracks.subtitles
     val (options, indices) = trackOptions(list, subtitle = !audio)
     val current = if (audio) state.selection?.audio else state.selection?.subtitle
-    val item = details.item
-    val prefix = if (item.kind == ItemKind.Episode && item.episodeNumber != null) {
-        stringResource(R.string.episode_badge, item.episodeNumber!!) + " · " + item.title
-    } else {
-        item.title
-    }
+    val prefix = sheetPrefix(details.item)
     TrackPanel(
         title = stringResource(if (audio) R.string.track_audio else R.string.track_subtitles),
         subtitle = prefix + " · " + stringResource(R.string.track_next_playback),
         options = options,
         selected = indices.indexOf(current).coerceAtLeast(0),
         onPick = { i -> viewModel.pickTrack(kind, indices[i], options[i].full) },
+        onDismiss = viewModel::closeTracks,
+    )
+}
+
+/** The sheets name the title, an episode with its number. */
+@Composable
+private fun sheetPrefix(item: MediaItem): String =
+    if (item.kind == ItemKind.Episode && item.episodeNumber != null) {
+        stringResource(R.string.episode_badge, item.episodeNumber!!) + " · " + item.title
+    } else {
+        item.title
+    }
+
+/**
+ * The title's files: "2160p", below it "HEVC · HDR · 58 GB". Cuts show their
+ * name with the size as a pill: "Director's Cut" [1080p], "H.264 · 2 h 15 min · 20 GB".
+ */
+@Composable
+private fun VersionSheet(state: DetailState, details: ItemDetails, viewModel: DetailViewModel) {
+    val versions = details.versions
+    val theatrical = stringResource(R.string.version_theatrical)
+    val labels = remember(versions, theatrical) { versionLabels(versions, theatrical) }
+    val context = LocalContext.current
+    // Cuts differ in length; files of the same cut do not, so their length says nothing.
+    val lengths = versions.map { it.runtimeMs?.let { ms -> ms / 60_000 } }
+    val showLength = lengths.distinct().size > 1
+    val cuts = versions.any { it.edition != null }
+    val rows = versions.map { version ->
+        val label = labels.getValue(version.id)
+        val minutes = version.runtimeMs?.let { (it / 60_000).toInt() }
+        val facts = listOfNotNull(
+            version.sizeLabel.takeUnless { cuts || label.contains(it) },
+            serverCodecText(version.videoCodec),
+            qualityText(version.quality?.copy(uhd = false)),
+            minutes?.takeIf { showLength }?.let { runtimeText(it) },
+            version.sizeBytes?.let { Formatter.formatShortFileSize(context, it) },
+        )
+        TrackRow(
+            label = if (cuts) label.replace(" ${version.sizeLabel}", "") else label,
+            flag = null,
+            facts = facts.joinToString(" · ").ifEmpty { null },
+            marks = listOfNotNull(version.sizeLabel.takeIf { cuts }),
+            full = label,
+        )
+    }
+    val show = details.item.kind == ItemKind.Episode
+    TrackPanel(
+        title = stringResource(R.string.version),
+        subtitle = sheetPrefix(details.item) + " · " + stringResource(if (show) R.string.version_for_show else R.string.version_for_movie),
+        options = rows,
+        selected = versions.indexOfFirst { it.id == state.selection?.versionId }.coerceAtLeast(0),
+        onPick = { i -> viewModel.pickVersion(versions[i].id, rows[i].full) },
         onDismiss = viewModel::closeTracks,
     )
 }

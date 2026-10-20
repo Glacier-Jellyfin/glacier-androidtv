@@ -178,10 +178,48 @@ class PlaybackRepository @Inject constructor(
     val stopped: SharedFlow<UUID> = _stopped.asSharedFlow()
 
     /**
+     * Ids of the files of [itemId] this device plays as they are, without the
+     * server converting the picture: the server weighs every file against the
+     * device profile when no file is named.
+     */
+    suspend fun directVersions(itemId: UUID): Set<String> = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        val device = capabilities.capabilities
+        val playback = settings.current().playback
+        val info = session.api.mediaInfoApi.getPostedPlaybackInfo(
+            itemId = itemId,
+            data = PlaybackInfoDto(
+                userId = session.userId,
+                maxStreamingBitrate = AUTO_BITRATE,
+                maxAudioChannels = device.maxAudioChannels,
+                // The picture decides; a subtitle burned in would make every file look converted.
+                subtitleStreamIndex = -1,
+                deviceProfile = DeviceProfiles.build(device, AUTO_BITRATE, playback.subtitleBurnIn, HlsSegments.preferredFor(device)),
+                enableDirectPlay = true,
+                enableDirectStream = true,
+                enableTranscoding = true,
+                allowVideoStreamCopy = true,
+                allowAudioStreamCopy = true,
+                autoOpenLiveStream = false,
+            ),
+        ).content
+        // Direct stream: the server only repacks the file.
+        info.mediaSources.filter { it.supportsDirectPlay || it.supportsDirectStream }.mapNotNull { it.id }.toSet()
+    }
+
+    /**
      * Asks the server how to play [itemId] on this device and builds the stream URL.
      * [segments] null: the container that suits the device, see [HlsSegments.preferredFor].
+     * [versionId]: the file to play of a title with several (media source id); null for the main one.
      */
-    suspend fun open(itemId: UUID, startMs: Long, audioIndex: Int?, subtitleIndex: Int?, segments: HlsSegments? = null): PlaybackSource = withContext(Dispatchers.IO) {
+    suspend fun open(
+        itemId: UUID,
+        startMs: Long,
+        audioIndex: Int?,
+        subtitleIndex: Int?,
+        segments: HlsSegments? = null,
+        versionId: String? = null,
+    ): PlaybackSource = withContext(Dispatchers.IO) {
         val session = requireSession()
         val api = session.api
         val playback = settings.current().playback
@@ -191,7 +229,7 @@ class PlaybackRepository @Inject constructor(
         // The server only takes the streams asked for when the source is named too
         // (MediaInfoHelper.SetDeviceSpecificData); otherwise a transcode carries its own default
         // audio. A title's main source has the item's id.
-        var sourceId = itemId.toString().replace("-", "").takeIf { audioIndex != null || subtitleIndex != null }
+        var sourceId = versionId ?: itemId.toString().replace("-", "").takeIf { audioIndex != null || subtitleIndex != null }
         suspend fun playbackInfo(bitrate: Int) = api.mediaInfoApi.getPostedPlaybackInfo(
             itemId = itemId,
             data = PlaybackInfoDto(
@@ -235,7 +273,7 @@ class PlaybackRepository @Inject constructor(
             val main = mainInsteadOfExtra(serverPick, streams.filter { it.type == MediaStreamType.AUDIO }.map { it.toTrack() })
             if (main != null && main != serverPick) {
                 Log.i(TAG, "Audio of $itemId: main track $main instead of extra track $serverPick")
-                return@withContext open(itemId, startMs, main, subtitleIndex, segments)
+                return@withContext open(itemId, startMs, main, subtitleIndex, segments, versionId)
             }
         }
         // The server's own pick may be a forced track that shows next to nothing: ask again with the full one.
@@ -247,7 +285,7 @@ class PlaybackRepository @Inject constructor(
             val full = fullInsteadOfForced(serverPick, subtitles, audio?.toTrack(), onlyForced)
             if (full != null && full != serverPick) {
                 Log.i(TAG, "Subtitles of $itemId: full track $full instead of forced track $serverPick")
-                return@withContext open(itemId, startMs, audioIndex, full, segments)
+                return@withContext open(itemId, startMs, audioIndex, full, segments, versionId)
             }
         }
         val (url, method) = when {

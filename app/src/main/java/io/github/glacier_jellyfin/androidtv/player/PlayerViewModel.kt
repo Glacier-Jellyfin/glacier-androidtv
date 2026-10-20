@@ -24,6 +24,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.Track
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelection
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelections
+import io.github.glacier_jellyfin.androidtv.core.data.media.forVersion
 import io.github.glacier_jellyfin.androidtv.core.data.playback.MediaSegment
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSubtitle
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentAction
@@ -139,12 +140,15 @@ class PlayerViewModel @Inject constructor(
     private val settings: SettingsRepository,
     private val serverPreferences: ServerPreferencesRepository,
     private val musicPlayback: MusicController,
+    private val versions: VersionChooser,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<PlayerRoute>()
     /** Changes when playback moves on to another episode. */
     private var itemId = UUID.fromString(route.itemId)
     private var fromStart = route.fromStart
+    /** The file that plays of a title with several; null until known, and for a single file. */
+    private var versionId: String? = null
     /** Playlist or artist whose videos play one after another; its list once loaded. */
     private val queueOf = route.queueOf?.let(UUID::fromString)
     private var queue: List<MediaItem>? = null
@@ -280,6 +284,7 @@ class PlayerViewModel @Inject constructor(
     fun load() {
         outputRecoveries = 0
         val selection = trackSelections.get(itemId)
+        versionId = selection?.versionId
         // A choice made on the detail page wins; "off" there is sent as -1 so the server does not pick one.
         open(startMs = null, audio = selection?.audio, subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE }, fromLastTitle = selection == null)
     }
@@ -294,7 +299,11 @@ class PlayerViewModel @Inject constructor(
             releasePlayer()
             _state.update { it.copy(loading = true, failed = false, trackPanel = null) }
             try {
-                val item = _state.value.details ?: details.details(itemId).also { d ->
+                val item = _state.value.details ?: details.details(itemId).let { loaded ->
+                    // The file the detail page showed, else the one picked for the title or show.
+                    if (versionId == null) versionId = versions.choose(loaded)?.id
+                    loaded.forVersion(versionId)
+                }.also { d ->
                     _state.update { it.copy(details = d) }
                     loadExtras(d)
                 }
@@ -305,7 +314,7 @@ class PlayerViewModel @Inject constructor(
                 } else {
                     null
                 }
-                val opened = playback.open(itemId, start, remembered?.audio ?: audio, remembered?.subtitle ?: subtitle, segments)
+                val opened = playback.open(itemId, start, remembered?.audio ?: audio, remembered?.subtitle ?: subtitle, segments, versionId)
                 source = opened
                 recordTracks(opened.audioIndex, opened.subtitleIndex)
                 val request = StreamRequest(
@@ -439,6 +448,7 @@ class PlayerViewModel @Inject constructor(
         }
         _progress.value = PlayerProgress()
         val selection = trackSelections.get(item.id)
+        versionId = selection?.versionId
         open(startMs = item.resumePositionMs, audio = selection?.audio, subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE }, fromLastTitle = selection == null)
     }
 
@@ -522,7 +532,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun remember(audio: Int?, subtitle: Int?) {
-        trackSelections.set(itemId, TrackSelection(audio, subtitle))
+        trackSelections.set(itemId, TrackSelection(audio, subtitle, versionId))
         recordTracks(audio, subtitle)
     }
 

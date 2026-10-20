@@ -301,6 +301,11 @@
     <string name="track_default">Default</string>
     <string name="track_next_playback">Applies to the next playback</string>
     <string name="track_audio_set">Audio track: %1$s</string>
+    <string name="version">Version</string>
+    <string name="version_set">Version: %1$s</string>
+    <string name="version_theatrical">Theatrical</string>
+    <string name="version_for_show">Applies to all episodes of the show</string>
+    <string name="version_for_movie">Stays picked for this movie</string>
     <string name="track_subtitles_set">Subtitles: %1$s</string>
 
     <!-- Collections and people -->

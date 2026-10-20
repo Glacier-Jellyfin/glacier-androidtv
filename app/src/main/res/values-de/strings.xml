@@ -295,6 +295,11 @@
     <string name="track_default">Standard</string>
     <string name="track_next_playback">Gilt für die nächste Wiedergabe</string>
     <string name="track_audio_set">Tonspur: %1$s</string>
+    <string name="version">Version</string>
+    <string name="version_set">Version: %1$s</string>
+    <string name="version_theatrical">Kinofassung</string>
+    <string name="version_for_show">Gilt für alle Folgen der Serie</string>
+    <string name="version_for_movie">Bleibt für diesen Film gewählt</string>
     <string name="track_subtitles_set">Untertitel: %1$s</string>
 
     <!-- Sammlungen und Personen -->

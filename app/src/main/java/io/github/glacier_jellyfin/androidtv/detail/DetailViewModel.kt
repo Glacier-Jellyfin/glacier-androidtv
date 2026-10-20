@@ -20,11 +20,14 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.data.media.Season
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelection
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelections
+import io.github.glacier_jellyfin.androidtv.core.data.media.forVersion
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
 import io.github.glacier_jellyfin.androidtv.core.data.settings.RememberedTracks
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.closestTrack
+import io.github.glacier_jellyfin.androidtv.core.data.settings.toKey
 import io.github.glacier_jellyfin.androidtv.core.data.settings.rememberedTracks
 import io.github.glacier_jellyfin.androidtv.music.MusicActions
 import io.github.glacier_jellyfin.androidtv.music.MusicController
@@ -34,6 +37,7 @@ import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PersonRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.TrailerRoute
+import io.github.glacier_jellyfin.androidtv.player.VersionChooser
 import io.github.glacier_jellyfin.androidtv.ui.PinGate
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.Job
@@ -48,7 +52,7 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
-enum class TrackKind { Audio, Subtitles }
+enum class TrackKind { Audio, Subtitles, Version }
 
 data class DetailState(
     val loading: Boolean = true,
@@ -98,6 +102,7 @@ class DetailViewModel @Inject constructor(
     private val parental: ParentalControl,
     private val ageFilter: AgeFilter,
     private val musicPlayback: MusicController,
+    private val versions: VersionChooser,
 ) : ViewModel() {
 
     private var itemId: UUID = UUID.fromString(savedStateHandle.toRoute<DetailRoute>().itemId)
@@ -141,13 +146,14 @@ class DetailViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(loading = true, failed = false) }
             try {
-                val details = repository.details(itemId)
-                if (ageFilter.isLocked(itemId, listOfNotNull(details.seriesId))) {
-                    askPin(details)
+                val loaded = repository.details(itemId)
+                if (ageFilter.isLocked(itemId, listOfNotNull(loaded.seriesId))) {
+                    askPin(loaded)
                     return@launch
                 }
                 val similarAsync = async { runCatching { repository.similar(itemId) }.getOrDefault(emptyList()) }
-                _state.update { it.copy(details = details, selection = selectionOf(details)) }
+                val (details, selection) = withVersion(loaded)
+                _state.update { it.copy(details = details, selection = selection) }
                 when (details.item.kind) {
                     ItemKind.Series -> loadSeries(details)
                     ItemKind.Episode -> loadSeasonOf(details)
@@ -176,12 +182,22 @@ class DetailViewModel @Inject constructor(
     }
 
     /**
+     * The details as the file that plays shows them (tracks, picture format), and what plays of it.
+     * A title with one file stays as it is.
+     */
+    private suspend fun withVersion(details: ItemDetails): Pair<ItemDetails, TrackSelection?> {
+        val versionId = trackSelections.get(details.item.id)?.versionId ?: versions.choose(details)?.id
+        val shown = details.forVersion(versionId)
+        return shown to selectionOf(shown, versionId)
+    }
+
+    /**
      * What plays: a choice made for this title, else the last title's tracks
      * where they apply (as the player takes them over), else the server's defaults.
      */
-    private suspend fun selectionOf(details: ItemDetails): TrackSelection? {
+    private suspend fun selectionOf(details: ItemDetails, versionId: String?): TrackSelection? {
         trackSelections.get(details.item.id)?.let { return it }
-        val tracks = details.tracks ?: return null
+        val tracks = details.tracks ?: return versionId?.let { TrackSelection(null, null, it) }
         val preferences = serverPreferences.preferences.value ?: serverPreferences.refresh()
         val remembered = preferences?.let { rememberedTracks(settings.current().lastTracks, it, tracks) }
         val audio = remembered?.audio ?: tracks.defaultAudio
@@ -191,7 +207,7 @@ class DetailViewModel @Inject constructor(
             RememberedTracks.SUBTITLES_OFF -> null
             else -> index
         }
-        return TrackSelection(audio, subtitle)
+        return TrackSelection(audio, subtitle, versionId)
     }
 
     private var refreshJob: Job? = null
@@ -206,17 +222,18 @@ class DetailViewModel @Inject constructor(
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
             try {
-                var details = repository.details(itemId)
-                val target = when (details.item.kind) {
-                    ItemKind.Series -> episodeAfter(stoppedId, details.item.id)
-                    ItemKind.Episode -> episodeAfter(stoppedId, details.seriesId)
+                var loaded = repository.details(itemId)
+                val target = when (loaded.item.kind) {
+                    ItemKind.Series -> episodeAfter(stoppedId, loaded.item.id)
+                    ItemKind.Episode -> episodeAfter(stoppedId, loaded.seriesId)
                     else -> null
                 }
-                if (details.item.kind == ItemKind.Episode && target != null && target.item.id != itemId) {
+                if (loaded.item.kind == ItemKind.Episode && target != null && target.item.id != itemId) {
                     itemId = target.item.id
-                    details = target
+                    loaded = target
                 }
-                _state.update { it.copy(details = details, selection = selectionOf(details)) }
+                val (details, selection) = withVersion(loaded)
+                _state.update { it.copy(details = details, selection = selection) }
                 when (details.item.kind) {
                     ItemKind.Series -> {
                         val seasons = repository.seasons(details.item.id)
@@ -553,6 +570,37 @@ class DetailViewModel @Inject constructor(
         _state.update { it.copy(selection = selection, trackPanel = null) }
         viewModelScope.launch {
             _events.send(UiEvent.Toast(if (kind == TrackKind.Audio) R.string.track_audio_set else R.string.track_subtitles_set, listOf(label)))
+        }
+    }
+
+    /**
+     * Another file of the title. Its tracks are other streams: the ones picked
+     * carry over by language, else the file's defaults apply. Subtitles off stay off.
+     * The pick holds for the movie, or for every episode of the show.
+     */
+    fun pickVersion(id: String, label: String) {
+        val current = _state.value
+        val details = current.details ?: return
+        val version = details.versions.firstOrNull { it.id == id } ?: return
+        val shown = details.forVersion(id)
+        val old = current.selection
+        val audio = old?.audio
+            ?.let { index -> details.tracks?.audio?.firstOrNull { it.index == index } }
+            ?.let { closestTrack(it.toKey(), shown.tracks?.audio.orEmpty()) }?.index
+            ?: shown.tracks?.defaultAudio
+        val subtitle = when {
+            old != null && old.subtitle == null -> null
+            else -> old?.subtitle
+                ?.let { index -> details.tracks?.subtitles?.firstOrNull { it.index == index } }
+                ?.let { closestTrack(it.toKey(), shown.tracks?.subtitles.orEmpty()) }?.index
+                ?: shown.tracks?.subtitleFor(audio)
+        }
+        val selection = TrackSelection(audio, subtitle, id)
+        trackSelections.set(itemId, selection)
+        _state.update { it.copy(details = shown, selection = selection, trackPanel = null) }
+        viewModelScope.launch {
+            versions.remember(details, version)
+            _events.send(UiEvent.Toast(R.string.version_set, listOf(label)))
         }
     }
 

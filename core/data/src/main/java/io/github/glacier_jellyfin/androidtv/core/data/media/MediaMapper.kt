@@ -6,6 +6,7 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.CollectionType
 import org.jellyfin.sdk.model.api.ImageType
+import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaStreamType
 import org.jellyfin.sdk.model.api.VideoRangeType
 import java.util.UUID
@@ -25,6 +26,22 @@ private object ImageWidth {
     const val LIBRARY = 720
     const val COVER_SMALL = 160
     const val COVER_LARGE = 960
+}
+
+/** "4K", "HDR" and the like of the first video stream; null for plain HD. */
+internal fun videoQuality(streams: List<MediaStream>?): VideoQuality? {
+    val video = streams?.firstOrNull { it.type == MediaStreamType.VIDEO } ?: return null
+    val hdr = when (video.videoRangeType) {
+        VideoRangeType.HDR10 -> HdrFormat.Hdr10
+        VideoRangeType.HDR10_PLUS -> HdrFormat.Hdr10Plus
+        VideoRangeType.HLG -> HdrFormat.Hlg
+        VideoRangeType.DOVI, VideoRangeType.DOVI_WITH_HDR10, VideoRangeType.DOVI_WITH_HLG,
+        VideoRangeType.DOVI_WITH_SDR, VideoRangeType.DOVI_WITH_EL, VideoRangeType.DOVI_WITH_HDR10_PLUS,
+        VideoRangeType.DOVI_WITH_ELHDR10_PLUS -> HdrFormat.DolbyVision
+        else -> null
+    }
+    val uhd = (video.width ?: 0) >= UHD_MIN_WIDTH
+    return VideoQuality(uhd, hdr).takeIf { uhd || hdr != null }
 }
 
 internal fun CollectionType?.toLibraryKind(): LibraryKind? = when (this) {
@@ -137,20 +154,7 @@ internal class MediaMapper(private val api: ApiClient) {
         imageUrl = dto.imageTags?.get(ImageType.PRIMARY)?.let { image(dto.id, ImageType.PRIMARY, it, ImageWidth.LIBRARY) },
     )
 
-    private fun quality(dto: BaseItemDto): VideoQuality? {
-        val video = dto.mediaStreams?.firstOrNull { it.type == MediaStreamType.VIDEO } ?: return null
-        val hdr = when (video.videoRangeType) {
-            VideoRangeType.HDR10 -> HdrFormat.Hdr10
-            VideoRangeType.HDR10_PLUS -> HdrFormat.Hdr10Plus
-            VideoRangeType.HLG -> HdrFormat.Hlg
-            VideoRangeType.DOVI, VideoRangeType.DOVI_WITH_HDR10, VideoRangeType.DOVI_WITH_HLG,
-            VideoRangeType.DOVI_WITH_SDR, VideoRangeType.DOVI_WITH_EL, VideoRangeType.DOVI_WITH_HDR10_PLUS,
-            VideoRangeType.DOVI_WITH_ELHDR10_PLUS -> HdrFormat.DolbyVision
-            else -> null
-        }
-        val uhd = (video.width ?: 0) >= UHD_MIN_WIDTH
-        return VideoQuality(uhd, hdr).takeIf { uhd || hdr != null }
-    }
+    private fun quality(dto: BaseItemDto): VideoQuality? = videoQuality(dto.mediaStreams)
 
     private fun poster(dto: BaseItemDto): String? {
         // Songs show their album's cover first, like the music player.

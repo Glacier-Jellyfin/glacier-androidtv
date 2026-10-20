@@ -183,7 +183,7 @@ fun LanguageFlag(flag: String, modifier: Modifier = Modifier, width: Int = 24, h
  * light glass with a clear edge so it stays readable over a bright backdrop.
  */
 @Composable
-fun TrackChip(content: TrackChipContent, audio: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun TrackChip(content: TrackChipContent, icon: ImageVector?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -200,7 +200,7 @@ fun TrackChip(content: TrackChipContent, audio: Boolean, onClick: () -> Unit, mo
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(if (audio) GlacierIcons.Speaker else GlacierIcons.Subtitles, contentDescription = null, tint = foreground, modifier = Modifier.size(19.dp))
+        icon?.let { Icon(it, contentDescription = null, tint = foreground, modifier = Modifier.size(19.dp)) }
         content.flag?.let { LanguageFlag(it) }
         // Episode pages leave the chips little room: one line, cut short, the mark icons keep their place.
         Text(

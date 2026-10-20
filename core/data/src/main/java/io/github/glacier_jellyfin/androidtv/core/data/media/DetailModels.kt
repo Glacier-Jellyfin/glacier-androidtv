@@ -37,6 +37,8 @@ data class ItemDetails(
     val directors: List<String> = emptyList(),
     /** Studios of a film, networks of a show. */
     val studios: List<String> = emptyList(),
+    /** The title's files when it has several, in the server's order; empty for a single file. */
+    val versions: List<MediaVersion> = emptyList(),
 )
 
 data class EpisodeNeighbours(val previous: MediaItem?, val next: MediaItem?)

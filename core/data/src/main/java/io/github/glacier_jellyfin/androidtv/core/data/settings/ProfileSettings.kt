@@ -1,6 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.core.data.settings
 
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
+import io.github.glacier_jellyfin.androidtv.core.data.media.VersionKey
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentAction
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentPolicy
@@ -30,6 +31,8 @@ data class ProfileSettings(
     /** The library sort last picked, keyed by library kind name (Movies, Shows, ...). */
     val librarySorts: Map<String, LibrarySortChoice> = emptyMap(),
     val liveTv: LiveTvSettings = LiveTvSettings(),
+    /** The version picked for a movie, or for all episodes of a show, keyed by the movie's or show's id. */
+    val versions: Map<String, VersionKey> = emptyMap(),
 )
 
 /**

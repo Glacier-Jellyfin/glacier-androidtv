@@ -22,6 +22,8 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
+import org.jellyfin.sdk.model.api.MediaSourceInfo
+import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.MediaStreamType
 import org.jellyfin.sdk.model.api.PersonKind
@@ -75,7 +77,32 @@ class DetailRepository @Inject constructor(
                 .mapNotNull { it.name?.takeIf(String::isNotBlank) }
                 .distinct(),
             studios = dto.studios.orEmpty().mapNotNull { it.name?.takeIf(String::isNotBlank) },
+            versions = versions(session, dto),
         )
+    }
+
+    /** Each file of a title with several, with its own tracks and seek previews. */
+    private fun versions(session: Session, dto: BaseItemDto): List<MediaVersion> {
+        val sources = dto.mediaSources.orEmpty()
+        if (sources.size < 2) return emptyList()
+        return sources.mapNotNull { source ->
+            val id = source.id ?: return@mapNotNull null
+            val streams = source.mediaStreams.orEmpty()
+            val video = streams.firstOrNull { it.type == MediaStreamType.VIDEO }
+            MediaVersion(
+                id = id,
+                name = source.name?.takeIf(String::isNotBlank),
+                edition = editionOf(source.name, dto.name),
+                width = video?.width,
+                height = video?.height,
+                quality = videoQuality(streams),
+                videoCodec = video?.codec,
+                sizeBytes = source.size,
+                runtimeMs = source.runTimeTicks?.let { it / TICKS_PER_MS },
+                tracks = tracks(source, null),
+                trickplay = trickplay(session, dto, id),
+            )
+        }
     }
 
     private fun chapters(session: Session, dto: BaseItemDto): List<Chapter> =
@@ -89,10 +116,10 @@ class DetailRepository @Inject constructor(
             )
         }
 
-    /** The resolution closest to the design's 340-wide preview. */
-    private fun trickplay(session: Session, dto: BaseItemDto): Trickplay? {
-        val source = dto.mediaSources?.firstOrNull()?.id ?: dto.id.toString().replace("-", "")
-        val sizes = dto.trickplay?.get(source) ?: dto.trickplay?.values?.firstOrNull() ?: return null
+    /** The resolution closest to the design's 340-wide preview; of the first file unless [sourceId] names one. */
+    private fun trickplay(session: Session, dto: BaseItemDto, sourceId: String? = null): Trickplay? {
+        val source = sourceId ?: dto.mediaSources?.firstOrNull()?.id ?: dto.id.toString().replace("-", "")
+        val sizes = dto.trickplay?.get(source) ?: dto.trickplay?.values?.firstOrNull().takeIf { sourceId == null } ?: return null
         val info = sizes.values.minByOrNull { kotlin.math.abs(it.width - TRICKPLAY_WIDTH) } ?: return null
         val perTile = (info.tileWidth * info.tileHeight).coerceAtLeast(1)
         val tiles = (info.thumbnailCount + perTile - 1) / perTile
@@ -313,9 +340,11 @@ class DetailRepository @Inject constructor(
                 )
             }
 
-    private fun tracks(dto: BaseItemDto): TrackChoices? {
-        val source = dto.mediaSources?.firstOrNull() ?: return null
-        val streams = source.mediaStreams ?: dto.mediaStreams ?: return null
+    private fun tracks(dto: BaseItemDto): TrackChoices? = tracks(dto.mediaSources?.firstOrNull() ?: return null, dto.mediaStreams)
+
+    /** Tracks of one file; [fallback] when the source lists no streams of its own. */
+    private fun tracks(source: MediaSourceInfo, fallback: List<MediaStream>?): TrackChoices? {
+        val streams = source.mediaStreams ?: fallback ?: return null
         val audio = streams.filter { it.type == MediaStreamType.AUDIO }.map { it.toTrack() }
         val subtitles = streams.filter { it.type == MediaStreamType.SUBTITLE }.map { it.toTrack() }
         if (audio.isEmpty() && subtitles.isEmpty()) return null
