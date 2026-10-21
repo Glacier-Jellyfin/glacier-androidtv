@@ -1,11 +1,15 @@
 package io.github.glacier_jellyfin.androidtv.detail
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.animation.Crossfade
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -19,6 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -56,9 +61,28 @@ import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
+import coil3.compose.AsyncImage
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
+import io.github.glacier_jellyfin.androidtv.ui.RowPivot
+import io.github.glacier_jellyfin.androidtv.ui.SONG_ROW_HEIGHT
 import java.util.UUID
+import kotlinx.coroutines.launch
 
 private const val MUSIC_BACKDROP = 760
+
+/** The cover left of the songs, and the space between them. */
+private const val COVER_SIZE = 400
+private const val COVER_GAP = 48
+
+/** Room below a playlist's cover for the focused song's album, artist and year. */
+private const val CAPTION_HEIGHT = 90
 
 /** Focus key of the options button (the others are song ids, or null for Play). */
 private const val MORE_KEY = "more"
@@ -77,6 +101,25 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
     val tracks = state.musicTracks
     /** A playlist with videos and no songs: Play starts the videos. */
     val videosOnly = item.kind == ItemKind.Playlist && tracks.isEmpty() && state.playlistVideos.isNotEmpty()
+    val playlist = item.kind == ItemKind.Playlist
+    // Albums and playlists show a cover left of the songs. It stays put while the songs scroll past.
+    // A playlist's follows the focused song, with its album below; before that it shows the playlist.
+    val focusedTrack = if (playlist) tracks.firstOrNull { it.id.toString() == focusKey } else null
+    val coverUrl = when {
+        tracks.isEmpty() -> null
+        item.kind == ItemKind.Album -> item.posterUrl
+        playlist -> focusedTrack?.coverUrl ?: item.posterUrl ?: tracks.first().coverUrl
+        else -> null
+    }
+    val coverHeight = COVER_SIZE + if (playlist) CAPTION_HEIGHT else 0
+    val songIndent = if (coverUrl != null) (COVER_SIZE + COVER_GAP).dp else 0.dp
+    val discs = tracks.mapNotNull { it.disc }.distinct().size > 1
+    // Songs that open a new disc get a heading above them.
+    val discStarts = if (discs && !playlist) {
+        tracks.indices.filter { tracks[it].disc != null && tracks[it].disc != tracks.getOrNull(it - 1)?.disc }.toSet()
+    } else {
+        emptySet()
+    }
     val sheet by viewModel.musicActions.sheet.collectAsStateWithLifecycle()
     // Also once the options sheet closes, which takes the focus with it. The key is kept from when it
     // opened: on closing, focus falls on Play for a moment before this runs.
@@ -97,13 +140,27 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
         runCatching { requester.requestFocus() }
     }
 
+    // Back among the songs and rows below first goes up to Play. Pressed again, it leaves the page.
+    var listFocused by remember { mutableStateOf(false) }
+    var headerFocused by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    BackHandler(enabled = listFocused && !headerFocused) {
+        scope.launch {
+            listState.scrollToItem(0)
+            withFrameNanos { }
+            runCatching { playFocus.requestFocus() }
+        }
+    }
+
     Box(Modifier.fillMaxSize().background(ImagePageGround)) {
         ScrollingBackdrop(item.backdropUrl ?: item.posterUrl, MUSIC_BACKDROP, listState)
         CompositionLocalProvider(LocalBringIntoViewSpec provides rememberRowPivotSpec(listState, HEADER_REGION)) {
-            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize().onFocusChanged { listFocused = it.hasFocus }) {
                 item(key = "header") {
                     Column(
-                        Modifier.padding(start = PageEdge.dp, end = PageEdge.dp, top = 130.dp),
+                        Modifier
+                            .padding(start = PageEdge.dp, end = PageEdge.dp, top = 130.dp)
+                            .onFocusChanged { headerFocused = it.hasFocus },
                         verticalArrangement = Arrangement.spacedBy(22.dp),
                     ) {
                         val music = stringResource(R.string.library_music)
@@ -176,23 +233,21 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                             stringResource(R.string.music_tracks),
                             style = GlacierText.display(28),
                             color = GlacierColors.Ice,
-                            modifier = Modifier.padding(start = PageEdge.dp, end = PageEdge.dp, top = 34.dp, bottom = 20.dp),
+                            modifier = Modifier.padding(start = PageEdge.dp + songIndent, end = PageEdge.dp, top = 34.dp, bottom = 20.dp),
                         )
                     }
                     // One column: Up and Down go song by song. Holding OK opens a song's options.
-                    val playlist = item.kind == ItemKind.Playlist
                     // Albums name each song's artist only when they differ (a sampler, a guest).
                     val withArtist = playlist || tracks.any { it.artist != null && it.artist != item.parentTitle }
-                    val discs = tracks.mapNotNull { it.disc }.distinct().size > 1
                     tracks.forEachIndexed { index, track ->
                         val disc = track.disc
-                        if (discs && !playlist && disc != null && disc != tracks.getOrNull(index - 1)?.disc) {
+                        if (index in discStarts && disc != null) {
                             item(key = "disc-$disc-$index") {
                                 Text(
                                     stringResource(R.string.music_disc, disc),
                                     style = GlacierText.body(17, FontWeight.SemiBold),
                                     color = GlacierColors.Mist,
-                                    modifier = Modifier.padding(start = PageEdge.dp + 24.dp, top = if (index == 0) 0.dp else 18.dp, bottom = 10.dp),
+                                    modifier = Modifier.padding(start = PageEdge.dp + songIndent + 24.dp, top = if (index == 0) 0.dp else 18.dp, bottom = 10.dp),
                                 )
                             }
                         }
@@ -205,17 +260,22 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                 artist = if (playlist) track.artist else track.artist?.takeIf { it != item.parentTitle },
                                 album = track.album,
                                 showArtist = withArtist,
-                                showAlbum = playlist,
+                                // The cover beside the list names the album of the focused song.
+                                showAlbum = playlist && coverUrl == null,
                                 onClick = { viewModel.playMusic(track) },
                                 onOptions = { viewModel.trackOptions(track) },
                                 modifier = Modifier
-                                    .padding(start = PageEdge.dp, end = PageEdge.dp, bottom = SONG_ROW_GAP.dp)
+                                    .padding(start = PageEdge.dp + songIndent, end = PageEdge.dp, bottom = SONG_ROW_GAP.dp)
                                     .focusRequester(focus)
                                     .onFocusChanged { if (it.isFocused) focusKey = track.id.toString() },
                             )
                         }
                     }
-                    item(key = "tracks-end") { Box(Modifier.padding(bottom = if (state.similar.isEmpty()) 98.dp else 20.dp)) }
+                    item(key = "tracks-end") {
+                        // A short album still leaves room for the whole cover before the next row.
+                        val coverRest = if (coverUrl != null) (coverHeight - tracks.size * (SONG_ROW_HEIGHT + SONG_ROW_GAP)).coerceAtLeast(0) else 0
+                        Box(Modifier.height(coverRest.dp + if (state.similar.isEmpty()) 98.dp else 20.dp))
+                    }
                 }
                 if (state.artistAlbums.isNotEmpty()) {
                     item(key = "albums") {
@@ -275,7 +335,72 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                 }
             }
         }
+        // Items: header, tracks title, then the songs with their disc headings, then the end spacer.
+        if (coverUrl != null) {
+            StickyCover(listState, firstIndex = 2, endIndex = 2 + tracks.size + discStarts.size, height = coverHeight) {
+                Cover(coverUrl)
+                if (playlist) focusedTrack?.let { TrackCaption(it) }
+            }
+        }
         MusicActionsSheet(viewModel.musicActions)
+    }
+}
+
+/**
+ * The cover beside the songs: it starts level with the first song, stops at [RowPivot]
+ * (where a focused song settles) and leaves with the last song. [firstIndex] is the list item
+ * that starts the songs, [endIndex] the spacer after them.
+ */
+@Composable
+private fun StickyCover(listState: LazyListState, firstIndex: Int, endIndex: Int, height: Int, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        Modifier
+            .padding(start = PageEdge.dp)
+            .size(COVER_SIZE.dp, height.dp)
+            .layout { measurable, constraints ->
+                val placeable = measurable.measure(constraints)
+                layout(placeable.width, placeable.height) {
+                    val info = listState.layoutInfo
+                    val visible = info.visibleItemsInfo
+                    val first = visible.firstOrNull { it.index == firstIndex }
+                    val end = visible.firstOrNull { it.index == endIndex }
+                    val firstVisible = visible.firstOrNull()?.index ?: 0
+                    val lastVisible = visible.lastOrNull()?.index ?: 0
+                    val viewport = info.viewportEndOffset
+                    // Where the songs begin and end on screen, beyond either edge when scrolled away.
+                    val top = first?.offset ?: if (firstIndex < firstVisible) Int.MIN_VALUE / 2 else viewport
+                    val bottom = (end?.offset ?: if (endIndex > lastVisible) Int.MAX_VALUE / 2 else Int.MIN_VALUE / 2) - SONG_ROW_GAP.dp.roundToPx()
+                    val y = maxOf(RowPivot.dp.roundToPx(), top)
+                        .coerceAtMost(maxOf(top, bottom - placeable.height))
+                        .coerceIn(-placeable.height, viewport)
+                    placeable.place(0, y)
+                }
+            },
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        content = content,
+    )
+}
+
+/** A square cover that fades over to the next one. */
+@Composable
+private fun Cover(url: String?) {
+    Crossfade(url, label = "cover", modifier = Modifier.size(COVER_SIZE.dp)) { shown ->
+        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(GlacierShapes.RadiusLg)).background(GlacierColors.GlassFill)) {
+            if (shown != null) AsyncImage(model = shown, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        }
+    }
+}
+
+/** The focused song's album, then artist and year, below a playlist's cover. */
+@Composable
+private fun TrackCaption(track: MusicTrack) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        track.album?.let {
+            Text(it, style = GlacierText.body(20, FontWeight.SemiBold), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        listOfNotNull(track.artist, track.year?.toString()).joinToString(" · ").takeIf { it.isNotEmpty() }?.let {
+            Text(it, style = GlacierText.body(18), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 }
 

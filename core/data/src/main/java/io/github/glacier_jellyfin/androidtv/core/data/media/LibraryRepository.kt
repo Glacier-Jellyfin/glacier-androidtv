@@ -175,19 +175,23 @@ class LibraryRepository @Inject constructor(
     private fun nameOf(dto: BaseItemDto, query: LibraryQuery): String =
         if (query.scope == LibraryScope.Songs) dto.name.orEmpty() else NameOrder.title(dto.name.orEmpty(), dto.sortName)
 
-    private fun entryOf(dto: BaseItemDto, query: LibraryQuery) = IndexEntry(
-        id = dto.id,
-        name = nameOf(dto, query),
-        addedMonth = dto.dateCreated?.let { it.year * 12 + it.monthValue - 1 },
-        year = dto.productionYear,
-        rating = dto.communityRating,
-        runtimeMs = dto.runTimeTicks?.div(10_000),
-        artist = if (query.scope == LibraryScope.Songs) dto.artists?.firstOrNull() ?: dto.albumArtist else dto.albumArtist,
-        albumId = dto.albumId?.toString(),
-        album = dto.album,
-        disc = dto.parentIndexNumber,
-        track = dto.indexNumber,
-    )
+    /** [shared] keeps one copy of each artist and album: a big music library repeats them on every song. */
+    private fun entryOf(dto: BaseItemDto, query: LibraryQuery, shared: MutableMap<String, String>? = null): IndexEntry {
+        fun String.once() = shared?.getOrPut(this) { this } ?: this
+        return IndexEntry(
+            id = dto.id,
+            name = nameOf(dto, query),
+            addedMonth = dto.dateCreated?.let { it.year * 12 + it.monthValue - 1 },
+            year = dto.productionYear,
+            rating = dto.communityRating,
+            runtimeMs = dto.runTimeTicks?.div(10_000),
+            artist = (if (query.scope == LibraryScope.Songs) dto.artists?.firstOrNull() ?: dto.albumArtist else dto.albumArtist)?.once(),
+            albumId = dto.albumId?.toString()?.once(),
+            album = dto.album?.once(),
+            disc = dto.parentIndexNumber,
+            track = dto.indexNumber,
+        )
+    }
 
     /** A list in the grid's order and, when fetched whole, its titles. */
     private class Listing(val query: LibraryQuery, val source: List<IndexEntry>, val list: ArrangedList, val whole: Map<UUID, BaseItemDto>?)
@@ -260,11 +264,15 @@ class LibraryRepository @Inject constructor(
     private fun indexKey(session: Session, query: LibraryQuery): String =
         "$INDEX_VERSION|${session.server.id}|${session.user.userId}|${query.copy(sort = LibrarySort.Title, descending = false)}"
 
-    /** [query]'s titles from the server. */
-    private suspend fun fetchIndex(session: Session, query: LibraryQuery): List<IndexEntry> =
-        fetchAll(session, query, light = true)
+    /**
+     * [query]'s titles from the server. Each page becomes index entries as it comes: 70,000
+     * songs as the server's items at once do not fit in a TV's memory.
+     */
+    private suspend fun fetchIndex(session: Session, query: LibraryQuery): List<IndexEntry> {
+        val shared = HashMap<String, String>()
+        return fetchAll(session, query, light = true) { page -> synchronized(shared) { page.map { entryOf(it, query, shared) } } }
             .distinctBy { it.id }
-            .map { entryOf(it, query) }
+    }
 
     /** Saves a new copy of an index for the next fresh look; the one in use stays as it is. */
     private fun refreshInBackground(session: Session, query: LibraryQuery, key: String) {
@@ -302,24 +310,30 @@ class LibraryRepository @Inject constructor(
             val recent = System.currentTimeMillis() - cached.at < WHOLE_FRESH_MS
             if (cached.key == key && (!fresh || recent)) return@withLock cached.value
         }
-        var items = fetchAll(session, query, grouped = query.unwatchedGrouped).distinctBy { it.id }
+        var items = fetchAll(session, query, grouped = query.unwatchedGrouped) { it }.distinctBy { it.id }
         if (query.unwatchedGrouped) items = items.filter { it.userData?.played != true }
         val whole = Whole(items.map { entryOf(it, query) }, items.associateBy { it.id })
         wholeCache = Cached(key, System.currentTimeMillis(), whole)
         whole
     }
 
-    /** Every title of [query], page by page, a few pages at once. */
-    private suspend fun fetchAll(session: Session, query: LibraryQuery, light: Boolean = false, grouped: Boolean = false): List<BaseItemDto> {
+    /** Every title of [query], page by page, a few pages at once, each page made into [T] as it comes. */
+    private suspend fun <T> fetchAll(
+        session: Session,
+        query: LibraryQuery,
+        light: Boolean = false,
+        grouped: Boolean = false,
+        convert: (List<BaseItemDto>) -> List<T>,
+    ): List<T> {
         val first = fetch(session, query, start = 0, limit = WHOLE_PAGE, light = light, grouped = grouped)
         val total = first.totalRecordCount.coerceAtMost(MAX_WHOLE)
         val permits = Semaphore(WHOLE_PARALLEL)
         val rest = coroutineScope {
             (WHOLE_PAGE until total step WHOLE_PAGE).map { start ->
-                async { permits.withPermit { fetch(session, query, start = start, limit = WHOLE_PAGE, light = light, grouped = grouped).items } }
+                async { permits.withPermit { convert(fetch(session, query, start = start, limit = WHOLE_PAGE, light = light, grouped = grouped).items) } }
             }.awaitAll()
         }
-        return first.items + rest.flatten()
+        return convert(first.items) + rest.flatten()
     }
 
     /** The titles with [ids], in that order. A few at once, so the address stays short. */

@@ -46,6 +46,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusDirection
@@ -346,10 +350,10 @@ fun LibraryScreen(
                             }
                         }
                         state.loading && state.items.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }, key = "loading") {
-                            InFreeSpace(gridState, "loading") { SpinningDiamond(90) }
+                            InFreeSpace(gridState, "loading", screenCentred = true) { SpinningDiamond(90) }
                         }
                         state.complete && state.items.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
-                            InFreeSpace(gridState, "empty") {
+                            InFreeSpace(gridState, "empty", screenCentred = true) {
                                 Text(
                                     stringResource(
                                         when {
@@ -421,10 +425,11 @@ fun LibraryScreen(
 
 /**
  * [content] in the middle of the space the titles would fill: from the grid item [key] down to
- * the grid's bottom edge. Without [fill] just in the middle of its own row.
+ * the grid's bottom edge. Without [fill] just in the middle of its own row. [screenCentred] puts it
+ * in the middle of the screen across, wherever the grid ends (with or without the A–Z rail).
  */
 @Composable
-private fun InFreeSpace(gridState: LazyGridState, key: String, fill: Boolean = true, content: @Composable () -> Unit) {
+private fun InFreeSpace(gridState: LazyGridState, key: String, fill: Boolean = true, screenCentred: Boolean = false, content: @Composable () -> Unit) {
     val density = LocalDensity.current
     // Read in a derived state: the layout info changes with every scrolled pixel.
     val height by remember(gridState, key) {
@@ -435,10 +440,21 @@ private fun InFreeSpace(gridState: LazyGridState, key: String, fill: Boolean = t
         }
     }
     val min = if (fill) LOADER_MIN_HEIGHT.dp else 0.dp
+    val screenWidth = LocalWindowInfo.current.containerSize.width
+    var shift by remember { mutableFloatStateOf(0f) }
     Box(
-        Modifier.fillMaxWidth().then(if (fill) Modifier.height((height ?: min).coerceAtLeast(min)) else Modifier),
+        Modifier
+            .fillMaxWidth()
+            .then(if (fill) Modifier.height((height ?: min).coerceAtLeast(min)) else Modifier)
+            .then(
+                if (screenCentred) {
+                    Modifier.onGloballyPositioned { shift = screenWidth / 2f - (it.positionInRoot().x + it.size.width / 2f) }
+                } else {
+                    Modifier
+                },
+            ),
         contentAlignment = Alignment.Center,
-    ) { content() }
+    ) { Box(Modifier.graphicsLayer { translationX = shift }) { content() } }
 }
 
 /** The small heading over a group of a list sorted by something else than the title. */
@@ -670,7 +686,12 @@ private fun AlphabetRail(
     val order = if (descending) AlphabetLetters.reversed() else AlphabetLetters
     val focused = current?.takeIf { it in letters } ?: order.firstOrNull { it in letters }
     Column(
-        modifier
+        // Coming in from any side lands on the current letter, not the nearest one. Before the
+        // caller's modifier, so its focus properties still reach the letters.
+        Modifier
+            .focusProperties { onEnter = { runCatching { focus.requestFocus() } } }
+            .focusGroup()
+            .then(modifier)
             .width(48.dp)
             .clip(PillShape)
             .background(GlacierColors.GlassFill)

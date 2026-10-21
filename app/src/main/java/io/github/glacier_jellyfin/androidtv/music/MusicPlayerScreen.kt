@@ -196,7 +196,7 @@ fun MusicPlayerScreen(
             Box(Modifier.padding(start = 96.dp).width(1064.dp)) {
                 AnimatedContent(state.lyricsOn, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "lyrics") { lyricsOn ->
                     if (lyricsOn) {
-                        LyricsView(state, current, progress.positionMs, onSeek = viewModel::seekTo)
+                        LyricsView(state, current, progress.positionMs, onSeek = viewModel::seekTo, left = playFocus)
                     } else {
                         NowPlaying(state, current)
                     }
@@ -219,6 +219,8 @@ fun MusicPlayerScreen(
                 progress = progress,
                 onPick = viewModel::playAt,
                 onOptions = viewModel::queueOptions,
+                // With the lyrics up, Left would land on a lyric line: it goes to the last button instead.
+                left = if (state.lyricsOn) infoFocus else null,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(end = 96.dp, top = 170.dp, bottom = 90.dp)
@@ -371,7 +373,7 @@ internal fun Equalizer(playing: Boolean) {
 
 /** Small cover and title above the lyrics, which follow the song when synced (design: "Songtext"). */
 @Composable
-private fun LyricsView(state: MusicUiState, track: MusicTrack, positionMs: Long, onSeek: (Long) -> Unit) {
+private fun LyricsView(state: MusicUiState, track: MusicTrack, positionMs: Long, onSeek: (Long) -> Unit, left: FocusRequester) {
     val accent = LocalAccent.current.main
     val loaded = (state.lyrics as? LyricsState.Loaded)?.lyrics
     Column(Modifier.padding(top = 170.dp).fillMaxWidth().height(600.dp)) {
@@ -403,7 +405,7 @@ private fun LyricsView(state: MusicUiState, track: MusicTrack, positionMs: Long,
                 is LyricsState.Loaded -> if (lyrics.lyrics.instrumental) {
                     NoLyrics(stringResource(R.string.lyrics_instrumental), Modifier.align(Alignment.CenterStart))
                 } else {
-                    LyricLines(track, lyrics.lyrics.lines, lyrics.lyrics.synced, positionMs, onSeek)
+                    LyricLines(track, lyrics.lyrics.lines, lyrics.lyrics.synced, positionMs, onSeek, left)
                 }
             }
         }
@@ -420,7 +422,7 @@ private fun NoLyrics(title: String, modifier: Modifier) {
 }
 
 @Composable
-private fun LyricLines(track: MusicTrack, lines: List<LyricLine>, synced: Boolean, positionMs: Long, onSeek: (Long) -> Unit) {
+private fun LyricLines(track: MusicTrack, lines: List<LyricLine>, synced: Boolean, positionMs: Long, onSeek: (Long) -> Unit, left: FocusRequester) {
     val listState = rememberLazyListState()
     val current = if (synced) lines.indexOfLast { (it.startMs ?: Long.MAX_VALUE) <= positionMs } else -1
     var focusedInside by remember { mutableStateOf(false) }
@@ -430,6 +432,8 @@ private fun LyricLines(track: MusicTrack, lines: List<LyricLine>, synced: Boolea
             .fillMaxSize()
             .offset(x = (-24).dp)
             .onFocusChanged { focusedInside = it.hasFocus }
+            // Left from a line goes to Play/Pause.
+            .leftTo(left)
             // Lines fade out at the top and bottom edge (design mask 16 % / 78 %).
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithContent {
@@ -652,9 +656,16 @@ internal fun MusicButton(
     }
 }
 
+/** Left from anything inside goes to [target] instead of the nearest thing on the left. */
+private fun Modifier.leftTo(target: FocusRequester): Modifier = onPreviewKeyEvent { event ->
+    if (event.key != Key.DirectionLeft) return@onPreviewKeyEvent false
+    if (event.type == KeyEventType.KeyDown) runCatching { target.requestFocus() }
+    true
+}
+
 /** "Wiedergabeliste": the queue, the current song marked, played ones faded. */
 @Composable
-private fun QueuePanel(state: MusicUiState, progress: MusicProgress, onPick: (Int) -> Unit, onOptions: (Int) -> Unit, modifier: Modifier) {
+private fun QueuePanel(state: MusicUiState, progress: MusicProgress, onPick: (Int) -> Unit, onOptions: (Int) -> Unit, left: FocusRequester?, modifier: Modifier) {
     val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
     val listState = rememberLazyListState()
     val currentFocus = remember { FocusRequester() }
@@ -689,6 +700,7 @@ private fun QueuePanel(state: MusicUiState, progress: MusicProgress, onPick: (In
             modifier = Modifier
                 .fillMaxSize()
                 .onFocusChanged { focusedInside = it.hasFocus }
+                .then(if (left != null) Modifier.leftTo(left) else Modifier)
                 // Coming in from the controls lands on the song that plays.
                 .focusProperties { onEnter = { currentFocus.requestFocus() } },
         ) {

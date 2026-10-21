@@ -22,6 +22,12 @@ renders the reference separately.
 - Pick the version of a movie or episode that has several files, such as 2160p and 1080p, or cuts like a Director's Cut. A chip before the audio track shows the version and opens the list. Glacier starts with the largest file of the main cut that your device plays without converting and that fits the screen. Your pick stays for the movie, or for all episodes of the show. Length and end time follow the version (#8)
 
 ### Improved
+- Album pages show the cover left of the songs. It stays in place while you scroll through the songs
+- Playlist pages show the cover of the focused song on the left, with its album, artist and year below
+- On album, artist and playlist pages, Back from the songs or the rows below first goes up to Play
+- Moving onto the A-Z rail always lands on the current letter
+- The loading sign and the text of an empty list sit in the middle of the screen, with or without the A-Z rail
+- With the lyrics on in the music player, Left from the queue goes to the last button and Left from the lyrics to Play/Pause
 - Detail pages show the mini player while music plays. Up from the buttons at the top reaches it
 - The mini player and messages sit as far from the right edge as from the top
 - Forced, hearing impaired, sing-along, commentary and audio description tracks are found by their name in many more languages, such as French, Spanish, Italian, Portuguese, Dutch, the Nordic languages, Polish and Russian. Accents and spellings like Sing-Along or Singalong no longer matter
@@ -37,6 +43,7 @@ renders the reference separately.
 - When a library view cannot load or has nothing to show, the message sits in the middle of the page, with the Retry button below it
 
 ### Fixed
+- The songs tab of a very large music library no longer closes the app while it loads
 - The A–Z rail of the Songs tab covers all songs, also in libraries with more than 40,000 songs
 - Subtitles for signs and songs show as forced, not as sing-along. This also covers German names like "Schild- und Liedtext"
 - An audio track named like "ger ac3 6ch" no longer shows as Swiss German
