@@ -34,6 +34,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 
@@ -46,7 +47,8 @@ const val FocusScale = 1.07f
  * scale is dropped and only border and ring remain.
  *
  * [content] receives the focus state so labels can switch to the accent colour.
- * Text fields pass [scaleOnFocus] = false: the design only rings them.
+ * Text fields pass [scaleOnFocus] = false: the design only rings them. Wide rows pass
+ * [maxWidthGrowth], so they grow sideways by about as much as a card.
  * [onLongClick] (holding OK, or the remote's menu key) opens options.
  */
 @Composable
@@ -59,6 +61,7 @@ fun GlacierClickable(
     borderWidth: Int = 2,
     contentAlignment: Alignment = Alignment.TopStart,
     scaleOnFocus: Boolean = true,
+    maxWidthGrowth: Dp = Dp.Unspecified,
     onLongClick: (() -> Unit)? = null,
     content: @Composable BoxScope.(focused: Boolean) -> Unit,
 ) {
@@ -66,7 +69,7 @@ fun GlacierClickable(
     val focused by interaction.collectIsFocusedAsState()
     Box(
         modifier = modifier
-            .focusScale(focused && scaleOnFocus)
+            .focusScale(focused && scaleOnFocus, maxWidthGrowth)
             .focusFrame(focused, shape, unfocusedBorder, borderWidth)
             .then(
                 if (onLongClick == null) {
@@ -104,15 +107,26 @@ fun GlacierCard(
     }
 }
 
-/** Scales up while focused, unless "reduce motion" is on. */
+/**
+ * Scales up while focused, unless "reduce motion" is on. With [maxWidthGrowth] it gets at most
+ * that much wider, however wide it is; its height still scales in full.
+ */
 @Composable
-fun Modifier.focusScale(focused: Boolean): Modifier {
+fun Modifier.focusScale(focused: Boolean, maxWidthGrowth: Dp = Dp.Unspecified): Modifier {
     val scale by animateFloatAsState(
         targetValue = if (focused && !LocalReduceMotion.current) FocusScale else 1f,
         animationSpec = tween(200),
         label = "focusScale",
     )
-    return graphicsLayer { scaleX = scale; scaleY = scale }
+    return graphicsLayer {
+        scaleY = scale
+        scaleX = if (maxWidthGrowth == Dp.Unspecified || size.width <= 0f) {
+            scale
+        } else {
+            val growth = (scale - 1f) / (FocusScale - 1f) * maxWidthGrowth.toPx()
+            minOf(scale, 1f + growth / size.width)
+        }
+    }
 }
 
 /** Accent border, 4px ring and drop shadow while focused; [unfocusedBorder] otherwise. */

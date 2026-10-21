@@ -41,6 +41,10 @@ data class MediaItem(
     val overview: String?,
     /** Series name for episodes, album artist for albums, artists for songs. */
     val parentTitle: String?,
+    /** The album a song is on. */
+    val album: String? = null,
+    /** In a library list sorted by something else than the title: the group it is listed under. */
+    val group: ListGroup? = null,
     /** The show of an episode or season. */
     val seriesId: UUID? = null,
     val seasonNumber: Int?,

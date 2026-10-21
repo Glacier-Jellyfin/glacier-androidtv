@@ -8,13 +8,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -26,14 +24,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
@@ -42,20 +38,17 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
-import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.music.MusicActionsSheet
-import io.github.glacier_jellyfin.androidtv.player.formatTime
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
 import io.github.glacier_jellyfin.androidtv.ui.CardShape
 import io.github.glacier_jellyfin.androidtv.ui.ContinueCard
 import io.github.glacier_jellyfin.androidtv.ui.FactsRow
 import io.github.glacier_jellyfin.androidtv.ui.GridCard
-import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
+import io.github.glacier_jellyfin.androidtv.ui.SONG_ROW_GAP
+import io.github.glacier_jellyfin.androidtv.ui.SongRow
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.audioFormatText
@@ -179,38 +172,47 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                 }
                 if (tracks.isNotEmpty()) {
                     item(key = "tracks-title") {
-                        Row(
-                            Modifier.padding(start = PageEdge.dp, end = PageEdge.dp, top = 34.dp, bottom = 20.dp),
-                            verticalAlignment = Alignment.Bottom,
-                            horizontalArrangement = Arrangement.spacedBy(20.dp),
-                        ) {
-                            Text(stringResource(R.string.music_tracks), style = GlacierText.display(28), color = GlacierColors.Ice)
-                            Text(stringResource(R.string.music_options_hint), style = GlacierText.body(17), color = GlacierColors.Mist, modifier = Modifier.padding(bottom = 4.dp))
-                        }
+                        Text(
+                            stringResource(R.string.music_tracks),
+                            style = GlacierText.display(28),
+                            color = GlacierColors.Ice,
+                            modifier = Modifier.padding(start = PageEdge.dp, end = PageEdge.dp, top = 34.dp, bottom = 20.dp),
+                        )
                     }
-                    // Two columns, filled row by row as in the design's grid.
+                    // One column: Up and Down go song by song. Holding OK opens a song's options.
                     val playlist = item.kind == ItemKind.Playlist
-                    items(tracks.chunked(2), key = { pair -> "tracks-" + pair.first().id }) { pair ->
-                        Row(
-                            Modifier.padding(start = PageEdge.dp, end = PageEdge.dp, bottom = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(30.dp),
-                        ) {
-                            pair.forEach { track ->
-                                val focus = remember(track.id) { FocusRequester() }.also { trackFocus[track.id] = it }
-                                val number = if (playlist) tracks.indexOf(track) + 1 else track.number
-                                TrackRow(
-                                    track = track,
-                                    number = number,
-                                    withArtist = playlist,
-                                    onClick = { viewModel.playMusic(track) },
-                                    onOptions = { viewModel.trackOptions(track) },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .focusRequester(focus)
-                                        .onFocusChanged { if (it.isFocused) focusKey = track.id.toString() },
+                    // Albums name each song's artist only when they differ (a sampler, a guest).
+                    val withArtist = playlist || tracks.any { it.artist != null && it.artist != item.parentTitle }
+                    val discs = tracks.mapNotNull { it.disc }.distinct().size > 1
+                    tracks.forEachIndexed { index, track ->
+                        val disc = track.disc
+                        if (discs && !playlist && disc != null && disc != tracks.getOrNull(index - 1)?.disc) {
+                            item(key = "disc-$disc-$index") {
+                                Text(
+                                    stringResource(R.string.music_disc, disc),
+                                    style = GlacierText.body(17, FontWeight.SemiBold),
+                                    color = GlacierColors.Mist,
+                                    modifier = Modifier.padding(start = PageEdge.dp + 24.dp, top = if (index == 0) 0.dp else 18.dp, bottom = 10.dp),
                                 )
                             }
-                            if (pair.size == 1) Box(Modifier.weight(1f))
+                        }
+                        item(key = "track-" + index + "-" + track.id) {
+                            val focus = remember(track.id) { FocusRequester() }.also { trackFocus[track.id] = it }
+                            SongRow(
+                                title = track.title,
+                                durationMs = track.durationMs,
+                                number = if (playlist) index + 1 else track.number,
+                                artist = if (playlist) track.artist else track.artist?.takeIf { it != item.parentTitle },
+                                album = track.album,
+                                showArtist = withArtist,
+                                showAlbum = playlist,
+                                onClick = { viewModel.playMusic(track) },
+                                onOptions = { viewModel.trackOptions(track) },
+                                modifier = Modifier
+                                    .padding(start = PageEdge.dp, end = PageEdge.dp, bottom = SONG_ROW_GAP.dp)
+                                    .focusRequester(focus)
+                                    .onFocusChanged { if (it.isFocused) focusKey = track.id.toString() },
+                            )
                         }
                     }
                     item(key = "tracks-end") { Box(Modifier.padding(bottom = if (state.similar.isEmpty()) 98.dp else 20.dp)) }
@@ -274,41 +276,6 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
             }
         }
         MusicActionsSheet(viewModel.musicActions)
-    }
-}
-
-/** A song in the two-column list: number, title (with artist in playlists), length. Holding OK opens its options; the mark says so. */
-@Composable
-private fun TrackRow(track: MusicTrack, number: Int?, withArtist: Boolean, onClick: () -> Unit, onOptions: () -> Unit, modifier: Modifier) {
-    val accent = LocalAccent.current.main
-    val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
-    GlacierClickable(onClick = onClick, onLongClick = onOptions, shape = shape, modifier = modifier) { focused ->
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = 64.dp)
-                .clip(shape)
-                .background(if (focused) GlacierColors.GlassFill2 else GlacierColors.GlassFill)
-                .padding(horizontal = 24.dp, vertical = if (withArtist) 9.dp else 0.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            Text(number?.let { "%02d".format(it) }.orEmpty(), style = GlacierText.mono(17), color = GlacierColors.Mist)
-            Column(Modifier.weight(1f)) {
-                Text(
-                    track.title,
-                    style = GlacierText.body(19, FontWeight.SemiBold),
-                    color = if (focused) accent else GlacierColors.Ice,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (withArtist && track.artist != null) {
-                    Text(track.artist.orEmpty(), style = GlacierText.body(15), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-            Text(formatTime(track.durationMs), style = GlacierText.mono(17), color = GlacierColors.Mist)
-            HoldOkMark(focused, accent, size = 26)
-        }
     }
 }
 

@@ -25,8 +25,19 @@ renders the reference separately.
 - Detail pages show the mini player while music plays. Up from the buttons at the top reaches it
 - The mini player and messages sit as far from the right edge as from the top
 - Forced, hearing impaired, sing-along, commentary and audio description tracks are found by their name in many more languages, such as French, Spanish, Italian, Portuguese, Dutch, the Nordic languages, Polish and Russian. Accents and spellings like Sing-Along or Singalong no longer matter
+- Album and playlist pages list their songs in one column. Up and Down go song by song. Each song shows its length, and its artist where that differs from the album. Playlists also show the album. Albums with more than one disc show a heading per disc
+- The Songs tab is a list too, with cover, title, artist, album and length
+- Holding OK on a song opens its options. The focused song shows a mark for this at its end, and it grows like a card
+- Sorted by title, the library sorts names itself. Names that start with a symbol or a number come first, then A to Z. Numbers go by value, so 2 comes before 10. The A–Z rail matches the list
+- The A–Z rail jumps straight to the letter, also in very large libraries. The titles before it load when you scroll back up
+- Large libraries open fast. The list is kept on the device and refreshed in the background. A new sort shows at once
+- Sorted by date added, year, rating, length, artist or album, the library shows a small heading over each group, such as "2024" or "October 2026". Inside a group the titles go from A to Z. Songs of an album keep their track order
+- Sorted by artist or album, the A–Z rail jumps to the artists or albums
+- The filter and sort buttons stay in the same place on every tab, with or without the A–Z rail
+- When a library view cannot load or has nothing to show, the message sits in the middle of the page, with the Retry button below it
 
 ### Fixed
+- The A–Z rail of the Songs tab covers all songs, also in libraries with more than 40,000 songs
 - Subtitles for signs and songs show as forced, not as sing-along. This also covers German names like "Schild- und Liedtext"
 - An audio track named like "ger ac3 6ch" no longer shows as Swiss German
 - Back in the music player closes an open options menu or info panel and leaves the player open. Before, newer Android TV versions closed the player as well

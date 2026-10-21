@@ -256,6 +256,15 @@
     <string name="library_empty_unwatched">Alles gesehen. In dieser Bibliothek ist kein ungesehener Titel übrig.</string>
     <string name="library_empty">Keine Einträge in dieser Ansicht.</string>
     <string name="library_error">Diese Ansicht konnte nicht geladen werden.</string>
+    <string name="group_minutes">%1$d–%2$d Min.</string>
+    <string name="group_hours">%1$s–%2$s Std.</string>
+    <string name="group_stars">★ %d</string>
+    <string name="group_unknown_date">Datum unbekannt</string>
+    <string name="group_unknown_year">Jahr unbekannt</string>
+    <string name="group_unknown_rating">Ohne Bewertung</string>
+    <string name="group_unknown_length">Länge unbekannt</string>
+    <string name="group_unknown_artist">Künstler unbekannt</string>
+    <string name="group_unknown_album">Album unbekannt</string>
 
     <!-- Details -->
     <string name="detail_error">Dieser Titel konnte nicht geladen werden.</string>
@@ -566,6 +575,7 @@
     <string name="repeat_all">Wiederholen: Alle Titel</string>
     <string name="repeat_one">Wiederholen: Aktueller Titel</string>
     <string name="music_tracks">Titel</string>
+    <string name="music_disc">CD %d</string>
     <string name="music_videos">Videos</string>
     <string name="music_albums">Alben</string>
     <string name="audio_bit_depth">%1$d Bit</string>
@@ -592,7 +602,6 @@
     <string name="music_options_add_playlist">Zur Wiedergabeliste hinzufügen</string>
     <string name="music_options_remove_queue">Aus der Warteschlange entfernen</string>
     <string name="music_options_remove_playlist">Aus dieser Wiedergabeliste entfernen</string>
-    <string name="music_options_hint">OK auf einem Titel gedrückt halten für mehr</string>
     <string name="music_choose_playlist">Zur Wiedergabeliste hinzufügen</string>
     <string name="music_new_playlist">Neue Wiedergabeliste</string>
     <string name="music_no_playlists">Noch keine Wiedergabelisten</string>

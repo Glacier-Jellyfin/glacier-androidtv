@@ -18,7 +18,10 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.LibrarySortChoice
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
+import io.github.glacier_jellyfin.androidtv.core.data.media.MusicRepository
+import io.github.glacier_jellyfin.androidtv.music.MusicActions
 import io.github.glacier_jellyfin.androidtv.music.MusicController
+import io.github.glacier_jellyfin.androidtv.music.MusicTarget
 import io.github.glacier_jellyfin.androidtv.navigation.FavoritesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
@@ -46,7 +49,13 @@ data class LibraryState(
     val query: LibraryQuery,
     /** Library or genre name; null shows the kind name. */
     val title: String?,
+    /** The loaded part of the list: titles [offset] to [offset] + size. */
     val items: List<MediaItem> = emptyList(),
+    /**
+     * Where [items] start in the whole list. An A–Z jump far down loads the titles
+     * there and leaves those before it for when the user scrolls back up.
+     */
+    val offset: Int = 0,
     val total: Int? = null,
     val loading: Boolean = true,
     val failed: Boolean = false,
@@ -57,7 +66,7 @@ data class LibraryState(
     val userName: String = "",
 ) {
     val scopes: List<LibraryScope> get() = LibraryQuery.scopes(query.kind, inGenre = query.genreId != null)
-    val complete: Boolean get() = total != null && items.size >= total
+    val complete: Boolean get() = total != null && offset + items.size >= total
 }
 
 @HiltViewModel
@@ -67,6 +76,7 @@ class LibraryViewModel @Inject constructor(
     private val sessions: SessionManager,
     private val settings: SettingsRepository,
     private val music: MusicController,
+    private val songs: MusicRepository,
     details: DetailRepository,
     playback: PlaybackRepository,
 ) : ViewModel() {
@@ -89,6 +99,14 @@ class LibraryViewModel @Inject constructor(
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
+
+    /** The options of a song of the songs tab. */
+    val musicActions = MusicActions(
+        scope = viewModelScope,
+        controller = music,
+        music = songs,
+        toast = { _events.send(it) },
+    )
 
     private var loadJob: Job? = null
     private var lettersJob: Job? = null
@@ -120,8 +138,8 @@ class LibraryViewModel @Inject constructor(
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
             try {
-                val page = repository.page(query, start = 0, limit = current.items.size)
-                _state.update { if (it.query == query && loadJob?.isActive != true) it.copy(items = page.items, total = page.total) else it }
+                val page = repository.page(query, start = current.offset, limit = current.items.size)
+                _state.update { if (it.query == query && it.offset == current.offset && loadJob?.isActive != true) it.copy(items = page.items, total = page.total) else it }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -134,7 +152,36 @@ class LibraryViewModel @Inject constructor(
     fun loadMore() {
         val current = _state.value
         if (current.loading || current.failed || current.complete) return
-        loadUpTo(current.items.size + PAGE_SIZE - 1)
+        loadUpTo(current.offset + current.items.size + PAGE_SIZE - 1)
+    }
+
+    /** Back to the toolbar: a list that starts further down (after a jump) starts at the top again. */
+    fun toStart() {
+        if (_state.value.offset > 0) reload()
+    }
+
+    /** Called by the grid of [columns] when it gets near the start of what is loaded, after a jump: the titles before it. */
+    fun loadBefore(columns: Int) {
+        val current = _state.value
+        if (current.offset == 0 || current.loading || current.failed || loadJob?.isActive == true) return
+        val query = current.query
+        loadJob = viewModelScope.launch {
+            _state.update { it.copy(loading = true) }
+            try {
+                // From the start of a row, so the rows already there stay as they are.
+                val start = repository.rowStart(query, (current.offset - PAGE_SIZE).coerceAtLeast(0), columns)
+                val page = repository.page(query, start = start, limit = current.offset - start)
+                _state.update {
+                    if (it.query != query || it.offset != current.offset) it.copy(loading = false)
+                    else it.copy(items = page.items + it.items, offset = start, total = page.total, loading = false)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Loading library failed", e)
+                _state.update { it.copy(loading = false, failed = true) }
+            }
+        }
     }
 
     fun retry() = reload()
@@ -169,15 +216,41 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun jumpToLetter(letter: Char) {
+    /**
+     * Scrolls to the first title filed under [letter]. When that is far beyond what is loaded,
+     * the list starts anew a few rows of [columns] before it.
+     */
+    fun jumpToLetter(letter: Char, columns: Int) {
         val current = _state.value
-        val total = current.total ?: return
+        if (current.total == null) return
         viewModelScope.launch {
-            val index = runCatching { repository.indexOfLetter(current.query, letter, total) }
+            val index = runCatching { repository.indexOfLetter(current.query, letter) }
                 .onFailure { Log.w(TAG, "A-Z jump failed", it) }
                 .getOrNull() ?: return@launch
-            loadUpTo(index + PAGE_SIZE / 2)?.join()
-            _state.update { it.copy(jumpTo = index.coerceIn(0, (it.items.size - 1).coerceAtLeast(0))) }
+            val state = _state.value
+            val end = state.offset + state.items.size
+            if (index >= state.offset && index < end + PAGE_SIZE) {
+                loadUpTo(index + PAGE_SIZE / 2)?.join()
+            } else {
+                val start = runCatching { repository.rowStart(state.query, (index - JUMP_ROWS_BEFORE * columns).coerceAtLeast(0), columns) }
+                    .getOrElse { return@launch }
+                loadJob?.cancel()
+                refreshJob?.cancel()
+                val query = state.query
+                loadJob = viewModelScope.launch {
+                    _state.update { it.copy(loading = true, failed = false) }
+                    try {
+                        val page = repository.page(query, start = start, limit = PAGE_SIZE)
+                        _state.update { if (it.query == query) it.copy(items = page.items, offset = start, total = page.total, loading = false) else it }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Loading library failed", e)
+                        _state.update { it.copy(loading = false, failed = true) }
+                    }
+                }.also { it.join() }
+            }
+            _state.update { it.copy(jumpTo = (index - it.offset).coerceIn(0, (it.items.size - 1).coerceAtLeast(0))) }
         }
     }
 
@@ -202,6 +275,18 @@ class LibraryViewModel @Inject constructor(
         val ids = items.drop(start).take(SONG_QUEUE).map { it.id }
         music.playSongs(title, ids, startTrackId = item.id.toString())
         viewModelScope.launch { _events.send(UiEvent.Navigate(MusicRoute())) }
+    }
+
+    /** Options for a song of the songs tab (its "…", holding OK, or the menu key). */
+    fun songOptions(item: MediaItem) {
+        musicActions.open(
+            MusicTarget(
+                title = item.title,
+                subtitle = listOfNotNull(item.parentTitle, item.album).joinToString(" · ").ifEmpty { null },
+                tracks = { songs.tracks(listOf(item.id)) },
+                mixFrom = item.id,
+            ),
+        )
     }
 
     fun onNav(target: NavTarget) {
@@ -233,11 +318,11 @@ class LibraryViewModel @Inject constructor(
 
     private fun reload() {
         loadJob?.cancel()
-        _state.update { it.copy(items = emptyList(), total = null, loading = false, failed = false, letters = emptySet(), jumpTo = null) }
+        _state.update { it.copy(items = emptyList(), offset = 0, total = null, loading = false, failed = false, letters = emptySet(), jumpTo = null) }
         loadUpTo(PAGE_SIZE - 1)
         lettersJob?.cancel()
         val query = _state.value.query
-        if (query.alphabetical) {
+        if (query.railed) {
             lettersJob = viewModelScope.launch {
                 runCatching { repository.availableLetters(query) }
                     .onSuccess { letters -> _state.update { if (it.query == query) it.copy(letters = letters) else it } }
@@ -246,22 +331,22 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    /** Loads pages until [index] is covered (or everything is loaded). */
+    /** Loads pages until position [index] is covered (or everything is loaded). */
     private fun loadUpTo(index: Int): Job? {
         val current = _state.value
-        if (current.total != null && current.items.size >= current.total) return null
-        if (index < current.items.size) return null
+        if (current.complete) return null
+        if (index < current.offset + current.items.size) return null
         loadJob?.let { if (it.isActive) return it }
         val query = current.query
         return viewModelScope.launch {
             _state.update { it.copy(loading = true, failed = false) }
             try {
                 while (true) {
-                    val loaded = _state.value.items
-                    val total = _state.value.total
-                    if ((total != null && loaded.size >= total) || loaded.size > index) break
-                    val page = repository.page(query, start = loaded.size, limit = PAGE_SIZE)
-                    if (_state.value.query != query) return@launch
+                    val state = _state.value
+                    val end = state.offset + state.items.size
+                    if ((state.total != null && end >= state.total) || end > index) break
+                    val page = repository.page(query, start = end, limit = PAGE_SIZE)
+                    if (_state.value.query != query || _state.value.offset != state.offset) return@launch
                     _state.update { it.copy(items = it.items + page.items, total = page.total) }
                     if (page.items.isEmpty()) break
                 }
@@ -286,6 +371,8 @@ class LibraryViewModel @Inject constructor(
         const val PAGE_SIZE = 70
         /** Names sort A to Z first; dates, years, ratings and runtimes newest or largest first. */
         private val AscendingFirst = setOf(LibrarySort.Title, LibrarySort.Artist, LibrarySort.Album)
+        /** Rows kept above the title an A–Z jump lands on, when the list starts anew there. */
+        private const val JUMP_ROWS_BEFORE = 3
         /** Songs queued from the songs tab; their ids go into one request. */
         private const val SONG_QUEUE = 100
         private const val TAG = "Library"

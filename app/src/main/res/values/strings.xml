@@ -261,6 +261,15 @@
     <string name="library_empty_unwatched">All caught up. No unwatched titles are left in this library.</string>
     <string name="library_empty">Nothing in this view.</string>
     <string name="library_error">This view could not be loaded.</string>
+    <string name="group_minutes">%1$d–%2$d min</string>
+    <string name="group_hours">%1$s–%2$s h</string>
+    <string name="group_stars">★ %d</string>
+    <string name="group_unknown_date">Date unknown</string>
+    <string name="group_unknown_year">Year unknown</string>
+    <string name="group_unknown_rating">Not rated</string>
+    <string name="group_unknown_length">Length unknown</string>
+    <string name="group_unknown_artist">Artist unknown</string>
+    <string name="group_unknown_album">Album unknown</string>
 
     <!-- Details -->
     <string name="detail_error">This title could not be loaded.</string>
@@ -572,6 +581,7 @@
     <string name="repeat_all">Repeat: all songs</string>
     <string name="repeat_one">Repeat: this song</string>
     <string name="music_tracks">Songs</string>
+    <string name="music_disc">Disc %d</string>
     <string name="music_videos">Videos</string>
     <string name="music_albums">Albums</string>
     <string name="audio_bit_depth">%1$d-bit</string>
@@ -598,7 +608,6 @@
     <string name="music_options_add_playlist">Add to playlist</string>
     <string name="music_options_remove_queue">Remove from queue</string>
     <string name="music_options_remove_playlist">Remove from this playlist</string>
-    <string name="music_options_hint">Hold OK on a song for more</string>
     <string name="music_choose_playlist">Add to playlist</string>
     <string name="music_new_playlist">New playlist</string>
     <string name="music_no_playlists">No playlists yet</string>

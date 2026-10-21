@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.library
 
+import android.text.format.DateFormat
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -28,7 +29,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -59,9 +59,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -73,8 +76,10 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.AlphabetLetters
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryScope
+import io.github.glacier_jellyfin.androidtv.core.data.media.ListGroup
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
+import io.github.glacier_jellyfin.androidtv.core.data.media.NameOrder
 import io.github.glacier_jellyfin.androidtv.core.data.media.railLetter
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
@@ -85,6 +90,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
+import io.github.glacier_jellyfin.androidtv.music.MusicActionsSheet
 import io.github.glacier_jellyfin.androidtv.player.formatTime
 import io.github.glacier_jellyfin.androidtv.ui.CardShape
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
@@ -93,6 +99,8 @@ import io.github.glacier_jellyfin.androidtv.ui.GridCard
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
+import io.github.glacier_jellyfin.androidtv.ui.SONG_ROW_GAP
+import io.github.glacier_jellyfin.androidtv.ui.SongRow
 import io.github.glacier_jellyfin.androidtv.ui.ToggleChip
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
@@ -101,6 +109,8 @@ import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import io.github.glacier_jellyfin.androidtv.ui.title
 import io.github.glacier_jellyfin.androidtv.ui.yearText
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
@@ -123,6 +133,7 @@ fun LibraryScreen(
     val gridState = rememberLazyGridState()
     val firstCardFocus = remember { FocusRequester() }
     val jumpFocus = remember { FocusRequester() }
+    val railFocus = remember { FocusRequester() }
     val gridFocus = remember { FocusRequester() }
     var initialFocusDone by rememberSaveable { mutableStateOf(false) }
     // Back from a detail page the screen is composed anew; focus goes back to the card the
@@ -134,8 +145,9 @@ fun LibraryScreen(
         snapshotFlow { firstRowHome(gridState) }.collect { top -> if (top != null) railTop = top }
     }
     val restoreFocus = remember { FocusRequester() }
-    var focusedIndex by remember { mutableIntStateOf(-1) }
-    var jumpTarget by remember { mutableStateOf<Int?>(null) }
+    // By id: titles loaded in before them (on the way back up after a jump) move them down.
+    var focusedId by remember { mutableStateOf<String?>(null) }
+    var jumpTarget by remember { mutableStateOf<String?>(null) }
     var sortAnchor by remember { mutableStateOf<Rect?>(null) }
     // The menu takes the focus with it when it closes; it goes back to the sort button.
     val sortButtonFocus = remember { FocusRequester() }
@@ -149,13 +161,34 @@ fun LibraryScreen(
             runCatching { sortButtonFocus.requestFocus() }
         }
     }
+    // A song's options sheet takes the focus with it when it closes; it goes back to the song.
+    val sheet by viewModel.musicActions.sheet.collectAsStateWithLifecycle()
+    var sheetWasOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(sheet == null) {
+        if (sheet != null) {
+            sheetWasOpen = true
+        } else if (sheetWasOpen) {
+            sheetWasOpen = false
+            withFrameNanos { }
+            runCatching { restoreFocus.requestFocus() }
+        }
+    }
     val songsTitle = stringResource(R.string.scope_songs)
+    // Songs are a one-column list: title, artist and album need the width.
+    val songList = state.query.scope == LibraryScope.Songs
+    val columns = if (songList) 1 else sizes.gridColumns
+    // Where each title sits in the grid: after the title and toolbar, and after the heading of its group and those before.
+    val positions = remember(state.items) { gridPositions(state.items) }
+    val gridCount = HEADER_ITEMS + state.items.size + (positions.lastOrNull()?.let { it - HEADER_ITEMS - state.items.lastIndex } ?: 0)
+    val showRail = state.query.railed && state.letters.isNotEmpty()
     // Back among the cards or on the A–Z rail first goes up to the tabs. Pressed again, it leaves the page.
     val activeChip = remember { FocusRequester() }
     var inContent by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     BackHandler(enabled = inContent) {
         scope.launch {
+            // After a jump the list starts at the letter: under the toolbar it starts at the top again.
+            viewModel.toStart()
             // The toolbar is a grid item and not composed while the grid is scrolled down.
             gridState.scrollToItem(0)
             withFrameNanos { }
@@ -164,10 +197,11 @@ fun LibraryScreen(
     }
 
     // Load the next page when the grid gets within three rows of the end.
-    LaunchedEffect(gridState, state.items.size) {
+    LaunchedEffect(gridState, gridCount, songList) {
         snapshotFlow { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
-            .collect { last -> if (last >= HEADER_ITEMS + state.items.size - 3 * sizes.gridColumns) viewModel.loadMore() }
+            .collect { last -> if (last >= gridCount - (if (songList) SONG_LOOKAHEAD else 3 * columns)) viewModel.loadMore() }
     }
+
     // Once per composition: a filter change later empties and refills the grid, and the
     // focus stays on the chip then.
     var focusPlaced by remember { mutableStateOf(false) }
@@ -184,8 +218,8 @@ fun LibraryScreen(
             runCatching { firstCardFocus.requestFocus() }
             return@LaunchedEffect
         }
-        if (gridState.layoutInfo.visibleItemsInfo.none { it.index == HEADER_ITEMS + index }) {
-            gridState.scrollToItem(HEADER_ITEMS + index)
+        if (gridState.layoutInfo.visibleItemsInfo.none { it.index == positions[index] }) {
+            gridState.scrollToItem(positions[index])
             withFrameNanos { }
         }
         runCatching { restoreFocus.requestFocus() }
@@ -194,12 +228,14 @@ fun LibraryScreen(
         val index = state.jumpTo ?: return@LaunchedEffect
         // Only the grid moves: the focus stays on the rail so the user can pick the next
         // letter, and Left then enters the grid at the first title of this one.
-        jumpTarget = index
-        focusedIndex = index
-        gridState.scrollToItem(HEADER_ITEMS + index)
+        jumpTarget = state.items.getOrNull(index)?.id?.toString()
+        focusedId = jumpTarget
+        // A group's first title: its heading comes into view with it.
+        val position = positions.getOrNull(index)?.let { if (startsGroup(state.items, index)) it - 1 else it } ?: return@LaunchedEffect
+        gridState.scrollToItem(position)
         withFrameNanos { }
         // Settle the row where focused rows sit, not under the nav.
-        val row = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == HEADER_ITEMS + index }
+        val row = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == position }
         if (row != null) {
             val top = row.offset.y - gridState.layoutInfo.viewportStartOffset
             gridState.scrollBy((top - with(density) { ROW_PIVOT.dp.toPx() }))
@@ -213,17 +249,20 @@ fun LibraryScreen(
                 LazyVerticalGrid(
                     state = gridState,
                     // Cells as wide as the cards, packed from the left like the design's rows.
-                    columns = GridCells.FixedSize(sizes.posterWidth.dp),
-                    contentPadding = PaddingValues(start = 80.dp, end = 22.dp, top = 150.dp, bottom = 120.dp),
+                    // The song list is as wide as the cards' rows, so the toolbar ends in the same place on every tab.
+                    columns = GridCells.FixedSize(if (songList) (sizes.gridColumns * sizes.posterWidth + (sizes.gridColumns - 1) * sizes.gridGap).dp else sizes.posterWidth.dp),
+                    // Without the A–Z rail the list keeps its width, so the toolbar and songs stay where they are.
+                    contentPadding = PaddingValues(start = 80.dp, end = if (showRail) 22.dp else RAIL_SPACE.dp, top = 150.dp, bottom = 120.dp),
                     horizontalArrangement = Arrangement.spacedBy(sizes.gridGap.dp),
-                    verticalArrangement = Arrangement.spacedBy(38.dp),
+                    verticalArrangement = Arrangement.spacedBy(if (songList) SONG_ROW_GAP.dp else 38.dp),
                     modifier = Modifier.weight(1f).fillMaxSize().focusRequester(gridFocus).focusRestorer(),
                 ) {
                     item(span = { GridItemSpan(maxLineSpan) }, key = "title") { Header(state) }
                     item(span = { GridItemSpan(maxLineSpan) }, key = "chips") {
                         val toolbarScope = rememberCoroutineScope()
                         Toolbar(
-                            modifier = Modifier.onFocusChanged {
+                            // The song rows sit closer together than cards: the toolbar keeps the cards' distance.
+                            modifier = Modifier.padding(vertical = if (songList) (38 - SONG_ROW_GAP).dp else 0.dp).onFocusChanged {
                                 if (it.hasFocus) {
                                     inContent = false
                                     toolbarScope.launch { gridState.animateScrollToItem(0) }
@@ -239,89 +278,112 @@ fun LibraryScreen(
                             activeChip = activeChip,
                         )
                     }
-                    itemsIndexed(state.items, key = { _, item -> item.id }) { index, item ->
-                        val id = item.id.toString()
-                        val focus = when {
-                            index == jumpTarget -> Modifier.focusRequester(jumpFocus)
-                            index == 0 -> Modifier.focusRequester(firstCardFocus)
-                            else -> Modifier
-                        }.then(if (id == lastFocusId) Modifier.focusRequester(restoreFocus) else Modifier)
-                        GridCard(
-                            imageUrl = item.posterUrl,
-                            title = item.title,
-                            caption = captionFor(item, sort = state.query.sort.takeUnless { state.query.listedByName }),
-                            onClick = { if (item.kind == ItemKind.Song) viewModel.play(item, songsTitle) else viewModel.open(item) },
-                            shape = when (item.kind) {
-                                ItemKind.Album, ItemKind.Playlist, ItemKind.Song -> CardShape.Square
-                                ItemKind.Artist -> CardShape.Round
-                                else -> CardShape.Poster
-                            },
-                            watched = item.played && item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode, ItemKind.MusicVideo, ItemKind.Collection),
-                            // Collections and shows count what is left to watch; a collection's size is in the caption.
-                            count = item.unwatchedCount.takeIf { item.kind == ItemKind.Collection || item.kind == ItemKind.Series },
-                            locked = item.showsLock(),
-                            modifier = focus.onFocusChanged {
+                    state.items.forEachIndexed { index, item ->
+                        val group = item.group
+                        if (group != null && startsGroup(state.items, index)) {
+                            item(span = { GridItemSpan(maxLineSpan) }, key = "group-$group") {
+                                GroupHeading(group, state.query.sort, cards = !songList)
+                            }
+                        }
+                        item(key = item.id) {
+                            val id = item.id.toString()
+                            val focus = when {
+                                id == jumpTarget -> Modifier.focusRequester(jumpFocus)
+                                index == 0 -> Modifier.focusRequester(firstCardFocus)
+                                else -> Modifier
+                            }.then(if (id == lastFocusId) Modifier.focusRequester(restoreFocus) else Modifier)
+                                // A group's last row is often short: Right goes to the rail, not up to the row above.
+                                .then(if (showRail && group != null && (index == state.items.lastIndex || startsGroup(state.items, index + 1))) Modifier.focusProperties { right = railFocus } else Modifier)
+                            val onFocus = Modifier.onFocusChanged {
                                 if (it.isFocused) {
                                     inContent = true
-                                    focusedIndex = index
+                                    focusedId = id
                                     lastFocusId = id
+                                    // After a jump far down the list starts there: the titles before it load on the way back up.
+                                    if (state.offset > 0 && index < (if (songList) SONG_LOOKAHEAD else 3 * columns)) viewModel.loadBefore(columns)
                                 }
-                            },
-                        )
+                            }
+                            if (item.kind == ItemKind.Song) {
+                                SongRow(
+                                    title = item.title,
+                                    durationMs = item.runtimeMs,
+                                    coverUrl = item.posterUrl,
+                                    showCover = true,
+                                    artist = item.parentTitle,
+                                    album = item.album,
+                                    showArtist = true,
+                                    showAlbum = true,
+                                    onClick = { viewModel.play(item, songsTitle) },
+                                    onOptions = { viewModel.songOptions(item) },
+                                    modifier = focus.then(onFocus),
+                                )
+                            } else GridCard(
+                                imageUrl = item.posterUrl,
+                                title = item.title,
+                                caption = captionFor(item, sort = state.query.sort.takeUnless { state.query.listedByName }),
+                                onClick = { viewModel.open(item) },
+                                shape = when (item.kind) {
+                                    ItemKind.Album, ItemKind.Playlist -> CardShape.Square
+                                    ItemKind.Artist -> CardShape.Round
+                                    else -> CardShape.Poster
+                                },
+                                watched = item.played && item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode, ItemKind.MusicVideo, ItemKind.Collection),
+                                // Collections and shows count what is left to watch; a collection's size is in the caption.
+                                count = item.unwatchedCount.takeIf { item.kind == ItemKind.Collection || item.kind == ItemKind.Series },
+                                locked = item.showsLock(),
+                                modifier = focus.then(onFocus),
+                            )
+                        }
                     }
                     when {
                         state.failed -> item(span = { GridItemSpan(maxLineSpan) }, key = "error") {
-                            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                                Text(stringResource(R.string.library_error), style = GlacierText.body(21), color = GlacierColors.Mist)
-                                PillButton(stringResource(R.string.action_retry), onClick = viewModel::retry, primary = true)
+                            // Where the titles would be; below titles already there it only needs its own height.
+                            InFreeSpace(gridState, "error", fill = state.items.isEmpty()) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                                    Text(stringResource(R.string.library_error), style = GlacierText.body(21), color = GlacierColors.Mist, textAlign = TextAlign.Center)
+                                    PillButton(stringResource(R.string.action_retry), onClick = viewModel::retry, primary = true)
+                                }
                             }
                         }
                         state.loading && state.items.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }, key = "loading") {
-                            // In the middle of the space the titles will fill: from here down to the grid's bottom edge.
-                            // Read in a derived state: the layout info changes with every scrolled pixel.
-                            val height by remember {
-                                derivedStateOf {
-                                    val info = gridState.layoutInfo
-                                    val top = info.visibleItemsInfo.firstOrNull { it.key == "loading" }?.offset?.y
-                                    top?.let { with(density) { (info.viewportEndOffset - info.afterContentPadding - it).toDp() } }
-                                }
-                            }
-                            Box(
-                                Modifier.fillMaxWidth().height((height ?: LOADER_MIN_HEIGHT.dp).coerceAtLeast(LOADER_MIN_HEIGHT.dp)),
-                                contentAlignment = Alignment.Center,
-                            ) { SpinningDiamond(90) }
+                            InFreeSpace(gridState, "loading") { SpinningDiamond(90) }
                         }
                         state.complete && state.items.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
-                            Text(
-                                stringResource(
-                                    when {
-                                        state.query.favoritesOnly && state.query.kind == LibraryKind.Music -> R.string.library_empty_music_favorites
-                                        state.query.favoritesOnly -> R.string.library_empty_favorites
-                                        state.query.unwatchedOnly -> R.string.library_empty_unwatched
-                                        else -> R.string.library_empty
-                                    },
-                                ),
-                                style = GlacierText.body(21),
-                                color = GlacierColors.Mist,
-                                modifier = Modifier.width(720.dp),
-                            )
+                            InFreeSpace(gridState, "empty") {
+                                Text(
+                                    stringResource(
+                                        when {
+                                            state.query.favoritesOnly && state.query.kind == LibraryKind.Music -> R.string.library_empty_music_favorites
+                                            state.query.favoritesOnly -> R.string.library_empty_favorites
+                                            state.query.unwatchedOnly -> R.string.library_empty_unwatched
+                                            else -> R.string.library_empty
+                                        },
+                                    ),
+                                    style = GlacierText.body(21),
+                                    color = GlacierColors.Mist,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.width(720.dp),
+                                )
+                            }
                         }
                         else -> Unit
                     }
                 }
             }
-            if (state.query.alphabetical && state.letters.isNotEmpty()) {
-                val current = state.items.getOrNull(focusedIndex)?.let(::letterOf)
+            if (showRail) {
+                val current = state.items.firstOrNull { it.id.toString() == focusedId }?.let(::letterOf)
                 AlphabetRail(
                     letters = state.letters,
                     descending = state.query.orderDescending,
                     current = current,
-                    onLetter = viewModel::jumpToLetter,
+                    focus = railFocus,
+                    onLetter = { viewModel.jumpToLetter(it, columns) },
                     modifier = Modifier
                         .onFocusChanged { if (it.hasFocus) inContent = true }
                         .focusProperties {
                             val target = jumpTarget
-                            if (target != null && gridState.layoutInfo.visibleItemsInfo.any { it.index == HEADER_ITEMS + target }) {
+                            // Visible items carry the titles' ids as keys.
+                            if (target != null && gridState.layoutInfo.visibleItemsInfo.any { it.key.toString() == target }) {
                                 left = jumpFocus
                             }
                         }
@@ -341,6 +403,8 @@ fun LibraryScreen(
             )
         }
 
+        MusicActionsSheet(viewModel.musicActions)
+
         TopNav(
             active = NavTarget.Library(state.query.kind),
             kinds = LocalLibraryKinds.current,
@@ -354,6 +418,69 @@ fun LibraryScreen(
         )
     }
 }
+
+/**
+ * [content] in the middle of the space the titles would fill: from the grid item [key] down to
+ * the grid's bottom edge. Without [fill] just in the middle of its own row.
+ */
+@Composable
+private fun InFreeSpace(gridState: LazyGridState, key: String, fill: Boolean = true, content: @Composable () -> Unit) {
+    val density = LocalDensity.current
+    // Read in a derived state: the layout info changes with every scrolled pixel.
+    val height by remember(gridState, key) {
+        derivedStateOf {
+            val info = gridState.layoutInfo
+            val top = info.visibleItemsInfo.firstOrNull { it.key == key }?.offset?.y
+            top?.let { with(density) { (info.viewportEndOffset - info.afterContentPadding - it).toDp() } }
+        }
+    }
+    val min = if (fill) LOADER_MIN_HEIGHT.dp else 0.dp
+    Box(
+        Modifier.fillMaxWidth().then(if (fill) Modifier.height((height ?: min).coerceAtLeast(min)) else Modifier),
+        contentAlignment = Alignment.Center,
+    ) { content() }
+}
+
+/** The small heading over a group of a list sorted by something else than the title. */
+@Composable
+private fun GroupHeading(group: ListGroup, sort: LibrarySort, cards: Boolean) {
+    Text(
+        groupLabel(group, sort),
+        style = GlacierText.body(19, FontWeight.SemiBold),
+        color = GlacierColors.Mist,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        // The grid keeps its row gap below the heading too: drawn lower, it sits with its cards.
+        modifier = if (cards) Modifier.offset(y = GROUP_HEADING_DROP.dp) else Modifier.padding(start = 24.dp, top = 8.dp),
+    )
+}
+
+@Composable
+private fun groupLabel(group: ListGroup, sort: LibrarySort): String = when (group) {
+    is ListGroup.Month -> {
+        val locale = LocalLocale.current.platformLocale
+        YearMonth.of(group.year, group.month).format(DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "LLLLyyyy"), locale))
+    }
+    is ListGroup.Year -> group.year.toString()
+    is ListGroup.Stars -> stringResource(R.string.group_stars, group.stars)
+    is ListGroup.Length ->
+        if (group.toMinutes <= 60) stringResource(R.string.group_minutes, group.fromMinutes, group.toMinutes)
+        else stringResource(R.string.group_hours, hoursText(group.fromMinutes), hoursText(group.toMinutes))
+    is ListGroup.Name -> group.name
+    ListGroup.Unknown -> stringResource(
+        when (sort) {
+            LibrarySort.DateAdded -> R.string.group_unknown_date
+            LibrarySort.Year -> R.string.group_unknown_year
+            LibrarySort.Rating -> R.string.group_unknown_rating
+            LibrarySort.Runtime -> R.string.group_unknown_length
+            LibrarySort.Artist -> R.string.group_unknown_artist
+            LibrarySort.Album, LibrarySort.Title -> R.string.group_unknown_album
+        },
+    )
+}
+
+/** 90 minutes as "1:30". */
+private fun hoursText(minutes: Int): String = "%d:%02d".format(minutes / 60, minutes % 60)
 
 @Composable
 private fun Header(state: LibraryState) {
@@ -535,10 +662,13 @@ private fun AlphabetRail(
     letters: Set<Char>,
     descending: Boolean,
     current: Char?,
+    /** On the current letter, else the first one with titles. */
+    focus: FocusRequester,
     onLetter: (Char) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val order = if (descending) AlphabetLetters.reversed() else AlphabetLetters
+    val focused = current?.takeIf { it in letters } ?: order.firstOrNull { it in letters }
     Column(
         modifier
             .width(48.dp)
@@ -548,17 +678,25 @@ private fun AlphabetRail(
             .padding(vertical = 18.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        order.forEach { letter -> RailLetter(letter, available = letter in letters, current = letter == current, onClick = { onLetter(letter) }) }
+        order.forEach { letter ->
+            RailLetter(
+                letter,
+                available = letter in letters,
+                current = letter == current,
+                onClick = { onLetter(letter) },
+                modifier = if (letter == focused) Modifier.focusRequester(focus) else Modifier,
+            )
+        }
     }
 }
 
 @Composable
-private fun RailLetter(letter: Char, available: Boolean, current: Boolean, onClick: () -> Unit) {
+private fun RailLetter(letter: Char, available: Boolean, current: Boolean, onClick: () -> Unit, modifier: Modifier) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     Box(
-        Modifier
+        modifier
             .focusScale(focused)
             .size(34.dp, 20.dp)
             .clip(PillShape)
@@ -619,9 +757,28 @@ private fun firstRowHome(gridState: LazyGridState): Int? {
     return firstRow.offset.y - info.viewportStartOffset
 }
 
-/** A song's sort name starts with its disc and track numbers, so songs go by their title. */
-private fun letterOf(item: MediaItem): Char =
-    railLetter(if (item.kind == ItemKind.Song) item.title else item.sortName ?: item.title)
+/**
+ * Filed as the library sorts it: by its artist or album when listed under them, else by its name.
+ * A song's sort name starts with its disc and track numbers, so songs go by their title.
+ */
+private fun letterOf(item: MediaItem): Char? = when (val group = item.group) {
+    is ListGroup.Name -> railLetter(group.name)
+    null -> railLetter(if (item.kind == ItemKind.Song) item.title else NameOrder.title(item.title, item.sortName))
+    else -> null
+}
+
+/** Whether the title at [index] is the first of its group, so its heading goes before it. */
+private fun startsGroup(items: List<MediaItem>, index: Int): Boolean =
+    items[index].group != null && items.getOrNull(index - 1)?.group != items[index].group
+
+/** Each title's index in the grid: after the title and toolbar, and after the group headings up to it. */
+private fun gridPositions(items: List<MediaItem>): IntArray {
+    var headings = 0
+    return IntArray(items.size) { index ->
+        if (startsGroup(items, index)) headings++
+        HEADER_ITEMS + headings + index
+    }
+}
 
 /** The card's caption, plus the value the grid is sorted by when the caption does not show it yet. */
 @Composable
@@ -678,6 +835,15 @@ private val LibrarySort.label: Int
         LibrarySort.Rating -> R.string.sort_rating
         LibrarySort.Runtime -> R.string.sort_runtime
     }
+
+/** The A–Z rail's width and gap right of it, plus the grid's own 22. */
+private const val RAIL_SPACE = 92
+
+/** The song list loads more this many songs before its end. */
+private const val SONG_LOOKAHEAD = 20
+
+/** How much lower a group heading over cards is drawn than its place in the grid. */
+private const val GROUP_HEADING_DROP = 22
 
 /** The grid's loader is at least this tall before the grid has measured where it sits. */
 private const val LOADER_MIN_HEIGHT = 360

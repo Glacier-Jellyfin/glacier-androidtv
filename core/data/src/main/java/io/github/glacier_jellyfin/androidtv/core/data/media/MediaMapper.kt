@@ -92,6 +92,7 @@ internal class MediaMapper(private val api: ApiClient) {
                 ItemKind.Song -> artists(dto)
                 else -> dto.seriesName
             },
+            album = dto.album.takeIf { kind == ItemKind.Song },
             seriesId = dto.seriesId,
             seasonNumber = dto.parentIndexNumber,
             episodeNumber = dto.indexNumber,

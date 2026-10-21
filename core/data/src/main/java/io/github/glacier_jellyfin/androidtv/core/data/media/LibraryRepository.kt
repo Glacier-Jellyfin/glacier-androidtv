@@ -2,7 +2,12 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.log.Log
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -90,8 +95,11 @@ data class LibraryQuery(
     /** The order actually requested: [descending] only applies to the chosen sort. */
     val orderDescending: Boolean get() = descending && !listedByName
 
-    /** Only title sorting has a meaningful A–Z order. */
-    val alphabetical: Boolean get() = sort == LibrarySort.Title
+    /** Sorted by something else than the name, the list goes in groups with a heading each (see [ListGroup]). */
+    val grouped: Boolean get() = !listedByName && sort != LibrarySort.Title
+
+    /** An A–Z rail where the list goes by names: titles, or groups of artists or albums. */
+    val railed: Boolean get() = listedByName || sort == LibrarySort.Title || sort == LibrarySort.Artist || sort == LibrarySort.Album
 
     companion object {
         fun defaultScope(kind: LibraryKind) = if (kind == LibraryKind.Music) LibraryScope.Albums else LibraryScope.All
@@ -110,134 +118,227 @@ data class LibraryPage(val items: List<MediaItem>, val total: Int)
 /** Letters of the A–Z rail; '#' stands for everything that does not start with A–Z. */
 val AlphabetLetters: List<Char> = listOf('#') + ('A'..'Z')
 
-/** The rail letter [name] is filed under: its first letter without accents, else '#'. */
+/** The rail letter [name] is filed under: its first letter without accents, else '#'. Matches [NameOrder]. */
 fun railLetter(name: String): Char {
-    val first = name.trim().firstOrNull()?.uppercaseChar() ?: return '#'
-    val plain = java.text.Normalizer.normalize(first.toString(), java.text.Normalizer.Form.NFD).first()
-    return if (plain in 'A'..'Z') plain else '#'
+    val first = NameOrder.key(name).firstOrNull() ?: return '#'
+    return if (first in 'a'..'z') first.uppercaseChar() else '#'
 }
 
 @Singleton
 class LibraryRepository @Inject constructor(
     private val sessions: SessionManager,
     private val ageFilter: AgeFilter,
+    private val store: NameIndexStore,
 ) {
 
+    /** Titles [start] to [start] + [limit] of [query], each with its group when the list is grouped. */
     suspend fun page(query: LibraryQuery, start: Int, limit: Int): LibraryPage = withContext(Dispatchers.IO) {
         val session = requireSession()
         val mapper = MediaMapper(session.api)
-        if (query.unwatchedGrouped) {
-            // The first page is a fresh look: something may have been watched meanwhile.
-            val all = unwatchedGrouped(session, query, fresh = start == 0)
-            val items = all.drop(start).take(limit)
-            return@withContext LibraryPage(ageFilter.mark(items.map(mapper::item)), all.size)
-        }
-        val result = fetch(session, query, start = start, limit = limit)
-        LibraryPage(ageFilter.mark(result.items.map(mapper::item)), result.totalRecordCount)
+        // The first page is a fresh look: something may have changed meanwhile.
+        val listing = listing(session, query, fresh = start == 0)
+        val list = listing.list
+        val end = minOf(start + limit, list.size)
+        if (start >= end) return@withContext LibraryPage(emptyList(), list.size)
+        val slice = list.entries.subList(start, end)
+        val groups = list.groups?.let { all -> slice.indices.associate { slice[it].id to all[start + it] } }
+        val dtos = listing.whole?.let { whole -> slice.mapNotNull { whole[it.id] } } ?: itemsByIds(session, slice.map { it.id })
+        val items = dtos.map(mapper::item).map { item -> groups?.get(item.id)?.let { item.copy(group = it) } ?: item }
+        LibraryPage(ageFilter.mark(items), list.size)
     }
 
-    /**
-     * Letters that have at least one title, for greying out the rest of the
-     * A–Z rail. One count query per letter, all at once.
-     */
+    /** Letters that have at least one title, for greying out the rest of the A–Z rail. */
     suspend fun availableLetters(query: LibraryQuery): Set<Char> = withContext(Dispatchers.IO) {
-        val session = requireSession()
-        if (query.scope == LibraryScope.Songs) return@withContext songNames(session, query).mapTo(mutableSetOf(), ::railLetter)
-        if (query.unwatchedGrouped) return@withContext unwatchedGrouped(session, query).mapTo(mutableSetOf()) { railLetter(it.sortName ?: it.name.orEmpty()) }
-        AlphabetLetters.map { letter ->
-            async {
-                val count = if (letter == '#') {
-                    fetch(session, query, start = 0, limit = 0, nameLessThan = "A").totalRecordCount
-                } else {
-                    fetch(session, query, start = 0, limit = 0, nameStartsWith = letter.toString()).totalRecordCount
+        val list = listing(requireSession(), query).list
+        (0 until list.size).mapNotNullTo(mutableSetOf()) { list.letterAt(it) }
+    }
+
+    /** Position of the first title filed under [letter] in the current order. */
+    suspend fun indexOfLetter(query: LibraryQuery, letter: Char): Int = withContext(Dispatchers.IO) {
+        val list = listing(requireSession(), query).list
+        (0 until list.size).firstOrNull { list.letterAt(it) == letter } ?: 0
+    }
+
+    /** Where the row that holds [index] starts in a grid of [columns] (see [ArrangedList.rowStart]). */
+    suspend fun rowStart(query: LibraryQuery, index: Int, columns: Int): Int = withContext(Dispatchers.IO) {
+        listing(requireSession(), query).list.rowStart(index, columns)
+    }
+
+    /**
+     * Fetched whole, with everything a card needs ([wholeList]). Artists and genres come
+     * from their own endpoints, which count albums and titles. Fetched by id they would not.
+     */
+    private val LibraryQuery.listedWhole: Boolean
+        get() = unwatchedGrouped || scope == LibraryScope.Artists || scope == LibraryScope.Genres
+
+    /** What a title is sorted and filed under (see [NameOrder.title]). A song's sort name starts with its disc and track ("0001 - 0003 - Title"). */
+    private fun nameOf(dto: BaseItemDto, query: LibraryQuery): String =
+        if (query.scope == LibraryScope.Songs) dto.name.orEmpty() else NameOrder.title(dto.name.orEmpty(), dto.sortName)
+
+    private fun entryOf(dto: BaseItemDto, query: LibraryQuery) = IndexEntry(
+        id = dto.id,
+        name = nameOf(dto, query),
+        addedMonth = dto.dateCreated?.let { it.year * 12 + it.monthValue - 1 },
+        year = dto.productionYear,
+        rating = dto.communityRating,
+        runtimeMs = dto.runTimeTicks?.div(10_000),
+        artist = if (query.scope == LibraryScope.Songs) dto.artists?.firstOrNull() ?: dto.albumArtist else dto.albumArtist,
+        albumId = dto.albumId?.toString(),
+        album = dto.album,
+        disc = dto.parentIndexNumber,
+        track = dto.indexNumber,
+    )
+
+    /** A list in the grid's order and, when fetched whole, its titles. */
+    private class Listing(val query: LibraryQuery, val source: List<IndexEntry>, val list: ArrangedList, val whole: Map<UUID, BaseItemDto>?)
+
+    private var listingCache: Listing? = null
+    private val listingLock = Mutex()
+
+    /**
+     * [query]'s titles in the grid's order. The app puts them in order itself (see
+     * [ListArrangement]), so it needs every title first: most come as a light index ([index]),
+     * and each page is then fetched by its ids. One index serves every sort, so a new sort
+     * only puts the titles in a new order.
+     */
+    private suspend fun listing(session: Session, query: LibraryQuery, fresh: Boolean = false): Listing {
+        val whole = if (query.listedWhole) wholeList(session, query, fresh) else null
+        val entries = whole?.entries ?: index(session, query, fresh)
+        return listingLock.withLock {
+            listingCache?.takeIf { it.query == query && it.source === entries }
+                ?: Listing(query, entries, ListArrangement.arrange(entries, query), whole?.dtos).also { listingCache = it }
+        }
+    }
+
+    private class Cached<T>(val key: Any, val at: Long, val value: T)
+
+    /** The index the grid pages through. */
+    private var indexCache: Cached<List<IndexEntry>>? = null
+    private val indexLock = Mutex()
+    private val refreshing = mutableSetOf<String>()
+    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Every title of [query] with what the sorts need. Kept for the next pages and the A–Z
+     * rail, and on the device ([NameIndexStore]): a big library takes the server half a
+     * minute to list. A fresh look (the first page) takes the newest copy and, when that is
+     * old, has a new one fetched in the background for next time. Narrowed to favorites or
+     * unwatched it is not saved: a change elsewhere can take a title out, so each fresh look
+     * fetches it again unless that was a moment ago.
+     */
+    private suspend fun index(session: Session, query: LibraryQuery, fresh: Boolean = false): List<IndexEntry> = indexLock.withLock {
+        val key = indexKey(session, query)
+        val now = System.currentTimeMillis()
+        val cached = indexCache?.takeIf { it.key == key }
+        when {
+            cached != null && !fresh -> cached.value
+            query.favoritesOnly || query.unwatchedOnly ->
+                if (cached != null && now - cached.at < WHOLE_FRESH_MS) cached.value else fetchIndex(session, query).also { indexCache = Cached(key, now, it) }
+            else -> {
+                val savedAt = store.savedAt(key)
+                val newest = if (savedAt != null && (cached == null || savedAt > cached.at)) store.read(key) else null
+                when {
+                    newest != null -> {
+                        indexCache = Cached(key, newest.at, newest.entries)
+                        if (now - newest.at > INDEX_REFRESH_MS) refreshInBackground(session, query, key)
+                        newest.entries
+                    }
+                    cached != null -> {
+                        if (now - cached.at > INDEX_REFRESH_MS) refreshInBackground(session, query, key)
+                        cached.value
+                    }
+                    else -> fetchIndex(session, query).also {
+                        indexCache = Cached(key, now, it)
+                        store.write(key, SavedIndex(now, it))
+                    }
                 }
-                letter.takeIf { count > 0 }
             }
-        }.awaitAll().filterNotNull().toSet()
-    }
-
-    /**
-     * Position of the first title filed under [letter] in the current order.
-     * Everything sorting before the letter comes first when ascending; when
-     * descending, everything from the next letter on comes first.
-     */
-    suspend fun indexOfLetter(query: LibraryQuery, letter: Char, total: Int): Int = withContext(Dispatchers.IO) {
-        val session = requireSession()
-        if (query.scope == LibraryScope.Songs) {
-            return@withContext songNames(session, query).indexOfFirst { railLetter(it) == letter }.coerceAtLeast(0)
-        }
-        if (query.unwatchedGrouped) {
-            return@withContext unwatchedGrouped(session, query).indexOfFirst { railLetter(it.sortName ?: it.name.orEmpty()) == letter }.coerceAtLeast(0)
-        }
-        suspend fun before(bound: String) = fetch(session, query, start = 0, limit = 0, nameLessThan = bound).totalRecordCount
-        if (!query.orderDescending) {
-            if (letter == '#') 0 else before(letter.toString())
-        } else {
-            val next = AlphabetLetters.getOrNull(AlphabetLetters.indexOf(letter) + 1)
-            if (next == null) 0 else total - before(next.toString())
         }
     }
 
-    /** The last [songNames] list and the query it belongs to. */
-    private var songNamesCache: Pair<LibraryQuery, List<String>>? = null
+    /** One index serves every sort and both directions. The version changes with what an entry holds. */
+    private fun indexKey(session: Session, query: LibraryQuery): String =
+        "$INDEX_VERSION|${session.server.id}|${session.user.userId}|${query.copy(sort = LibrarySort.Title, descending = false)}"
+
+    /** [query]'s titles from the server. */
+    private suspend fun fetchIndex(session: Session, query: LibraryQuery): List<IndexEntry> =
+        fetchAll(session, query, light = true)
+            .distinctBy { it.id }
+            .map { entryOf(it, query) }
+
+    /** Saves a new copy of an index for the next fresh look; the one in use stays as it is. */
+    private fun refreshInBackground(session: Session, query: LibraryQuery, key: String) {
+        synchronized(refreshing) { if (!refreshing.add(key)) return }
+        background.launch {
+            try {
+                val entries = fetchIndex(session, query)
+                store.write(key, SavedIndex(System.currentTimeMillis(), entries))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Refreshing a name index failed", e)
+            } finally {
+                synchronized(refreshing) { refreshing.remove(key) }
+            }
+        }
+    }
+
+    /** A list fetched whole: its titles as index entries and as they came. */
+    private class Whole(val entries: List<IndexEntry>, val dtos: Map<UUID, BaseItemDto>)
+
+    private var wholeCache: Cached<Whole>? = null
+    private val wholeLock = Mutex()
 
     /**
-     * Every song name of [query], in its order. The server's letter filters work on the sort
-     * name, which for songs starts with disc and track ("0001 - 0003 - Title"), so the
-     * songs' A–Z rail goes by the plain names instead. Fetched without images or user data,
-     * page by page at once, and kept for the next jump.
+     * The whole list of [query], kept for the next pages and the A–Z rail. [fresh] fetches
+     * it again unless it was fetched a moment ago (the first page and the rail load together).
+     * The movies tab grouped into collections, without what was watched, is one: the server
+     * does not group once a played filter is in the query, so the app leaves out the movies
+     * watched and the collections whose movies were all watched (the server marks those played).
      */
-    private suspend fun songNames(session: Session, query: LibraryQuery): List<String> {
-        songNamesCache?.let { (cached, names) -> if (cached == query) return names }
+    private suspend fun wholeList(session: Session, query: LibraryQuery, fresh: Boolean = false): Whole = wholeLock.withLock {
+        val key = indexKey(session, query)
+        wholeCache?.let { cached ->
+            val recent = System.currentTimeMillis() - cached.at < WHOLE_FRESH_MS
+            if (cached.key == key && (!fresh || recent)) return@withLock cached.value
+        }
+        var items = fetchAll(session, query, grouped = query.unwatchedGrouped).distinctBy { it.id }
+        if (query.unwatchedGrouped) items = items.filter { it.userData?.played != true }
+        val whole = Whole(items.map { entryOf(it, query) }, items.associateBy { it.id })
+        wholeCache = Cached(key, System.currentTimeMillis(), whole)
+        whole
+    }
+
+    /** Every title of [query], page by page, a few pages at once. */
+    private suspend fun fetchAll(session: Session, query: LibraryQuery, light: Boolean = false, grouped: Boolean = false): List<BaseItemDto> {
+        val first = fetch(session, query, start = 0, limit = WHOLE_PAGE, light = light, grouped = grouped)
+        val total = first.totalRecordCount.coerceAtMost(MAX_WHOLE)
+        val permits = Semaphore(WHOLE_PARALLEL)
+        val rest = coroutineScope {
+            (WHOLE_PAGE until total step WHOLE_PAGE).map { start ->
+                async { permits.withPermit { fetch(session, query, start = start, limit = WHOLE_PAGE, light = light, grouped = grouped).items } }
+            }.awaitAll()
+        }
+        return first.items + rest.flatten()
+    }
+
+    /** The titles with [ids], in that order. A few at once, so the address stays short. */
+    private suspend fun itemsByIds(session: Session, ids: List<UUID>): List<BaseItemDto> {
+        if (ids.isEmpty()) return emptyList()
         val userId = UUID.fromString(session.user.userId)
-        suspend fun names(start: Int) = session.api.libraryApi.getItems(
-            userId = userId,
-            parentId = query.libraryId,
-            recursive = true,
-            includeItemTypes = listOf(BaseItemKind.AUDIO),
-            isFavorite = true.takeIf { query.favoritesOnly },
-            sortBy = sortBy(query),
-            sortOrder = listOf(if (query.orderDescending) SortOrder.DESCENDING else SortOrder.ASCENDING),
-            enableImages = false,
-            enableUserData = false,
-            startIndex = start,
-            limit = NAMES_PAGE,
-            enableTotalRecordCount = true,
-        ).content
-        val first = names(0)
-        val total = first.totalRecordCount.coerceAtMost(MAX_SONG_NAMES)
-        val rest = coroutineScope {
-            (NAMES_PAGE until total step NAMES_PAGE).map { start -> async { names(start).items } }.awaitAll()
-        }
-        val all = (first.items + rest.flatten()).map { it.name.orEmpty() }
-        songNamesCache = query to all
-        return all
-    }
-
-    /** The last [unwatchedGrouped] list, the query it belongs to, and when it was fetched. */
-    private var unwatchedCache: Triple<LibraryQuery, Long, List<BaseItemDto>>? = null
-    private val unwatchedLock = Mutex()
-
-    /**
-     * The movies tab grouped into collections, without what was watched: the
-     * whole grouped list, page by page at once, less the movies watched and the
-     * collections whose movies were all watched (the server marks those played).
-     * Kept for the next pages and the A–Z rail; [fresh] fetches it again unless
-     * it was fetched a moment ago (the first page and the rail load together).
-     */
-    private suspend fun unwatchedGrouped(session: Session, query: LibraryQuery, fresh: Boolean = false): List<BaseItemDto> = unwatchedLock.withLock {
-        unwatchedCache?.let { (cached, at, items) ->
-            val recent = System.currentTimeMillis() - at < UNWATCHED_FRESH_MS
-            if (cached == query && (!fresh || recent)) return@withLock items
-        }
-        val first = fetch(session, query, start = 0, limit = NAMES_PAGE, grouped = true)
-        val total = first.totalRecordCount.coerceAtMost(MAX_SONG_NAMES)
-        val rest = coroutineScope {
-            (NAMES_PAGE until total step NAMES_PAGE).map { start -> async { fetch(session, query, start = start, limit = NAMES_PAGE, grouped = true).items } }.awaitAll()
-        }
-        val unwatched = (first.items + rest.flatten()).filter { it.userData?.played != true }
-        unwatchedCache = Triple(query, System.currentTimeMillis(), unwatched)
-        unwatched
+        val found = coroutineScope {
+            ids.chunked(IDS_PER_REQUEST).map { chunk ->
+                async {
+                    session.api.libraryApi.getItems(
+                        userId = userId,
+                        ids = chunk,
+                        fields = listOf(ItemFields.CHILD_COUNT, ItemFields.GENRES, ItemFields.SORT_NAME),
+                        enableUserData = true,
+                    ).content.items
+                }
+            }.awaitAll().flatten()
+        }.associateBy { it.id }
+        return ids.mapNotNull { found[it] }
     }
 
     /** The last [showCollectionIds], the user they belong to, and when they were found. */
@@ -288,17 +389,18 @@ class LibraryRepository @Inject constructor(
         query: LibraryQuery,
         start: Int,
         limit: Int,
-        nameStartsWith: String? = null,
-        nameLessThan: String? = null,
-        /** For [unwatchedGrouped]: grouped into collections, without the played filter the server would not group with. */
+        /** Only what [index] needs: no images, user data or extra fields. */
+        light: Boolean = false,
+        /** For [wholeList]: grouped into collections, without the played filter the server would not group with. */
         grouped: Boolean = false,
     ): BaseItemDtoQueryResult {
         val userId = UUID.fromString(session.user.userId)
-        val sortBy = sortBy(query)
+        // The app puts the titles in order itself (ListArrangement). This only keeps the pages apart.
+        val sortBy = listOf(ItemSortBy.SORT_NAME, ItemSortBy.DATE_CREATED)
         val favorite = true.takeIf { query.favoritesOnly }
         // Music and playlists have no age ratings worth filtering on.
         val ages = if (query.kind == LibraryKind.Music || query.scope == LibraryScope.Playlists) null else ageFilter.limits()
-        val order = listOf(if (query.orderDescending) SortOrder.DESCENDING else SortOrder.ASCENDING)
+        val order = listOf(SortOrder.ASCENDING)
         val only = if (query.showCollections) showCollectionIds(session) else emptyList()
         // Asked without ids, the server would list every collection.
         if (query.showCollections && only.isEmpty()) return BaseItemDtoQueryResult(items = emptyList(), totalRecordCount = 0, startIndex = 0)
@@ -310,19 +412,15 @@ class LibraryRepository @Inject constructor(
                 fields = listOf(ItemFields.ITEM_COUNTS, ItemFields.SORT_NAME),
                 startIndex = start,
                 limit = limit,
-                nameStartsWith = nameStartsWith,
-                nameLessThan = nameLessThan,
                 sortBy = listOf(ItemSortBy.SORT_NAME),
                 sortOrder = order,
             ).content
             LibraryScope.Artists -> session.api.artistApi.getAlbumArtists(
                 userId = userId,
                 parentId = query.libraryId,
-                fields = listOf(ItemFields.CHILD_COUNT, ItemFields.SORT_NAME),
+                fields = listOf(ItemFields.CHILD_COUNT, ItemFields.SORT_NAME, ItemFields.DATE_CREATED),
                 startIndex = start,
                 limit = limit,
-                nameStartsWith = nameStartsWith,
-                nameLessThan = nameLessThan,
                 isFavorite = favorite,
                 sortBy = sortBy,
                 sortOrder = order,
@@ -341,12 +439,11 @@ class LibraryRepository @Inject constructor(
                 isFavorite = favorite,
                 // Filtered, the titles themselves count: a collection would hide which of its movies match.
                 collapseBoxSetItems = (grouped || (query.groupsCollections && !query.unwatchedOnly)).takeIf { it },
-                fields = listOf(ItemFields.CHILD_COUNT, ItemFields.GENRES, ItemFields.SORT_NAME),
-                enableUserData = true,
+                fields = if (light) listOf(ItemFields.SORT_NAME, ItemFields.DATE_CREATED) else listOf(ItemFields.CHILD_COUNT, ItemFields.GENRES, ItemFields.SORT_NAME, ItemFields.DATE_CREATED),
+                enableImages = !light,
+                enableUserData = !light,
                 startIndex = start,
                 limit = limit,
-                nameStartsWith = nameStartsWith,
-                nameLessThan = nameLessThan,
                 sortBy = sortBy,
                 sortOrder = order,
                 enableTotalRecordCount = true,
@@ -369,32 +466,26 @@ class LibraryRepository @Inject constructor(
             LibraryKind.MusicVideos -> BaseItemKind.MUSIC_VIDEO
         }
 
-    /** A secondary sort by name keeps the order stable between pages. Songs of one album stay in track order. */
-    private fun sortBy(query: LibraryQuery): List<ItemSortBy> {
-        val inAlbum = listOf(ItemSortBy.ALBUM, ItemSortBy.PARENT_INDEX_NUMBER, ItemSortBy.INDEX_NUMBER, ItemSortBy.SORT_NAME)
-        return when (if (query.listedByName) LibrarySort.Title else query.sort) {
-            LibrarySort.DateAdded -> listOf(ItemSortBy.DATE_CREATED, ItemSortBy.SORT_NAME)
-            LibrarySort.Title -> if (query.scope == LibraryScope.Songs) listOf(ItemSortBy.NAME) else listOf(ItemSortBy.SORT_NAME)
-            LibrarySort.Artist ->
-                if (query.scope == LibraryScope.Songs) listOf(ItemSortBy.ARTIST) + inAlbum
-                else listOf(ItemSortBy.ALBUM_ARTIST, ItemSortBy.SORT_NAME)
-            LibrarySort.Album -> inAlbum
-            LibrarySort.Year -> listOf(ItemSortBy.PRODUCTION_YEAR, ItemSortBy.PREMIERE_DATE, ItemSortBy.SORT_NAME)
-            LibrarySort.Rating -> listOf(ItemSortBy.COMMUNITY_RATING, ItemSortBy.SORT_NAME)
-            LibrarySort.Runtime -> listOf(ItemSortBy.RUNTIME, ItemSortBy.SORT_NAME)
-        }
-    }
-
     private companion object {
-        const val NAMES_PAGE = 2000
-        /** The grid's first page and the A–Z rail ask for [unwatchedGrouped] together: one fetch serves both. */
-        const val UNWATCHED_FRESH_MS = 3_000L
+        /** Titles per request when a whole list is fetched. */
+        const val WHOLE_PAGE = 2000
+        /** Requests at once when a whole list is fetched. */
+        const val WHOLE_PARALLEL = 8
+        /** The grid's first page and the A–Z rail ask for the whole list together: one fetch serves both. */
+        const val WHOLE_FRESH_MS = 3_000L
+        /** An [index] older than this is fetched again in the background. The pages fetched with it are always fresh. */
+        const val INDEX_REFRESH_MS = 30 * 60_000L
+        const val TAG = "Library"
+        /** Ids per request when a page is fetched by its ids. */
+        const val IDS_PER_REQUEST = 40
         /** How long the collections holding shows are trusted before they are looked up again. */
         const val SHOW_COLLECTIONS_FRESH_MS = 5 * 60_000L
         /** Collections asked for their shows at once. */
         const val SHOW_COLLECTIONS_PARALLEL = 8
-        /** Beyond this many songs the rail covers only the first ones. */
-        const val MAX_SONG_NAMES = 40_000
+        /** Beyond this many titles only the first ones are listed. */
+        const val MAX_WHOLE = 200_000
+        /** Part of the index key: saved indexes of an older form are not read. */
+        const val INDEX_VERSION = 2
     }
 
     private fun requireSession(): Session = checkNotNull(sessions.session.value) { "No profile is signed in" }
