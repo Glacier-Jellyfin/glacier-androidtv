@@ -251,7 +251,12 @@ private fun MediaDetail(state: DetailState, details: ItemDetails, viewModel: Det
                 }
                 if (state.similar.isNotEmpty()) {
                     item(key = "similar") {
-                        MediaRow(title = stringResource(R.string.detail_similar), bottomPadding = 120) {
+                        // Without a cast row this row sits right under the buttons, so it takes the cast row's gap.
+                        MediaRow(
+                            title = stringResource(R.string.detail_similar),
+                            bottomPadding = 120,
+                            modifier = Modifier.padding(top = if (details.cast.isEmpty()) 48.dp else 0.dp),
+                        ) {
                             items(state.similar, key = { it.id }) { similar ->
                                 GridCard(
                                     imageUrl = similar.posterUrl,

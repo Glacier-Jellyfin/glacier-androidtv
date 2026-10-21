@@ -30,6 +30,7 @@ renders the reference separately.
 - Subtitles for signs and songs show as forced, not as sing-along. This also covers German names like "Schild- und Liedtext"
 - An audio track named like "ger ac3 6ch" no longer shows as Swiss German
 - Back in the music player closes an open options menu or info panel and leaves the player open. Before, newer Android TV versions closed the player as well
+- On a title without cast, "More like this" no longer sits right under the buttons
 
 ## [0.5.0] - 2026-10-16
 
