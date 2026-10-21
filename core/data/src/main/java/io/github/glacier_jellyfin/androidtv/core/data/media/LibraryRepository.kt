@@ -11,6 +11,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -27,6 +31,7 @@ import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.SortOrder
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -115,6 +120,14 @@ data class LibraryQuery(
 
 data class LibraryPage(val items: List<MediaItem>, val total: Int)
 
+/** How far the whole list of [query] has come while the grid waits for it: [loaded] of [total] titles. */
+data class LoadProgress(val query: LibraryQuery, val loaded: Int, val total: Int) {
+    /** Whether this is the list [other] waits for. One list serves every sort. */
+    fun isFor(other: LibraryQuery): Boolean = query.unsorted == other.unsorted
+}
+
+private val LibraryQuery.unsorted: LibraryQuery get() = copy(sort = LibrarySort.Title, descending = false)
+
 /** Letters of the A–Z rail; '#' stands for everything that does not start with A–Z. */
 val AlphabetLetters: List<Char> = listOf('#') + ('A'..'Z')
 
@@ -130,6 +143,11 @@ class LibraryRepository @Inject constructor(
     private val ageFilter: AgeFilter,
     private val store: NameIndexStore,
 ) {
+
+    private val _progress = MutableStateFlow<LoadProgress?>(null)
+
+    /** The whole list the grid waits for, while it takes more than one request; null otherwise. */
+    val progress: StateFlow<LoadProgress?> = _progress.asStateFlow()
 
     /** Titles [start] to [start] + [limit] of [query], each with its group when the list is grouped. */
     suspend fun page(query: LibraryQuery, start: Int, limit: Int): LibraryPage = withContext(Dispatchers.IO) {
@@ -262,15 +280,15 @@ class LibraryRepository @Inject constructor(
 
     /** One index serves every sort and both directions. The version changes with what an entry holds. */
     private fun indexKey(session: Session, query: LibraryQuery): String =
-        "$INDEX_VERSION|${session.server.id}|${session.user.userId}|${query.copy(sort = LibrarySort.Title, descending = false)}"
+        "$INDEX_VERSION|${session.server.id}|${session.user.userId}|${query.unsorted}"
 
     /**
      * [query]'s titles from the server. Each page becomes index entries as it comes: 70,000
      * songs as the server's items at once do not fit in a TV's memory.
      */
-    private suspend fun fetchIndex(session: Session, query: LibraryQuery): List<IndexEntry> {
+    private suspend fun fetchIndex(session: Session, query: LibraryQuery, waitedFor: Boolean = true): List<IndexEntry> {
         val shared = HashMap<String, String>()
-        return fetchAll(session, query, light = true) { page -> synchronized(shared) { page.map { entryOf(it, query, shared) } } }
+        return fetchAll(session, query, light = true, waitedFor = waitedFor) { page -> synchronized(shared) { page.map { entryOf(it, query, shared) } } }
             .distinctBy { it.id }
     }
 
@@ -279,7 +297,7 @@ class LibraryRepository @Inject constructor(
         synchronized(refreshing) { if (!refreshing.add(key)) return }
         background.launch {
             try {
-                val entries = fetchIndex(session, query)
+                val entries = fetchIndex(session, query, waitedFor = false)
                 store.write(key, SavedIndex(System.currentTimeMillis(), entries))
             } catch (e: CancellationException) {
                 throw e
@@ -317,23 +335,44 @@ class LibraryRepository @Inject constructor(
         whole
     }
 
-    /** Every title of [query], page by page, a few pages at once, each page made into [T] as it comes. */
+    /**
+     * Every title of [query], page by page, a few pages at once, each page made into [T] as it comes.
+     * When the grid [waitedFor] it, [progress] counts the titles that came.
+     */
     private suspend fun <T> fetchAll(
         session: Session,
         query: LibraryQuery,
         light: Boolean = false,
         grouped: Boolean = false,
+        waitedFor: Boolean = true,
         convert: (List<BaseItemDto>) -> List<T>,
     ): List<T> {
         val first = fetch(session, query, start = 0, limit = WHOLE_PAGE, light = light, grouped = grouped)
         val total = first.totalRecordCount.coerceAtMost(MAX_WHOLE)
+        val counted = waitedFor && total > WHOLE_PAGE
+        val loaded = AtomicInteger(first.items.size)
+        if (counted) _progress.value = LoadProgress(query, loaded.get(), total)
         val permits = Semaphore(WHOLE_PARALLEL)
-        val rest = coroutineScope {
-            (WHOLE_PAGE until total step WHOLE_PAGE).map { start ->
-                async { permits.withPermit { convert(fetch(session, query, start = start, limit = WHOLE_PAGE, light = light, grouped = grouped).items) } }
-            }.awaitAll()
+        try {
+            val rest = coroutineScope {
+                (WHOLE_PAGE until total step WHOLE_PAGE).map { start ->
+                    async {
+                        permits.withPermit {
+                            val page = fetch(session, query, start = start, limit = WHOLE_PAGE, light = light, grouped = grouped).items
+                            if (counted) {
+                                val now = loaded.addAndGet(page.size).coerceAtMost(total)
+                                // Pages finish in any order: the count only goes up.
+                                _progress.update { if (it?.query == query && it.loaded >= now) it else LoadProgress(query, now, total) }
+                            }
+                            convert(page)
+                        }
+                    }
+                }.awaitAll()
+            }
+            return convert(first.items) + rest.flatten()
+        } finally {
+            if (counted) _progress.update { if (it?.query == query) null else it }
         }
-        return convert(first.items) + rest.flatten()
     }
 
     /** The titles with [ids], in that order. A few at once, so the address stays short. */

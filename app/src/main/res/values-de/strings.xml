@@ -256,6 +256,8 @@
     <string name="library_empty_unwatched">Alles gesehen. In dieser Bibliothek ist kein ungesehener Titel übrig.</string>
     <string name="library_empty">Keine Einträge in dieser Ansicht.</string>
     <string name="library_error">Diese Ansicht konnte nicht geladen werden.</string>
+    <string name="library_loading_progress">%1$d von %2$s geladen</string>
+    <string name="library_loading_once">Das passiert nur beim ersten Mal. Danach öffnet sich die Liste schnell.</string>
     <string name="group_minutes">%1$d–%2$d Min.</string>
     <string name="group_hours">%1$s–%2$s Std.</string>
     <string name="group_stars">★ %d</string>

@@ -130,6 +130,7 @@ fun LibraryScreen(
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val progress by viewModel.progress.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
     val sizes = LocalCardSizes.current
     val density = LocalDensity.current
@@ -350,7 +351,28 @@ fun LibraryScreen(
                             }
                         }
                         state.loading && state.items.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }, key = "loading") {
-                            InFreeSpace(gridState, "loading", screenCentred = true) { SpinningDiamond(90) }
+                            InFreeSpace(gridState, "loading", screenCentred = true) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(28.dp)) {
+                                    SpinningDiamond(90)
+                                    // A big list takes a while the first time: say how far it has come.
+                                    progress?.takeIf { it.isFor(state.query) }?.let {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text(
+                                                stringResource(R.string.library_loading_progress, it.loaded, countText(state.query.scope, state.query.kind, it.total)),
+                                                style = GlacierText.body(21),
+                                                color = GlacierColors.Mist,
+                                                textAlign = TextAlign.Center,
+                                            )
+                                            Text(
+                                                stringResource(R.string.library_loading_once),
+                                                style = GlacierText.body(17),
+                                                color = GlacierColors.Mist,
+                                                textAlign = TextAlign.Center,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                         state.complete && state.items.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
                             InFreeSpace(gridState, "empty", screenCentred = true) {

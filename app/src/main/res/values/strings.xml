@@ -261,6 +261,8 @@
     <string name="library_empty_unwatched">All caught up. No unwatched titles are left in this library.</string>
     <string name="library_empty">Nothing in this view.</string>
     <string name="library_error">This view could not be loaded.</string>
+    <string name="library_loading_progress">%1$d of %2$s loaded</string>
+    <string name="library_loading_once">This only happens the first time. After that the list opens quickly.</string>
     <string name="group_minutes">%1$d–%2$d min</string>
     <string name="group_hours">%1$s–%2$s h</string>
     <string name="group_stars">★ %d</string>

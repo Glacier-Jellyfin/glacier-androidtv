@@ -17,6 +17,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryScope
 import io.github.glacier_jellyfin.androidtv.core.data.settings.LibrarySortChoice
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
+import io.github.glacier_jellyfin.androidtv.core.data.media.LoadProgress
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicRepository
 import io.github.glacier_jellyfin.androidtv.music.MusicActions
@@ -96,6 +97,9 @@ class LibraryViewModel @Inject constructor(
         ),
     )
     val state: StateFlow<LibraryState> = _state.asStateFlow()
+
+    /** How far a big list has come while the grid waits for it. */
+    val progress: StateFlow<LoadProgress?> = repository.progress
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
