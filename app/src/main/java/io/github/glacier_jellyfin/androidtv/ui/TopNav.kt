@@ -180,8 +180,8 @@ fun TopNav(
 /** Space between the navigation pill and the mini player when they come close. */
 private const val NAV_MINI_GAP = 24
 
-/** The mini player's distance from the right edge of the screen. */
-const val MINI_PLAYER_END = 96
+/** The mini player's distance from the right edge of the screen: the same as from the top. */
+const val MINI_PLAYER_END = MINI_PLAYER_TOP
 
 @Composable
 private fun NavItem(

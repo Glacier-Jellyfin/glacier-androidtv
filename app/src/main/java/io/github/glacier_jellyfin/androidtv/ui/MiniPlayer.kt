@@ -65,6 +65,9 @@ val LocalMusicProgress = staticCompositionLocalOf<StateFlow<MusicProgress>?> { n
 /** Height of the [MiniPlayer]; toasts move below it while it shows. */
 const val MINI_PLAYER_HEIGHT = 84
 
+/** The mini player's distance from the top of the screen, where the navigation pill sits too. */
+const val MINI_PLAYER_TOP = 34
+
 /** Whether a [MiniPlayer] is on screen; pages without the top navigation show none. */
 object MiniPlayerOnScreen {
     var count by mutableIntStateOf(0)

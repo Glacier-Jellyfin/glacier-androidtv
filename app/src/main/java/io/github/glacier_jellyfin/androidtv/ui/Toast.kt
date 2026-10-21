@@ -71,7 +71,7 @@ fun BoxScope.ToastHost(toaster: Toaster) {
         modifier = Modifier
             .align(Alignment.TopEnd)
             // Below the mini player while it shows (same corner).
-            .padding(top = if (MiniPlayerOnScreen.shown) (34 + MINI_PLAYER_HEIGHT + 12).dp else 34.dp, end = 96.dp),
+            .padding(top = if (MiniPlayerOnScreen.shown) (MINI_PLAYER_TOP + MINI_PLAYER_HEIGHT + 12).dp else MINI_PLAYER_TOP.dp, end = MINI_PLAYER_END.dp),
     ) {
         val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
         Row(

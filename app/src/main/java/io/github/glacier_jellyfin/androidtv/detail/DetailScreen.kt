@@ -87,6 +87,7 @@ import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalNowPlaying
 import io.github.glacier_jellyfin.androidtv.ui.MINI_PLAYER_END
+import io.github.glacier_jellyfin.androidtv.ui.MINI_PLAYER_TOP
 import io.github.glacier_jellyfin.androidtv.ui.MiniPlayer
 import io.github.glacier_jellyfin.androidtv.ui.ComingSoonScreen
 import io.github.glacier_jellyfin.androidtv.ui.DetailBackdrop
@@ -160,7 +161,7 @@ fun DetailScreen(
                 onClick = viewModel::openNowPlaying,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 34.dp, end = MINI_PLAYER_END.dp)
+                    .padding(top = MINI_PLAYER_TOP.dp, end = MINI_PLAYER_END.dp)
                     .focusRequester(miniFocus)
                     .focusProperties { down = pageFocus },
             )

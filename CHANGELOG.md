@@ -23,6 +23,7 @@ renders the reference separately.
 
 ### Improved
 - Detail pages show the mini player while music plays. Up from the buttons at the top reaches it
+- The mini player and messages sit as far from the right edge as from the top
 - Forced, hearing impaired, sing-along, commentary and audio description tracks are found by their name in many more languages, such as French, Spanish, Italian, Portuguese, Dutch, the Nordic languages, Polish and Russian. Accents and spellings like Sing-Along or Singalong no longer matter
 
 ### Fixed
