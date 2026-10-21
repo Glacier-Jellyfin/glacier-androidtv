@@ -3,6 +3,7 @@ package io.github.glacier_jellyfin.androidtv.core.data
 import androidx.datastore.core.DataStore
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.ServerInfo
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.SignedInUser
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -64,6 +65,7 @@ class AccountRepository @Inject constructor(
         if (ok && Pins.outdated(stored)) {
             val hash = withContext(Dispatchers.Default) { Pins.hash(pin) }
             store.updateData { it.updateUser(serverId, userId) { user -> user.copy(pin = hash) } }
+            Log.i(TAG, "PIN hash redone with ${hash.iterations} instead of ${stored.iterations} iterations")
         }
         return ok
     }
@@ -77,4 +79,8 @@ class AccountRepository @Inject constructor(
     }
 
     private fun now() = System.currentTimeMillis()
+
+    private companion object {
+        const val TAG = "Accounts"
+    }
 }
