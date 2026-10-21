@@ -15,6 +15,9 @@ sealed interface PinReason {
 
     /** No PIN yet: the new one twice. */
     data object Create : PinReason
+
+    /** The current PIN, then it is gone. */
+    data object Remove : PinReason
 }
 
 enum class PinStep { Current, New, Confirm }
@@ -32,11 +35,10 @@ data class PinPrompt(
 ) {
     val complete: Boolean get() = digits.length == LENGTH
 
-    /** A key typed; [PinKey.Confirm] changes nothing, four digits finish a step on their own. */
+    /** A key typed; four digits finish a step on their own. */
     fun type(key: PinKey): PinPrompt = when (key) {
         is PinKey.Digit -> if (complete) this else copy(digits = digits + key.value, error = null)
         PinKey.Delete -> copy(digits = digits.dropLast(1), error = null)
-        PinKey.Confirm -> this
     }
 
     /**

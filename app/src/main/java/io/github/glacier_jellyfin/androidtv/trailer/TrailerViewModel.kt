@@ -288,7 +288,10 @@ class TrailerViewModel @Inject constructor(
         loadTimeout?.cancel()
         loadTimeout = viewModelScope.launch {
             delay(LOAD_TIMEOUT_MS)
-            if (_state.value.loading) fail()
+            if (_state.value.loading) {
+                Log.w(TAG, "Trailer showed nothing for ${LOAD_TIMEOUT_MS / 1000} s, giving up")
+                fail()
+            }
         }
     }
 

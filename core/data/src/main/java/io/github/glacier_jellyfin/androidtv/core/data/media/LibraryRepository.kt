@@ -278,9 +278,19 @@ class LibraryRepository @Inject constructor(
         }
     }
 
-    /** One index serves every sort and both directions. The version changes with what an entry holds. */
-    private fun indexKey(session: Session, query: LibraryQuery): String =
-        "$INDEX_VERSION|${session.server.id}|${session.user.userId}|${query.unsorted}"
+    /**
+     * One index serves every sort and both directions. The version changes with what an entry holds.
+     * The age limits are part of it: the server leaves hidden titles out, so a list fetched under
+     * other limits shows titles the profile must not see, or misses ones it may.
+     */
+    private suspend fun indexKey(session: Session, query: LibraryQuery): String {
+        val ages = ageLimits(query)
+        return "$INDEX_VERSION|${session.server.id}|${session.user.userId}|${query.unsorted}|${ages?.maxOfficialRating}|${ages?.hasOfficialRating}"
+    }
+
+    /** Music and playlists have no age ratings worth filtering on. */
+    private suspend fun ageLimits(query: LibraryQuery): AgeLimits? =
+        if (query.kind == LibraryKind.Music || query.scope == LibraryScope.Playlists) null else ageFilter.limits()
 
     /**
      * [query]'s titles from the server. Each page becomes index entries as it comes: 70,000
@@ -451,8 +461,7 @@ class LibraryRepository @Inject constructor(
         // The app puts the titles in order itself (ListArrangement). This only keeps the pages apart.
         val sortBy = listOf(ItemSortBy.SORT_NAME, ItemSortBy.DATE_CREATED)
         val favorite = true.takeIf { query.favoritesOnly }
-        // Music and playlists have no age ratings worth filtering on.
-        val ages = if (query.kind == LibraryKind.Music || query.scope == LibraryScope.Playlists) null else ageFilter.limits()
+        val ages = ageLimits(query)
         val order = listOf(SortOrder.ASCENDING)
         val only = if (query.showCollections) showCollectionIds(session) else emptyList()
         // Asked without ids, the server would list every collection.

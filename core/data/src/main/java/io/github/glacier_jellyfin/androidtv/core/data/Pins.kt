@@ -10,9 +10,10 @@ import javax.crypto.spec.PBEKeySpec
  * Four-digit PINs. Hashing cannot make 10,000 combinations hard to guess;
  * it only keeps the PIN itself out of the (already encrypted) state file.
  * The protection against guessing is that the PIN only unlocks this device.
+ * So the iteration count stays low: 120,000 took about 1.5 s on a Sony TV.
  */
 object Pins {
-    private const val ITERATIONS = 120_000
+    private const val ITERATIONS = 10_000
     private const val KEY_BITS = 256
     private val PIN_FORMAT = Regex("""\d{4}""")
 
@@ -26,6 +27,9 @@ object Pins {
             iterations = iterations,
         )
     }
+
+    /** A hash from before the lower iteration count; it is redone once the PIN was entered right. */
+    fun outdated(stored: PinHash): Boolean = stored.iterations > ITERATIONS
 
     fun verify(pin: String, stored: PinHash): Boolean {
         if (!isValid(pin)) return false

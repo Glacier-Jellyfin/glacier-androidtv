@@ -50,9 +50,13 @@
     <string name="profiles_offline">Server nicht erreichbar · Profile dieses Geräts werden angezeigt</string>
     <string name="pin_title">PIN für %1$s</string>
     <string name="pin_hint">Vier Ziffern eingeben</string>
+    <string name="pin_wheel_delete">Löschen</string>
+    <string name="pin_wheel_hold_switch">halten für %1$s</string>
     <string name="pin_wrong">Falsche PIN · bitte erneut versuchen</string>
-    <string name="pin_required">Vier Ziffern erforderlich</string>
     <string name="pin_saved">Neue PIN gespeichert</string>
+    <string name="pin_removed">PIN entfernt</string>
+    <string name="pin_remove_title">PIN entfernen</string>
+    <string name="pin_remove_hint">Aktuelle PIN eingeben. Danach sind alle PIN-Sperren aus</string>
     <string name="pin_current_title">Aktuelle PIN</string>
     <string name="pin_current_hint">Zum Ändern zuerst die aktuelle PIN eingeben</string>
     <string name="pin_new_title">Neue PIN festlegen</string>
@@ -894,6 +898,7 @@
     <string name="settings_pin_change">PIN ändern</string>
     <string name="settings_pin_change_sub">Zuletzt geändert: %1$s</string>
     <string name="settings_pin_change_value">Ändern</string>
+    <string name="settings_pin_remove_value">Entfernen</string>
     <string name="settings_pin_set">PIN festlegen</string>
     <string name="settings_pin_set_sub">Noch keine PIN · wird beim ersten Einschalten eines PIN-Schutzes festgelegt</string>
     <string name="settings_pin_set_value">Festlegen</string>

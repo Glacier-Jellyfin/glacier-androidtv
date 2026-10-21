@@ -70,6 +70,9 @@ object GlacierIcons {
     /** Previous and next episode (design: triangle with a bar). */
     val SkipBack = filled("M19 20 9 12 19 4z", "M5 19V5", strokeWidth = 2f)
     val SkipForward = filled("M5 4 15 12 5 20z", "M19 5v14", strokeWidth = 2f)
+    /** The remote's rewind and menu keys, for key hints. */
+    val Rewind = filled("M11 18 3 12 11 6z", "M21 18 13 12 21 6z", strokeWidth = 1.6f)
+    val Menu = icon("M4 7h16", "M4 12h16", "M4 17h16")
     val Close = icon("M18 6 6 18", "m6 6 12 12")
     val Info = icon("M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z", "M12 16v-4", "M12 8h.01")
     val More = icon("M5 12h.01", "M12 12h.01", "M19 12h.01", strokeWidth = 3.4f)

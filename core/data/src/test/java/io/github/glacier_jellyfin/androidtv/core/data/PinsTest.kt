@@ -22,6 +22,12 @@ class PinsTest {
     }
 
     @Test
+    fun `old slow hashes are outdated, new ones are not`() {
+        assertTrue(Pins.outdated(Pins.hash("2580", iterations = 120_000)))
+        assertFalse(Pins.outdated(Pins.hash("2580")))
+    }
+
+    @Test
     fun `salts differ between hashes of the same pin`() {
         assertNotEquals(Pins.hash("1111", iterations = 1_000).salt, Pins.hash("1111", iterations = 1_000).salt)
     }

@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
@@ -7,6 +8,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -19,7 +22,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinDots
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinKey
-import io.github.glacier_jellyfin.androidtv.core.designsystem.PinPad
+import io.github.glacier_jellyfin.androidtv.core.designsystem.PinWheel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -84,10 +87,6 @@ class PinGate(
 
     fun key(key: PinKey) {
         val current = _prompt.value ?: return
-        if (key == PinKey.Confirm && !current.complete) {
-            scope.launch { toast(UiEvent.Toast(R.string.pin_required)) }
-            return
-        }
         val typed = current.type(key)
         _prompt.value = typed
         if (!typed.complete || pending?.isActive == true) return
@@ -101,6 +100,10 @@ class PinGate(
                     when (val reason = typed.reason) {
                         PinReason.Settings -> parental.unlockSettings()
                         is PinReason.Title -> parental.unlock(reason.itemId)
+                        PinReason.Remove -> {
+                            parental.removePin()
+                            toast(UiEvent.Toast(R.string.pin_removed))
+                        }
                         PinReason.Change, PinReason.Create -> Unit
                     }
                     finish()
@@ -138,6 +141,7 @@ fun PinDialog(prompt: PinPrompt, onKey: (PinKey) -> Unit, onDismiss: () -> Unit)
             PinReason.Settings -> stringResource(R.string.pin_settings_title)
             is PinReason.Title -> reason.name
             PinReason.Change, PinReason.Create -> stringResource(R.string.pin_current_title)
+            PinReason.Remove -> stringResource(R.string.pin_remove_title)
         }
     }
     val sub = when {
@@ -151,6 +155,7 @@ fun PinDialog(prompt: PinPrompt, onKey: (PinKey) -> Unit, onDismiss: () -> Unit)
                 ?.let { stringResource(R.string.pin_title_rated_hint, it) }
                 ?: stringResource(R.string.pin_title_unrated_hint)
             PinReason.Change, PinReason.Create -> stringResource(R.string.pin_current_hint)
+            PinReason.Remove -> stringResource(R.string.pin_remove_hint)
         }
     }
     ModalSheet(onDismiss = onDismiss) {
@@ -165,7 +170,29 @@ fun PinDialog(prompt: PinPrompt, onKey: (PinKey) -> Unit, onDismiss: () -> Unit)
         }
         PinDots(filled = prompt.digits.length)
         val padFocus = remember { FocusRequester() }
-        PinPad(onKey = onKey, firstKeyFocus = padFocus)
+        PinEntry(prompt.digits.length, onKey, padFocus)
         LaunchedEffect(Unit) { runCatching { padFocus.requestFocus() } }
     }
+}
+
+/**
+ * The Fire TV style PIN wheel; the number keys type as well. Back deletes
+ * while [typed] digits are there, for remotes without a rewind key; with none
+ * typed it closes the sheet as usual.
+ */
+@Composable
+fun PinEntry(typed: Int, onKey: (PinKey) -> Unit, focus: FocusRequester) {
+    BackHandler(enabled = typed > 0) { onKey(PinKey.Delete) }
+    val fireTv = TvPlatform.of(LocalContext.current) == TvPlatform.FireTv
+    val resources = LocalResources.current
+    PinWheel(
+        onKey = onKey,
+        deleteHint = stringResource(R.string.pin_wheel_delete),
+        // Next to the menu key the target block says enough; OK has to be held.
+        switchHint = { if (fireTv) it else resources.getString(R.string.pin_wheel_hold_switch, it) },
+        keyIcons = fireTv,
+        deleteKey = "Back",
+        switchKey = "OK",
+        focus = focus,
+    )
 }

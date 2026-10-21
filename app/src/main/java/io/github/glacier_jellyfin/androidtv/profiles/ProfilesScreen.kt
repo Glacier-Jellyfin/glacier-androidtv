@@ -49,9 +49,9 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinDots
-import io.github.glacier_jellyfin.androidtv.core.designsystem.PinPad
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
+import io.github.glacier_jellyfin.androidtv.ui.PinEntry
 import io.github.glacier_jellyfin.androidtv.ui.TvPlatform
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 
@@ -146,7 +146,7 @@ fun ProfilesScreen(
             }
             PinDots(filled = state.pin.length)
             val padFocus = remember { FocusRequester() }
-            PinPad(onKey = viewModel::pinKey, firstKeyFocus = padFocus)
+            PinEntry(state.pin.length, viewModel::pinKey, padFocus)
             LaunchedEffect(Unit) { runCatching { padFocus.requestFocus() } }
         }
     }

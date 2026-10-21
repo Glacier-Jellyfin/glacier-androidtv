@@ -2,6 +2,7 @@ package io.github.glacier_jellyfin.androidtv.core.designsystem
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -26,6 +31,11 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -159,37 +169,157 @@ fun PinDots(filled: Int, modifier: Modifier = Modifier) {
 sealed interface PinKey {
     data class Digit(val value: Char) : PinKey
     data object Delete : PinKey
-    data object Confirm : PinKey
 }
 
-/** 3×4 PIN pad: 1–9, delete, 0, OK. */
+/** The PIN key for a number or delete key of the remote or a keyboard. */
+private fun remoteKey(key: Key): PinKey? = when (key) {
+    Key.Zero, Key.NumPad0 -> PinKey.Digit('0')
+    Key.One, Key.NumPad1 -> PinKey.Digit('1')
+    Key.Two, Key.NumPad2 -> PinKey.Digit('2')
+    Key.Three, Key.NumPad3 -> PinKey.Digit('3')
+    Key.Four, Key.NumPad4 -> PinKey.Digit('4')
+    Key.Five, Key.NumPad5 -> PinKey.Digit('5')
+    Key.Six, Key.NumPad6 -> PinKey.Digit('6')
+    Key.Seven, Key.NumPad7 -> PinKey.Digit('7')
+    Key.Eight, Key.NumPad8 -> PinKey.Digit('8')
+    Key.Nine, Key.NumPad9 -> PinKey.Digit('9')
+    Key.Backspace -> PinKey.Delete
+    else -> null
+}
+
+/** The digits of the [PinWheel] per block: OK, then up, right, down and left. */
+private val WHEEL_BLOCKS = listOf("01234", "56789")
+
+/**
+ * PIN entry with the D-pad, like the Fire TV's: OK and the four directions
+ * type the digits of the current block. The menu key, Play/Pause or a held OK
+ * switch between 0–4 and 5–9, rewind deletes. The number keys type as well.
+ * Arrows never move the focus here. Back is the caller's: remotes without
+ * rewind delete with it.
+ *
+ * [keyIcons] shows the Fire TV keys (rewind, menu) before [deleteHint] and
+ * [switchHint]; otherwise [deleteKey] and [switchKey] (such as "Back" and "OK")
+ * show as key caps, a short one round like the remote's OK.
+ */
 @Composable
-fun PinPad(
+fun PinWheel(
     onKey: (PinKey) -> Unit,
+    deleteHint: String,
+    switchHint: (target: String) -> String,
+    keyIcons: Boolean,
+    deleteKey: String,
+    switchKey: String,
     modifier: Modifier = Modifier,
-    confirmLabel: String = "OK",
-    firstKeyFocus: FocusRequester? = null,
+    focus: FocusRequester? = null,
 ) {
-    val keys = "123456789".map { PinKey.Digit(it) } + listOf(PinKey.Delete, PinKey.Digit('0'), PinKey.Confirm)
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        keys.chunked(3).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                row.forEach { key ->
-                    KeyCap(
-                        onClick = { onKey(key) },
-                        width = 92,
-                        height = 76,
-                        shape = RoundedCornerShape(GlacierShapes.RadiusMd),
-                        modifier = if (key == keys.first() && firstKeyFocus != null) Modifier.focusRequester(firstKeyFocus) else Modifier,
-                    ) { color ->
-                        when (key) {
-                            is PinKey.Digit -> Text(key.value.toString(), style = GlacierText.display(26), color = color)
-                            PinKey.Delete -> Icon(GlacierIcons.Backspace, contentDescription = null, tint = color, modifier = Modifier.size(28.dp))
-                            PinKey.Confirm -> Text(confirmLabel, style = GlacierText.display(26), color = color)
+    var block by remember { mutableIntStateOf(0) }
+    val digits = WHEEL_BLOCKS[block]
+    // OK types on release, so holding it can switch the block instead. Only a press seen here counts.
+    var okDown by remember { mutableStateOf(false) }
+    var okHeld by remember { mutableStateOf(false) }
+    // No digit lights up: only the dots show that a key was taken, so nobody watching sees the PIN.
+    fun type(slot: Int) = onKey(PinKey.Digit(digits[slot]))
+    fun wheelKey(key: Key): (() -> Unit)? = when (key) {
+        Key.DirectionUp -> { { type(1) } }
+        Key.DirectionRight -> { { type(2) } }
+        Key.DirectionDown -> { { type(3) } }
+        Key.DirectionLeft -> { { type(4) } }
+        Key.Menu, Key.MediaPlayPause -> { { block = 1 - block } }
+        Key.MediaRewind, Key.Backspace -> { { onKey(PinKey.Delete) } }
+        else -> remoteKey(key)?.let { pinKey -> { onKey(pinKey) } }
+    }
+    Column(
+        modifier
+            .then(if (focus != null) Modifier.focusRequester(focus) else Modifier)
+            .onKeyEvent { event ->
+                val down = event.type == KeyEventType.KeyDown
+                val first = down && event.nativeKeyEvent.repeatCount == 0
+                when (event.key) {
+                    Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> when {
+                        first -> {
+                            okDown = true
+                            okHeld = false
+                        }
+                        down -> if (okDown && !okHeld) {
+                            okHeld = true
+                            block = 1 - block
+                        }
+                        event.type == KeyEventType.KeyUp -> {
+                            if (okDown && !okHeld) type(0)
+                            okDown = false
                         }
                     }
+                    else -> {
+                        val action = wheelKey(event.key) ?: return@onKeyEvent false
+                        // A held key types once.
+                        if (first) action()
+                    }
                 }
+                true
             }
+            .focusable(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(22.dp),
+    ) {
+        @Composable
+        fun Slot(digit: Char, modifier: Modifier) {
+            Box(modifier.size(72.dp), contentAlignment = Alignment.Center) {
+                Text(digit.toString(), style = GlacierText.display(34), color = GlacierColors.Ice)
+            }
+        }
+        Box(
+            Modifier
+                .size(300.dp)
+                .clip(CircleShape)
+                .background(GlacierColors.GlassFill)
+                .border(2.dp, GlacierColors.GlassBorder, CircleShape),
+        ) {
+            Box(
+                Modifier
+                    .size(132.dp)
+                    .align(Alignment.Center)
+                    .clip(CircleShape)
+                    .background(GlacierColors.Void.copy(alpha = 0.55f))
+                    .border(2.dp, GlacierColors.GlassBorder, CircleShape),
+            )
+            Slot(digits[0], Modifier.align(Alignment.Center))
+            Slot(digits[1], Modifier.align(Alignment.TopCenter).padding(top = 8.dp))
+            Slot(digits[2], Modifier.align(Alignment.CenterEnd).padding(end = 8.dp))
+            Slot(digits[3], Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp))
+            Slot(digits[4], Modifier.align(Alignment.CenterStart).padding(start = 8.dp))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(48.dp), verticalAlignment = Alignment.CenterVertically) {
+            @Composable
+            fun Hint(icon: ImageVector, key: String, label: String) = Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (keyIcons) {
+                    Box(
+                        Modifier.size(34.dp).clip(CircleShape).border(2.dp, GlacierColors.GlassBorder2, CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(icon, contentDescription = null, tint = GlacierColors.Mist, modifier = Modifier.size(18.dp))
+                    }
+                } else {
+                    val round = key.length <= 2
+                    val shape = if (round) CircleShape else RoundedCornerShape(GlacierShapes.RadiusSm)
+                    Box(
+                        Modifier
+                            .then(if (round) Modifier.size(40.dp) else Modifier.height(34.dp))
+                            .clip(shape)
+                            .background(GlacierColors.GlassFill)
+                            .border(2.dp, GlacierColors.GlassBorder2, shape)
+                            .padding(horizontal = if (round) 0.dp else 12.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(key, style = GlacierText.body(16, FontWeight.SemiBold), color = GlacierColors.Ice, maxLines = 1)
+                    }
+                }
+                Text(label, style = GlacierText.body(19, FontWeight.SemiBold), color = GlacierColors.Ice)
+            }
+            Hint(GlacierIcons.Rewind, deleteKey, deleteHint)
+            Hint(GlacierIcons.Menu, switchKey, switchHint(if (block == 0) "5–9" else "0–4"))
         }
     }
 }

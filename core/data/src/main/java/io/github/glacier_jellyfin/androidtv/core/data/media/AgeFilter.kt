@@ -167,7 +167,10 @@ internal suspend fun blockedTitles(api: ApiClient, userId: UUID, maxAge: Int?, b
     return ids.toSet() - rated.mapTo(HashSet()) { it.id }
 }
 
-/** Episodes without a rating of their own take their show's. */
+/**
+ * Episodes without a rating of their own take their show's. Only movies, shows and episodes
+ * need one ([AgeFilter.Checked]): albums, artists and playlists never carry a rating.
+ */
 private suspend fun List<BaseItemDto>.filterRated(api: ApiClient, userId: UUID): List<BaseItemDto> {
     val seriesIds = filter { !AgeFilter.isRated(it.officialRating) && it.type == BaseItemKind.EPISODE }.mapNotNull { it.seriesId }.distinct()
     val seriesRated = if (seriesIds.isEmpty()) {
@@ -176,7 +179,9 @@ private suspend fun List<BaseItemDto>.filterRated(api: ApiClient, userId: UUID):
         api.libraryApi.getItems(userId = userId, ids = seriesIds, recursive = true, enableUserData = false, enableImages = false)
             .content.items.filter { AgeFilter.isRated(it.officialRating) }.mapTo(HashSet()) { it.id }
     }
-    return filter { AgeFilter.isRated(it.officialRating) || it.seriesId in seriesRated }
+    return filter { it.type !in RatedTypes || AgeFilter.isRated(it.officialRating) || it.seriesId in seriesRated }
 }
+
+private val RatedTypes = setOf(BaseItemKind.MOVIE, BaseItemKind.SERIES, BaseItemKind.EPISODE)
 
 private const val AGE_CHUNK = 100

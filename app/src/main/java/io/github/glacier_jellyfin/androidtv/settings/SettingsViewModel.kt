@@ -243,6 +243,8 @@ class SettingsViewModel @Inject constructor(
 
     fun changePin() = pin.open(if (_state.value.lock.hasPin) PinReason.Change else PinReason.Create)
 
+    fun removePin() = pin.open(PinReason.Remove)
+
     fun unlockAccount() = pin.open(PinReason.Settings)
 
     private fun updateProtection(transform: (Protection) -> Protection) {

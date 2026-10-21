@@ -43,6 +43,9 @@ renders the reference separately.
 - Sorted by artist or album, the A–Z rail jumps to the artists or albums
 - The filter and sort buttons stay in the same place on every tab, with or without the A–Z rail
 - When a library view cannot load or has nothing to show, the message sits in the middle of the page, with the Retry button below it
+- The PIN is typed with the D-pad, like on the Fire TV. OK and the four directions type 0–4. Holding OK or pressing the menu key switches to 5–9. Back or rewind deletes. The number keys of the remote work as well. The pressed digit no longer lights up, so nobody watching sees the PIN
+- A PIN can be removed in Settings › Account, next to Change. This switches off all PIN locks
+- Checking the PIN is much faster on slow TVs. Before, it could take over a second and keys pressed meanwhile were lost
 
 ### Fixed
 - The songs tab of a very large music library no longer closes the app while it loads
@@ -51,6 +54,9 @@ renders the reference separately.
 - An audio track named like "ger ac3 6ch" no longer shows as Swiss German
 - Back in the music player closes an open options menu or info panel and leaves the player open. Before, newer Android TV versions closed the player as well
 - On a title without cast, "More like this" no longer sits right under the buttons
+- With "Lock unrated titles" on, albums, artists and playlists open again. Music has no age rating, so it is never locked
+- A library that is still loading no longer takes the focus away from a tab you moved to
+- A new age limit or "Lock unrated titles" applies to the library lists at once. Before, a list kept on the device could still show the titles from before
 
 ## [0.5.0] - 2026-10-16
 

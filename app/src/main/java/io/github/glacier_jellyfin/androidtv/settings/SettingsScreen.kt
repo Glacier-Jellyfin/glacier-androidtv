@@ -222,6 +222,10 @@ private sealed interface SettingRow {
         override val enabled: Boolean = true,
         val focus: FocusRequester? = null,
         val primary: Boolean = false,
+        /** A second button before [button], like Remove next to Change. */
+        val secondButton: String? = null,
+        val onSecondClick: () -> Unit = {},
+        val secondFocus: FocusRequester? = null,
     ) : SettingRow
 
     /** The app update: its state, an action, a progress bar while downloading and the notes of a new version. */
@@ -524,13 +528,25 @@ private fun SettingCard(row: SettingRow) {
             row.label,
             row.sub,
             row.enabled,
-            trailing = { ActionButton(
-                    onClick = row.onClick,
-                    label = row.button,
-                    primary = row.primary,
-                    enabled = row.enabled,
-                    modifier = row.focus?.let { Modifier.focusRequester(it) } ?: Modifier,
-                ) },
+            trailing = {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    row.secondButton?.let { label ->
+                        ActionButton(
+                            onClick = row.onSecondClick,
+                            label = label,
+                            enabled = row.enabled,
+                            modifier = row.secondFocus?.let { Modifier.focusRequester(it) } ?: Modifier,
+                        )
+                    }
+                    ActionButton(
+                        onClick = row.onClick,
+                        label = row.button,
+                        primary = row.primary,
+                        enabled = row.enabled,
+                        modifier = row.focus?.let { Modifier.focusRequester(it) } ?: Modifier,
+                    )
+                }
+            },
         )
     }
 }
@@ -1203,6 +1219,9 @@ private fun accountRows(
                         button = stringResource(R.string.settings_pin_change_value),
                         onClick = pinOrigins.tap("change", viewModel::changePin),
                         focus = pinOrigins.of("change"),
+                        secondButton = stringResource(R.string.settings_pin_remove_value),
+                        onSecondClick = pinOrigins.tap("remove", viewModel::removePin),
+                        secondFocus = pinOrigins.of("remove"),
                     )
                 } else {
                     SettingRow.Action(

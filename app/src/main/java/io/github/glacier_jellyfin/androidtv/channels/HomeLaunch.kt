@@ -3,6 +3,7 @@ package io.github.glacier_jellyfin.androidtv.channels
 import android.content.Context
 import android.content.Intent
 import io.github.glacier_jellyfin.androidtv.MainActivity
+import org.jellyfin.sdk.model.serializer.toUUIDOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,10 +27,13 @@ data class HomeLaunch(val serverId: String, val userId: String, val itemId: Stri
             if (intent?.action != ACTION) return null
             return HomeLaunch(
                 serverId = intent.getStringExtra(EXTRA_SERVER) ?: return null,
-                userId = intent.getStringExtra(EXTRA_USER) ?: return null,
-                itemId = intent.getStringExtra(EXTRA_ITEM) ?: return null,
+                userId = intent.getStringExtra(EXTRA_USER)?.let(::uuid) ?: return null,
+                itemId = intent.getStringExtra(EXTRA_ITEM)?.let(::uuid) ?: return null,
             )
         }
+
+        /** Any app can send this intent: ids come with or without dashes, and a broken one is dropped. */
+        private fun uuid(id: String): String? = id.toUUIDOrNull()?.toString()
     }
 }
 

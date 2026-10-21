@@ -3,6 +3,7 @@ package io.github.glacier_jellyfin.androidtv.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
@@ -40,7 +42,11 @@ fun ModalSheet(
     ) {
         val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
         Column(
+            // Focus stays in the sheet: the page behind it is still composed, and a card there
+            // can be the next one down from a button here (a profile tile behind the PIN pad).
             modifier = Modifier
+                .focusProperties { onExit = { cancelFocusChange() } }
+                .focusGroup()
                 .width(width.dp)
                 .clip(shape)
                 .background(GlacierColors.Deep)

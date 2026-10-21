@@ -64,6 +64,11 @@ class ParentalControl @Inject constructor(
         accounts.setPin(serverId, userId, pin)
     }
 
+    suspend fun removePin() {
+        val (serverId, userId) = activeUser() ?: return
+        accounts.removePin(serverId, userId)
+    }
+
     suspend fun updateProtection(transform: (Protection) -> Protection) {
         val (serverId, userId) = activeUser() ?: return
         accounts.updateProtection(serverId, userId, transform)

@@ -143,9 +143,6 @@ class ProfilesViewModel @Inject constructor(
         val pin = when (key) {
             is PinKey.Digit -> (current.pin + key.value).take(4)
             PinKey.Delete -> current.pin.dropLast(1)
-            PinKey.Confirm -> current.pin.also {
-                if (it.length < 4) viewModelScope.launch { _events.send(UiEvent.Toast(R.string.pin_required)) }
-            }
         }
         _state.update { it.copy(pin = pin, pinWrong = false) }
         if (pin.length < 4) return

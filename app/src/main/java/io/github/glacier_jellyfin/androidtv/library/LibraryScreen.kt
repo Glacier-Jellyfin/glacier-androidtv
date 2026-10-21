@@ -56,6 +56,9 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
@@ -210,10 +213,17 @@ fun LibraryScreen(
     // Once per composition: a filter change later empties and refills the grid, and the
     // focus stays on the chip then.
     var focusPlaced by remember { mutableStateOf(false) }
+    // A key pressed on the page before the titles came: the user moved on (the first load of a
+    // big library takes a while) and the focus stays where they put it.
+    var keyPressed by remember { mutableStateOf(false) }
     LaunchedEffect(state.items.isNotEmpty()) {
         if (state.items.isEmpty() || focusPlaced) return@LaunchedEffect
         focusPlaced = true
         withFrameNanos { }
+        if (!initialFocusDone && keyPressed) {
+            initialFocusDone = true
+            return@LaunchedEffect
+        }
         if (!initialFocusDone) {
             initialFocusDone = runCatching { firstCardFocus.requestFocus() }.isSuccess
             return@LaunchedEffect
@@ -248,7 +258,12 @@ fun LibraryScreen(
         viewModel.jumpHandled()
     }
 
-    Box(Modifier.fillMaxSize()) {
+    Box(
+        Modifier.fillMaxSize().onPreviewKeyEvent {
+            if (it.type == KeyEventType.KeyDown) keyPressed = true
+            false
+        },
+    ) {
         Row(Modifier.fillMaxSize()) {
             CompositionLocalProvider(LocalBringIntoViewSpec provides rememberGridPivotSpec(gridState)) {
                 LazyVerticalGrid(
@@ -346,7 +361,15 @@ fun LibraryScreen(
                             InFreeSpace(gridState, "error", fill = state.items.isEmpty()) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
                                     Text(stringResource(R.string.library_error), style = GlacierText.body(21), color = GlacierColors.Mist, textAlign = TextAlign.Center)
-                                    PillButton(stringResource(R.string.action_retry), onClick = viewModel::retry, primary = true)
+                                    PillButton(
+                                        stringResource(R.string.action_retry),
+                                        // The button goes away with the error: the titles take the focus, as on a first load.
+                                        onClick = {
+                                            keyPressed = false
+                                            viewModel.retry()
+                                        },
+                                        primary = true,
+                                    )
                                 }
                             }
                         }
