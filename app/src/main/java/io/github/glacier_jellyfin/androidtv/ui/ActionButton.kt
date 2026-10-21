@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
@@ -86,6 +87,6 @@ fun ActionButton(
                 }
             }
         }
-        if (label != null) Text(label, style = GlacierText.body(21, FontWeight.SemiBold), color = foreground)
+        if (label != null) Text(label, style = GlacierText.body(21, FontWeight.SemiBold), color = foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

@@ -19,6 +19,7 @@ renders the reference separately.
 ## [Unreleased]
 
 ### New
+- Album pages have a button with the artist's name that opens the artist's page
 - Pick the version of a movie or episode that has several files, such as 2160p and 1080p, or cuts like a Director's Cut. A chip before the audio track shows the version and opens the list. Glacier starts with the largest file of the main cut that your device plays without converting and that fits the screen. Your pick stays for the movie, or for all episodes of the show. Length and end time follow the version (#8)
 
 ### Improved

@@ -13,6 +13,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -222,6 +223,17 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                     modifier = Modifier
                                         .focusRequester(moreFocus)
                                         .onFocusChanged { if (it.isFocused) focusKey = MORE_KEY },
+                                )
+                            }
+                            // An album leads on to its artist's page.
+                            val artist = item.parentTitle
+                            if (item.kind == ItemKind.Album && item.artistId != null && artist != null) {
+                                ActionButton(
+                                    onClick = viewModel::openArtist,
+                                    label = artist,
+                                    icon = GlacierIcons.User,
+                                    contentDescription = stringResource(R.string.music_artist) + ": " + artist,
+                                    modifier = Modifier.widthIn(max = 420.dp),
                                 )
                             }
                         }

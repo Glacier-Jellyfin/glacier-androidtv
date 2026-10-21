@@ -47,6 +47,8 @@ data class MediaItem(
     val group: ListGroup? = null,
     /** The show of an episode or season. */
     val seriesId: UUID? = null,
+    /** The album artist of an album, to open their page. */
+    val artistId: UUID? = null,
     val seasonNumber: Int?,
     val episodeNumber: Int?,
     val progress: Float?,

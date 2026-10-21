@@ -94,6 +94,7 @@ internal class MediaMapper(private val api: ApiClient) {
             },
             album = dto.album.takeIf { kind == ItemKind.Song },
             seriesId = dto.seriesId,
+            artistId = dto.albumArtists?.firstOrNull()?.id?.takeIf { kind == ItemKind.Album },
             seasonNumber = dto.parentIndexNumber,
             episodeNumber = dto.indexNumber,
             progress = dto.userData?.playedPercentage?.let { (it / 100).toFloat() }?.takeIf { it > 0f },

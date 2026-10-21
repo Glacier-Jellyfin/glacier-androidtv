@@ -608,6 +608,12 @@ class DetailViewModel @Inject constructor(
 
     fun openItem(item: MediaItem) = navigate(DetailRoute(item.id.toString()))
 
+    /** An album's artist page. */
+    fun openArtist() {
+        val artistId = _state.value.item?.artistId ?: return
+        navigate(DetailRoute(artistId.toString()))
+    }
+
     /** The full music player, from the mini player. */
     fun openNowPlaying() = navigate(MusicRoute())
 
