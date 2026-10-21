@@ -119,7 +119,6 @@ fun MusicPlayerScreen(
 
     LaunchedEffect(viewModel) { viewModel.finished.collect { onBack() } }
     CollectEvents(viewModel.events, onNavigate = {})
-    BackHandler { viewModel.close() }
 
     val sheet by viewModel.musicActions.sheet.collectAsStateWithLifecycle()
     val stationMenu by viewModel.stationMenu.collectAsStateWithLifecycle()
@@ -130,6 +129,16 @@ fun MusicPlayerScreen(
     // Nothing left to describe (the queue ended, a radio took over): the panel goes.
     val songGone = state.current == null || state.radio != null
     LaunchedEffect(songGone) { if (songGone) infoOpen = false }
+
+    // The options sheet, the station menu and the info panel take Back with their own BackHandler.
+    val panelBack = sheet != null || stationMenu != null || infoOpen
+    // Newer Android hands Back to the dispatcher as well as the key, older only the key. The key's
+    // release only counts when its press came here too, not to a panel that closed on it.
+    var backDown by remember { mutableStateOf(false) }
+    BackHandler(enabled = !panelBack) {
+        backDown = false
+        viewModel.close()
+    }
     // Also when the options sheet closes: its focus goes with it.
     // Switching radio stations loads each time: the focus stays where it is then.
     val waiting = state.loading && state.radio == null
@@ -144,22 +153,17 @@ fun MusicPlayerScreen(
             .fillMaxSize()
             .background(GlacierColors.Void)
             .onPreviewKeyEvent { event ->
-                // Back closes on the first press, whatever has focus (see PlayerScreen); an open options sheet first.
+                // Back acts on the first press, whatever has focus (see PlayerScreen); Compose would spend it on moving focus out.
                 if (event.key == Key.Back) {
-                    // An open options sheet takes Back itself: one step back, and the player stays.
-                    if (sheet != null) {
-                        if (event.type == KeyEventType.KeyUp) viewModel.musicActions.back()
-                        return@onPreviewKeyEvent true
+                    // Older Android brings an open panel's Back as the key's release. A release whose press
+                    // went to a panel that is gone now must not close the player as well.
+                    if (panelBack) return@onPreviewKeyEvent false
+                    if (event.type == KeyEventType.KeyDown) {
+                        backDown = true
+                    } else if (event.type == KeyEventType.KeyUp && backDown) {
+                        backDown = false
+                        viewModel.close()
                     }
-                    if (stationMenu != null) {
-                        if (event.type == KeyEventType.KeyUp) viewModel.closeStationMenu()
-                        return@onPreviewKeyEvent true
-                    }
-                    if (infoOpen) {
-                        if (event.type == KeyEventType.KeyUp) infoOpen = false
-                        return@onPreviewKeyEvent true
-                    }
-                    if (event.type == KeyEventType.KeyUp) viewModel.close()
                     return@onPreviewKeyEvent true
                 }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false

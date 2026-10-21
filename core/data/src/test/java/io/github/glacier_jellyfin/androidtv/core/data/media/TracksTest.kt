@@ -1,5 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
+import org.jellyfin.sdk.model.api.MediaStream
+import org.jellyfin.sdk.model.api.MediaStreamType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -163,6 +165,8 @@ class TracksTest {
         assertEquals("BE", regionOf("dut", "Dutch (Flemish)"))
         assertEquals("CH", regionOf("ger", "Schweizerdeutsch"))
         assertNull(regionOf("ger", "German AT"))
+        assertNull(regionOf("ger", "ger ac3 6ch"))
+        assertNull(regionOf("eng", "eng 2us"))
         assertEquals("AR", regionOf("spa", "Argentina"))
         assertEquals("be", Languages.flag("dut", "BE"))
         assertEquals("de", Languages.flag("de-LI"))
@@ -229,10 +233,68 @@ class TracksTest {
         assertTrue(forcedByName("German Forced"))
         assertTrue(forcedByName("Deutsch (erzwungen)"))
         assertTrue(forcedByName("Signs & Songs"))
+        assertTrue(forcedByName("Deutsch (Schilder & Songtexte)"))
+        assertTrue(forcedByName("Deutsch - Schild- und Liedtext CR/Fuchs ASS"))
+        assertFalse(forcedByName("Schildkröte"))
         assertFalse(forcedByName("German Full"))
         assertFalse(forcedByName("Unforced Errors"))
         assertFalse(forcedByName(null))
     }
+
+    @Test
+    fun `names count in other languages and spellings`() {
+        assertTrue(forcedByName("Français (forcés)"))
+        assertTrue(forcedByName("FRANCAIS FORCES"))
+        assertTrue(forcedByName("Español (Forzados)"))
+        assertTrue(forcedByName("Português - Forçadas"))
+        assertTrue(forcedByName("Русский (форсированные)"))
+        assertTrue(hearingImpairedByName("Français (sourds et malentendants)"))
+        assertTrue(hearingImpairedByName("Español para sordos"))
+        assertTrue(hearingImpairedByName("Svenska hörselskadade"))
+        assertTrue(singAlongByName("English Singalong"))
+        assertTrue(singAlongByName("English Sing-a-long"))
+        assertTrue(singAlongByName("Español (letras)"))
+        assertTrue(commentaryByName("Commentaire du réalisateur"))
+        assertTrue(audioDescriptionByName("Français (audio-description)"))
+        assertTrue(audioDescriptionByName("AudioDescriptions"))
+        assertTrue(audioDescriptionByName("Svenska syntolkning"))
+        assertFalse(forcedByName("Forcemajeure"))
+        assertFalse(singAlongByName("Parolesque"))
+    }
+
+    @Test
+    fun `facts keep the signs words of a forced track`() {
+        val track = sub("Deutsch - Schild- und Liedtext CR/Fuchs ASS", "ass", forced = true)
+        assertEquals(listOf("Schild- und Liedtext CR/Fuchs ASS"), facts(track, true))
+    }
+
+    @Test
+    fun `signs and songs is forced, not sing-along`() {
+        for (title in listOf("Signs & Songs", "English (Signs/Songs) [Lyrics]", "Deutsch - Schild- und Liedtext - Ohne Insert CR/Fuchs ASS")) {
+            val track = stream(title).toTrack()
+            assertTrue(title, track.forced)
+            assertFalse(title, track.singAlong)
+            assertEquals(listOf(TrackMark.Forced), describeTrack(track, true, de).marks)
+        }
+        assertTrue(stream("Songtexte").toTrack().singAlong)
+        assertFalse(stream("Lyrics", forced = true).toTrack().singAlong)
+    }
+
+    private fun stream(title: String, forced: Boolean = false) = MediaStream(
+        type = MediaStreamType.SUBTITLE,
+        index = 3,
+        language = "ger",
+        codec = "ass",
+        title = title,
+        isInterlaced = false,
+        isDefault = false,
+        isForced = forced,
+        isHearingImpaired = false,
+        isExternal = false,
+        isOriginal = false,
+        isTextSubtitleStream = true,
+        supportsExternalStream = true,
+    )
 
     @Test
     fun `sing-along shows in the stream name`() {

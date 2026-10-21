@@ -93,6 +93,8 @@ fun PlayerScreen(
     val skipFocus = remember { FocusRequester() }
     val upNextFocus = remember { FocusRequester() }
     val overlayOpen = state.trackPanel != null || state.chaptersOpen || state.infoOpen
+    // Back's release only counts when its press came here too, not to an overlay that closed on it.
+    var backDown by remember { mutableStateOf(false) }
     val upNext = progress.upNext?.let { countdown -> state.next?.let { it to countdown } }
     val skip = progress.skip
     /** Skip button or "Up next" card on screen; with the OSD hidden, it holds the focus. */
@@ -186,7 +188,12 @@ fun PlayerScreen(
                 // first move focus to the root and only the second Back would stop. Stop on the first one.
                 // Key up, like the system's back; newer Android also sends Back to the BackHandler.
                 if (event.key == Key.Back) {
-                    if (event.type == KeyEventType.KeyUp) viewModel.stop()
+                    if (event.type == KeyEventType.KeyDown) {
+                        backDown = true
+                    } else if (event.type == KeyEventType.KeyUp && backDown) {
+                        backDown = false
+                        viewModel.stop()
+                    }
                     return@onPreviewKeyEvent true
                 }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false

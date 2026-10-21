@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -44,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
@@ -83,6 +85,9 @@ import io.github.glacier_jellyfin.androidtv.ui.ActionButton
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
+import io.github.glacier_jellyfin.androidtv.ui.LocalNowPlaying
+import io.github.glacier_jellyfin.androidtv.ui.MINI_PLAYER_END
+import io.github.glacier_jellyfin.androidtv.ui.MiniPlayer
 import io.github.glacier_jellyfin.androidtv.ui.ComingSoonScreen
 import io.github.glacier_jellyfin.androidtv.ui.DetailBackdrop
 import io.github.glacier_jellyfin.androidtv.ui.FactsRow
@@ -129,15 +134,36 @@ fun DetailScreen(
     val pinPrompt by viewModel.pin.prompt.collectAsStateWithLifecycle()
     LaunchedEffect(state.leave) { if (state.leave) onBack() }
 
+    val nowPlaying = LocalNowPlaying.current
+    val pageFocus = remember { FocusRequester() }
+    val miniFocus = remember { FocusRequester() }
+
     Box(Modifier.fillMaxSize()) {
-        when {
-            details == null && state.failed -> ErrorState(onRetry = viewModel::load)
-            details == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
-            details.item.kind in VideoKinds -> MediaDetail(state, details, viewModel)
-            details.item.kind == ItemKind.Episode -> EpisodeDetail(state, details, viewModel)
-            details.item.kind == ItemKind.Collection -> CollectionDetail(state, details, viewModel)
-            details.item.kind in MusicKinds -> MusicDetail(state, details, viewModel)
-            else -> ComingSoonScreen(details.item.title, onBack = onBack)
+        // Down from the mini player lands where Up left.
+        Box(Modifier.fillMaxSize().focusRequester(pageFocus).focusRestorer()) {
+            CompositionLocalProvider(LocalMiniPlayerFocus provides miniFocus.takeIf { nowPlaying != null }) {
+                when {
+                    details == null && state.failed -> ErrorState(onRetry = viewModel::load)
+                    details == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
+                    details.item.kind in VideoKinds -> MediaDetail(state, details, viewModel)
+                    details.item.kind == ItemKind.Episode -> EpisodeDetail(state, details, viewModel)
+                    details.item.kind == ItemKind.Collection -> CollectionDetail(state, details, viewModel)
+                    details.item.kind in MusicKinds -> MusicDetail(state, details, viewModel)
+                    else -> ComingSoonScreen(details.item.title, onBack = onBack)
+                }
+            }
+        }
+        // Detail pages have no top navigation: the mini player sits where it would be.
+        if (nowPlaying != null) {
+            MiniPlayer(
+                nowPlaying = nowPlaying,
+                onClick = viewModel::openNowPlaying,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 34.dp, end = MINI_PLAYER_END.dp)
+                    .focusRequester(miniFocus)
+                    .focusProperties { down = pageFocus },
+            )
         }
         val panel = state.trackPanel
         if (panel != null && details != null) TrackSheet(panel, state, details, viewModel)
@@ -148,6 +174,12 @@ fun DetailScreen(
         pinPrompt?.let { PinDialog(it, onKey = viewModel.pin::key, onDismiss = viewModel::dismissPin) }
     }
 }
+
+/** The mini player of a detail page while music is loaded, for Up from the page's buttons. */
+internal val LocalMiniPlayerFocus = compositionLocalOf<FocusRequester?> { null }
+
+/** Up from the buttons in this row goes to the [mini] player; focus search does not get there out of the page's list. */
+internal fun Modifier.upTo(mini: FocusRequester?): Modifier = if (mini == null) this else focusProperties { up = mini }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -175,7 +207,7 @@ private fun MediaDetail(state: DetailState, details: ItemDetails, viewModel: Det
                         Title(item.title, size = 84, maxWidth = 1180)
                         FactsRow(item, mediaFacts(details), tech = techLine(details))
                         item.overview?.let { Overview(it, maxWidth = 900) }
-                        Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Row(Modifier.padding(top = 10.dp).upTo(LocalMiniPlayerFocus.current), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             PlayButtons(state, item, viewModel, playFocus)
                             ActionButton(
                                 onClick = viewModel::toggleFavorite,
@@ -284,7 +316,7 @@ private fun EpisodeDetail(state: DetailState, details: ItemDetails, viewModel: D
                                     color = LocalAccent.current.main,
                                 )
                             }
-                            Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Row(Modifier.padding(top = 6.dp).upTo(LocalMiniPlayerFocus.current), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                                 PlayButtons(state, episode, viewModel, playFocus, episodeLabel = true)
                                 SeenButton(episode.played, onClick = viewModel::togglePlayed)
                                 ActionButton(

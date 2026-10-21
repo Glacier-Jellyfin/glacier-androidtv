@@ -21,6 +21,15 @@ renders the reference separately.
 ### New
 - Pick the version of a movie or episode that has several files, such as 2160p and 1080p, or cuts like a Director's Cut. A chip before the audio track shows the version and opens the list. Glacier starts with the largest file of the main cut that your device plays without converting and that fits the screen. Your pick stays for the movie, or for all episodes of the show. Length and end time follow the version (#8)
 
+### Improved
+- Detail pages show the mini player while music plays. Up from the buttons at the top reaches it
+- Forced, hearing impaired, sing-along, commentary and audio description tracks are found by their name in many more languages, such as French, Spanish, Italian, Portuguese, Dutch, the Nordic languages, Polish and Russian. Accents and spellings like Sing-Along or Singalong no longer matter
+
+### Fixed
+- Subtitles for signs and songs show as forced, not as sing-along. This also covers German names like "Schild- und Liedtext"
+- An audio track named like "ger ac3 6ch" no longer shows as Swiss German
+- Back in the music player closes an open options menu or info panel and leaves the player open. Before, newer Android TV versions closed the player as well
+
 ## [0.5.0] - 2026-10-16
 
 ### New

@@ -181,7 +181,7 @@ fun TopNav(
 private const val NAV_MINI_GAP = 24
 
 /** The mini player's distance from the right edge of the screen. */
-private const val MINI_PLAYER_END = 96
+const val MINI_PLAYER_END = 96
 
 @Composable
 private fun NavItem(

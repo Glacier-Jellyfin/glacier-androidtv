@@ -174,6 +174,8 @@ fun TrailerScreen(
     var interaction by remember { mutableIntStateOf(0) }
     /** The OSD came up with the trailer, not by a key press. */
     var autoShown by remember { mutableStateOf(true) }
+    // Back's release only counts when its press came here too, not to the subtitle menu that closed on it.
+    var backDown by remember { mutableStateOf(false) }
     val osdShown = osdVisible && !stopped && current != null
 
     fun showOsd() {
@@ -211,7 +213,12 @@ fun TrailerScreen(
                 if (state.subtitlesOpen) return@onPreviewKeyEvent false
                 // One Back closes, whatever has focus; on key up (see PlayerScreen).
                 if (event.key == Key.Back) {
-                    if (event.type == KeyEventType.KeyUp) viewModel.close()
+                    if (event.type == KeyEventType.KeyDown) {
+                        backDown = true
+                    } else if (event.type == KeyEventType.KeyUp && backDown) {
+                        backDown = false
+                        viewModel.close()
+                    }
                     return@onPreviewKeyEvent true
                 }
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false

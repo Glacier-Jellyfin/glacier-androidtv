@@ -164,7 +164,7 @@ fun CollectionDetail(state: DetailState, details: ItemDetails, viewModel: Detail
                                     Text(pluralStringResource(R.plurals.collection_seen, watchable.size, seen, watchable.size), style = GlacierText.body(17), color = GlacierColors.Mist)
                                 }
                             }
-                            Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Row(Modifier.padding(top = 10.dp).upTo(LocalMiniPlayerFocus.current), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                 if (playable) {
                                     val title = next?.title?.let { if (it.length > TITLE_CLAMP) it.take(TITLE_CLAMP - 1).trimEnd() + "…" else it }.orEmpty()
                                     ActionButton(

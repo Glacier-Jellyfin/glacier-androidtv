@@ -2,6 +2,7 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaStreamType
+import java.text.Normalizer
 import java.util.Locale
 
 /** An audio or subtitle stream of a title, as offered in the track picker. */
@@ -43,16 +44,18 @@ internal fun MediaStream.toTrack(): Track {
     val subtitle = type == MediaStreamType.SUBTITLE
     val audio = type == MediaStreamType.AUDIO
     val captions = subtitle && (closedCaptionsByName(title) || codec?.lowercase() in CAPTION_CODECS)
+    val forced = isForced || (subtitle && forcedByName(title))
     return Track(
         index = index,
         language = cantoneseOr(language, title),
         codec = codec,
         channels = channels,
-        forced = isForced || (subtitle && forcedByName(title)),
+        forced = forced,
         // The server's hearing impaired flag on a track named CC means its closed captions.
         hearingImpaired = (isHearingImpaired && !captions) || (subtitle && hearingImpairedByName(title)),
         closedCaptions = captions,
-        singAlong = subtitle && singAlongByName(title),
+        // "Signs & Songs" has the songs' lyrics too, but it is the forced track.
+        singAlong = subtitle && !forced && singAlongByName(title),
         fallbackTitle = displayTitle ?: title,
         title = title,
         profile = profile,
@@ -67,7 +70,7 @@ internal fun MediaStream.toTrack(): Track {
 // Some files only say it in the stream name, without the stream's flag. The
 // Glacier web plugin reads names the same way (glacier-details.js).
 
-/** "German Forced", "Signs & Songs". */
+/** "German Forced", "Signs & Songs", "Schild- und Liedtext". */
 internal fun forcedByName(title: String?): Boolean = hasWord(title, FORCED_WORDS)
 
 /** "English SDH", "Hörgeschädigt". */
@@ -85,17 +88,47 @@ internal fun commentaryByName(title: String?): Boolean = hasWord(title, COMMENTA
 /** "Audio Description", "Hörfilm", "AD". */
 internal fun audioDescriptionByName(title: String?): Boolean = hasWord(title, DESCRIPTION_WORDS)
 
-private val FORCED_WORDS = listOf("forced", "erzwungen", "signs")
-private val SDH_WORDS = listOf("sdh", "hörgeschädigt", "hearing impaired")
+// Words in the languages subtitles come in most. Accents, case and the joins of
+// longer terms ("sing along", "sing-along", "singalong") need no variants here:
+// the matching ignores them.
+/** Words for "forced" itself, which the facts leave out once the mark says it. */
+private val FORCED_LABELS = listOf(
+    "forced", "erzwungen", "forcé", "forcés", "forcée", "forcées", "forzados", "forzadas", "forzado", "forzada",
+    "forzati", "forzate", "forzato", "forçadas", "forçados", "forçada", "forçado", "geforceerd", "geforceerde",
+    "tvingad", "tvingade", "tvungen", "tvungne", "pakotettu", "pakotetut", "wymuszone", "wymuszony", "vynucené",
+    "kényszerített", "форсированные", "принудительные", "zorunlu", "強制", "强制",
+)
+/** A track of signs (and song lines) is the forced track: "Signs & Songs", "Schild- und Liedtext". */
+private val FORCED_WORDS = FORCED_LABELS + listOf("signs", "schild", "schilder", "panneaux", "carteles", "cartelli", "letreiros")
+private val SDH_WORDS = listOf(
+    "sdh", "hearing impaired", "deaf and hard of hearing", "hard of hearing", "hörgeschädigt", "hörgeschädigte",
+    "gehörlose", "malentendants", "sourds et malentendants", "para sordos", "sordos", "non udenti", "sordi",
+    "surdos", "para surdos", "slechthorenden", "doven en slechthorenden", "hörselskadade", "hørehæmmede",
+    "hørselshemmede", "kuulovammaiset", "kuulovammaisille", "niesłyszących", "dla niesłyszących", "neslyšící",
+    "pro neslyšící", "siketek", "hallássérültek", "для слабослышащих", "слабослышащих", "işitme engelli",
+)
 private val CC_WORDS = listOf("closed captions", "closed caption", "cc")
 private val SING_ALONG_WORDS = listOf(
-    "sing along", "sing-along", "singalong", "sing-a-long", "karaoke", "lyrics", "songtext", "songtexte", "liedtext", "liedtexte", "mitsingen",
+    "sing along", "sing a long", "karaoke", "lyrics", "songtext", "songtexte", "liedtext", "liedtexte", "mitsingen",
+    "paroles", "letras", "testi delle canzoni", "songteksten", "meezingen", "sångtexter", "歌詞", "歌词",
 )
 private val CAPTION_CODECS = setOf("eia_608", "eia_708", "cc_dec")
-private val COMMENTARY_WORDS = listOf("director's commentary", "audiokommentar", "commentary", "kommentar")
+private val COMMENTARY_WORDS = listOf(
+    "director's commentary", "commentary", "audiokommentar", "kommentar", "commentaire", "commentaires",
+    "comentario", "comentarios", "comentário", "comentários", "commento", "commenti", "commentaar", "komentarz",
+    "komentář", "kommentár", "комментарий", "комментарии", "yorum",
+)
 private val DESCRIPTION_WORDS = listOf(
-    "audio descriptions", "audio description", "audiodescriptions", "audiodescription", "audiodeskription",
-    "descriptive audio", "descriptive", "described", "visually impaired", "sehbehindert", "hörfilmfassung", "hörfilm", "ad",
+    "audio descriptions", "audio description", "descriptive audio", "descriptive", "described", "visually impaired",
+    "audiodeskription", "sehbehindert", "hörfilmfassung", "hörfilm", "ad", "description audio", "audiodescripción",
+    "audiodescrizione", "audiodescrição", "audiodescriptie", "syntolkning", "synstolkning", "synstolking",
+    "kuvailutulkkaus", "audiodeskrypcja", "audiopopis", "тифлокомментарий", "sesli betimleme",
+)
+
+/** Words that only say a subtitle track is the full one, not the forced one. */
+private val FULL_WORDS = listOf(
+    "full", "vollständig", "komplett", "complet", "complets", "completos", "completas", "completo", "completa",
+    "completi", "complete", "volledig", "fullständig", "fuld", "fullstendig", "täydellinen", "pełne", "úplné", "полные",
 )
 
 /**
@@ -374,7 +407,7 @@ fun describeTrack(track: Track, subtitle: Boolean, locales: List<Locale>): Track
     if (subtitle) {
         // "Full" only says the track is not the forced one, which the missing mark already says.
         val known = languageNames + regionWords(track.language, track.region) +
-            listOf("forced", "erzwungen", "full", "vollständig", "komplett") +
+            FORCED_LABELS + FULL_WORDS +
             (if (track.hearingImpaired) SDH_WORDS else emptyList()) +
             (if (track.closedCaptions) CC_WORDS else emptyList()) +
             if (track.singAlong) SING_ALONG_WORDS else emptyList()
@@ -439,32 +472,67 @@ private val SPACES = Regex("\\s+")
 // IGNORE_CASE takes about 20 ms to compile on a Fire TV, so one per word and
 // track held the track sheet back for seconds.
 
-/** Whether [text] holds one of [words] as a whole word ("ad" in "German AD", not in "Advanced"). */
-private fun hasWord(text: String?, words: List<String>): Boolean =
-    text != null && words.any { wordAt(text, it, 0) >= 0 }
+/** Whether [text] holds one of [words] as a whole word ("ad" in "German AD", not in "Advanced", "ch" not in "6ch"). */
+private fun hasWord(text: String?, words: List<String>): Boolean {
+    val folded = text?.let(::foldAll) ?: return false
+    return words.any { wordAt(folded, it, 0) != null }
+}
 
 /** [text] with every whole-word [word] replaced by a space. */
 private fun replaceWord(text: String, word: String): String {
+    val folded = foldAll(text)
     val out = StringBuilder()
     var from = 0
     while (true) {
-        val at = wordAt(text, word, from)
-        if (at < 0) break
-        out.append(text, from, at).append(' ')
-        from = at + word.length
+        val found = wordAt(folded, word, from) ?: break
+        out.append(text, from, found.first).append(' ')
+        from = found.last + 1
     }
     return out.append(text, from, text.length).toString()
 }
 
-/** Where [word] next stands as a whole word in [text] from [from] on, or -1. */
-private fun wordAt(text: String, word: String, from: Int): Int {
-    var at = text.indexOf(word, from, ignoreCase = true)
-    while (at >= 0) {
-        val end = at + word.length
-        if ((at == 0 || !text[at - 1].isLetter()) && (end == text.length || !text[end].isLetter())) return at
-        at = text.indexOf(word, at + 1, ignoreCase = true)
+/**
+ * Where [word] next stands as a whole word in the [folded][foldAll] [text] from [from] on, or null.
+ * Case and accents do not count ("forcé" is "FORCE"), and a space or hyphen in
+ * [word] also matches other joins or none ("sing along" finds "Sing-Along" and "Singalong").
+ */
+private fun wordAt(text: String, word: String, from: Int): IntRange? {
+    for (start in from until text.length) {
+        if (start > 0 && text[start - 1].isLetterOrDigit()) continue
+        val end = matchAt(text, start, word) ?: continue
+        if (end == text.length || !text[end].isLetterOrDigit()) return start until end
     }
-    return -1
+    return null
+}
+
+/** The end of [word] matched at [start] in [text], or null where it does not match. */
+private fun matchAt(text: String, start: Int, word: String): Int? {
+    var t = start
+    var w = 0
+    while (w < word.length) {
+        if (word[w] in JOINS) {
+            while (w < word.length && word[w] in JOINS) w++
+            while (t < text.length && text[t] in JOINS) t++
+            continue
+        }
+        if (t >= text.length || text[t] != fold(word[w])) return null
+        t++
+        w++
+    }
+    return t.takeIf { it > start }
+}
+
+private val JOINS = setOf(' ', '-', '_', '.')
+
+/** [text] [folded][fold] letter by letter, so its positions stay those of [text]. */
+private fun foldAll(text: String): String = String(CharArray(text.length) { fold(text[it]) })
+
+/** [c] without case and accents: "É" is "e". Letters that are more than an accented base stay as they are. */
+private fun fold(c: Char): Char {
+    if (c.code < 128) return c.lowercaseChar()
+    val base = Normalizer.normalize(c.toString(), Normalizer.Form.NFD)
+    val plain = base.takeIf { it.length > 1 && it.drop(1).all { m -> Character.getType(m) == Character.NON_SPACING_MARK.toInt() } }?.first() ?: c
+    return plain.lowercaseChar()
 }
 
 /** Short codec names as the design writes them: "DTS", "AAC", "EAC3", "TrueHD". */

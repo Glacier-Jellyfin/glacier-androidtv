@@ -125,7 +125,7 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                         // Age ratings are a film thing: the design leaves them off music.
                         FactsRow(item.copy(officialRating = null), musicFacts(state, item), tech = musicTech(tracks))
                         item.overview?.takeIf { it.isNotBlank() }?.let { Overview(it, maxWidth = 900) }
-                        Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Row(Modifier.padding(top = 10.dp).upTo(LocalMiniPlayerFocus.current), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             ActionButton(
                                 // A playlist of videos only plays them in the video player.
                                 onClick = { if (videosOnly) viewModel.playVideo(state.playlistVideos.first()) else viewModel.playMusic() },

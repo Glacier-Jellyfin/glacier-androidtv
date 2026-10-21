@@ -608,6 +608,9 @@ class DetailViewModel @Inject constructor(
 
     fun openItem(item: MediaItem) = navigate(DetailRoute(item.id.toString()))
 
+    /** The full music player, from the mini player. */
+    fun openNowPlaying() = navigate(MusicRoute())
+
     fun openPerson(person: CastMember) =
         navigate(PersonRoute(person.id.toString(), fromTitle = _state.value.item?.title, role = person.role))
 
