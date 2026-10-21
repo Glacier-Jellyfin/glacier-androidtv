@@ -50,7 +50,7 @@ OUT = ROOT / "website" / "assets" / "screenshots"
 PACKAGE = "io.github.glacier_jellyfin.androidtv.debug"
 SERVER = "https://demo.jellyfin.org/stable"
 USER = "demo"
-DETAIL_TITLE = "Dracula"
+DETAIL_TITLE = "The Boy in the Plastic Bubble"
 SHOW_TITLE = "Pioneer One"
 # The demo server has spelt this artist both ways.
 MUSIC_ARTIST = ("Binärpilot", "Binaerpilot")
@@ -349,10 +349,15 @@ class Capture:
         self.d.press_until("DPAD_LEFT", lambda f: f.startswith("Resume"), tries=4)
         self.d.key("DPAD_CENTER")
         self.wait_for_playback()
+        # The demo server can still be buffering, which brings the OSD back.
+        time.sleep(4)
+        self.d.wait_gone("Pause")
         remote = "/sdcard/glacier-trickplay.png"
-        self.d.shell("input keyevent KEYCODE_DPAD_LEFT; sleep 0.4; input keyevent KEYCODE_DPAD_LEFT; sleep 0.4; "
-                     "input keyevent KEYCODE_DPAD_LEFT; sleep 0.4; input keyevent KEYCODE_DPAD_LEFT; sleep 0.3; "
-                     f"screencap -p {remote}")
+        # Each press (input itself takes about 0.4 s) comes before the scrub commits
+        # (SCRUB_COMMIT_MS, 1.2 s), so the preview stays up long enough for the
+        # demo server's slow preview tiles.
+        presses = "input keyevent KEYCODE_DPAD_LEFT; sleep 0.4; " * 9
+        self.d.shell(f"{presses}input keyevent KEYCODE_DPAD_LEFT; sleep 0.3; screencap -p {remote}")
         self.save_jpg_from(remote, "player-trickplay")
         self.d.key("BACK")
 

@@ -29,13 +29,16 @@
 ## Features
 
 - Movies, shows and music from your Jellyfin server, with search, sorting and
-  filters, collections and an A–Z rail for large libraries
+  filters, collections and an A–Z rail. Large libraries open fast, and sorts by
+  year, date added or artist show a heading over each group
+- Several versions of a title, such as 2160p and 1080p or a Director's Cut,
+  with the right one picked for your TV and your pick kept per movie or show
 - Search that also finds titles missing from your library and requests them
   through Seerr (needs the Jellyfin Enhanced plugin on the server)
 - Multiple servers and profiles, server discovery and Quick Connect. A start
   profile can open by itself
 - Parental controls: age limits and PINs for profiles, titles and settings,
-  stored only on the device
+  stored only on the device. The PIN goes in with the D-pad, like on a Fire TV
 - A player made for watching: skip intros, recaps and credits, trickplay
   previews while seeking, chapters and "next episode" with a countdown
 - The TV switches to the frame rate of the video, so films play without judder
