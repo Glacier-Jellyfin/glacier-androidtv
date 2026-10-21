@@ -93,6 +93,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
 import io.github.glacier_jellyfin.androidtv.player.subtitleTypeface
 import io.github.glacier_jellyfin.androidtv.player.usesNative
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
+import io.github.glacier_jellyfin.androidtv.update.VersionNotes
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.layout.layout
@@ -582,9 +583,9 @@ internal fun InfoCard(label: String, sub: String, value: String) {
     }
 }
 
-/** Below the update card: the download progress, or the notes of the version on offer. */
+/** Below the update card: the download progress, or the notes of the version on offer by section (New, Improved, Fixed …). */
 @Composable
-internal fun UpdateDetails(progress: Float?, progressStart: String, progressEnd: String, notesTitle: String, notes: List<String>) {
+internal fun UpdateDetails(progress: Float?, progressStart: String, progressEnd: String, notesTitle: String, notes: List<VersionNotes>) {
     val accent = LocalAccent.current.main
     if (progress != null) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -598,13 +599,33 @@ internal fun UpdateDetails(progress: Float?, progressStart: String, progressEnd:
         }
     }
     if (notes.isNotEmpty()) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.fillMaxWidth().height(1.dp).background(GlacierColors.GlassBorder))
-            Text(notesTitle.uppercase(), style = GlacierText.label(15, 0.04), color = GlacierColors.Mist, modifier = Modifier.padding(top = 8.dp))
-            notes.forEach { note ->
-                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Box(Modifier.padding(top = 11.dp).size(6.dp).clip(CircleShape).background(accent))
-                    Text(note, style = GlacierText.body(18), color = GlacierColors.Ice)
+        Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.fillMaxWidth().height(1.dp).background(GlacierColors.GlassBorder))
+                Text(notesTitle.uppercase(), style = GlacierText.label(15, 0.04), color = GlacierColors.Mist, modifier = Modifier.padding(top = 8.dp))
+            }
+            notes.forEach { release ->
+                // Only an update across several releases needs a heading per version.
+                if (notes.size > 1) {
+                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Text(stringResource(R.string.update_title, release.version), style = GlacierText.display(22), color = GlacierColors.Ice)
+                        release.date?.let { Text(it, style = GlacierText.body(16), color = GlacierColors.Mist, modifier = Modifier.padding(bottom = 2.dp)) }
+                    }
+                }
+                release.sections.forEach { section ->
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Text(section.heading.uppercase(), style = GlacierText.label(15, 0.06), color = accent)
+                            Box(Modifier.weight(1f).height(1.dp).background(GlacierColors.GlassBorder))
+                        }
+                        section.items.forEach { item ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                Box(Modifier.padding(top = 11.dp).size(6.dp).clip(CircleShape).background(GlacierColors.Ice))
+                                Text(item.text, style = GlacierText.body(18), color = GlacierColors.Ice, modifier = Modifier.weight(1f))
+                                item.ref?.let { Text(it, style = GlacierText.mono(15), color = GlacierColors.Mist, modifier = Modifier.padding(top = 3.dp)) }
+                            }
+                        }
+                    }
                 }
             }
         }

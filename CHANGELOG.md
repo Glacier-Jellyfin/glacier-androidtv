@@ -18,6 +18,9 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### Improved
+- The release notes of an update in Settings › System are split into New, Improved and Fixed, like in the update dialog
+
 ## [0.6.0] - 2026-10-21
 
 ### New

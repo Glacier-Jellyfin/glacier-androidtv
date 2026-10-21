@@ -959,7 +959,6 @@
     <string name="update_error_package">The download is not the Glacier version the release announced</string>
     <string name="update_error_install">Android could not install the update</string>
     <string name="update_new_in">New in %1$s</string>
-    <string name="update_note">%1$s · %2$s</string>
     <string name="update_bar_version">Glacier %1$s</string>
     <string name="update_bar_size">%1$s / %2$s</string>
     <string name="update_mb">%1$.1f MB</string>
@@ -1037,7 +1036,6 @@
     <string name="update_downloading_hint">Glacier installs the update right after. Back cancels the download.</string>
     <string name="update_release_since">Since %1$s</string>
     <string name="update_new_since">New since %1$s</string>
-    <string name="update_note_versioned">%1$s · %2$s · %3$s</string>
 
     <!-- Android TV home screen channels -->
     <string name="channel_continue_watching">Continue watching</string>

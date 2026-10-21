@@ -120,6 +120,7 @@ import io.github.glacier_jellyfin.androidtv.core.updater.pending
 import io.github.glacier_jellyfin.androidtv.update.megabytes
 import io.github.glacier_jellyfin.androidtv.update.message
 import io.github.glacier_jellyfin.androidtv.update.publishedDate
+import io.github.glacier_jellyfin.androidtv.update.VersionNotes
 import io.github.glacier_jellyfin.androidtv.update.releaseNotes
 import java.text.DateFormat
 import kotlin.math.roundToInt
@@ -240,7 +241,7 @@ private sealed interface SettingRow {
         val progressStart: String = "",
         val progressEnd: String = "",
         val notesTitle: String = "",
-        val notes: List<String> = emptyList(),
+        val notes: List<VersionNotes> = emptyList(),
         override val enabled: Boolean = true,
     ) : SettingRow {
         override val key: String get() = "update"
@@ -1572,25 +1573,11 @@ private fun notesTitle(candidate: UpdateCandidate, installed: AppVersion): Strin
         stringResource(R.string.update_new_in, candidate.version.toString())
     }
 
-/** The release notes as single lines, "New · Voice search"; across several releases "1.4.0 · New · Voice search". */
+/** The release notes by release and section (New, Improved, Fixed …), newest release first. */
 @Composable
-private fun notes(candidate: UpdateCandidate): List<String> {
+private fun notes(candidate: UpdateCandidate): List<VersionNotes> {
     val fallback = stringResource(R.string.update_notes_fallback)
-    val resources = LocalResources.current
-    return remember(candidate, resources) {
-        val releases = releaseNotes(candidate, fallback)
-        releases.flatMap { release ->
-            release.sections.flatMap { section ->
-                section.items.map {
-                    if (releases.size > 1) {
-                        resources.getString(R.string.update_note_versioned, release.version, section.heading, it.text)
-                    } else {
-                        resources.getString(R.string.update_note, section.heading, it.text)
-                    }
-                }
-            }
-        }
-    }
+    return remember(candidate, fallback) { releaseNotes(candidate, fallback) }
 }
 
 @Composable
