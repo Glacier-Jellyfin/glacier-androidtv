@@ -18,45 +18,50 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-21
+
 ### New
-- Album pages have a button with the artist's name that opens the artist's page
 - Pick the version of a movie or episode that has several files, such as 2160p and 1080p, or cuts like a Director's Cut. A chip before the audio track shows the version and opens the list. Glacier starts with the largest file of the main cut that your device plays without converting and that fits the screen. Your pick stays for the movie, or for all episodes of the show. Length and end time follow the version (#8)
+- Album pages have a button with the artist's name that opens the artist's page
 
 ### Improved
+- Large libraries open fast. The list is kept on the device and refreshed in the background. A new sort shows at once
+- The first load of a very large library shows how far it has come, such as "12000 of 70406 songs loaded", and that this only happens the first time
+- Sorted by title, the library sorts names itself. Names that start with a symbol or a number come first, then A to Z. Numbers go by value, so 2 comes before 10. The A–Z rail matches the list
+- Sorted by date added, year, rating, length, artist or album, the library shows a small heading over each group, such as "2024" or "October 2026". Inside a group the titles go from A to Z. Songs of an album keep their track order
+- The A–Z rail jumps straight to the letter, also in very large libraries. The titles before it load when you scroll back up
+- Sorted by artist or album, the A–Z rail jumps to the artists or albums
+- Moving onto the A–Z rail always lands on the current letter
+- The filter and sort buttons stay in the same place on every tab, with or without the A–Z rail
+- The loading sign and the text of an empty list sit in the middle of the screen, with or without the A–Z rail
+- When a library view cannot load or has nothing to show, the message sits in the middle of the page, with the Retry button below it
+- Album and playlist pages list their songs in one column. Up and Down go song by song. Each song shows its length, and its artist where that differs from the album. Playlists also show the album. Albums with more than one disc show a heading per disc
 - Album pages show the cover left of the songs. It stays in place while you scroll through the songs
 - Playlist pages show the cover of the focused song on the left, with its album, artist and year below
+- The Songs tab is a list too, with cover, title, artist, album and length
+- Holding OK on a song opens its options. The focused song shows a mark for this at its end, and it grows like a card
 - On album, artist and playlist pages, Back from the songs or the rows below first goes up to Play
-- Moving onto the A-Z rail always lands on the current letter
-- The loading sign and the text of an empty list sit in the middle of the screen, with or without the A-Z rail
 - With the lyrics on in the music player, Left from the queue goes to the last button and Left from the lyrics to Play/Pause
 - Detail pages show the mini player while music plays. Up from the buttons at the top reaches it
 - The mini player and messages sit as far from the right edge as from the top
 - Forced, hearing impaired, sing-along, commentary and audio description tracks are found by their name in many more languages, such as French, Spanish, Italian, Portuguese, Dutch, the Nordic languages, Polish and Russian. Accents and spellings like Sing-Along or Singalong no longer matter
-- Album and playlist pages list their songs in one column. Up and Down go song by song. Each song shows its length, and its artist where that differs from the album. Playlists also show the album. Albums with more than one disc show a heading per disc
-- The Songs tab is a list too, with cover, title, artist, album and length
-- Holding OK on a song opens its options. The focused song shows a mark for this at its end, and it grows like a card
-- Sorted by title, the library sorts names itself. Names that start with a symbol or a number come first, then A to Z. Numbers go by value, so 2 comes before 10. The A–Z rail matches the list
-- The A–Z rail jumps straight to the letter, also in very large libraries. The titles before it load when you scroll back up
-- Large libraries open fast. The list is kept on the device and refreshed in the background. A new sort shows at once
-- The first load of a very large library shows how far it has come, such as "12000 of 70406 songs loaded", and that this only happens the first time
-- Sorted by date added, year, rating, length, artist or album, the library shows a small heading over each group, such as "2024" or "October 2026". Inside a group the titles go from A to Z. Songs of an album keep their track order
-- Sorted by artist or album, the A–Z rail jumps to the artists or albums
-- The filter and sort buttons stay in the same place on every tab, with or without the A–Z rail
-- When a library view cannot load or has nothing to show, the message sits in the middle of the page, with the Retry button below it
 - The PIN is typed with the D-pad, like on the Fire TV. OK and the four directions type 0–4. Holding OK or pressing the menu key switches to 5–9. Back or rewind deletes. The number keys of the remote work as well. The pressed digit no longer lights up, so nobody watching sees the PIN
 - A PIN can be removed in Settings › Account, next to Change. This switches off all PIN locks
 - Checking the PIN is much faster on slow TVs. Before, it could take over a second and keys pressed meanwhile were lost
 
 ### Fixed
-- The songs tab of a very large music library no longer closes the app while it loads
+- The Songs tab of a very large music library no longer closes the app while it loads
 - The A–Z rail of the Songs tab covers all songs, also in libraries with more than 40,000 songs
+- A library that is still loading no longer takes the focus away from a tab you moved to
+- A new age limit or "Lock unrated titles" applies to the library lists at once. Before, a list kept on the device could still show the titles from before
+- With "Lock unrated titles" on, albums, artists and playlists open again. Music has no age rating, so it is never locked
 - Subtitles for signs and songs show as forced, not as sing-along. This also covers German names like "Schild- und Liedtext"
 - An audio track named like "ger ac3 6ch" no longer shows as Swiss German
 - Back in the music player closes an open options menu or info panel and leaves the player open. Before, newer Android TV versions closed the player as well
 - On a title without cast, "More like this" no longer sits right under the buttons
-- With "Lock unrated titles" on, albums, artists and playlists open again. Music has no age rating, so it is never locked
-- A library that is still loading no longer takes the focus away from a tab you moved to
-- A new age limit or "Lock unrated titles" applies to the library lists at once. Before, a list kept on the device could still show the titles from before
+
+### Known issues
+- All versions of a title share one resume point. The server keeps only one per title
 
 ## [0.5.0] - 2026-10-16
 
