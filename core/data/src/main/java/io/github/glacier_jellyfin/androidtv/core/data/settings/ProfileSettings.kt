@@ -36,8 +36,8 @@ data class ProfileSettings(
 )
 
 /**
- * Which Live TV channels are radio. Jellyfin's own tuners (M3U, HDHomeRun)
- * call every channel TV, so the app keeps what it found out itself.
+ * Which Live TV channels are radio, and the order of the channels. Jellyfin's own
+ * tuners (M3U, HDHomeRun) call every channel TV, so the app keeps what it found out itself.
  */
 @Serializable
 data class LiveTvSettings(
@@ -45,6 +45,10 @@ data class LiveTvSettings(
     val radio: Set<String> = emptySet(),
     /** Channel ids moved to TV by hand: they stay TV, whatever the server or a playback says. */
     val tv: Set<String> = emptySet(),
+    /** The order of the channel list, the guide and switching channels in the player. */
+    val sort: ChannelSort = ChannelSort.Number,
+    /** Highest number or Z first. */
+    val descending: Boolean = false,
 ) {
     /** Radio or TV: the user's choice first, then what a playback found, then what the server says. */
     fun isRadio(channelId: String, serverSaysRadio: Boolean): Boolean = when (channelId) {
@@ -59,6 +63,15 @@ data class LiveTvSettings(
 
     /** A playback found no picture: radio, unless the user said TV. */
     fun heardAsRadio(channelId: String): LiveTvSettings = if (channelId in tv) this else copy(radio = radio + channelId)
+}
+
+/** How Live TV orders its channels. */
+@Serializable
+enum class ChannelSort {
+    /** By channel number. Channels without a number follow, by name. */
+    Number,
+    /** By name, whatever the numbers. */
+    Name,
 }
 
 /** One library kind's sort, kept from one time to the next. */

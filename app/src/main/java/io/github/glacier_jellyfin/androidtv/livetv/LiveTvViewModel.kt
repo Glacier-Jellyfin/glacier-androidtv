@@ -19,22 +19,20 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LiveSeriesTimer
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveTimer
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveTvRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.halfHourFloor
+import io.github.glacier_jellyfin.androidtv.core.data.media.sortedChannels
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
+import io.github.glacier_jellyfin.androidtv.core.data.settings.ChannelSort
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
 import io.github.glacier_jellyfin.androidtv.music.MusicController
-import io.github.glacier_jellyfin.androidtv.navigation.FavoritesRoute
-import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
-import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LiveTvPlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
-import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
-import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
-import io.github.glacier_jellyfin.androidtv.navigation.SettingsRoute
+import io.github.glacier_jellyfin.androidtv.navigation.navEvent
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.CancellationException
@@ -75,6 +73,9 @@ data class LiveTvState(
     val stations: List<LiveChannel> = emptyList(),
     /** Only the channels marked with the heart. */
     val favoritesOnly: Boolean = false,
+    /** The profile's channel order, kept in its settings. */
+    val sort: ChannelSort = ChannelSort.Number,
+    val descending: Boolean = false,
     /** The clock the programme times and progress bars follow. */
     val nowMs: Long = System.currentTimeMillis(),
     /** The channel with the focus, shown in the panel beside the list. */
@@ -162,6 +163,7 @@ class LiveTvViewModel @Inject constructor(
         load()
         // A channel moved to radio or TV (here, or found out by the player): the lists follow.
         viewModelScope.launch { repository.radioMarks.drop(1).collect { refresh() } }
+        viewModelScope.launch { repository.radioMarks.collect { marks -> _state.update { it.copy(sort = marks.sort, descending = marks.descending) } } }
         viewModelScope.launch {
             while (isActive) {
                 delay(CLOCK_TICK_MS)
@@ -184,7 +186,7 @@ class LiveTvViewModel @Inject constructor(
     fun load() {
         viewModelScope.launch {
             _state.update { it.copy(loading = true, failed = false) }
-            runCatching { repository.channels() }
+            runSuspendCatching { repository.channels() }
                 .onSuccess { channels ->
                     _state.update { state ->
                         val loaded = state.withChannels(channels).copy(loading = false, nowMs = System.currentTimeMillis())
@@ -202,7 +204,7 @@ class LiveTvViewModel @Inject constructor(
     /** In the background: what is on screen stays if it fails. */
     private fun refresh() {
         viewModelScope.launch {
-            runCatching { repository.channels() }
+            runSuspendCatching { repository.channels() }
                 .onSuccess { channels -> _state.update { it.withChannels(channels).copy(upcoming = emptyMap()) } }
                 .onFailure { Log.w(TAG, "Refreshing channels failed", it) }
             _state.value.focused?.let(::loadUpcoming)
@@ -210,6 +212,18 @@ class LiveTvViewModel @Inject constructor(
     }
 
     fun setFavoritesOnly(on: Boolean) = _state.update { it.copy(favoritesOnly = on) }
+
+    /**
+     * By number or by name, like the library's sort menu: picking the active sort again flips the
+     * direction. The lists change at once, the guide and the player follow the saved choice.
+     */
+    fun setSort(sort: ChannelSort) {
+        val descending = sort == _state.value.sort && !_state.value.descending
+        _state.update { it.copy(sort = sort, descending = descending).withChannels(sortedChannels(it.all, sort, descending)) }
+        viewModelScope.launch {
+            runSuspendCatching { repository.setSort(sort, descending) }.onFailure { Log.w(TAG, "Saving the channel order failed", it) }
+        }
+    }
 
     fun setView(view: LiveTvView) {
         _state.update { it.copy(view = view) }
@@ -557,20 +571,8 @@ class LiveTvViewModel @Inject constructor(
     }
 
     fun onNav(target: NavTarget) {
-        when (target) {
-            NavTarget.LiveTv -> Unit
-            NavTarget.Home -> viewModelScope.launch { _events.send(UiEvent.Navigate(HomeRoute, clearBackStack = true)) }
-            NavTarget.Search -> navigate(SearchRoute())
-            NavTarget.Settings -> navigate(SettingsRoute)
-            NavTarget.Favorites -> navigate(FavoritesRoute)
-            is NavTarget.Library -> navigate(LibraryRoute(target.kind.name))
-            NavTarget.NowPlaying -> navigate(MusicRoute())
-            NavTarget.Profile -> {
-                val serverId = sessions.session.value?.server?.id ?: return
-                sessions.leave()
-                viewModelScope.launch { _events.send(UiEvent.Navigate(ProfilesRoute(serverId), clearBackStack = true)) }
-            }
-        }
+        val event = sessions.navEvent(target, current = NavTarget.LiveTv) ?: return
+        viewModelScope.launch { _events.send(event) }
     }
 
     private fun navigate(route: Any) {

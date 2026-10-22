@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.AccountRepository
 import io.github.glacier_jellyfin.androidtv.core.data.Profile
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
@@ -18,6 +17,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.startChoice
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinKey
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.Authenticator
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.PublicUser
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ServerListRoute
@@ -83,7 +83,7 @@ class ProfilesViewModel @Inject constructor(
             if (route.appStart && (route.userId != null || accounts.current().startProfile.mode != StartMode.Single) && start(publicUsers = null)) {
                 return@launch
             }
-            val users = runCatching { authenticator.publicUsers(server.address) }
+            val users = runSuspendCatching { authenticator.publicUsers(server.address) }
             publicUsers.value = users.getOrNull()
             // Nobody to pick (no public users, nobody signed in here before): go straight to sign-in.
             if (users.getOrNull()?.isEmpty() == true && accounts.current().users.none { it.serverId == serverId }) {
@@ -163,7 +163,7 @@ class ProfilesViewModel @Inject constructor(
         val server = _state.value.server ?: return false
         val token = accounts.current().users.firstOrNull { it.serverId == serverId && it.userId == profile.userId }?.accessToken
         // A revoked token sends the user to sign-in; an unreachable server does not.
-        val valid = token != null && runCatching { authenticator.isTokenValid(server.address, token) }.getOrDefault(true)
+        val valid = token != null && runSuspendCatching { authenticator.isTokenValid(server.address, token) }.getOrDefault(true)
         if (!valid) {
             accounts.forgetToken(serverId, profile.userId)
             navigate(SignInRoute(serverId, profile.name))

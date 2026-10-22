@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.jellyfin.sdk.Jellyfin
 import org.jellyfin.sdk.api.client.ApiClient
+import org.jellyfin.sdk.api.client.util.AuthorizationHeaderBuilder
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -15,7 +16,16 @@ data class Session(
     val server: StoredServer,
     val user: StoredUser,
     val api: ApiClient,
-)
+) {
+    /** Jellyfin's `Authorization` header for requests the SDK client does not make (the player, raw HTTP). */
+    fun authorization(): String = AuthorizationHeaderBuilder.buildHeader(
+        clientName = api.clientInfo.name,
+        clientVersion = api.clientInfo.version,
+        deviceId = api.deviceInfo.id,
+        deviceName = api.deviceInfo.name,
+        accessToken = api.accessToken,
+    )
+}
 
 @Singleton
 class SessionManager @Inject constructor(

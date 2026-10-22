@@ -17,16 +17,12 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.FavoritesRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
-import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
-import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
-import io.github.glacier_jellyfin.androidtv.navigation.LiveTvRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
-import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
-import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
-import io.github.glacier_jellyfin.androidtv.navigation.SettingsRoute
+import io.github.glacier_jellyfin.androidtv.navigation.navEvent
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.channels.Channel
@@ -79,7 +75,7 @@ class FavoritesViewModel @Inject constructor(
     fun load() {
         viewModelScope.launch {
             _state.update { it.copy(loading = true, failed = false) }
-            runCatching { repository.load() }
+            runSuspendCatching { repository.load() }
                 .onSuccess { favorites -> _state.update { it.copy(loading = false, favorites = favorites) } }
                 .onFailure { error ->
                     Log.w(TAG, "Loading favorites failed", error)
@@ -91,7 +87,7 @@ class FavoritesViewModel @Inject constructor(
     /** In the background: what is on screen stays if it fails. */
     private fun refresh() {
         viewModelScope.launch {
-            runCatching { repository.load() }
+            runSuspendCatching { repository.load() }
                 .onSuccess { favorites -> _state.update { it.copy(favorites = favorites) } }
                 .onFailure { Log.w(TAG, "Refreshing favorites failed", it) }
         }
@@ -107,20 +103,8 @@ class FavoritesViewModel @Inject constructor(
     }
 
     fun onNav(target: NavTarget) {
-        when (target) {
-            NavTarget.Favorites -> Unit
-            NavTarget.Home -> viewModelScope.launch { _events.send(UiEvent.Navigate(HomeRoute, clearBackStack = true)) }
-            NavTarget.Search -> navigate(SearchRoute())
-            NavTarget.Settings -> navigate(SettingsRoute)
-            is NavTarget.Library -> navigate(LibraryRoute(target.kind.name))
-            NavTarget.NowPlaying -> navigate(MusicRoute())
-            NavTarget.LiveTv -> navigate(LiveTvRoute)
-            NavTarget.Profile -> {
-                val serverId = sessions.session.value?.server?.id ?: return
-                sessions.leave()
-                viewModelScope.launch { _events.send(UiEvent.Navigate(ProfilesRoute(serverId), clearBackStack = true)) }
-            }
-        }
+        val event = sessions.navEvent(target, current = NavTarget.Favorites) ?: return
+        viewModelScope.launch { _events.send(event) }
     }
 
     private fun navigate(route: Any) {

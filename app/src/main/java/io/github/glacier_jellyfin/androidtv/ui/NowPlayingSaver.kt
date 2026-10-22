@@ -110,7 +110,7 @@ fun NowPlayingSaver(visible: Boolean, nowPlaying: NowPlaying?, music: StateFlow<
                 MusicClock(Modifier.align(Alignment.TopEnd).padding(end = 80.dp, top = 60.dp))
                 Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                     if (playing.live) {
-                        StationLogo(playing.largeCoverUrl, playing.title, CoverShape(CENTER_COVER), textSize = 72)
+                        StationLogo(playing.largeCoverUrl, playing.title, Modifier.coverShape(CENTER_COVER), textSize = 72)
                     } else {
                         CoverRow(state, playing)
                     }
@@ -134,7 +134,7 @@ private fun CoverRow(state: MusicUiState, playing: NowPlaying) {
     }
     Box(Modifier.fillMaxWidth().height(CENTER_COVER.dp), contentAlignment = Alignment.Center) {
         if (queue.isEmpty()) {
-            Artwork(playing.largeCoverUrl, CoverShape(CENTER_COVER))
+            Artwork(playing.largeCoverUrl, Modifier.coverShape(CENTER_COVER))
             return@Box
         }
         val at = place.value
@@ -155,14 +155,14 @@ private fun CoverRow(state: MusicUiState, playing: NowPlaying) {
                         scaleY = scale
                         translationX = (if (from < 0) -shift else shift).dp.toPx()
                         alpha = 1f - near * 0.45f
-                    }.then(CoverShape(CENTER_COVER)),
+                    }.coverShape(CENTER_COVER),
                 )
             }
         }
     }
 }
 
-private fun CoverShape(size: Int) = Modifier
+private fun Modifier.coverShape(size: Int) = this
     .size(size.dp)
     .shadow(32.dp, RoundedCornerShape(GlacierShapes.RadiusLg))
     .clip(RoundedCornerShape(GlacierShapes.RadiusLg))

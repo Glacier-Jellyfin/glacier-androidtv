@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
+import io.github.glacier_jellyfin.androidtv.core.data.settings.ChannelSort
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -82,5 +83,39 @@ class LiveTvTest {
         assertEquals(false, plain.recorded)
         assertEquals(true, plain.copy(timerId = "t").recorded)
         assertEquals(true, plain.copy(seriesTimerId = "s").recorded)
+    }
+
+    private fun named(name: String, number: String?) =
+        LiveChannel(UUID.randomUUID(), number, name, null, favorite = false, now = null)
+
+    @Test
+    fun `by number the numbered channels come first, then the others by name`() {
+        val channels = listOf(
+            named("zdf", null), named("Arte", null), named("One", "101"),
+            named("Ten", "10"), named("Nine", "9"), named("Five HD", "5.1"), named("Five", "5"),
+        )
+        assertEquals(
+            listOf("Five", "Five HD", "Nine", "Ten", "One", "Arte", "zdf"),
+            sortedChannels(channels, ChannelSort.Number).map { it.name },
+        )
+    }
+
+    @Test
+    fun `descending turns both round but channels without a number stay last`() {
+        val channels = listOf(named("zdf", null), named("Arte", null), named("Ten", "10"), named("Nine", "9"), named("Five", "5"))
+        assertEquals(
+            listOf("Ten", "Nine", "Five", "zdf", "Arte"),
+            sortedChannels(channels, ChannelSort.Number, descending = true).map { it.name },
+        )
+        assertEquals(
+            listOf("zdf", "Ten", "Nine", "Five", "Arte"),
+            sortedChannels(channels, ChannelSort.Name, descending = true).map { it.name },
+        )
+    }
+
+    @Test
+    fun `by name the numbers do not matter`() {
+        val channels = listOf(named("ZDF", "2"), named("arte", null), named("Das Erste", "1"))
+        assertEquals(listOf("arte", "Das Erste", "ZDF"), sortedChannels(channels, ChannelSort.Name).map { it.name })
     }
 }

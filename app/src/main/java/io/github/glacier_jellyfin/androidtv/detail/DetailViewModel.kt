@@ -29,6 +29,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepositor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.closestTrack
 import io.github.glacier_jellyfin.androidtv.core.data.settings.toKey
 import io.github.glacier_jellyfin.androidtv.core.data.settings.rememberedTracks
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.music.MusicActions
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.music.MusicTarget
@@ -151,7 +152,7 @@ class DetailViewModel @Inject constructor(
                     askPin(loaded)
                     return@launch
                 }
-                val similarAsync = async { runCatching { repository.similar(itemId) }.getOrDefault(emptyList()) }
+                val similarAsync = async { runSuspendCatching { repository.similar(itemId) }.getOrDefault(emptyList()) }
                 val (details, selection) = withVersion(loaded)
                 _state.update { it.copy(details = details, selection = selection) }
                 when (details.item.kind) {
@@ -160,11 +161,11 @@ class DetailViewModel @Inject constructor(
                     ItemKind.Collection -> loadCollection(details)
                     ItemKind.Album -> _state.update { it.copy(musicTracks = music.albumTracks(itemId)) }
                     ItemKind.Playlist -> {
-                        val videos = runCatching { repository.playlistVideos(itemId) }.getOrDefault(emptyList())
+                        val videos = runSuspendCatching { repository.playlistVideos(itemId) }.getOrDefault(emptyList())
                         _state.update { it.copy(musicTracks = music.playlistTracks(itemId), playlistVideos = videos) }
                     }
                     ItemKind.Artist -> {
-                        val videos = runCatching { repository.artistVideos(itemId) }.getOrDefault(emptyList())
+                        val videos = runSuspendCatching { repository.artistVideos(itemId) }.getOrDefault(emptyList())
                         _state.update { it.copy(artistAlbums = music.artistAlbums(itemId), artistVideos = videos) }
                     }
                     else -> Unit
@@ -237,7 +238,7 @@ class DetailViewModel @Inject constructor(
                 when (details.item.kind) {
                     ItemKind.Series -> {
                         val seasons = repository.seasons(details.item.id)
-                        val next = runCatching { repository.nextEpisode(details.item.id) }.getOrNull()
+                        val next = runSuspendCatching { repository.nextEpisode(details.item.id) }.getOrNull()
                         _state.update { it.copy(seasons = seasons, nextEpisode = next) }
                         val season = seasons.firstOrNull { it.id == target?.seasonId }
                             ?: seasons.firstOrNull { it.id == _state.value.season?.id }
@@ -282,7 +283,7 @@ class DetailViewModel @Inject constructor(
         if (musicPlayback.isPlaying) return
         themeSongLoaded = true
         viewModelScope.launch {
-            runCatching { music.themeSong(itemId)?.let(playback::audioSource) }
+            runSuspendCatching { music.themeSong(itemId)?.let(playback::audioSource) }
                 .onSuccess { source -> _state.update { it.copy(themeSong = source) } }
                 .onFailure { Log.w(TAG, "Loading the theme song failed", it) }
         }
@@ -294,7 +295,7 @@ class DetailViewModel @Inject constructor(
         val regular = seasons.filter { it.number != 0 }.ifEmpty { seasons }
         val season = seasons.firstOrNull { it.id == routeSeasonId }
             ?: regular.firstOrNull { (it.unwatchedCount ?: 0) > 0 } ?: regular.lastOrNull()
-        val next = runCatching { repository.nextEpisode(details.item.id) }.getOrNull()
+        val next = runSuspendCatching { repository.nextEpisode(details.item.id) }.getOrNull()
         _state.update { it.copy(seasons = seasons, nextEpisode = next) }
         season?.let { selectSeason(it, details.item.id) }
     }
@@ -333,7 +334,7 @@ class DetailViewModel @Inject constructor(
         val items = _state.value.collectionItems.filter { it.kind in MusicInCollection }
         if (items.isEmpty()) return
         viewModelScope.launch {
-            runCatching {
+            runSuspendCatching {
                 val songs = music.tracks(items.filter { it.kind == ItemKind.Song }.map { it.id }).associateBy { it.id }
                 items.flatMap { item ->
                     when (item.kind) {
@@ -371,7 +372,7 @@ class DetailViewModel @Inject constructor(
     /** The episode row lands on [focusId] if given, else on the first unwatched episode. */
     private suspend fun selectSeason(season: Season, seriesId: UUID, focusId: UUID? = null) {
         _state.update { it.copy(season = season) }
-        val episodes = runCatching { repository.episodes(seriesId, season.id) }
+        val episodes = runSuspendCatching { repository.episodes(seriesId, season.id) }
             .onFailure { Log.w(TAG, "Loading episodes failed", it) }
             .getOrDefault(emptyList())
         val focus = episodes.indexOfFirst { it.id == focusId }.takeIf { it >= 0 }
@@ -385,8 +386,8 @@ class DetailViewModel @Inject constructor(
         val stopped = repository.details(stoppedId)
         if (stopped.item.kind != ItemKind.Episode || stopped.seriesId != seriesId) return null
         if (!stopped.item.played) return stopped
-        val next = runCatching { repository.nextEpisode(seriesId) }.getOrNull() ?: return stopped
-        return runCatching { repository.details(next.id) }.getOrDefault(stopped)
+        val next = runSuspendCatching { repository.nextEpisode(seriesId) }.getOrNull() ?: return stopped
+        return runSuspendCatching { repository.details(next.id) }.getOrDefault(stopped)
     }
 
     /** Episode pages switch in place when another episode of the season is picked (design). */
@@ -414,7 +415,7 @@ class DetailViewModel @Inject constructor(
     /** A show of a collection plays where it stands; with nothing left to watch its page opens. */
     private fun playShow(show: MediaItem) {
         viewModelScope.launch {
-            val episode = runCatching { repository.nextEpisode(show.id) }
+            val episode = runSuspendCatching { repository.nextEpisode(show.id) }
                 .onFailure { Log.w(TAG, "Loading the next episode failed", it) }
                 .getOrNull()
             if (episode != null) navigate(PlayerRoute(episode.id.toString())) else openItem(show)
@@ -474,7 +475,7 @@ class DetailViewModel @Inject constructor(
     /** After songs went in or out: the songs and the item's counts. */
     private fun reloadPlaylist() {
         viewModelScope.launch {
-            runCatching { Triple(repository.details(itemId), music.playlistTracks(itemId), repository.playlistVideos(itemId)) }
+            runSuspendCatching { Triple(repository.details(itemId), music.playlistTracks(itemId), repository.playlistVideos(itemId)) }
                 .onSuccess { (details, tracks, videos) -> _state.update { it.copy(details = details, musicTracks = tracks, playlistVideos = videos) } }
         }
     }
@@ -495,7 +496,7 @@ class DetailViewModel @Inject constructor(
         val favorite = !item.isFavorite
         updateItem { it.copy(isFavorite = favorite) }
         viewModelScope.launch {
-            runCatching { repository.setFavorite(item.id, favorite) }
+            runSuspendCatching { repository.setFavorite(item.id, favorite) }
                 .onSuccess { toast(if (favorite) R.string.favorite_added else R.string.favorite_removed) }
                 .onFailure { updateItem { current -> current.copy(isFavorite = !favorite) } }
         }
@@ -510,7 +511,7 @@ class DetailViewModel @Inject constructor(
         updateItem(marked)
         _state.update { state -> state.copy(episodes = state.episodes.map { if (it.id == item.id) marked(it) else it }) }
         viewModelScope.launch {
-            runCatching { repository.setPlayed(item.id, played) }
+            runSuspendCatching { repository.setPlayed(item.id, played) }
                 .onSuccess {
                     toast(
                         when {
@@ -523,7 +524,7 @@ class DetailViewModel @Inject constructor(
                     // A whole show or collection changes its episodes or movies too.
                     if (item.kind == ItemKind.Series) {
                         _state.value.season?.let { selectSeason(it, item.id) }
-                        val next = runCatching { repository.nextEpisode(item.id) }.getOrNull()
+                        val next = runSuspendCatching { repository.nextEpisode(item.id) }.getOrNull()
                         _state.update { it.copy(nextEpisode = next) }
                     }
                     if (item.kind == ItemKind.Collection) loadCollection(_state.value.details ?: return@onSuccess)
@@ -549,13 +550,13 @@ class DetailViewModel @Inject constructor(
             state.copy(collectionItems = state.collectionItems.map { if (it.kind in WatchableInCollection) it.copy(played = played) else it })
         }
         viewModelScope.launch {
-            runCatching {
+            runSuspendCatching {
                 if (mixed) watchable.forEach { repository.setPlayed(it.id, played) } else repository.setPlayed(collection.id, played)
             }
                 .onSuccess { toast(if (played) R.string.marked_watched else R.string.marked_unwatched) }
                 .onFailure { Log.w(TAG, "Marking the collection failed", it) }
             val details = _state.value.details ?: return@launch
-            runCatching { loadCollection(details) }.onFailure { Log.w(TAG, "Reloading the collection failed", it) }
+            runSuspendCatching { loadCollection(details) }.onFailure { Log.w(TAG, "Reloading the collection failed", it) }
         }
     }
 

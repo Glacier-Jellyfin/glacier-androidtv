@@ -2,8 +2,8 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.core.log.Log
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -11,7 +11,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.jellyfin.sdk.api.client.HttpMethod
-import org.jellyfin.sdk.api.client.util.AuthorizationHeaderBuilder
 import java.net.HttpURLConnection
 import java.net.URL
 import java.time.LocalDate
@@ -114,8 +113,7 @@ class SeerrRepository @Inject constructor(
         val key = "${session.server.id}/${session.user.userId}"
         mutex.withLock {
             if (linkedFor == key && (linked || System.currentTimeMillis() - checkedAt < RECHECK_MS)) return@withLock linked
-            val status = runCatching { session.get<UserStatusDto>("/user-status") }
-                .onFailure { if (it is CancellationException) throw it }
+            val status = runSuspendCatching { session.get<UserStatusDto>("/user-status") }
                 .getOrNull()
             // Only answers are kept: a server that could not be reached is asked again next time.
             if (status != null) {
@@ -144,8 +142,7 @@ class SeerrRepository @Inject constructor(
         // TMDB leaves the plot empty without a translation and lists only trailers in the
         // asked language; English fills the gaps.
         if (language != FALLBACK_LANGUAGE && (dto.overview.isNullOrBlank() || dto.youTubeTrailers().isEmpty())) {
-            val english = runCatching { session.get<DetailsDto>("/${type.path}/$tmdbId", mapOf("language" to FALLBACK_LANGUAGE)) }
-                .onFailure { if (it is CancellationException) throw it }
+            val english = runSuspendCatching { session.get<DetailsDto>("/${type.path}/$tmdbId", mapOf("language" to FALLBACK_LANGUAGE)) }
                 .getOrNull()
             if (english != null) {
                 dto = dto.copy(
@@ -221,8 +218,7 @@ class SeerrRepository @Inject constructor(
 
     /** The user's request limit for [type]; null when there is none or it cannot be read. */
     suspend fun quota(type: SeerrMediaType): SeerrQuota? = withContext(Dispatchers.IO) {
-        val quota = runCatching { requireSession().get<QuotaDto>("/quota") }
-            .onFailure { if (it is CancellationException) throw it }
+        val quota = runSuspendCatching { requireSession().get<QuotaDto>("/quota") }
             .getOrNull() ?: return@withContext null
         val entry = if (type == SeerrMediaType.Movie) quota.movie else quota.tv
         entry?.takeIf { (it.limit ?: 0) > 0 }?.let { SeerrQuota(it.limit ?: 0, it.remaining ?: 0, it.days ?: 0) }
@@ -248,7 +244,7 @@ class SeerrRepository @Inject constructor(
                 connection.readTimeout = TIMEOUT_MS
                 connection.setRequestProperty("Content-Type", "application/json")
                 connection.setRequestProperty("Accept", "application/json")
-                connection.setRequestProperty("Authorization", authorization(session))
+                connection.setRequestProperty("Authorization", session.authorization())
                 connection.outputStream.use { it.write(body.toByteArray()) }
                 val status = connection.responseCode
                 if (status in 200..299) return@withContext SeerrRequestResult.Sent
@@ -259,14 +255,6 @@ class SeerrRepository @Inject constructor(
                 connection.disconnect()
             }
         }
-
-    private fun authorization(session: Session): String = AuthorizationHeaderBuilder.buildHeader(
-        clientName = session.api.clientInfo.name,
-        clientVersion = session.api.clientInfo.version,
-        deviceId = session.api.deviceInfo.id,
-        deviceName = session.api.deviceInfo.name,
-        accessToken = session.api.accessToken,
-    )
 
     private suspend inline fun <reified T> Session.get(path: String, query: Map<String, Any?> = emptyMap()): T {
         val response = api.request(HttpMethod.GET, "$BASE$path", emptyMap(), query, null)

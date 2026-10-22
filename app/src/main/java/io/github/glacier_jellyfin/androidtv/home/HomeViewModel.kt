@@ -21,17 +21,14 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.Library
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveChannel
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.music.MusicController
-import io.github.glacier_jellyfin.androidtv.navigation.FavoritesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LiveTvPlayerRoute
-import io.github.glacier_jellyfin.androidtv.navigation.LiveTvRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
-import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
-import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
-import io.github.glacier_jellyfin.androidtv.navigation.SettingsRoute
+import io.github.glacier_jellyfin.androidtv.navigation.navEvent
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PinGate
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
@@ -115,7 +112,7 @@ class HomeViewModel @Inject constructor(
     /** Only the Live TV rows; the rest of the page stays as it is. */
     private fun refreshLive() {
         viewModelScope.launch {
-            runCatching { repository.liveChannels() }
+            runSuspendCatching { repository.liveChannels() }
                 .onSuccess { channels -> _state.update { it.copy(content = it.content?.copy(liveChannels = channels)) } }
                 .onFailure { Log.w(TAG, "Refreshing Live TV failed", it) }
         }
@@ -124,7 +121,7 @@ class HomeViewModel @Inject constructor(
     /** Reloads in the background: no spinner, and what is on screen stays if it fails. */
     private fun refresh() {
         viewModelScope.launch {
-            runCatching { repository.load() }
+            runSuspendCatching { repository.load() }
                 .onSuccess { content ->
                     _state.update { it.copy(content = content) }
                     // Only "continue watching" follows what was just watched; the other sources stay put.
@@ -137,7 +134,7 @@ class HomeViewModel @Inject constructor(
     /** Only the favorites row; the rest of the page stays as it is. */
     private fun refreshFavorites() {
         viewModelScope.launch {
-            runCatching { repository.favorites() }
+            runSuspendCatching { repository.favorites() }
                 .onSuccess { favorites -> _state.update { it.copy(content = it.content?.copy(favorites = favorites)) } }
                 .onFailure { Log.w(TAG, "Refreshing favorites failed", it) }
         }
@@ -146,7 +143,7 @@ class HomeViewModel @Inject constructor(
     fun load() {
         viewModelScope.launch {
             _state.update { it.copy(loading = true, failed = false) }
-            runCatching { repository.load() }
+            runSuspendCatching { repository.load() }
                 .onSuccess { content ->
                     val spotlight = spotlightOf(content, _state.value.settings)
                     _state.update { it.copy(loading = false, content = content, spotlight = spotlight) }
@@ -179,7 +176,7 @@ class HomeViewModel @Inject constructor(
         val favorite = !item.isFavorite
         updateItem(item.id) { it.copy(isFavorite = favorite) }
         viewModelScope.launch {
-            runCatching { repository.setFavorite(item.id, favorite) }
+            runSuspendCatching { repository.setFavorite(item.id, favorite) }
                 .onSuccess {
                     _events.send(UiEvent.Toast(if (favorite) R.string.favorite_added else R.string.favorite_removed))
                     refreshFavorites()
@@ -220,7 +217,7 @@ class HomeViewModel @Inject constructor(
         // A show has no file of its own: its next episode plays, as on its page. With none
         // (all watched, say), the page opens to pick one.
         viewModelScope.launch {
-            val next = runCatching { details.nextEpisode(item.id) }.getOrNull()
+            val next = runSuspendCatching { details.nextEpisode(item.id) }.getOrNull()
             navigate(if (next != null) PlayerRoute(next.id.toString()) else DetailRoute(item.id.toString()))
         }
     }
@@ -244,20 +241,8 @@ class HomeViewModel @Inject constructor(
     fun openLibrary(library: Library) = navigate(LibraryRoute(library.kind.name, library.id.toString(), title = library.name))
 
     fun onNav(target: NavTarget) {
-        when (target) {
-            NavTarget.Home -> Unit
-            NavTarget.Search -> navigate(SearchRoute())
-            NavTarget.Settings -> navigate(SettingsRoute)
-            is NavTarget.Library -> navigate(LibraryRoute(target.kind.name))
-            NavTarget.Favorites -> navigate(FavoritesRoute)
-            NavTarget.NowPlaying -> navigate(MusicRoute())
-            NavTarget.LiveTv -> navigate(LiveTvRoute)
-            NavTarget.Profile -> {
-                val serverId = sessions.session.value?.server?.id ?: return
-                sessions.leave()
-                viewModelScope.launch { _events.send(UiEvent.Navigate(ProfilesRoute(serverId), clearBackStack = true)) }
-            }
-        }
+        val event = sessions.navEvent(target, current = NavTarget.Home) ?: return
+        viewModelScope.launch { _events.send(event) }
     }
 
     private fun navigate(route: Any) {

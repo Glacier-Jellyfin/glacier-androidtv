@@ -477,7 +477,9 @@ class LibraryRepository @Inject constructor(
                 sortBy = listOf(ItemSortBy.SORT_NAME),
                 sortOrder = order,
             ).content
-            LibraryScope.Artists -> session.api.artistApi.getAlbumArtists(
+            // Deprecated since the 12.1 API, but nothing else lists only album artists: /Artists and
+            // /Items with MusicArtist also list every guest artist of a song (checked on 12.2).
+            LibraryScope.Artists -> @Suppress("DEPRECATION") session.api.artistApi.getAlbumArtists(
                 userId = userId,
                 parentId = query.libraryId,
                 fields = listOf(ItemFields.CHILD_COUNT, ItemFields.SORT_NAME, ItemFields.DATE_CREATED),

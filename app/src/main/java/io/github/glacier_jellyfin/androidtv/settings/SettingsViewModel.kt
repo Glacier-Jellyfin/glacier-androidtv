@@ -34,13 +34,8 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
 import io.github.glacier_jellyfin.androidtv.diagnostics.Diagnostics
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogServer
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogShare
-import io.github.glacier_jellyfin.androidtv.navigation.FavoritesRoute
-import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
-import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
-import io.github.glacier_jellyfin.androidtv.navigation.LiveTvRoute
-import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
-import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
+import io.github.glacier_jellyfin.androidtv.navigation.navEvent
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PinGate
 import io.github.glacier_jellyfin.androidtv.ui.PinReason
@@ -287,22 +282,8 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun onNav(target: NavTarget) {
-        viewModelScope.launch {
-            when (target) {
-                NavTarget.Settings -> Unit
-                NavTarget.Home -> _events.send(UiEvent.Navigate(HomeRoute, clearBackStack = true))
-                NavTarget.Search -> _events.send(UiEvent.Navigate(SearchRoute()))
-                is NavTarget.Library -> _events.send(UiEvent.Navigate(LibraryRoute(target.kind.name)))
-                NavTarget.Favorites -> _events.send(UiEvent.Navigate(FavoritesRoute))
-                NavTarget.NowPlaying -> _events.send(UiEvent.Navigate(MusicRoute()))
-                NavTarget.LiveTv -> _events.send(UiEvent.Navigate(LiveTvRoute))
-                NavTarget.Profile -> {
-                    val serverId = sessions.session.value?.server?.id ?: return@launch
-                    sessions.leave()
-                    _events.send(UiEvent.Navigate(ProfilesRoute(serverId), clearBackStack = true))
-                }
-            }
-        }
+        val event = sessions.navEvent(target, current = NavTarget.Settings) ?: return
+        viewModelScope.launch { _events.send(event) }
     }
 
     fun sendLog() {

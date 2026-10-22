@@ -28,6 +28,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.YouTubeTrailer
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.PlaybackSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
 import io.github.glacier_jellyfin.androidtv.music.MusicController
@@ -191,7 +192,7 @@ class TrailerViewModel @Inject constructor(
                 }
                 val details = repository.details(itemId)
                 val local = if (details.trailers.localCount > 0) {
-                    runCatching { repository.localTrailers(itemId) }
+                    runSuspendCatching { repository.localTrailers(itemId) }
                         .onFailure { Log.w(TAG, "Loading local trailers failed", it) }
                         .getOrDefault(emptyList())
                 } else {
@@ -395,7 +396,7 @@ class TrailerViewModel @Inject constructor(
         countdown?.cancel()
         viewModelScope.launch {
             val target = when (item.kind) {
-                ItemKind.Series -> runCatching { repository.nextEpisode(item.id) }.getOrNull()?.id
+                ItemKind.Series -> runSuspendCatching { repository.nextEpisode(item.id) }.getOrNull()?.id
                 else -> item.id
             }
             if (target == null) {
@@ -414,7 +415,7 @@ class TrailerViewModel @Inject constructor(
         val favorite = !details.item.isFavorite
         setFavorite(favorite)
         viewModelScope.launch {
-            runCatching { repository.setFavorite(details.item.id, favorite) }
+            runSuspendCatching { repository.setFavorite(details.item.id, favorite) }
                 .onSuccess { _events.send(UiEvent.Toast(if (favorite) R.string.favorite_added else R.string.favorite_removed)) }
                 .onFailure { setFavorite(!favorite) }
         }

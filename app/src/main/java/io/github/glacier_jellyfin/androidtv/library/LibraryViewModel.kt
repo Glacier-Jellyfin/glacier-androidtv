@@ -20,18 +20,14 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
 import io.github.glacier_jellyfin.androidtv.core.data.media.LoadProgress
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicRepository
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.music.MusicActions
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.music.MusicTarget
-import io.github.glacier_jellyfin.androidtv.navigation.FavoritesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
-import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
-import io.github.glacier_jellyfin.androidtv.navigation.LiveTvRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
-import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
-import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
-import io.github.glacier_jellyfin.androidtv.navigation.SettingsRoute
+import io.github.glacier_jellyfin.androidtv.navigation.navEvent
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.CancellationException
@@ -119,7 +115,7 @@ class LibraryViewModel @Inject constructor(
     init {
         // The kept sort comes from the settings file, which may not be read yet right after start.
         viewModelScope.launch {
-            val kept = runCatching { settings.current().librarySorts }
+            val kept = runSuspendCatching { settings.current().librarySorts }
                 .onFailure { Log.w(TAG, "Reading the library sort failed", it) }
                 .getOrNull()
             if (kept != null) _state.update { it.copy(query = it.query.withKeptSort(kept)) }
@@ -215,7 +211,7 @@ class LibraryViewModel @Inject constructor(
         val query = _state.value.query
         val choice = LibrarySortChoice(query.sort, query.descending)
         viewModelScope.launch {
-            runCatching { settings.update { it.copy(librarySorts = it.librarySorts + (query.sortKey to choice)) } }
+            runSuspendCatching { settings.update { it.copy(librarySorts = it.librarySorts + (query.sortKey to choice)) } }
                 .onFailure { Log.w(TAG, "Saving the library sort failed", it) }
         }
     }
@@ -228,7 +224,7 @@ class LibraryViewModel @Inject constructor(
         val current = _state.value
         if (current.total == null) return
         viewModelScope.launch {
-            val index = runCatching { repository.indexOfLetter(current.query, letter) }
+            val index = runSuspendCatching { repository.indexOfLetter(current.query, letter) }
                 .onFailure { Log.w(TAG, "A-Z jump failed", it) }
                 .getOrNull() ?: return@launch
             val state = _state.value
@@ -236,7 +232,7 @@ class LibraryViewModel @Inject constructor(
             if (index >= state.offset && index < end + PAGE_SIZE) {
                 loadUpTo(index + PAGE_SIZE / 2)?.join()
             } else {
-                val start = runCatching { repository.rowStart(state.query, (index - JUMP_ROWS_BEFORE * columns).coerceAtLeast(0), columns) }
+                val start = runSuspendCatching { repository.rowStart(state.query, (index - JUMP_ROWS_BEFORE * columns).coerceAtLeast(0), columns) }
                     .getOrElse { return@launch }
                 loadJob?.cancel()
                 refreshJob?.cancel()
@@ -294,25 +290,8 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun onNav(target: NavTarget) {
-        val route: Any = when (target) {
-            NavTarget.Home -> {
-                viewModelScope.launch { _events.send(UiEvent.Navigate(HomeRoute, clearBackStack = true)) }
-                return
-            }
-            NavTarget.Search -> SearchRoute()
-            NavTarget.Settings -> SettingsRoute
-            NavTarget.Favorites -> FavoritesRoute
-            NavTarget.NowPlaying -> MusicRoute()
-            NavTarget.LiveTv -> LiveTvRoute
-            is NavTarget.Library -> if (target.kind == _state.value.query.kind && route.libraryId == null && route.genreId == null) return else LibraryRoute(target.kind.name)
-            NavTarget.Profile -> {
-                val serverId = sessions.session.value?.server?.id ?: return
-                sessions.leave()
-                viewModelScope.launch { _events.send(UiEvent.Navigate(ProfilesRoute(serverId), clearBackStack = true)) }
-                return
-            }
-        }
-        viewModelScope.launch { _events.send(UiEvent.Navigate(route)) }
+        val event = sessions.navEvent(target, current = NavTarget.Library(_state.value.query.kind).takeIf { route.libraryId == null && route.genreId == null }) ?: return
+        viewModelScope.launch { _events.send(event) }
     }
 
     private fun update(change: (LibraryQuery) -> LibraryQuery) {
@@ -328,7 +307,7 @@ class LibraryViewModel @Inject constructor(
         val query = _state.value.query
         if (query.railed) {
             lettersJob = viewModelScope.launch {
-                runCatching { repository.availableLetters(query) }
+                runSuspendCatching { repository.availableLetters(query) }
                     .onSuccess { letters -> _state.update { if (it.query == query) it.copy(letters = letters) else it } }
                     .onFailure { Log.w(TAG, "Loading A-Z letters failed", it) }
             }

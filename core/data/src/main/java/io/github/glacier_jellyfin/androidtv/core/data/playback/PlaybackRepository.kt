@@ -14,21 +14,23 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleMode
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.DeviceProfiles
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.HlsSegments
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.MediaCapabilityDetector
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.audioApi
 import org.jellyfin.sdk.api.client.extensions.mediaInfoApi
 import org.jellyfin.sdk.api.client.extensions.mediaSegmentApi
 import org.jellyfin.sdk.api.client.extensions.sessionApi
 import org.jellyfin.sdk.api.client.extensions.userDataApi
 import org.jellyfin.sdk.api.client.extensions.videoApi
-import org.jellyfin.sdk.api.client.util.AuthorizationHeaderBuilder
 import org.jellyfin.sdk.model.api.HardwareAccelerationType
 import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaStreamProtocol
@@ -37,6 +39,7 @@ import org.jellyfin.sdk.model.api.MediaStreamType
 import org.jellyfin.sdk.model.api.SubtitleDeliveryMethod
 import org.jellyfin.sdk.model.api.PlayMethod
 import org.jellyfin.sdk.model.api.PlaybackInfoDto
+import org.jellyfin.sdk.model.api.PlaybackInfoResponse
 import org.jellyfin.sdk.model.api.PlaybackOrder
 import org.jellyfin.sdk.model.api.PlaybackProgressInfo
 import org.jellyfin.sdk.model.api.PlaybackStartInfo
@@ -253,14 +256,21 @@ class PlaybackRepository @Inject constructor(
         // The bitrate setting only caps transcodes (design): ask without it first, so a
         // file above the cap still plays directly, and again with it when the server transcodes.
         var info = playbackInfo(AUTO_BITRATE)
+        // Each answer opens a channel's live stream once more. The answer left behind closes its own
+        // after the new one is open, so the tuner is not given up in between.
+        suspend fun askAgain(bitrate: Int) {
+            val unused = info
+            info = playbackInfo(bitrate)
+            closeLiveStreams(api, unused)
+        }
         // Several versions where the first is not named after the item: ask without the source.
         if (sourceId != null && info.errorCode == null && info.mediaSources.isEmpty()) {
             sourceId = null
-            info = playbackInfo(AUTO_BITRATE)
+            askAgain(AUTO_BITRATE)
         }
         val cap = playback.maxBitrate.bitsPerSecond
         if (cap != null && info.errorCode == null && info.mediaSources.firstOrNull()?.supportsDirectPlay == false) {
-            info = playbackInfo(cap)
+            askAgain(cap)
         }
         info.errorCode?.let { error("Server refused playback: $it") }
         val source = info.mediaSources.firstOrNull() ?: error("Server returned no media source")
@@ -273,7 +283,11 @@ class PlaybackRepository @Inject constructor(
             val main = mainInsteadOfExtra(serverPick, streams.filter { it.type == MediaStreamType.AUDIO }.map { it.toTrack() })
             if (main != null && main != serverPick) {
                 Log.i(TAG, "Audio of $itemId: main track $main instead of extra track $serverPick")
-                return@withContext open(itemId, startMs, main, subtitleIndex, segments, versionId)
+                return@withContext try {
+                    open(itemId, startMs, main, subtitleIndex, segments, versionId)
+                } finally {
+                    closeLiveStreams(api, info)
+                }
             }
         }
         // The server's own pick may be a forced track that shows next to nothing: ask again with the full one.
@@ -285,7 +299,11 @@ class PlaybackRepository @Inject constructor(
             val full = fullInsteadOfForced(serverPick, subtitles, audio?.toTrack(), onlyForced)
             if (full != null && full != serverPick) {
                 Log.i(TAG, "Subtitles of $itemId: full track $full instead of forced track $serverPick")
-                return@withContext open(itemId, startMs, audioIndex, full, segments, versionId)
+                return@withContext try {
+                    open(itemId, startMs, audioIndex, full, segments, versionId)
+                } finally {
+                    closeLiveStreams(api, info)
+                }
             }
         }
         val (url, method) = when {
@@ -298,7 +316,10 @@ class PlaybackRepository @Inject constructor(
             ) to PlaybackMethod.DirectPlay
             source.transcodingUrl != null -> (baseUrl + source.transcodingUrl) to
                 if (source.supportsDirectStream) PlaybackMethod.DirectStream else PlaybackMethod.Transcode
-            else -> error("Server offered neither direct play nor a transcode")
+            else -> {
+                closeLiveStreams(api, info)
+                error("Server offered neither direct play nor a transcode")
+            }
         }
         val reasons = source.transcodingUrl?.takeIf { method != PlaybackMethod.DirectPlay }?.let { TRANSCODE_REASONS.find(it)?.groupValues?.get(1) }
         // The tracks asked for, and for a stream the server builds the audio it was told to put in.
@@ -320,7 +341,7 @@ class PlaybackRepository @Inject constructor(
                 source.transcodingContainer.equals("mp4", ignoreCase = true),
             liveStreamId = source.liveStreamId,
             method = method,
-            headers = mapOf("Authorization" to authorization(session)),
+            headers = mapOf("Authorization" to session.authorization()),
             // A stream carries the audio the server put in it, whatever was asked for.
             audioIndex = streamAudio?.toIntOrNull() ?: audioIndex ?: source.defaultAudioStreamIndex,
             // The server's default follows the user's subtitle mode; -1 means off.
@@ -352,7 +373,7 @@ class PlaybackRepository @Inject constructor(
                         height = it.height,
                         bitDepth = it.bitDepth,
                         frameRate = it.realFrameRate ?: it.averageFrameRate,
-                        rangeType = it.videoRangeType?.serialName,
+                        rangeType = it.videoRangeType.serialName,
                         dolbyVisionProfile = it.dvProfile,
                     )
                 },
@@ -370,7 +391,7 @@ class PlaybackRepository @Inject constructor(
      */
     suspend fun transcodeStatus(source: PlaybackSource): TranscodeStatus? = withContext(Dispatchers.IO) {
         val api = sessions.session.value?.api ?: return@withContext null
-        val info = runCatching { api.sessionApi.getSessions(deviceId = api.deviceInfo.id).content }
+        val info = runSuspendCatching { api.sessionApi.getSessions(deviceId = api.deviceInfo.id).content }
             .onFailure { Log.w(TAG, "Loading the transcode status failed", it) }
             .getOrNull()
             ?.firstOrNull { it.nowPlayingItem?.id == source.itemId }
@@ -426,7 +447,7 @@ class PlaybackRepository @Inject constructor(
             url = url,
             isHls = !direct,
             method = if (direct) PlaybackMethod.DirectPlay else PlaybackMethod.Transcode,
-            headers = mapOf("Authorization" to authorization(session)),
+            headers = mapOf("Authorization" to session.authorization()),
             audioIndex = null,
             subtitleIndex = null,
             audioTracks = emptyList(),
@@ -437,7 +458,7 @@ class PlaybackRepository @Inject constructor(
     /** Intro, credits and the like; empty when the server has none or cannot tell (no segment provider). */
     suspend fun segments(itemId: UUID): List<MediaSegment> = withContext(Dispatchers.IO) {
         val api = requireSession().api
-        runCatching { api.mediaSegmentApi.getItemSegments(itemId).content.items }
+        runSuspendCatching { api.mediaSegmentApi.getItemSegments(itemId).content.items }
             .onFailure { Log.w(TAG, "Loading media segments failed", it) }
             .getOrDefault(emptyList())
             .mapNotNull { dto ->
@@ -513,25 +534,26 @@ class PlaybackRepository @Inject constructor(
             if (watched) userDataApi.markPlayedItem(itemId = source.itemId)
         }
 
-    private fun report(what: String, onDone: () -> Unit = {}, call: suspend org.jellyfin.sdk.api.client.ApiClient.() -> Unit) {
+    private fun report(what: String, onDone: () -> Unit = {}, call: suspend ApiClient.() -> Unit) {
         val api = sessions.session.value?.api ?: return
         reportScope.launch {
             // Reporting is best effort: playback goes on if the server misses one.
-            runCatching { api.call() }
+            runSuspendCatching { api.call() }
                 .onSuccess { onDone() }
                 .onFailure { Log.w(TAG, "Playback report '$what' failed", it) }
         }
     }
 
-    private fun authorization(session: Session): String {
-        val api = session.api
-        return AuthorizationHeaderBuilder.buildHeader(
-            clientName = api.clientInfo.name,
-            clientVersion = api.clientInfo.version,
-            deviceId = api.deviceInfo.id,
-            deviceName = api.deviceInfo.name,
-            accessToken = api.accessToken,
-        )
+    /** Gives back the live streams [info] opened: on the server, each answer is one more user of a channel's tuner. */
+    private suspend fun closeLiveStreams(api: ApiClient, info: PlaybackInfoResponse) {
+        val ids = info.mediaSources.mapNotNullTo(HashSet()) { it.liveStreamId }
+        // Also when playback was cancelled meanwhile: the tuner stays taken otherwise.
+        withContext(NonCancellable) {
+            for (id in ids) {
+                runCatching { api.mediaInfoApi.closeLiveStream(id) }
+                    .onFailure { Log.w(TAG, "Closing an unused live stream failed", it) }
+            }
+        }
     }
 
     private fun PlaybackMethod.toApi() = when (this) {
@@ -549,7 +571,7 @@ class PlaybackRepository @Inject constructor(
         type.name.lowercase(),
         codec,
         profile,
-        videoRangeType?.name,
+        videoRangeType.name,
         width?.let { "${it}x$height" },
         channels?.let { "${it}ch" },
         language,

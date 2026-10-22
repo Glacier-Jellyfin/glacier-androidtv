@@ -18,8 +18,15 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### New
+- Live TV can list the channels by channel number or by channel name, up or down. Pick the order with the sort button next to Favorites. Picking it again turns the direction round. The guide and switching channels in the player follow the same order
+
 ### Improved
 - The release notes of an update in Settings › System are split into New, Improved and Fixed, like in the update dialog
+
+### Fixed
+- Live TV lists channels without a number after the numbered ones, not before them
+- Live TV no longer keeps a tuner busy on the server after a channel started. This happened with a bitrate limit or when Glacier picked the main audio track of a channel
 
 ## [0.6.0] - 2026-10-21
 

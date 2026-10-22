@@ -2,6 +2,7 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -34,7 +35,7 @@ class FavoritesRepository @Inject constructor(
         val session = checkNotNull(sessions.session.value) { "No profile is signed in" }
         val mapper = MediaMapper(session.api)
         coroutineScope {
-            val songs = async { runCatching { songs(session, mapper) }.getOrDefault(emptyList()) }
+            val songs = async { runSuspendCatching { songs(session, mapper) }.getOrDefault(emptyList()) }
             val items = ageFilter.screen(titles(session).map(mapper::item))
             fun of(kind: ItemKind) = items.filter { it.kind == kind }
             Favorites(

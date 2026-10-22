@@ -68,6 +68,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PersonRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
@@ -186,7 +187,7 @@ class PersonViewModel @Inject constructor(
         val favorite = !person.isFavorite
         _state.update { it.copy(person = person.copy(isFavorite = favorite)) }
         viewModelScope.launch {
-            runCatching { repository.setFavorite(id, favorite) }
+            runSuspendCatching { repository.setFavorite(id, favorite) }
                 .onSuccess { _events.send(UiEvent.Toast(if (favorite) R.string.favorite_added else R.string.favorite_removed)) }
                 .onFailure { _state.update { it.copy(person = it.person?.copy(isFavorite = !favorite)) } }
         }

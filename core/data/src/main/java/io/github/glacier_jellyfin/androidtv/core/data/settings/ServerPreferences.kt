@@ -128,7 +128,7 @@ class ServerPreferencesRepository @Inject constructor(
                 .filter { !it.twoLetterIsoLanguageName.isNullOrBlank() }
                 .mapNotNull { culture ->
                     val code = culture.threeLetterIsoLanguageName ?: return@mapNotNull null
-                    Language(code, Languages.name(code) ?: culture.displayName ?: code)
+                    Language(code, Languages.name(code) ?: culture.displayName)
                 }
                 .distinctBy { it.code }
                 .sortedWith(compareBy(Collator.getInstance()) { it.name })

@@ -2,6 +2,7 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.settings.ChannelSort
 import io.github.glacier_jellyfin.androidtv.core.data.settings.LiveTvSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import kotlinx.coroutines.Dispatchers
@@ -161,6 +162,38 @@ fun channelByNumber(channels: List<LiveChannel>, number: String): LiveChannel? =
     channels.firstOrNull { it.number == number }
         ?: number.trimStart('0').takeIf { it.isNotEmpty() }?.let { trimmed -> channels.firstOrNull { it.number?.trimStart('0') == trimmed } }
 
+/**
+ * [channels] in [sort] order. By number: numbered channels first, a number like "5.1" after "5"
+ * and "10" after "9"; channels without a number follow by name. The server puts those first.
+ * [descending] turns both round, but channels without a number stay at the end.
+ */
+fun sortedChannels(channels: List<LiveChannel>, sort: ChannelSort, descending: Boolean = false): List<LiveChannel> {
+    fun Comparator<LiveChannel>.directed() = if (descending) reversed() else this
+    val byName = compareBy(NameOrder) { channel: LiveChannel -> channel.name }.directed()
+    return when (sort) {
+        ChannelSort.Number -> channels.sortedWith(
+            compareBy<LiveChannel> { it.number == null }
+                .then(Comparator<LiveChannel> { a, b -> compareChannelNumbers(a.number.orEmpty(), b.number.orEmpty()) }.directed())
+                .then(byName),
+        )
+        ChannelSort.Name -> channels.sortedWith(byName)
+    }
+}
+
+/** Part by part as numbers: "2.10" after "2.9". */
+private fun compareChannelNumbers(a: String, b: String): Int {
+    val left = NUMBER_PARTS.findAll(a).map { it.value.trimStart('0') }.toList()
+    val right = NUMBER_PARTS.findAll(b).map { it.value.trimStart('0') }.toList()
+    for (i in 0 until minOf(left.size, right.size)) {
+        // Without leading zeros, a longer run of digits is the larger number, however long.
+        val byValue = compareValuesBy(left[i], right[i], { it.length }, { it })
+        if (byValue != 0) return byValue
+    }
+    return left.size.compareTo(right.size).takeIf { it != 0 } ?: a.compareTo(b)
+}
+
+private val NUMBER_PARTS = Regex("\\d+")
+
 /** Live TV through the server: its channels (as the tuners and the guide set them up) and their programmes. */
 @Singleton
 class LiveTvRepository @Inject constructor(
@@ -168,8 +201,13 @@ class LiveTvRepository @Inject constructor(
     private val settings: SettingsRepository,
 ) {
 
-    /** Which channels are radio, as this profile found out or chose; see [LiveTvSettings]. */
+    /** Which channels are radio, as this profile found out or chose, and their order; see [LiveTvSettings]. */
     val radioMarks: Flow<LiveTvSettings> = settings.settings.map { it.liveTv }.distinctUntilChanged()
+
+    /** Orders the channels everywhere: list, guide and switching channels in the player. */
+    suspend fun setSort(sort: ChannelSort, descending: Boolean) {
+        settings.update { it.copy(liveTv = it.liveTv.copy(sort = sort, descending = descending)) }
+    }
 
     /** Moves [channelId] to the radio stations, or back to the TV channels. */
     suspend fun moveChannel(channelId: UUID, toRadio: Boolean) {
@@ -191,7 +229,7 @@ class LiveTvRepository @Inject constructor(
         _lastWatched.value = WatchedChannel(channelId, System.currentTimeMillis())
     }
 
-    /** All channels in the server's order (by number), TV and radio, each with the programme on air now. */
+    /** All channels in the profile's order (see [sortedChannels]), TV and radio, each with the programme on air now. */
     suspend fun channels(): List<LiveChannel> = withContext(Dispatchers.IO) {
         val session = requireSession()
         val api = session.api
@@ -204,7 +242,7 @@ class LiveTvRepository @Inject constructor(
             enableUserData = true,
             addCurrentProgram = true,
             fields = listOf(ItemFields.OVERVIEW),
-        ).content.items.map { it.toChannel(api, marks) }
+        ).content.items.map { it.toChannel(api, marks) }.let { sortedChannels(it, marks.sort, marks.descending) }
     }
 
     /** The programmes of [channelId] from what airs now to [hours] ahead. */

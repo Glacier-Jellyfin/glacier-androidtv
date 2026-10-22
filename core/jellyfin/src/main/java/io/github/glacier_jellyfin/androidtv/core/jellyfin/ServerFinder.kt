@@ -53,11 +53,11 @@ class ServerFinder @Inject constructor(
 
     private suspend fun probeBlocking(address: String): DiscoveredServer? {
         val api = jellyfin.createApi(baseUrl = address)
-        val (info, latency) = runCatching {
+        val (info, latency) = runSuspendCatching {
             measureTimedValue { api.systemApi.getPublicSystemInfo().content }
         }.getOrNull() ?: return null
         val server = info.toServerInfo(address) ?: return null
-        val users = runCatching { api.userApi.getPublicUsers().content.size }.getOrNull()
+        val users = runSuspendCatching { api.userApi.getPublicUsers().content.size }.getOrNull()
         return DiscoveredServer(server, users, latency.inWholeMilliseconds)
     }
 

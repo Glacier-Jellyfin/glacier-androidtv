@@ -13,16 +13,10 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.SearchRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrStatus
-import io.github.glacier_jellyfin.androidtv.navigation.FavoritesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
-import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
-import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
-import io.github.glacier_jellyfin.androidtv.navigation.LiveTvRoute
-import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
-import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SeerrRoute
-import io.github.glacier_jellyfin.androidtv.navigation.SettingsRoute
+import io.github.glacier_jellyfin.androidtv.navigation.navEvent
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.CancellationException
@@ -139,20 +133,8 @@ class SearchViewModel @Inject constructor(
     fun open(item: SeerrItem) = navigate(SeerrRoute(item.type.name, item.tmdbId))
 
     fun onNav(target: NavTarget) {
-        when (target) {
-            NavTarget.Search -> Unit
-            NavTarget.Home -> viewModelScope.launch { _events.send(UiEvent.Navigate(HomeRoute, clearBackStack = true)) }
-            NavTarget.Settings -> navigate(SettingsRoute)
-            is NavTarget.Library -> navigate(LibraryRoute(target.kind.name))
-            NavTarget.Favorites -> navigate(FavoritesRoute)
-            NavTarget.NowPlaying -> navigate(MusicRoute())
-            NavTarget.LiveTv -> navigate(LiveTvRoute)
-            NavTarget.Profile -> {
-                val serverId = sessions.session.value?.server?.id ?: return
-                sessions.leave()
-                viewModelScope.launch { _events.send(UiEvent.Navigate(ProfilesRoute(serverId), clearBackStack = true)) }
-            }
-        }
+        val event = sessions.navEvent(target, current = NavTarget.Search) ?: return
+        viewModelScope.launch { _events.send(event) }
     }
 
     private fun navigate(route: Any) {

@@ -39,6 +39,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -56,12 +59,12 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
-import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveChannel
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveProgram
 import io.github.glacier_jellyfin.androidtv.core.data.media.nowAndNext
+import io.github.glacier_jellyfin.androidtv.core.data.settings.ChannelSort
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
@@ -77,6 +80,8 @@ import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
 import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
+import io.github.glacier_jellyfin.androidtv.ui.SortButton
+import io.github.glacier_jellyfin.androidtv.ui.SortMenu
 import io.github.glacier_jellyfin.androidtv.ui.ToggleChip
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
@@ -119,6 +124,29 @@ fun LiveTvScreen(
     val activeChip = remember { FocusRequester() }
     BackHandler(enabled = contentFocused && state.sheet == null) {
         runCatching { activeChip.requestFocus() }.onFailure { runCatching { chipsFocus.requestFocus() } }
+    }
+
+    // The sort menu takes the focus with it when it closes; it goes back to the sort button.
+    // A new order shows from the top, so Down lands on the first channel.
+    var sortMenuOpen by remember { mutableStateOf(false) }
+    var sortAnchor by remember { mutableStateOf<Rect?>(null) }
+    val sortButtonFocus = remember { FocusRequester() }
+    var sortMenuWasOpen by remember { mutableStateOf(false) }
+    var sortPicked by remember { mutableStateOf(false) }
+    LaunchedEffect(sortMenuOpen) {
+        if (sortMenuOpen) {
+            sortMenuWasOpen = true
+            return@LaunchedEffect
+        }
+        if (!sortMenuWasOpen) return@LaunchedEffect
+        sortMenuWasOpen = false
+        withFrameNanos { }
+        runCatching { sortButtonFocus.requestFocus() }
+        if (sortPicked) {
+            sortPicked = false
+            state.shown?.firstOrNull()?.let { lastFocus = it.id.toString() }
+            if (state.view != LiveTvView.Guide) listState.scrollToItem(0)
+        }
     }
 
     // The preview's tuner is freed while the page is away (player, other app), and comes back with it.
@@ -254,6 +282,14 @@ fun LiveTvScreen(
                     Spacer(Modifier.weight(1f))
                     // Recordings are not listed by channel: the channel filter has nothing to do there.
                     if (state.view != LiveTvView.Recordings) {
+                        // Down from the right goes to the top channel on screen: spatial search would
+                        // pick its heart, the nearest thing below, and OK there changes a favorite.
+                        val downIntoList = Modifier.focusProperties {
+                            down = when {
+                                state.view == LiveTvView.Guide -> gridFocus
+                                else -> shown?.getOrNull(listState.firstVisibleItemIndex)?.let { requesters[it.id.toString()] } ?: FocusRequester.Default
+                            }
+                        }
                         ToggleChip(
                             label = stringResource(R.string.livetv_favorites),
                             on = state.favoritesOnly,
@@ -263,6 +299,14 @@ fun LiveTvScreen(
                                 toggled = true
                                 viewModel.setFavoritesOnly(!state.favoritesOnly)
                             },
+                            modifier = downIntoList,
+                        )
+                        SortButton(
+                            label = stringResource(state.sort.label),
+                            open = sortMenuOpen,
+                            descending = state.descending,
+                            onClick = { sortMenuOpen = !sortMenuOpen },
+                            modifier = downIntoList.focusRequester(sortButtonFocus).onGloballyPositioned { sortAnchor = it.boundsInRoot() },
                         )
                     }
                 }
@@ -369,9 +413,32 @@ fun LiveTvScreen(
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp),
         )
 
+        val anchor = sortAnchor
+        if (sortMenuOpen && anchor != null) {
+            SortMenu(
+                sorts = ChannelSort.entries,
+                current = state.sort,
+                label = { stringResource(it.label) },
+                anchor = anchor,
+                onSort = { sort ->
+                    viewModel.setSort(sort)
+                    sortPicked = true
+                    sortMenuOpen = false
+                },
+                onDismiss = { sortMenuOpen = false },
+                descending = state.descending,
+            )
+        }
+
         state.sheet?.let { LiveTvSheetHost(it, state.nowMs, state.all, viewModel) }
     }
 }
+
+private val ChannelSort.label: Int
+    get() = when (this) {
+        ChannelSort.Number -> R.string.livetv_sort_number
+        ChannelSort.Name -> R.string.livetv_sort_name
+    }
 
 /**
  * A channel or station: OK plays it, holding OK opens its options, which the

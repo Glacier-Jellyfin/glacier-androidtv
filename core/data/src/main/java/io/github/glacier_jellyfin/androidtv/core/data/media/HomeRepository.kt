@@ -5,6 +5,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightSource
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightType
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -71,7 +72,7 @@ class HomeRepository @Inject constructor(
         val librariesAsync = async { libraries(session, mapper) }
         val resumeAsync = async { resume(session) }
         val nextUpAsync = async { nextUp(session) }
-        val favoritesAsync = async { runCatching { favorites(session, mapper) }.getOrDefault(emptyList()) }
+        val favoritesAsync = async { runSuspendCatching { favorites(session, mapper) }.getOrDefault(emptyList()) }
         val excludesAsync = async {
             session.api.userApi.getCurrentUser().content.configuration?.latestItemsExcludes.orEmpty().toSet()
         }
@@ -88,10 +89,10 @@ class HomeRepository @Inject constructor(
             .filter { (_, items) -> items.isNotEmpty() }
 
         val hasMusic = libraries.any { it.kind == LibraryKind.Music }
-        val recentAlbums = if (hasMusic) runCatching { recentAlbums(session, mapper) }.getOrDefault(emptyList()) else emptyList()
-        val favoriteSongs = if (hasMusic) runCatching { favoriteSongs(session, mapper) }.getOrDefault(emptyList()) else emptyList()
+        val recentAlbums = if (hasMusic) runSuspendCatching { recentAlbums(session, mapper) }.getOrDefault(emptyList()) else emptyList()
+        val favoriteSongs = if (hasMusic) runSuspendCatching { favoriteSongs(session, mapper) }.getOrDefault(emptyList()) else emptyList()
         // Set by libraries(), so known here.
-        val liveChannels = if (_liveTv.value) runCatching { liveChannels() }.getOrDefault(emptyList()) else emptyList()
+        val liveChannels = if (_liveTv.value) runSuspendCatching { liveChannels() }.getOrDefault(emptyList()) else emptyList()
 
         HomeContent(
             libraries = libraries,
@@ -219,7 +220,7 @@ class HomeRepository @Inject constructor(
             .awaitAll()
     }
 
-    private suspend fun count(session: Session, libraryId: UUID, kind: LibraryKind): Int? = runCatching {
+    private suspend fun count(session: Session, libraryId: UUID, kind: LibraryKind): Int? = runSuspendCatching {
         session.api.libraryApi.getItems(
             userId = session.userId,
             parentId = libraryId,
