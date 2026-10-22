@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -155,7 +156,6 @@ fun ProfilesScreen(
 
 @Composable
 private fun ProfileTile(card: ProfileCard, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
-    val accent = LocalAccent.current
     val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
     var focused by remember { mutableStateOf(false) }
     Column(
@@ -163,56 +163,60 @@ private fun ProfileTile(card: ProfileCard, onClick: () -> Unit, focusRequester: 
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
+        val profileAccent = Accent.valueOf(card.accent.name)
         // Only the avatar is the focus target; the name below follows its focus.
-        GlacierClickable(
-            onClick = onClick,
-            shape = shape,
-            modifier = Modifier
-                .onFocusChanged { focused = it.hasFocus }
-                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
-        ) {
-            Box(
-                Modifier
-                    .size(168.dp)
-                    .clip(shape)
-                    // No photo: the surface comes from the profile's own accent, not from an image.
-                    .background(Brush.linearGradient(listOf(Accent.valueOf(card.accent.name).deep, GlacierColors.Void))),
-                contentAlignment = Alignment.Center,
+        // Focus ring and name show the profile's own accent, like its surface.
+        CompositionLocalProvider(LocalAccent provides profileAccent) {
+            GlacierClickable(
+                onClick = onClick,
+                shape = shape,
+                modifier = Modifier
+                    .onFocusChanged { focused = it.hasFocus }
+                    .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
             ) {
-                // The initial stands in until the profile picture has loaded, or when there is none.
-                var imageLoaded by remember(card.imageUrl) { mutableStateOf(false) }
-                if (!imageLoaded) {
-                    Text(
-                        card.profile.name.take(1).uppercase(),
-                        style = GlacierText.display(64).copy(shadow = Shadow(Color.Black.copy(alpha = 0.5f), blurRadius = 18f)),
-                        color = GlacierColors.Ice,
-                    )
-                }
-                if (card.imageUrl != null) {
-                    AsyncImage(
-                        model = card.imageUrl,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        onSuccess = { imageLoaded = true },
-                        modifier = Modifier.size(168.dp),
-                    )
-                }
-                if (card.profile.pinLocked) {
-                    Box(
-                        Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(12.dp)
-                            .size(36.dp)
-                            .clip(PillShape)
-                            .background(GlacierColors.GlassFill2)
-                            .border(1.dp, GlacierColors.GlassBorder2, PillShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(GlacierIcons.Lock, contentDescription = null, tint = GlacierColors.Ice, modifier = Modifier.size(18.dp))
+                Box(
+                    Modifier
+                        .size(168.dp)
+                        .clip(shape)
+                        // No photo: the surface comes from the profile's own accent, not from an image.
+                        .background(Brush.linearGradient(listOf(profileAccent.deep, GlacierColors.Void))),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    // The initial stands in until the profile picture has loaded, or when there is none.
+                    var imageLoaded by remember(card.imageUrl) { mutableStateOf(false) }
+                    if (!imageLoaded) {
+                        Text(
+                            card.profile.name.take(1).uppercase(),
+                            style = GlacierText.display(64).copy(shadow = Shadow(Color.Black.copy(alpha = 0.5f), blurRadius = 18f)),
+                            color = GlacierColors.Ice,
+                        )
+                    }
+                    if (card.imageUrl != null) {
+                        AsyncImage(
+                            model = card.imageUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            onSuccess = { imageLoaded = true },
+                            modifier = Modifier.size(168.dp),
+                        )
+                    }
+                    if (card.profile.pinLocked) {
+                        Box(
+                            Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(12.dp)
+                                .size(36.dp)
+                                .clip(PillShape)
+                                .background(GlacierColors.GlassFill2)
+                                .border(1.dp, GlacierColors.GlassBorder2, PillShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(GlacierIcons.Lock, contentDescription = null, tint = GlacierColors.Ice, modifier = Modifier.size(18.dp))
+                        }
                     }
                 }
             }
         }
-        Text(card.profile.name, style = GlacierText.body(21, FontWeight.SemiBold), color = if (focused) accent.main else GlacierColors.Ice, maxLines = 1)
+        Text(card.profile.name, style = GlacierText.body(21, FontWeight.SemiBold), color = if (focused) profileAccent.main else GlacierColors.Ice, maxLines = 1)
     }
 }

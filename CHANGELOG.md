@@ -18,6 +18,9 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### Improved
+- On the profile screen the focus ring and the name of a profile show that profile's accent colour
+
 ### Fixed
 - After a long time in the background the app could no longer load anything, and Refresh did not help either. It now starts over with the profile and loads normally
 
