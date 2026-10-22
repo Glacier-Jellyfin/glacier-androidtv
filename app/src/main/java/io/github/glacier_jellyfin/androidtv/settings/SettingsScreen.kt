@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.focusGroup
@@ -261,6 +262,12 @@ fun SettingsScreen(
     val focusManager = LocalFocusManager.current
     // Read right after a focus move, so a plain holder rather than state.
     val cardsFocus = remember { object { var value = false } }
+    // Back among the cards first goes to the open category, from there to the navigation bar.
+    val navFocus = remember { FocusRequester() }
+    var inCards by remember { mutableStateOf(false) }
+    var inCategories by remember { mutableStateOf(false) }
+    BackHandler(enabled = inCards) { runCatching { categoryFocus.getValue(state.category).requestFocus() } }
+    BackHandler(enabled = inCategories) { runCatching { navFocus.requestFocus() } }
     var initialFocusDone by rememberSaveable { mutableStateOf(false) }
     // Closing the language list returns to the button that opened it.
     val languageFocus = remember { FocusRequester() }
@@ -333,6 +340,7 @@ fun SettingsScreen(
             Column(
                 Modifier
                     .width(420.dp)
+                    .onFocusChanged { inCategories = it.hasFocus }
                     .onKeyEvent { event ->
                         if (event.type != KeyEventType.KeyDown || event.key != Key.DirectionRight) return@onKeyEvent false
                         scope.launch {
@@ -361,7 +369,10 @@ fun SettingsScreen(
             Column(
                 Modifier
                     .weight(1f)
-                    .onFocusChanged { cardsFocus.value = it.hasFocus }
+                    .onFocusChanged {
+                        cardsFocus.value = it.hasFocus
+                        inCards = it.hasFocus
+                    }
                     // Left out of the cards always lands on the open category, not the nearest one. Focus
                     // properties cannot redirect it reliably here, so the move is made by hand and corrected.
                     .onKeyEvent { event ->
@@ -425,7 +436,7 @@ fun SettingsScreen(
             userName = state.userName,
             onSelect = viewModel::onNav,
             down = categoryFocus.getValue(state.category),
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp).focusRequester(navFocus),
         )
 
         when (openList) {

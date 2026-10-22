@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,6 +33,7 @@ import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.shadow.Shadow
@@ -102,7 +104,14 @@ fun TopNav(
      * above it and focus search never finds it below; the page names its list.
      */
     down: FocusRequester? = null,
+    /**
+     * Back on the bar goes to the home screen. Off on the home screen itself and on a page
+     * opened from another page, where Back goes back to that page.
+     */
+    backHome: Boolean = active != NavTarget.Home,
 ) {
+    var focused by remember { mutableStateOf(false) }
+    BackHandler(enabled = focused && backHome) { onSelect(NavTarget.Home) }
     val activeFocus = remember { FocusRequester() }
     val profileFocus = remember { FocusRequester() }
     val miniFocus = remember { FocusRequester() }
@@ -114,7 +123,7 @@ fun TopNav(
     // The pill sits in the middle while there is room. With many entries it moves left, away from the
     // mini player, but not past the page edge; when even that is not enough, the mini player gets narrower.
     Layout(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().onFocusChanged { focused = it.hasFocus },
         content = {
             Row(
                 modifier = Modifier

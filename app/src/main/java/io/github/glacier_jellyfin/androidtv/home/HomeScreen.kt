@@ -183,6 +183,10 @@ fun HomeScreen(
     // Home is the bottom of the stack: Back asks before it closes the app.
     var exitAsked by remember { mutableStateOf(false) }
     BackHandler(enabled = !exitAsked) { exitAsked = true }
+    // Back among the rows first goes up to the navigation bar. The page keeps its place below.
+    val navFocus = remember { FocusRequester() }
+    var inList by remember { mutableStateOf(false) }
+    BackHandler(enabled = !exitAsked && inList) { runCatching { navFocus.requestFocus() } }
     var exitWasOpen by remember { mutableStateOf(false) }
     LaunchedEffect(exitAsked) {
         if (!exitAsked && exitWasOpen) {
@@ -205,7 +209,7 @@ fun HomeScreen(
                     LazyColumn(
                         state = listState,
                         // Down from the nav returns to the last focused card.
-                        modifier = Modifier.fillMaxSize().focusRequester(listFocus).focusRestorer(),
+                        modifier = Modifier.fillMaxSize().onFocusChanged { inList = it.hasFocus }.focusRequester(listFocus).focusRestorer(),
                     ) {
                         item(key = "spotlight") {
                             if (spotlight.isNotEmpty()) {
@@ -397,7 +401,8 @@ fun HomeScreen(
             down = listFocus,
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = 34.dp),
+                .padding(top = 34.dp)
+                .focusRequester(navFocus),
         )
 
         if (exitAsked) {

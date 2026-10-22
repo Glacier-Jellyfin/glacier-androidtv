@@ -118,13 +118,16 @@ fun LiveTvScreen(
     val watched by viewModel.lastWatched.collectAsStateWithLifecycle()
     var landed by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // Back from inside a view (the long guide above all) first goes up to the chips; from there it leaves the page.
+    // Back from inside a view (the long guide above all) first goes up to the chips, from there to the navigation bar.
     var contentFocused by remember { mutableStateOf(false) }
     val contentFocus = Modifier.onFocusChanged { contentFocused = it.hasFocus }
     val activeChip = remember { FocusRequester() }
     BackHandler(enabled = contentFocused && state.sheet == null) {
         runCatching { activeChip.requestFocus() }.onFailure { runCatching { chipsFocus.requestFocus() } }
     }
+    val navFocus = remember { FocusRequester() }
+    var chipsFocused by remember { mutableStateOf(false) }
+    BackHandler(enabled = chipsFocused && state.sheet == null) { runCatching { navFocus.requestFocus() } }
 
     // The sort menu takes the focus with it when it closes; it goes back to the sort button.
     // A new order shows from the top, so Down lands on the first channel.
@@ -248,7 +251,11 @@ fun LiveTvScreen(
                 }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    modifier = Modifier.padding(top = 22.dp, bottom = 22.dp).focusRequester(chipsFocus).focusRestorer(),
+                    modifier = Modifier
+                        .padding(top = 22.dp, bottom = 22.dp)
+                        .onFocusChanged { chipsFocused = it.hasFocus }
+                        .focusRequester(chipsFocus)
+                        .focusRestorer(),
                 ) {
                     // A tuner with radio only has no TV to list or guide.
                     if (channels.isNotEmpty()) {
@@ -410,7 +417,7 @@ fun LiveTvScreen(
                 state.view == LiveTvView.Guide -> gridFocus
                 else -> listFocus
             },
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp).focusRequester(navFocus),
         )
 
         val anchor = sortAnchor

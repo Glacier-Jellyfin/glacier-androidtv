@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.search
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -101,6 +103,13 @@ fun SearchScreen(
         runCatching { restoreFocus.requestFocus() }
     }
 
+    // Back among the results first goes to the keypad, from there to the navigation bar.
+    val navFocus = remember { FocusRequester() }
+    var inResults by remember { mutableStateOf(false) }
+    var inInput by remember { mutableStateOf(false) }
+    BackHandler(enabled = inResults) { runCatching { keyFocus.requestFocus() } }
+    BackHandler(enabled = inInput) { runCatching { navFocus.requestFocus() } }
+
     Box(Modifier.fillMaxSize()) {
         Row(
             Modifier
@@ -108,7 +117,7 @@ fun SearchScreen(
                 .padding(start = 80.dp, end = 80.dp, top = 150.dp),
             horizontalArrangement = Arrangement.spacedBy(56.dp),
         ) {
-            Column(Modifier.width(620.dp), verticalArrangement = Arrangement.spacedBy(26.dp)) {
+            Column(Modifier.width(620.dp).onFocusChanged { inInput = it.hasFocus }, verticalArrangement = Arrangement.spacedBy(26.dp)) {
                 // Same field as sign-in: OK opens the system keyboard, Up reaches the top navigation.
                 InputField(
                     label = null,
@@ -147,7 +156,7 @@ fun SearchScreen(
                     viewModel.open(item)
                 },
                 onRetry = viewModel::retry,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).onFocusChanged { inResults = it.hasFocus },
             )
         }
 
@@ -156,7 +165,7 @@ fun SearchScreen(
             kinds = LocalLibraryKinds.current,
             userName = state.userName,
             onSelect = viewModel::onNav,
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp).focusRequester(navFocus),
         )
     }
 

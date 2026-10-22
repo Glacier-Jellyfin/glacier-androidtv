@@ -289,8 +289,11 @@ class LibraryViewModel @Inject constructor(
         )
     }
 
+    /** Opened from the navigation bar, not for one library or genre from another page. */
+    val inNavBar: Boolean get() = route.libraryId == null && route.genreId == null
+
     fun onNav(target: NavTarget) {
-        val event = sessions.navEvent(target, current = NavTarget.Library(_state.value.query.kind).takeIf { route.libraryId == null && route.genreId == null }) ?: return
+        val event = sessions.navEvent(target, current = NavTarget.Library(_state.value.query.kind).takeIf { inNavBar }) ?: return
         viewModelScope.launch { _events.send(event) }
     }
 

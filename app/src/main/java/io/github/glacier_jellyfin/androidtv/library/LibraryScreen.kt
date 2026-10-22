@@ -187,9 +187,12 @@ fun LibraryScreen(
     val positions = remember(state.items) { gridPositions(state.items) }
     val gridCount = HEADER_ITEMS + state.items.size + (positions.lastOrNull()?.let { it - HEADER_ITEMS - state.items.lastIndex } ?: 0)
     val showRail = state.query.railed && state.letters.isNotEmpty()
-    // Back among the cards or on the A–Z rail first goes up to the tabs. Pressed again, it leaves the page.
+    // Back among the cards or on the A–Z rail first goes up to the tabs, from there to the navigation bar.
+    // Pressed there, it goes home. A library opened from another page goes back to that page.
     val activeChip = remember { FocusRequester() }
+    val navFocus = remember { FocusRequester() }
     var inContent by remember { mutableStateOf(false) }
+    var inToolbar by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     BackHandler(enabled = inContent) {
         scope.launch {
@@ -201,6 +204,7 @@ fun LibraryScreen(
             runCatching { activeChip.requestFocus() }.onFailure { runCatching { sortButtonFocus.requestFocus() } }
         }
     }
+    BackHandler(enabled = inToolbar) { runCatching { navFocus.requestFocus() } }
 
     // Load the next page when the grid gets within three rows of the end.
     LaunchedEffect(gridState, gridCount, songList) {
@@ -281,6 +285,7 @@ fun LibraryScreen(
                         Toolbar(
                             // The song rows sit closer together than cards: the toolbar keeps the cards' distance.
                             modifier = Modifier.padding(vertical = if (songList) (38 - SONG_ROW_GAP).dp else 0.dp).onFocusChanged {
+                                inToolbar = it.hasFocus
                                 if (it.hasFocus) {
                                     inContent = false
                                     toolbarScope.launch { gridState.animateScrollToItem(0) }
@@ -464,7 +469,9 @@ fun LibraryScreen(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 34.dp)
+                .focusRequester(navFocus)
                 .onFocusChanged { if (it.hasFocus) inContent = false },
+            backHome = viewModel.inNavBar,
         )
     }
 }

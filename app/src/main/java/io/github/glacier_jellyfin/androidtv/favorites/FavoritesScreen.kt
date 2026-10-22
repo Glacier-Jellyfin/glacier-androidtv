@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.favorites
 
+import androidx.activity.compose.BackHandler
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FavoriteRow
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Spacer
@@ -62,6 +63,10 @@ fun FavoritesScreen(
     val rows by viewModel.rows.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
     val listFocus = remember { FocusRequester() }
+    // Back among the rows first goes up to the navigation bar. The page keeps its place below.
+    val navFocus = remember { FocusRequester() }
+    var inList by remember { mutableStateOf(false) }
+    BackHandler(enabled = inList) { runCatching { navFocus.requestFocus() } }
     // Back from a title lands on its card again; the first time on the first card.
     var lastFocus by rememberSaveable { mutableStateOf<String?>(null) }
     val requesters = remember { mutableMapOf<String, FocusRequester>() }
@@ -88,7 +93,7 @@ fun FavoritesScreen(
             rows.none { favorites.has(it) } -> Message(text = stringResource(R.string.favorites_empty), body = stringResource(R.string.favorites_empty_body))
             else -> {
                 val songsTitle = stringResource(R.string.favorites_songs)
-                LazyColumn(Modifier.fillMaxSize().focusRequester(listFocus).focusRestorer()) {
+                LazyColumn(Modifier.fillMaxSize().onFocusChanged { inList = it.hasFocus }.focusRequester(listFocus).focusRestorer()) {
                     item(key = "title") {
                         Text(
                             stringResource(R.string.nav_favorites),
@@ -133,7 +138,7 @@ fun FavoritesScreen(
             userName = state.userName,
             onSelect = viewModel::onNav,
             down = listFocus,
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp).focusRequester(navFocus),
         )
     }
 }

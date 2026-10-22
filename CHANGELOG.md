@@ -20,6 +20,7 @@ renders the reference separately.
 
 ### Improved
 - On the profile screen the focus ring and the name of a profile show that profile's accent colour
+- Back works the same on every page with the navigation bar. It goes up one step at a time, from the titles to the tabs or the menu on the left, then to the navigation bar. Back in the navigation bar goes to the home screen. On the home screen it asks whether to close the app, as before
 
 ### Fixed
 - After a long time in the background the app could no longer load anything, and Refresh did not help either. It now starts over with the profile and loads normally
