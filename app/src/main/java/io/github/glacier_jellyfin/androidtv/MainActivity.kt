@@ -233,7 +233,10 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        // After Android ended the process in the background, the saved screens would open without a signed-in profile.
+        // The app starts over instead, through the profile screen like on a normal launch.
+        super.onCreate(savedInstanceState.takeIf { processAlive })
+        processAlive = true
         // Before the start screen is chosen; a recreated activity has already handled it.
         if (savedInstanceState == null) HomeLaunch.from(intent)?.let(launches::set)
         lifecycleScope.launch {
@@ -351,6 +354,11 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         HomeLaunch.from(intent)?.let(startViewModel::open)
+    }
+
+    private companion object {
+        /** False until the first activity of this process is created, so a restore after the process ended can be told apart. */
+        var processAlive = false
     }
 }
 

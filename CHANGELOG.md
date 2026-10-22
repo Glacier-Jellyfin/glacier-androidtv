@@ -18,6 +18,9 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### Fixed
+- After a long time in the background the app could no longer load anything, and Refresh did not help either. It now starts over with the profile and loads normally
+
 ## [0.6.1] - 2026-10-22
 
 ### New
