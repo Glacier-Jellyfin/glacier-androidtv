@@ -438,6 +438,8 @@ class LiveTvViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Opening the preview of $channelId failed", e)
+                // Opened but not playable here: its tuner is freed.
+                previewSource?.let { playback.reportStopped(it, 0) }
                 previewSource = null
             }
         }

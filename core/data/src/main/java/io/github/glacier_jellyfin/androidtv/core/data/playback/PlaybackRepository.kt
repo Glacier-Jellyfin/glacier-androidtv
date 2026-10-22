@@ -15,15 +15,20 @@ import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.DeviceProfile
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.HlsSegments
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.MediaCapabilityDetector
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import org.jellyfin.sdk.Jellyfin
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.audioApi
 import org.jellyfin.sdk.api.client.extensions.mediaInfoApi
@@ -45,9 +50,11 @@ import org.jellyfin.sdk.model.api.PlaybackProgressInfo
 import org.jellyfin.sdk.model.api.PlaybackStartInfo
 import org.jellyfin.sdk.model.api.PlaybackStopInfo
 import org.jellyfin.sdk.model.api.RepeatMode
+import java.net.SocketTimeoutException
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.minutes
 
 /** How the server delivers the stream; shown as a badge in the player. */
 enum class PlaybackMethod { DirectPlay, DirectStream, Transcode }
@@ -167,12 +174,16 @@ class PlaybackRepository @Inject constructor(
     private val capabilities: MediaCapabilityDetector,
     private val settings: SettingsRepository,
     private val serverPreferences: ServerPreferencesRepository,
+    private val jellyfin: Jellyfin,
 ) {
 
     /** Reports must outlive the player screen: "stopped" is sent while it closes. */
     private val reportScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _stopped = MutableSharedFlow<UUID>(extraBufferCapacity = 8)
+
+    /** The client [patientApi] made, with the session client it was made for. */
+    private var patient: Pair<ApiClient, ApiClient>? = null
 
     /**
      * A title whose "stopped" report reached the server: resume points and watched state changed.
@@ -222,6 +233,59 @@ class PlaybackRepository @Inject constructor(
         subtitleIndex: Int?,
         segments: HlsSegments? = null,
         versionId: String? = null,
+    ): PlaybackSource {
+        // The caller may give up (focus moved on, screen closed, no answer in time) while the server
+        // goes on opening a channel's stream. The open runs on here and gives that stream back.
+        val opening = reportScope.async { openNow(itemId, startMs, audioIndex, subtitleIndex, segments, versionId) }
+        val opened = try {
+            withTimeoutOrNull(OPEN_TIMEOUT_MS) { opening.await() }
+        } catch (e: CancellationException) {
+            giveBackWhenDone(opening)
+            throw e
+        }
+        if (opened == null) {
+            giveBackWhenDone(opening)
+            throw SocketTimeoutException("No answer for playing $itemId within ${OPEN_TIMEOUT_MS / 1000} s")
+        }
+        return opened
+    }
+
+    /** Closes the live stream [opening] brings, nobody plays it. */
+    private fun giveBackWhenDone(opening: Deferred<PlaybackSource>) {
+        opening.invokeOnCompletion { failure ->
+            if (failure != null) return@invokeOnCompletion
+            reportScope.launch {
+                val source = opening.await()
+                val id = source.liveStreamId ?: return@launch
+                Log.i(TAG, "Closing the live stream of ${source.itemId}, it was opened after the caller gave up")
+                closeLiveStreams(requireSession().api, setOf(id))
+            }
+        }
+    }
+
+    /**
+     * A client that waits as long as the server takes. Opening a channel can take minutes: the
+     * server probes the stream first, and a dead one only fails after a long wait. The answer must
+     * still come in, or the live stream it opened is never closed.
+     */
+    private fun patientApi(api: ApiClient): ApiClient = synchronized(this) {
+        patient?.takeIf { it.first === api }?.second
+            ?: jellyfin.createApi(
+                baseUrl = api.baseUrl,
+                accessToken = api.accessToken,
+                clientInfo = api.clientInfo,
+                deviceInfo = api.deviceInfo,
+                httpClientOptions = api.httpClientOptions.copy(requestTimeout = PATIENT_TIMEOUT, socketTimeout = PATIENT_TIMEOUT),
+            ).also { patient = api to it }
+    }
+
+    private suspend fun openNow(
+        itemId: UUID,
+        startMs: Long,
+        audioIndex: Int?,
+        subtitleIndex: Int?,
+        segments: HlsSegments?,
+        versionId: String?,
     ): PlaybackSource = withContext(Dispatchers.IO) {
         val session = requireSession()
         val api = session.api
@@ -233,7 +297,7 @@ class PlaybackRepository @Inject constructor(
         // (MediaInfoHelper.SetDeviceSpecificData); otherwise a transcode carries its own default
         // audio. A title's main source has the item's id.
         var sourceId = versionId ?: itemId.toString().replace("-", "").takeIf { audioIndex != null || subtitleIndex != null }
-        suspend fun playbackInfo(bitrate: Int) = api.mediaInfoApi.getPostedPlaybackInfo(
+        suspend fun playbackInfo(bitrate: Int) = patientApi(api).mediaInfoApi.getPostedPlaybackInfo(
             itemId = itemId,
             data = PlaybackInfoDto(
                 userId = session.userId,
@@ -256,133 +320,139 @@ class PlaybackRepository @Inject constructor(
         // The bitrate setting only caps transcodes (design): ask without it first, so a
         // file above the cap still plays directly, and again with it when the server transcodes.
         var info = playbackInfo(AUTO_BITRATE)
-        // Each answer opens a channel's live stream once more. The answer left behind closes its own
-        // after the new one is open, so the tuner is not given up in between.
-        suspend fun askAgain(bitrate: Int) {
-            val unused = info
-            info = playbackInfo(bitrate)
-            closeLiveStreams(api, unused)
-        }
-        // Several versions where the first is not named after the item: ask without the source.
-        if (sourceId != null && info.errorCode == null && info.mediaSources.isEmpty()) {
-            sourceId = null
-            askAgain(AUTO_BITRATE)
-        }
-        val cap = playback.maxBitrate.bitsPerSecond
-        if (cap != null && info.errorCode == null && info.mediaSources.firstOrNull()?.supportsDirectPlay == false) {
-            askAgain(cap)
-        }
-        info.errorCode?.let { error("Server refused playback: $it") }
-        val source = info.mediaSources.firstOrNull() ?: error("Server returned no media source")
+        // Whatever goes wrong from here on, the live stream an answer opened is given back.
+        var handedOn = false
+        try {
+            // Each answer opens a channel's live stream once more. The answer left behind closes its own
+            // after the new one is open, so the tuner is not given up in between.
+            suspend fun askAgain(bitrate: Int) {
+                val unused = info
+                info = playbackInfo(bitrate)
+                closeLiveStreams(api, unused)
+            }
+            // Several versions where the first is not named after the item: ask without the source.
+            if (sourceId != null && info.errorCode == null && info.mediaSources.isEmpty()) {
+                sourceId = null
+                askAgain(AUTO_BITRATE)
+            }
+            val cap = playback.maxBitrate.bitsPerSecond
+            if (cap != null && info.errorCode == null && info.mediaSources.firstOrNull()?.supportsDirectPlay == false) {
+                askAgain(cap)
+            }
+            info.errorCode?.let { error("Server refused playback: $it") }
+            val source = info.mediaSources.firstOrNull() ?: error("Server returned no media source")
 
-        val baseUrl = checkNotNull(api.baseUrl).trimEnd('/')
-        val streams = source.mediaStreams.orEmpty()
-        // The server's own audio pick may be a commentary the file marked as default: ask again with the main track.
-        if (audioIndex == null) {
-            val serverPick = source.defaultAudioStreamIndex
-            val main = mainInsteadOfExtra(serverPick, streams.filter { it.type == MediaStreamType.AUDIO }.map { it.toTrack() })
-            if (main != null && main != serverPick) {
-                Log.i(TAG, "Audio of $itemId: main track $main instead of extra track $serverPick")
-                return@withContext try {
-                    open(itemId, startMs, main, subtitleIndex, segments, versionId)
-                } finally {
-                    closeLiveStreams(api, info)
+            val baseUrl = checkNotNull(api.baseUrl).trimEnd('/')
+            val streams = source.mediaStreams.orEmpty()
+            // The server's own audio pick may be a commentary the file marked as default: ask again with the main track.
+            if (audioIndex == null) {
+                val serverPick = source.defaultAudioStreamIndex
+                val main = mainInsteadOfExtra(serverPick, streams.filter { it.type == MediaStreamType.AUDIO }.map { it.toTrack() })
+                if (main != null && main != serverPick) {
+                    Log.i(TAG, "Audio of $itemId: main track $main instead of extra track $serverPick")
+                    handedOn = true
+                    return@withContext try {
+                        openNow(itemId, startMs, main, subtitleIndex, segments, versionId)
+                    } finally {
+                        closeLiveStreams(api, info)
+                    }
                 }
             }
-        }
-        // The server's own pick may be a forced track that shows next to nothing: ask again with the full one.
-        if (subtitleIndex == null) {
-            val serverPick = source.defaultSubtitleStreamIndex?.takeIf { it >= 0 }
-            val audio = streams.firstOrNull { it.type == MediaStreamType.AUDIO && it.index == (audioIndex ?: source.defaultAudioStreamIndex) }
-            val onlyForced = (serverPreferences.preferences.value ?: serverPreferences.refresh())?.subtitleMode == SubtitleMode.OnlyForced
-            val subtitles = streams.filter { it.type == MediaStreamType.SUBTITLE }.map { it.toTrack() }
-            val full = fullInsteadOfForced(serverPick, subtitles, audio?.toTrack(), onlyForced)
-            if (full != null && full != serverPick) {
-                Log.i(TAG, "Subtitles of $itemId: full track $full instead of forced track $serverPick")
-                return@withContext try {
-                    open(itemId, startMs, audioIndex, full, segments, versionId)
-                } finally {
-                    closeLiveStreams(api, info)
+            // The server's own pick may be a forced track that shows next to nothing: ask again with the full one.
+            if (subtitleIndex == null) {
+                val serverPick = source.defaultSubtitleStreamIndex?.takeIf { it >= 0 }
+                val audio = streams.firstOrNull { it.type == MediaStreamType.AUDIO && it.index == (audioIndex ?: source.defaultAudioStreamIndex) }
+                val onlyForced = (serverPreferences.preferences.value ?: serverPreferences.refresh())?.subtitleMode == SubtitleMode.OnlyForced
+                val subtitles = streams.filter { it.type == MediaStreamType.SUBTITLE }.map { it.toTrack() }
+                val full = fullInsteadOfForced(serverPick, subtitles, audio?.toTrack(), onlyForced)
+                if (full != null && full != serverPick) {
+                    Log.i(TAG, "Subtitles of $itemId: full track $full instead of forced track $serverPick")
+                    handedOn = true
+                    return@withContext try {
+                        openNow(itemId, startMs, audioIndex, full, segments, versionId)
+                    } finally {
+                        closeLiveStreams(api, info)
+                    }
                 }
             }
-        }
-        val (url, method) = when {
-            source.supportsDirectPlay -> api.videoApi.getVideoStreamUrl(
+            val (url, method) = when {
+                source.supportsDirectPlay -> api.videoApi.getVideoStreamUrl(
+                    itemId = itemId,
+                    static = true,
+                    mediaSourceId = source.id,
+                    playSessionId = info.playSessionId,
+                    liveStreamId = source.liveStreamId,
+                ) to PlaybackMethod.DirectPlay
+                source.transcodingUrl != null -> (baseUrl + source.transcodingUrl) to
+                    if (source.supportsDirectStream) PlaybackMethod.DirectStream else PlaybackMethod.Transcode
+                else -> error("Server offered neither direct play nor a transcode")
+            }
+            val reasons = source.transcodingUrl?.takeIf { method != PlaybackMethod.DirectPlay }?.let { TRANSCODE_REASONS.find(it)?.groupValues?.get(1) }
+            // The tracks asked for, and for a stream the server builds the audio it was told to put in.
+            val streamAudio = source.transcodingUrl?.takeIf { method != PlaybackMethod.DirectPlay }?.let { AUDIO_STREAM_INDEX.find(it)?.groupValues?.get(1) }
+            Log.i(
+                TAG,
+                "Playing $itemId: $method, container ${source.container}, ${source.bitrate} bit/s" + reasons?.let { ", because $it" }.orEmpty() +
+                    ", audio ${audioIndex ?: "default " + source.defaultAudioStreamIndex}, subtitles ${subtitleIndex ?: "default " + source.defaultSubtitleStreamIndex}" +
+                    streamAudio?.let { ", stream audio $it" }.orEmpty(),
+            )
+            if (Log.verbose) Log.d(TAG, "Streams of $itemId: " + streams.joinToString { it.describe() })
+            PlaybackSource(
                 itemId = itemId,
-                static = true,
                 mediaSourceId = source.id,
                 playSessionId = info.playSessionId,
+                url = url,
+                isHls = method != PlaybackMethod.DirectPlay && source.transcodingSubProtocol == MediaStreamProtocol.HLS,
+                fmp4Segments = method != PlaybackMethod.DirectPlay && source.transcodingSubProtocol == MediaStreamProtocol.HLS &&
+                    source.transcodingContainer.equals("mp4", ignoreCase = true),
                 liveStreamId = source.liveStreamId,
-            ) to PlaybackMethod.DirectPlay
-            source.transcodingUrl != null -> (baseUrl + source.transcodingUrl) to
-                if (source.supportsDirectStream) PlaybackMethod.DirectStream else PlaybackMethod.Transcode
-            else -> {
-                closeLiveStreams(api, info)
-                error("Server offered neither direct play nor a transcode")
-            }
+                method = method,
+                headers = mapOf("Authorization" to session.authorization()),
+                // A stream carries the audio the server put in it, whatever was asked for.
+                audioIndex = streamAudio?.toIntOrNull() ?: audioIndex ?: source.defaultAudioStreamIndex,
+                // The server's default follows the user's subtitle mode; -1 means off.
+                subtitleIndex = (subtitleIndex ?: source.defaultSubtitleStreamIndex)?.takeIf { it >= 0 },
+                audioTracks = streams.filter { it.type == MediaStreamType.AUDIO && !it.isExternal }.map { it.toTrack() },
+                subtitles = streams.filter { it.type == MediaStreamType.SUBTITLE }.mapNotNull { stream ->
+                    val delivery = when (stream.deliveryMethod) {
+                        SubtitleDeliveryMethod.EMBED -> SubtitleDelivery.Embedded
+                        SubtitleDeliveryMethod.EXTERNAL, SubtitleDeliveryMethod.HLS -> SubtitleDelivery.External
+                        SubtitleDeliveryMethod.ENCODE -> SubtitleDelivery.BurnIn
+                        // Drop and unknown methods cannot be shown.
+                        else -> return@mapNotNull null
+                    }
+                    val url = stream.deliveryUrl?.let { if (it.startsWith("http")) it else baseUrl + it }
+                    if (delivery == SubtitleDelivery.External && url == null) null else PlaybackSubtitle(stream.toTrack(), delivery, url)
+                },
+                file = SourceFile(
+                    container = source.container,
+                    sizeBytes = source.size,
+                    bitrate = source.bitrate,
+                    streamContainer = source.transcodingContainer?.uppercase()?.takeIf { method != PlaybackMethod.DirectPlay }?.let {
+                        if (source.transcodingSubProtocol == MediaStreamProtocol.HLS) "HLS · $it" else it
+                    },
+                    video = streams.firstOrNull { it.type == MediaStreamType.VIDEO }?.let {
+                        SourceVideo(
+                            codec = it.codec,
+                            profile = it.profile,
+                            width = it.width,
+                            height = it.height,
+                            bitDepth = it.bitDepth,
+                            frameRate = it.realFrameRate ?: it.averageFrameRate,
+                            rangeType = it.videoRangeType.serialName,
+                            dolbyVisionProfile = it.dvProfile,
+                        )
+                    },
+                    audio = streams.filter { it.type == MediaStreamType.AUDIO && !it.isExternal }.map {
+                        SourceAudio(it.index, it.codec, it.profile, it.channels, it.sampleRate, it.bitRate)
+                    },
+                    transcodeReasons = reasons?.split(',')?.filter { it.isNotBlank() }.orEmpty(),
+                ),
+            )
+        } catch (e: Throwable) {
+            if (!handedOn) closeLiveStreams(api, info)
+            throw e
         }
-        val reasons = source.transcodingUrl?.takeIf { method != PlaybackMethod.DirectPlay }?.let { TRANSCODE_REASONS.find(it)?.groupValues?.get(1) }
-        // The tracks asked for, and for a stream the server builds the audio it was told to put in.
-        val streamAudio = source.transcodingUrl?.takeIf { method != PlaybackMethod.DirectPlay }?.let { AUDIO_STREAM_INDEX.find(it)?.groupValues?.get(1) }
-        Log.i(
-            TAG,
-            "Playing $itemId: $method, container ${source.container}, ${source.bitrate} bit/s" + reasons?.let { ", because $it" }.orEmpty() +
-                ", audio ${audioIndex ?: "default " + source.defaultAudioStreamIndex}, subtitles ${subtitleIndex ?: "default " + source.defaultSubtitleStreamIndex}" +
-                streamAudio?.let { ", stream audio $it" }.orEmpty(),
-        )
-        if (Log.verbose) Log.d(TAG, "Streams of $itemId: " + streams.joinToString { it.describe() })
-        PlaybackSource(
-            itemId = itemId,
-            mediaSourceId = source.id,
-            playSessionId = info.playSessionId,
-            url = url,
-            isHls = method != PlaybackMethod.DirectPlay && source.transcodingSubProtocol == MediaStreamProtocol.HLS,
-            fmp4Segments = method != PlaybackMethod.DirectPlay && source.transcodingSubProtocol == MediaStreamProtocol.HLS &&
-                source.transcodingContainer.equals("mp4", ignoreCase = true),
-            liveStreamId = source.liveStreamId,
-            method = method,
-            headers = mapOf("Authorization" to session.authorization()),
-            // A stream carries the audio the server put in it, whatever was asked for.
-            audioIndex = streamAudio?.toIntOrNull() ?: audioIndex ?: source.defaultAudioStreamIndex,
-            // The server's default follows the user's subtitle mode; -1 means off.
-            subtitleIndex = (subtitleIndex ?: source.defaultSubtitleStreamIndex)?.takeIf { it >= 0 },
-            audioTracks = streams.filter { it.type == MediaStreamType.AUDIO && !it.isExternal }.map { it.toTrack() },
-            subtitles = streams.filter { it.type == MediaStreamType.SUBTITLE }.mapNotNull { stream ->
-                val delivery = when (stream.deliveryMethod) {
-                    SubtitleDeliveryMethod.EMBED -> SubtitleDelivery.Embedded
-                    SubtitleDeliveryMethod.EXTERNAL, SubtitleDeliveryMethod.HLS -> SubtitleDelivery.External
-                    SubtitleDeliveryMethod.ENCODE -> SubtitleDelivery.BurnIn
-                    // Drop and unknown methods cannot be shown.
-                    else -> return@mapNotNull null
-                }
-                val url = stream.deliveryUrl?.let { if (it.startsWith("http")) it else baseUrl + it }
-                if (delivery == SubtitleDelivery.External && url == null) null else PlaybackSubtitle(stream.toTrack(), delivery, url)
-            },
-            file = SourceFile(
-                container = source.container,
-                sizeBytes = source.size,
-                bitrate = source.bitrate,
-                streamContainer = source.transcodingContainer?.uppercase()?.takeIf { method != PlaybackMethod.DirectPlay }?.let {
-                    if (source.transcodingSubProtocol == MediaStreamProtocol.HLS) "HLS · $it" else it
-                },
-                video = streams.firstOrNull { it.type == MediaStreamType.VIDEO }?.let {
-                    SourceVideo(
-                        codec = it.codec,
-                        profile = it.profile,
-                        width = it.width,
-                        height = it.height,
-                        bitDepth = it.bitDepth,
-                        frameRate = it.realFrameRate ?: it.averageFrameRate,
-                        rangeType = it.videoRangeType.serialName,
-                        dolbyVisionProfile = it.dvProfile,
-                    )
-                },
-                audio = streams.filter { it.type == MediaStreamType.AUDIO && !it.isExternal }.map {
-                    SourceAudio(it.index, it.codec, it.profile, it.channels, it.sampleRate, it.bitRate)
-                },
-                transcodeReasons = reasons?.split(',')?.filter { it.isNotBlank() }.orEmpty(),
-            ),
-        )
     }
 
     /**
@@ -545,8 +615,10 @@ class PlaybackRepository @Inject constructor(
     }
 
     /** Gives back the live streams [info] opened: on the server, each answer is one more user of a channel's tuner. */
-    private suspend fun closeLiveStreams(api: ApiClient, info: PlaybackInfoResponse) {
-        val ids = info.mediaSources.mapNotNullTo(HashSet()) { it.liveStreamId }
+    private suspend fun closeLiveStreams(api: ApiClient, info: PlaybackInfoResponse) =
+        closeLiveStreams(api, info.mediaSources.mapNotNullTo(HashSet()) { it.liveStreamId })
+
+    private suspend fun closeLiveStreams(api: ApiClient, ids: Set<String>) {
         // Also when playback was cancelled meanwhile: the tuner stays taken otherwise.
         withContext(NonCancellable) {
             for (id in ids) {
@@ -584,6 +656,12 @@ class PlaybackRepository @Inject constructor(
 
         /** Bitrate "Auto": the highest step the design offers (120 Mbit/s). */
         const val AUTO_BITRATE = 120_000_000
+
+        /** How long a caller waits for [open], the old request timeout of the client. */
+        const val OPEN_TIMEOUT_MS = 30_000L
+
+        /** Longer than the server takes to give up on a dead channel (about five minutes). */
+        val PATIENT_TIMEOUT = 10.minutes
 
         /** The server's reasons in a transcode URL, e.g. "VideoCodecNotSupported,AudioChannelsNotSupported". */
         val TRANSCODE_REASONS = Regex("[?&]TranscodeReasons=([^&]+)")

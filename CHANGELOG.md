@@ -27,6 +27,7 @@ renders the reference separately.
 ### Fixed
 - Live TV lists channels without a number after the numbered ones, not before them
 - Live TV no longer keeps a tuner busy on the server after a channel started. This happened with a bitrate limit or when Glacier picked the main audio track of a channel
+- Live TV no longer keeps a tuner busy after you moved on from a channel that was slow to start. Once the server has opened it, Glacier gives it back
 
 ## [0.6.0] - 2026-10-21
 
