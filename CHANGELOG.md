@@ -18,6 +18,8 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-22
+
 ### New
 - Live TV can list the channels by channel number or by channel name, up or down. Pick the order with the sort button next to Favorites. Picking it again turns the direction round. The guide and switching channels in the player follow the same order
 
