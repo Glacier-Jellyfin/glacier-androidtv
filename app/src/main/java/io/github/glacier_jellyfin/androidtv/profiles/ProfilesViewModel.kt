@@ -12,6 +12,9 @@ import io.github.glacier_jellyfin.androidtv.core.data.StartChoice
 import io.github.glacier_jellyfin.androidtv.core.data.StartMode
 import io.github.glacier_jellyfin.androidtv.core.data.StoredServer
 import io.github.glacier_jellyfin.androidtv.core.data.profileChoice
+import io.github.glacier_jellyfin.androidtv.core.data.settings.AccentColor
+import io.github.glacier_jellyfin.androidtv.core.data.settings.AppearanceSettings
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.profilesFor
 import io.github.glacier_jellyfin.androidtv.core.data.startChoice
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinKey
@@ -35,7 +38,8 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
-data class ProfileCard(val profile: Profile, val imageUrl: String?)
+/** [accent]: the profile's own accent, the surface behind its initial when it has no picture. */
+data class ProfileCard(val profile: Profile, val imageUrl: String?, val accent: AccentColor = AppearanceSettings().accent)
 
 data class ProfilesState(
     val server: StoredServer? = null,
@@ -58,6 +62,7 @@ class ProfilesViewModel @Inject constructor(
     private val accounts: AccountRepository,
     private val authenticator: Authenticator,
     private val sessions: SessionManager,
+    private val settings: SettingsRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<ProfilesRoute>()
@@ -94,13 +99,19 @@ class ProfilesViewModel @Inject constructor(
             _state.update { it.copy(loading = false, offline = users.isFailure) }
         }
         viewModelScope.launch {
-            combine(accounts.state, publicUsers) { state, public -> state.profilesFor(serverId, public) }
-                .collect { profiles ->
-                    val address = _state.value.server?.address
-                    _state.update { state ->
-                        state.copy(profiles = profiles.map { ProfileCard(it, address?.let { a -> imageUrl(a, it) }) })
-                    }
+            combine(accounts.state, publicUsers, settings.accents(serverId)) { state, public, accents ->
+                state.profilesFor(serverId, public) to accents
+            }.collect { (profiles, accents) ->
+                val address = _state.value.server?.address
+                _state.update { state ->
+                    state.copy(
+                        profiles = profiles.map { profile ->
+                            val card = ProfileCard(profile, address?.let { imageUrl(it, profile) })
+                            accents[profile.userId]?.let { card.copy(accent = it) } ?: card
+                        },
+                    )
                 }
+            }
         }
     }
 

@@ -39,6 +39,7 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import io.github.glacier_jellyfin.androidtv.BuildConfig
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.core.designsystem.Accent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
@@ -174,8 +175,8 @@ private fun ProfileTile(card: ProfileCard, onClick: () -> Unit, focusRequester: 
                 Modifier
                     .size(168.dp)
                     .clip(shape)
-                    // No photo: the surface comes from the accent, not from an image.
-                    .background(Brush.linearGradient(listOf(accent.deep, GlacierColors.Void))),
+                    // No photo: the surface comes from the profile's own accent, not from an image.
+                    .background(Brush.linearGradient(listOf(Accent.valueOf(card.accent.name).deep, GlacierColors.Void))),
                 contentAlignment = Alignment.Center,
             ) {
                 // The initial stands in until the profile picture has loaded, or when there is none.

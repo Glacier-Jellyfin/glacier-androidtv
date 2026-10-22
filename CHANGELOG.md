@@ -23,6 +23,7 @@ renders the reference separately.
 
 ### Improved
 - The release notes of an update in Settings › System are split into New, Improved and Fixed, like in the update dialog
+- A profile without a picture shows its own accent colour behind its initial on the profile screen
 
 ### Fixed
 - Live TV lists channels without a number after the numbered ones, not before them

@@ -72,6 +72,13 @@ class SettingsRepository @Inject constructor(
     val settings: StateFlow<ProfileSettings> = active.map { it ?: ProfileSettings() }
         .stateIn(scope, SharingStarted.Eagerly, ProfileSettings())
 
+    /** The accent of each profile of [serverId] on this device, by user id; profiles never set up are left out. */
+    fun accents(serverId: String): Flow<Map<String, AccentColor>> = store.data.map { state ->
+        state.profiles.mapNotNull { (key, settings) ->
+            key.removePrefix("$serverId/").takeIf { it != key }?.let { it to settings.appearance.accent }
+        }.toMap()
+    }
+
     /** The current value, read from the file when [settings] has not caught up yet (right after start). */
     suspend fun current(): ProfileSettings {
         val session = sessions.session.value ?: return ProfileSettings()
