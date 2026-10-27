@@ -131,6 +131,16 @@ fun PlayerScreen(
         interaction++
     }
 
+    /** Pausing focuses the timeline, ready to scrub; OK there plays on. */
+    fun togglePlay() {
+        val pausing = state.playWhenReady
+        viewModel.togglePlay()
+        if (!pausing) return showOsd(playFocus)
+        // Already showing, the OSD's focus effect does not run again.
+        if (osdVisible) runCatching { seekFocus.requestFocus() }
+        showOsd(seekFocus)
+    }
+
     fun scrub(deltaMs: Long) {
         val duration = progress.durationMs.takeIf { it > 0 } ?: Long.MAX_VALUE
         scrubMs = ((scrubMs ?: progress.positionMs) + deltaMs).coerceIn(0, duration)
@@ -222,8 +232,7 @@ fun PlayerScreen(
                 interaction++
                 when (event.key) {
                     Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause -> {
-                        viewModel.togglePlay()
-                        showOsd(playFocus)
+                        togglePlay()
                         true
                     }
                     Key.MediaRewind -> { viewModel.seekBy(-state.seekBackMs); true }
@@ -238,8 +247,7 @@ fun PlayerScreen(
                     }
                     // OK presses a focused prompt; otherwise, with the OSD hidden, it pauses like a click on the picture.
                     Key.DirectionCenter, Key.Enter -> if (!osdVisible && prompt == null) {
-                        viewModel.togglePlay()
-                        showOsd(playFocus)
+                        togglePlay()
                         true
                     } else {
                         false
@@ -300,7 +308,7 @@ fun PlayerScreen(
                     scrubMs?.let(viewModel::seekTo)
                     scrubMs = null
                 },
-                onTogglePlay = viewModel::togglePlay,
+                onTogglePlay = ::togglePlay,
                 onSeekBy = viewModel::seekBy,
                 onPrevious = viewModel::playPrevious,
                 onNext = viewModel::playNext,

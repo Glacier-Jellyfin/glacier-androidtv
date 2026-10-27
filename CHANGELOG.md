@@ -20,6 +20,7 @@ renders the reference separately.
 
 ### Improved
 - The skip button for intros, recaps and credits fades out after a while when the controls are hidden, so it no longer covers the picture. Press Up to bring it back; it also shows with the controls. Set the time in Settings › Playback › Segments, or turn it off
+- Pausing a video puts the focus on the timeline, so Left and Right scrub straight away. OK plays on
 - The ring on the skip button and the bar on the Up next card empty smoothly instead of in steps
 - On the profile screen the focus ring and the name of a profile show that profile's accent colour
 - Back works the same on every page with the navigation bar. It goes up one step at a time, from the titles to the tabs or the menu on the left, then to the navigation bar. Back in the navigation bar goes to the home screen. On the home screen it asks whether to close the app, as before
