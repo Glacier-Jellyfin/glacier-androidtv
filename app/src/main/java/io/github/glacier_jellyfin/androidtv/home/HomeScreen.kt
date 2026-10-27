@@ -141,6 +141,25 @@ fun HomeScreen(
     fun Modifier.remembered(key: String, restoreTo: String = key): Modifier = this
         .focusRequester(requesters.getOrPut(key) { FocusRequester() })
         .onFocusChanged { if (it.isFocused) lastFocus = restoreTo }
+    // "Continue watching" changed (back from the player, marked watched): the row starts at its
+    // left end again, where the title just watched now sits, and a focus in it goes along.
+    val continueRow = rememberLazyListState()
+    var continueIds by rememberSaveable { mutableStateOf<String?>(null) }
+    var inContinue by remember { mutableStateOf(false) }
+    val continueItems = state.content?.continueWatching
+    LaunchedEffect(continueItems?.joinToString(",") { it.id.toString() }) {
+        val ids = continueItems?.joinToString(",") { it.id.toString() } ?: return@LaunchedEffect
+        val before = continueIds
+        continueIds = ids
+        if (before == null || before == ids) return@LaunchedEffect
+        val first = continueItems.firstOrNull()?.let { "continue-${it.id}" }
+        if (lastFocus?.startsWith("continue-") == true) lastFocus = first
+        continueRow.scrollToItem(0)
+        if (inContinue && first != null) {
+            withFrameNanos { }
+            requesters[first]?.let { runCatching { it.requestFocus() } }
+        }
+    }
     val hasContent = state.content != null
     LaunchedEffect(hasContent) {
         if (!hasContent || !initialFocusDone) return@LaunchedEffect
@@ -268,7 +287,11 @@ fun HomeScreen(
                             if (choice.shown) when (choice.row) {
                                 HomeRow.ContinueWatching -> if (content.continueWatching.isNotEmpty()) {
                                     item(key = "continue") {
-                                        MediaRow(title = stringResource(R.string.home_continue_watching)) {
+                                        MediaRow(
+                                            title = stringResource(R.string.home_continue_watching),
+                                            state = continueRow,
+                                            modifier = Modifier.onFocusChanged { inContinue = it.hasFocus },
+                                        ) {
                                             items(content.continueWatching, key = { it.id }) { item ->
                                                 ContinueCard(
                                                     title = if (item.kind == ItemKind.Episode) item.parentTitle ?: item.title else item.title,
