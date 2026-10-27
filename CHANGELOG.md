@@ -18,6 +18,8 @@ renders the reference separately.
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-10-27
+
 ### Improved
 - The skip button for intros, recaps and credits fades out after a while when the controls are hidden, so it no longer covers the picture. Press Up to bring it back; it also shows with the controls. Set the time in Settings › Playback › Segments, or turn it off
 - Pausing a video puts the focus on the timeline, so Left and Right scrub straight away. OK plays on
@@ -28,6 +30,8 @@ renders the reference separately.
 ### Fixed
 - "Use the audio track of the last title" and "Use the subtitles of the last title" now work per show. Before, the tracks picked in one show carried over to every other show and film. A film keeps the tracks last picked in it. The tracks remembered so far start over once
 - After a long time in the background the app could no longer load anything, and Refresh did not help either. It now starts over with the profile and loads normally
+- The clock and the end time in the player keep moving while a video is paused. Before, they stood still until it played on
+- After you come back from the player or mark a title as watched, Continue watching starts at the left again, where the title just watched now sits
 
 ## [0.6.1] - 2026-10-22
 
