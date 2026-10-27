@@ -37,6 +37,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferences
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyle
 import io.github.glacier_jellyfin.androidtv.core.data.settings.rememberedTracks
+import io.github.glacier_jellyfin.androidtv.core.data.settings.showKey
 import io.github.glacier_jellyfin.androidtv.core.data.settings.toKey
 import io.github.glacier_jellyfin.androidtv.core.player.SideloadedSubtitle
 import io.github.glacier_jellyfin.androidtv.core.player.TrackControl
@@ -313,7 +314,7 @@ class PlayerViewModel @Inject constructor(
                 val start = startMs ?: if (fromStart) 0 else item.item.resumePositionMs
                 val remembered = if (fromLastTitle) {
                     val preferences = serverPreferences.preferences.value ?: serverPreferences.refresh()
-                    preferences?.let { rememberedTracks(settings.current().lastTracks, it, item.tracks) }
+                    preferences?.let { rememberedTracks(settings.current().showTracks[item.showKey()], it, item.tracks) }
                 } else {
                     null
                 }
@@ -539,15 +540,16 @@ class PlayerViewModel @Inject constructor(
         recordTracks(audio, subtitle)
     }
 
-    /** What plays now, for the next title's "use the tracks of the last title". */
+    /** What plays now, for the show's next episode ("use the tracks of the last title"). */
     private fun recordTracks(audio: Int?, subtitle: Int?) {
         val current = source ?: return
+        val key = _state.value.details?.showKey() ?: return
         val last = LastTracks(
             audio = current.audioTracks.firstOrNull { it.index == audio }?.toKey(),
             subtitle = current.subtitles.firstOrNull { it.track.index == subtitle }?.track?.toKey(),
             subtitlesOff = subtitle == null,
         )
-        viewModelScope.launch { settings.update { it.copy(lastTracks = last) } }
+        viewModelScope.launch { settings.update { it.copy(showTracks = it.showTracks + (key to last)) } }
     }
 
     private fun toast(message: Int, arg: String) {

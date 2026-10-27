@@ -1,14 +1,18 @@
 package io.github.glacier_jellyfin.androidtv.core.data.settings
 
+import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.Languages
 import io.github.glacier_jellyfin.androidtv.core.data.media.Track
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackChoices
 
+/** What a show's episodes share in the settings (tracks, version); a movie keeps its own. */
+fun ItemDetails.showKey(): String = (seriesId ?: item.id).toString()
+
 fun Track.toKey() = TrackKey(language = Languages.iso3(language) ?: language, forced = forced, hearingImpaired = hearingImpaired, title = title)
 
 /**
- * Tracks to start with, taken over from the last title ("use the tracks of
- * the last title"). [audio] and [subtitle] are stream indices; null leaves
+ * Tracks to start with, taken over from the last episode of the same show
+ * ("use the tracks of the last title"). [audio] and [subtitle] are stream indices; null leaves
  * the choice to the server, [SUBTITLES_OFF] switches subtitles off.
  */
 data class RememberedTracks(val audio: Int?, val subtitle: Int?) {
@@ -17,8 +21,8 @@ data class RememberedTracks(val audio: Int?, val subtitle: Int?) {
     }
 }
 
-fun rememberedTracks(last: LastTracks, preferences: ServerPreferences, choices: TrackChoices?): RememberedTracks {
-    if (choices == null) return RememberedTracks(null, null)
+fun rememberedTracks(last: LastTracks?, preferences: ServerPreferences, choices: TrackChoices?): RememberedTracks {
+    if (choices == null || last == null) return RememberedTracks(null, null)
     val audio = last.audio?.takeIf { preferences.rememberAudio }?.let { closestTrack(it, choices.audio) }?.index
     val subtitle = when {
         !preferences.rememberSubtitles -> null

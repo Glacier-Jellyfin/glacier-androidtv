@@ -52,5 +52,6 @@ class TrackMemoryTest {
     @Test
     fun `nothing remembered leaves the choice to the server`() {
         assertEquals(RememberedTracks(null, null), rememberedTracks(LastTracks(), ServerPreferences(), choices))
+        assertEquals(RememberedTracks(null, null), rememberedTracks(null, ServerPreferences(), choices))
     }
 }

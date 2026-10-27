@@ -29,6 +29,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepositor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.closestTrack
 import io.github.glacier_jellyfin.androidtv.core.data.settings.toKey
 import io.github.glacier_jellyfin.androidtv.core.data.settings.rememberedTracks
+import io.github.glacier_jellyfin.androidtv.core.data.settings.showKey
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.music.MusicActions
 import io.github.glacier_jellyfin.androidtv.music.MusicController
@@ -200,7 +201,7 @@ class DetailViewModel @Inject constructor(
         trackSelections.get(details.item.id)?.let { return it }
         val tracks = details.tracks ?: return versionId?.let { TrackSelection(null, null, it) }
         val preferences = serverPreferences.preferences.value ?: serverPreferences.refresh()
-        val remembered = preferences?.let { rememberedTracks(settings.current().lastTracks, it, tracks) }
+        val remembered = preferences?.let { rememberedTracks(settings.current().showTracks[details.showKey()], it, tracks) }
         val audio = remembered?.audio ?: tracks.defaultAudio
         val subtitle = when (val index = remembered?.subtitle) {
             // Under the last title's audio, not the server's default: a forced pick stays forced under its own language.

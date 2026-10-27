@@ -791,7 +791,7 @@
     <string name="settings_default_track">Always play the default track</string>
     <string name="settings_default_track_sub">Uses the track marked as default, whatever the preferred language</string>
     <string name="settings_remember_audio">Use the audio track of the last title</string>
-    <string name="settings_remember_audio_sub">Picks the track closest to the last episode or film you watched · takes precedence over the preferred language</string>
+    <string name="settings_remember_audio_sub">Picks the track closest to the last episode you watched of the same show, for a film the one last picked in it · takes precedence over the preferred language</string>
 
     <string name="settings_sub_lang">Preferred language</string>
     <string name="settings_sub_lang_sub">Picked automatically at start</string>
@@ -819,7 +819,7 @@
     <string name="settings_burn_complex">Complex formats</string>
     <string name="settings_burn_always">Always</string>
     <string name="settings_remember_subs">Use the subtitles of the last title</string>
-    <string name="settings_remember_subs_sub">Takes over language and kind (such as forced or SDH) of the last subtitles · takes precedence over the subtitle mode</string>
+    <string name="settings_remember_subs_sub">Takes over language and kind (such as forced or SDH) of the subtitles last picked in the same show or film · takes precedence over the subtitle mode</string>
     <string name="settings_sub_style">Subtitle style</string>
     <string name="settings_sub_style_custom">Custom</string>
     <string name="settings_sub_style_native">Native</string>

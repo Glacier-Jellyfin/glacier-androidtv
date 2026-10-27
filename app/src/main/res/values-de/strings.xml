@@ -785,7 +785,7 @@
     <string name="settings_default_track">Standardtonspur immer abspielen</string>
     <string name="settings_default_track_sub">Nutzt die als Standard markierte Tonspur, unabhängig von der bevorzugten Sprache</string>
     <string name="settings_remember_audio">Tonspur vom letzten Titel übernehmen</string>
-    <string name="settings_remember_audio_sub">Wählt die Tonspur, die der zuletzt gesehenen Folge oder dem letzten Film am nächsten kommt · hat Vorrang vor der bevorzugten Sprache</string>
+    <string name="settings_remember_audio_sub">Wählt die Tonspur, die der zuletzt gesehenen Folge derselben Serie am nächsten kommt, bei einem Film der zuletzt darin gewählten · hat Vorrang vor der bevorzugten Sprache</string>
 
     <string name="settings_sub_lang">Bevorzugte Sprache</string>
     <string name="settings_sub_lang_sub">Wird beim Start automatisch gewählt</string>
@@ -813,7 +813,7 @@
     <string name="settings_burn_complex">Komplexe Formate</string>
     <string name="settings_burn_always">Immer</string>
     <string name="settings_remember_subs">Untertitel vom letzten Titel übernehmen</string>
-    <string name="settings_remember_subs_sub">Übernimmt Sprache und Art (z. B. erzwungen oder SDH) der zuletzt gewählten Untertitel · hat Vorrang vor dem Untertitelmodus</string>
+    <string name="settings_remember_subs_sub">Übernimmt Sprache und Art (z. B. erzwungen oder SDH) der zuletzt in derselben Serie oder demselben Film gewählten Untertitel · hat Vorrang vor dem Untertitelmodus</string>
     <string name="settings_sub_style">Untertitelstil</string>
     <string name="settings_sub_style_custom">Benutzerdefiniert</string>
     <string name="settings_sub_style_native">Nativ</string>

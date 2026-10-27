@@ -24,8 +24,11 @@ data class ProfileSettings(
     val uiLanguage: UiLanguage = UiLanguage.System,
     /** Top navigation and the favorites page. */
     val navigation: NavigationSettings = NavigationSettings(),
-    /** Tracks of the last title played, for "use the tracks of the last title". */
-    val lastTracks: LastTracks = LastTracks(),
+    /**
+     * Tracks last played, for "use the tracks of the last title": keyed by the show's id,
+     * so each show keeps its own, or by a movie's own id.
+     */
+    val showTracks: Map<String, LastTracks> = emptyMap(),
     /** The music player's switches, kept from one time to the next. */
     val music: MusicSettings = MusicSettings(),
     /** The library sort last picked, keyed by library kind name (Movies, Shows, ...). */

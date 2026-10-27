@@ -26,6 +26,7 @@ renders the reference separately.
 - Back works the same on every page with the navigation bar. It goes up one step at a time, from the titles to the tabs or the menu on the left, then to the navigation bar. Back in the navigation bar goes to the home screen. On the home screen it asks whether to close the app, as before
 
 ### Fixed
+- "Use the audio track of the last title" and "Use the subtitles of the last title" now work per show. Before, the tracks picked in one show carried over to every other show and film. A film keeps the tracks last picked in it. The tracks remembered so far start over once
 - After a long time in the background the app could no longer load anything, and Refresh did not help either. It now starts over with the profile and loads normally
 
 ## [0.6.1] - 2026-10-22

@@ -10,6 +10,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.Resolution
 import io.github.glacier_jellyfin.androidtv.core.data.media.pickVersion
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.showKey
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.ConcurrentHashMap
@@ -34,14 +35,14 @@ class VersionChooser @Inject constructor(
     /** The version to play of [details]; null for a title with one file. */
     suspend fun choose(details: ItemDetails): MediaVersion? {
         if (details.versions.size < 2) return null
-        val picked = settings.current().versions[keyOf(details)]
+        val picked = settings.current().versions[details.showKey()]
         return pickVersion(details.versions, picked, directVersions(details), screen())
     }
 
     /** Remembers [version]: the very file for a movie, the kind of file for every episode of a show. */
     suspend fun remember(details: ItemDetails, version: MediaVersion) {
         val key = if (details.seriesId == null) version.key.copy(id = version.id) else version.key
-        settings.update { it.copy(versions = it.versions + (keyOf(details) to key)) }
+        settings.update { it.copy(versions = it.versions + (details.showKey() to key)) }
     }
 
     private suspend fun directVersions(details: ItemDetails): Set<String>? {
@@ -65,8 +66,5 @@ class VersionChooser @Inject constructor(
 
     private companion object {
         const val TAG = "Versions"
-
-        /** A show keeps one pick for all its episodes. */
-        fun keyOf(details: ItemDetails): String = (details.seriesId ?: details.item.id).toString()
     }
 }
