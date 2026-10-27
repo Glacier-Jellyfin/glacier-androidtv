@@ -256,6 +256,7 @@ data class PlaybackSettings(
     val seekForward: SeekStep = SeekStep.S30,
     val maxBitrate: MaxBitrate = MaxBitrate.Auto,
     val segments: Map<SegmentKind, SegmentAction> = SegmentPolicy.DefaultActions,
+    val skipButtonHide: SkipButtonHide = SkipButtonHide.S10,
     val audioChannels: AudioChannels = AudioChannels.Auto,
     val subtitleBurnIn: SubtitleBurnIn = SubtitleBurnIn.Auto,
 ) {
@@ -275,6 +276,10 @@ enum class UpNextChoice(val mode: UpNextMode) {
     S50(UpNextMode.Before(50_000)),
     M1(UpNextMode.Before(60_000)),
 }
+
+/** Time the skip button stays over the bare picture before it fades away; [Off] keeps it. */
+@Serializable
+enum class SkipButtonHide(val ms: Long) { Off(0), S5(5_000), S10(10_000), S15(15_000), S30(30_000) }
 
 /** Remote Left/Right, the OSD skip buttons and the music player's seek. */
 @Serializable

@@ -772,6 +772,8 @@
     <string name="settings_segment_commercial_sub">Markierte Werbeunterbrechungen</string>
     <string name="settings_segment_outro">Abspann</string>
     <string name="settings_segment_outro_sub">Credits am Ende</string>
+    <string name="settings_skip_hide">Überspringen ausblenden</string>
+    <string name="settings_skip_hide_sub">Blendet nach dieser Zeit ohne Steuerung aus · Nach oben holt es zurück</string>
 
     <string name="settings_audio_channels">Maximal erlaubte Audiokanäle</string>
     <string name="settings_audio_channels_sub">Mehr Kanäle werden auf diese Anzahl heruntergemischt</string>

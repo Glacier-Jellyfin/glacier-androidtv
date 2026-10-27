@@ -3,7 +3,10 @@ package io.github.glacier_jellyfin.androidtv.player
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -32,6 +35,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -65,6 +70,9 @@ private const val OSD_TIMEOUT_MS = 3_000L
 /** Scrubbing on the timeline only moves the preview; the jump happens after this pause (design: 1.2 s). */
 private const val SCRUB_COMMIT_MS = 1_200L
 
+/** How long the skip button takes to fade away over the bare picture. */
+private const val SKIP_FADE_MS = 2_500
+
 @OptIn(UnstableApi::class)
 @Composable
 fun PlayerScreen(
@@ -96,7 +104,9 @@ fun PlayerScreen(
     // Back's release only counts when its press came here too, not to an overlay that closed on it.
     var backDown by remember { mutableStateOf(false) }
     val upNext = progress.upNext?.let { countdown -> state.next?.let { it to countdown } }
-    val skip = progress.skip
+    /** Faded away over the bare picture; Up or the OSD brings it back. */
+    var skipHidden by remember { mutableStateOf(false) }
+    val skip = progress.skip?.takeUnless { skipHidden }
     /** Skip button or "Up next" card on screen; with the OSD hidden, it holds the focus. */
     val prompt = when {
         overlayOpen || state.loading || state.failed -> null
@@ -112,6 +122,8 @@ fun PlayerScreen(
     var osdTarget by remember { mutableStateOf(playFocus) }
     var interaction by remember { mutableIntStateOf(0) }
     var scrubMs by remember { mutableStateOf<Long?>(null) }
+    val skipAlpha = remember { Animatable(1f) }
+    var skipWake by remember { mutableIntStateOf(0) }
 
     fun showOsd(target: FocusRequester) {
         osdTarget = target
@@ -136,6 +148,16 @@ fun PlayerScreen(
             delay(OSD_TIMEOUT_MS)
             osdVisible = false
         }
+    }
+    // With the OSD hidden, the skip button fades away after the time set in Settings › Playback.
+    // A new segment, the OSD or Up (skipWake) bring it back and start the wait again.
+    LaunchedEffect(progress.skip, osdVisible, skipWake, state.skipHideMs) {
+        skipHidden = false
+        skipAlpha.animateTo(1f, tween(300))
+        if (progress.skip == null || osdVisible || state.skipHideMs <= 0) return@LaunchedEffect
+        delay(state.skipHideMs)
+        skipAlpha.animateTo(0f, tween(SKIP_FADE_MS, easing = LinearEasing))
+        skipHidden = true
     }
     // Closing an overlay returns focus to the button that opened it.
     var lastOverlay by remember { mutableStateOf<OsdButton?>(null) }
@@ -222,8 +244,9 @@ fun PlayerScreen(
                     } else {
                         false
                     }
+                    // Up first brings back a skip button that faded away; the OSD comes with the next press.
                     Key.DirectionUp, Key.DirectionDown -> if (!osdVisible) {
-                        showOsd(playFocus)
+                        if (event.key == Key.DirectionUp && skipHidden && progress.skip != null && prompt == null) skipWake++ else showOsd(playFocus)
                         true
                     } else {
                         false
@@ -303,7 +326,18 @@ fun PlayerScreen(
                         onDismiss = viewModel::dismissUpNext,
                     )
                 } else if (skip != null) {
-                    SkipButton(skip, progress.positionMs, onClick = viewModel::skipSegment, modifier = Modifier.focusRequester(skipFocus))
+                    SkipButton(
+                        skip,
+                        progress.positionMs,
+                        onClick = viewModel::skipSegment,
+                        modifier = Modifier
+                            .focusRequester(skipFocus)
+                            .graphicsLayer {
+                                alpha = skipAlpha.value
+                                // An offscreen layer would clip the focused button's scale-up.
+                                compositingStrategy = CompositingStrategy.ModulateAlpha
+                            },
+                    )
                 }
             }
         }

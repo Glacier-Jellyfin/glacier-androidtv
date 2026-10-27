@@ -112,6 +112,8 @@ data class PlayerUiState(
     val subtitleStyle: SubtitleStyle = SubtitleStyle(),
     /** Switch the TV to the video's frame rate (Settings › Playback). */
     val matchFrameRate: Boolean = true,
+    /** The skip button fades away after this long with the OSD hidden, 0 for never (Settings › Playback). */
+    val skipHideMs: Long = 10_000,
 ) {
     val chapters: List<Chapter> get() = details?.chapters.orEmpty()
     val isEpisode: Boolean get() = details?.item?.kind == ItemKind.Episode
@@ -274,6 +276,7 @@ class PlayerViewModel @Inject constructor(
                         seekForwardMs = profile.playback.seekForward.ms,
                         subtitleStyle = profile.subtitleStyle,
                         matchFrameRate = profile.playback.matchFrameRate,
+                        skipHideMs = profile.playback.skipButtonHide.ms,
                     )
                 }
             }

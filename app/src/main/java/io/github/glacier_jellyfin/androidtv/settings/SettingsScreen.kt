@@ -78,6 +78,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeRowChoice
 import io.github.glacier_jellyfin.androidtv.core.data.settings.Language
 import io.github.glacier_jellyfin.androidtv.core.data.settings.MaxBitrate
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SeekStep
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SkipButtonHide
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightCount
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightRotation
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightSource
@@ -847,7 +848,13 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
             segmentActions.indexOf(policy.action(kind)),
             onSelect = { i -> viewModel.updatePlayback { it.copy(segments = policy.actions + (kind to segmentActions[i])) } },
         )
-    }
+    } + SettingRow.Choice(
+        stringResource(R.string.settings_skip_hide),
+        stringResource(R.string.settings_skip_hide_sub),
+        SkipButtonHide.entries.map { if (it == SkipButtonHide.Off) stringResource(R.string.settings_off) else seconds(it.ms) },
+        playback.skipButtonHide.ordinal,
+        onSelect = { i -> viewModel.updatePlayback { it.copy(skipButtonHide = SkipButtonHide.entries[i]) } },
+    )
 
     return listOf(
         SettingGroup(
