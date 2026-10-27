@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +65,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.ui.seasonLabel
+import kotlinx.coroutines.delay
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
@@ -88,8 +90,15 @@ fun PlayerOsd(
         Box(Modifier.align(Alignment.TopCenter).osdScrim(top = true))
         Box(Modifier.align(Alignment.BottomCenter).osdScrim(top = false))
 
+        // One ticking clock for the time of day and "ends at", which also moves while paused.
+        val now by produceState(LocalTime.now()) {
+            while (true) {
+                delay(CLOCK_TICK_MS - System.currentTimeMillis() % CLOCK_TICK_MS)
+                value = LocalTime.now()
+            }
+        }
         TitleBlock(state, Modifier.align(Alignment.TopStart).padding(start = 80.dp, top = 60.dp))
-        Clock(Modifier.align(Alignment.TopEnd).padding(end = 80.dp, top = 60.dp))
+        Clock(now, Modifier.align(Alignment.TopEnd).padding(end = 80.dp, top = 60.dp))
 
         Column(
             Modifier
@@ -139,7 +148,7 @@ fun PlayerOsd(
                 }
                 Spacer(Modifier.weight(1f))
                 if (progress.durationMs > 0) {
-                    val end = LocalTime.now().plusSeconds((progress.durationMs - progress.positionMs).coerceAtLeast(0) / 1000)
+                    val end = now.plusSeconds((progress.durationMs - progress.positionMs).coerceAtLeast(0) / 1000)
                     Text(stringResource(R.string.player_ends_at, end.format(ClockFormat)), style = GlacierText.body(18), color = OsdSecondary)
                 }
             }
@@ -165,8 +174,8 @@ private fun TitleBlock(state: PlayerUiState, modifier: Modifier) {
 
 /** The time of day. Quality and delivery live in the info panel. */
 @Composable
-private fun Clock(modifier: Modifier) {
-    Text(LocalTime.now().format(ClockFormat), modifier, style = GlacierText.display(34), color = GlacierColors.Ice)
+private fun Clock(now: LocalTime, modifier: Modifier) {
+    Text(now.format(ClockFormat), modifier, style = GlacierText.display(34), color = GlacierColors.Ice)
 }
 
 /**
@@ -427,6 +436,7 @@ internal val OsdSecondary = Color(0xFFC4D4DC)
 private fun fraction(value: Long, total: Long): Float = (value.toFloat() / total).coerceIn(0f, 1f)
 
 private val ClockFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+private const val CLOCK_TICK_MS = 1_000L
 
 /** 1:02:03 or 12:34. */
 internal fun formatTime(ms: Long): String {
