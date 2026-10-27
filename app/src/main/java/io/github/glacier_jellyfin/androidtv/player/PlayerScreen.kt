@@ -321,6 +321,7 @@ fun PlayerScreen(
                     UpNextCard(
                         next = upNext.first,
                         countdown = upNext.second,
+                        playing = state.playing,
                         playFocus = upNextFocus,
                         onPlay = viewModel::playNext,
                         onDismiss = viewModel::dismissUpNext,
@@ -329,6 +330,7 @@ fun PlayerScreen(
                     SkipButton(
                         skip,
                         progress.positionMs,
+                        playing = state.playing,
                         onClick = viewModel::skipSegment,
                         modifier = Modifier
                             .focusRequester(skipFocus)

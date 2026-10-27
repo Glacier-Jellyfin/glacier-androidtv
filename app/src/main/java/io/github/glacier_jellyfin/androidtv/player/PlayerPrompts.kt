@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,11 +15,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.LongState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -46,14 +54,35 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 
 /**
- * "Skip intro" and friends (design: 68 high, bottom right). The ring empties
- * as the segment plays; inside it, the time left until it ends.
+ * Milliseconds played since [sample] arrived, counted on frame by frame while
+ * [playing], so prompts move smoothly between the ticks of the position.
+ * Read it in the draw phase; reading it in composition recomposes every frame.
  */
 @Composable
-fun SkipButton(segment: MediaSegment, positionMs: Long, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun rememberSinceSample(sample: Any, playing: Boolean): LongState {
+    val elapsed = remember { mutableLongStateOf(0) }
+    LaunchedEffect(sample, playing) {
+        elapsed.longValue = 0
+        if (!playing) return@LaunchedEffect
+        val anchor = withFrameMillis { it }
+        while (true) withFrameMillis { elapsed.longValue = it - anchor }
+    }
+    return elapsed
+}
+
+/**
+ * "Skip intro" and friends (design: 68 high, bottom right). The ring empties
+ * as the segment plays; inside it, the time left until it ends.
+
+ */
+@Composable
+fun SkipButton(segment: MediaSegment, positionMs: Long, playing: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val accent = LocalAccent.current.main
-    val remaining = (segment.endMs - positionMs).coerceAtLeast(0)
-    val played = ((positionMs - segment.startMs).toFloat() / (segment.endMs - segment.startMs)).coerceIn(0f, 1f)
+    val elapsed = rememberSinceSample(positionMs, playing)
+    // The label recomposes once a second; the ring reads the position while drawing.
+    val remaining by remember(segment, positionMs) {
+        derivedStateOf { (segment.endMs - positionMs - elapsed.longValue).coerceAtLeast(0) / 1000 * 1000 }
+    }
     GlacierClickable(onClick = onClick, shape = PillShape, modifier = modifier) { focused ->
         val color = if (focused) GlacierColors.Void else GlacierColors.Ice
         Row(
@@ -72,6 +101,7 @@ fun SkipButton(segment: MediaSegment, positionMs: Long, onClick: () -> Unit, mod
             }
             Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxSize()) {
+                    val played = ((positionMs + elapsed.longValue - segment.startMs).toFloat() / (segment.endMs - segment.startMs)).coerceIn(0f, 1f)
                     val stroke = 4.dp.toPx()
                     val inset = stroke / 2 + 1.5.dp.toPx()
                     val arcSize = Size(size.width - 2 * inset, size.height - 2 * inset)
@@ -103,6 +133,7 @@ fun SkipButton(segment: MediaSegment, positionMs: Long, onClick: () -> Unit, mod
 fun UpNextCard(
     next: MediaItem,
     countdown: UpNextCountdown,
+    playing: Boolean,
     playFocus: FocusRequester,
     onPlay: () -> Unit,
     onDismiss: () -> Unit,
@@ -123,8 +154,12 @@ fun UpNextCard(
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            val seconds = countdown.remainingMs / 1000
-            val remaining = if (seconds >= 60) formatTime(countdown.remainingMs) else "$seconds s"
+            val elapsed = rememberSinceSample(countdown, playing)
+            val remainingMs by remember(countdown) {
+                derivedStateOf { (countdown.remainingMs - elapsed.longValue).coerceAtLeast(0) / 1000 * 1000 }
+            }
+            val seconds = remainingMs / 1000
+            val remaining = if (seconds >= 60) formatTime(remainingMs) else "$seconds s"
             Text(
                 stringResource(R.string.up_next_in, remaining).uppercase(),
                 style = GlacierText.body(16, FontWeight.Bold).copy(letterSpacing = 0.09.em),
@@ -135,10 +170,15 @@ fun UpNextCard(
                     .fillMaxWidth()
                     .height(4.dp)
                     .clip(PillShape)
-                    .background(GlacierColors.GlassFill2),
-            ) {
-                Box(Modifier.fillMaxHeight().fillMaxWidth(countdown.fraction.coerceIn(0f, 1f)).clip(PillShape).background(accent))
-            }
+                    .background(GlacierColors.GlassFill2)
+                    .drawBehind {
+                        // The lead time behind the fraction stays put, so the bar shrinks with the time left.
+                        val left = (countdown.remainingMs - elapsed.longValue).coerceAtLeast(0)
+                        val fraction = if (countdown.remainingMs > 0) countdown.fraction * left / countdown.remainingMs else countdown.fraction
+                        val width = size.width * fraction.coerceIn(0f, 1f)
+                        drawRoundRect(accent, size = size.copy(width = width), cornerRadius = CornerRadius(size.height / 2))
+                    },
+            )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
             Artwork(
