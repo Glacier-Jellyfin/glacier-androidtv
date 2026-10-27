@@ -25,6 +25,7 @@ buildscript {
             classpath("org.jdom:jdom2:2.0.6.1")
             classpath("org.apache.commons:commons-lang3:3.21.0")
             classpath("org.apache.httpcomponents:httpclient:4.5.14")
+            classpath("com.google.guava:guava:33.7.2-jre")
         }
     }
 }
@@ -37,6 +38,7 @@ subprojects {
             "org.bouncycastle:bcutil-jdk18on:1.86",
             "org.apache.commons:commons-lang3:3.21.0",
             "org.apache.httpcomponents:httpclient:4.5.14",
+            "com.google.guava:guava:33.7.2-jre",
         ).forEach { dependencyConstraints.add(project.dependencies.constraints.create(it)) }
     }
 }

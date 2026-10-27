@@ -27,4 +27,8 @@ dependencies {
     implementation(project(":core:ffmpeg"))
     // Full ASS/SSA rendering (signs, fonts, animation) that Media3's own parser lacks.
     api(libs.libass.media)
+    constraints {
+        // Media3 brings an older Guava with a known vulnerability. Remove once Media3's own is at least this new.
+        api(libs.guava)
+    }
 }
