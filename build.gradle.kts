@@ -41,4 +41,13 @@ subprojects {
             "com.google.guava:guava:33.7.2-jre",
         ).forEach { dependencyConstraints.add(project.dependencies.constraints.create(it)) }
     }
+
+    // Media3 brings Guava into the app, Hilt and KSP into the annotation processors.
+    // Raises all of them past a known vulnerability, keeping the Android flavour in
+    // the APK. Remove once Media3, Hilt and KSP bring at least this version.
+    configurations.matching { it.isCanBeResolved && it.name != "androidLintTool" }.configureEach {
+        val processor = name.startsWith("ksp") || name.contains("AnnotationProcessor")
+        val flavour = if (processor) "jre" else "android"
+        dependencyConstraints.add(project.dependencies.constraints.create("com.google.guava:guava:33.7.2-$flavour"))
+    }
 }

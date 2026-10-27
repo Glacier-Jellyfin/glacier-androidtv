@@ -17,8 +17,6 @@ coroutines = "1.11.0"
 serialization = "1.12.0"
 coil = "3.6.3"
 media3 = "1.11.1"
-# Not used directly. Raises the Guava that Media3 brings in (see core/player).
-guava = "33.7.2-android"
 # libass for ASS/SSA subtitles (MIT); 0.5.x is built against Media3 1.8 and works with 1.11.
 libass-android = "0.5.1"
 # Generated from the 12.1 API; its minimum supported server is still 12.0.
@@ -66,7 +64,6 @@ media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls", versio
 media3-ui-compose = { module = "androidx.media3:media3-ui-compose", version.ref = "media3" }
 media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
 media3-session = { module = "androidx.media3:media3-session", version.ref = "media3" }
-guava = { module = "com.google.guava:guava", version.ref = "guava" }
 libass-media = { module = "io.github.peerless2012:ass-media", version.ref = "libass-android" }
 jellyfin-core = { module = "org.jellyfin.sdk:jellyfin-core", version.ref = "jellyfin-sdk" }
 junit = { module = "junit:junit", version.ref = "junit" }
