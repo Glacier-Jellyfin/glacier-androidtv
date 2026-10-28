@@ -43,6 +43,12 @@ internal fun AccountState.withoutServer(serverId: String): AccountState = copy(
     startProfile = startProfile.takeUnless { it.serverId == serverId } ?: StartProfile(),
 )
 
+/** Forgets a profile on this device: token, PIN and parental control; a start profile set to it falls back to the default. */
+internal fun AccountState.withoutUser(serverId: String, userId: String): AccountState = copy(
+    users = users.filterNot { it.serverId == serverId && it.userId == userId },
+    startProfile = startProfile.takeUnless { it.serverId == serverId && it.userId == userId } ?: StartProfile(),
+)
+
 /** One entry on the "Who's watching?" screen. */
 data class Profile(
     val userId: String,

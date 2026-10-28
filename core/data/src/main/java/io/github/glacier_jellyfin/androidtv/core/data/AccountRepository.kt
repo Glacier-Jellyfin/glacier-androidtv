@@ -36,6 +36,10 @@ class AccountRepository @Inject constructor(
         store.updateData { it.updateUser(serverId, userId) { user -> user.copy(accessToken = null) } }
     }
 
+    suspend fun removeUser(serverId: String, userId: String) {
+        store.updateData { it.withoutUser(serverId, userId) }
+    }
+
     suspend fun setPin(serverId: String, userId: String, pin: String) {
         val hash = withContext(Dispatchers.Default) { Pins.hash(pin) }
         store.updateData { it.updateUser(serverId, userId) { user -> user.copy(pin = hash, pinChangedAt = now()) } }

@@ -92,6 +92,16 @@ class AccountStateTest {
         assertNull(state.lastServerId)
     }
 
+    @Test
+    fun `removing a profile forgets it and its start profile but keeps the server`() {
+        val state = twoProfiles(StartMode.Fixed)
+            .updateUser("s1", anna.toString()) { it.copy(pin = PinHash("salt", "hash", 1)) }
+            .withoutUser("s1", anna.toString())
+        assertEquals(listOf("Jonas"), state.users.map { it.name })
+        assertEquals(StartProfile(), state.startProfile)
+        assertEquals(listOf("s1"), state.servers.map { it.id })
+    }
+
     private fun twoProfiles(mode: StartMode) = AccountState()
         .withServer(server, now = 0)
         .withSignIn(signIn(anna, "Anna"), now = 1)

@@ -58,14 +58,29 @@ class SessionManager @Inject constructor(
      * next time either way.
      */
     suspend fun signOut() {
-        val current = _session.value ?: return
+        val current = endOnServer() ?: return
+        accounts.forgetToken(current.server.id, current.user.userId)
+        _session.value = null
+    }
+
+    /**
+     * Signs out like [signOut] and forgets the profile on this device: PIN and
+     * parental control go too. The Jellyfin account itself stays.
+     */
+    suspend fun removeFromDevice() {
+        val current = endOnServer() ?: return
+        accounts.removeUser(current.server.id, current.user.userId)
+        _session.value = null
+    }
+
+    private suspend fun endOnServer(): Session? {
+        val current = _session.value ?: return null
         val token = current.user.accessToken
         if (token != null) {
             runCatching { authenticator.signOut(current.server.address, token) }
                 .onFailure { Log.w(TAG, "Server sign-out failed; token dropped locally only", it) }
         }
-        accounts.forgetToken(current.server.id, current.user.userId)
-        _session.value = null
+        return current
     }
 
     private companion object {

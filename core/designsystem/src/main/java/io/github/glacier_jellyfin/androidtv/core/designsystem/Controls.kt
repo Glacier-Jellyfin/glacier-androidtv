@@ -63,6 +63,8 @@ fun PillButton(
     /** A small count or fact at the end, like a playlist's number of songs. */
     badge: String? = null,
     width: Int? = null,
+    /** A marker in the accent before [badge], like "This device". */
+    tag: String? = null,
 ) {
     val accent = LocalAccent.current
     GlacierClickable(
@@ -97,8 +99,20 @@ fun PillButton(
                 color = foreground,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = if (badge != null && fillWidth) Modifier.weight(1f) else Modifier,
+                modifier = if ((badge != null || tag != null) && fillWidth) Modifier.weight(1f) else Modifier,
             )
+            if (tag != null) {
+                Box(
+                    Modifier
+                        .height(30.dp)
+                        .clip(PillShape)
+                        .background(if (focused) GlacierColors.Void else accent.main)
+                        .padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(tag, style = GlacierText.body(15, FontWeight.Bold), color = if (focused) accent.main else GlacierColors.Void, maxLines = 1)
+                }
+            }
             if (badge != null) {
                 Box(
                     Modifier

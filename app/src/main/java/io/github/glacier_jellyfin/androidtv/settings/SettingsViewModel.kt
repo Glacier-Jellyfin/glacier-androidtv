@@ -21,6 +21,8 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.Library
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AppearanceSettings
+import io.github.glacier_jellyfin.androidtv.core.data.settings.DeviceSettings
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsSync
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.NavigationSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.Language
@@ -103,7 +105,20 @@ data class SettingsUiState(
     val startProfile: StartProfile = StartProfile(),
     /** Profiles [StartMode.Fixed] can open: the signed-in ones of this server, and the chosen one wherever it is. */
     val startCandidates: List<StoredUser> = emptyList(),
-)
+    /** This profile's settings copies on the server ([SettingsSync]), this device's included. */
+    val copies: List<DeviceSettings> = emptyList(),
+    val thisDeviceId: String? = null,
+    /** The list of the devices' copies is open. */
+    val copyPicker: Boolean = false,
+    /** One copy is open from the list, to take or delete it. */
+    val copyOpened: DeviceSettings? = null,
+    /** "Delete this copy?" is open over [copyOpened]. */
+    val deleteAsked: DeviceSettings? = null,
+    /** "Remove from this TV?" is open. */
+    val removeAsked: Boolean = false,
+) {
+    val hasOwnCopy: Boolean get() = copies.any { it.deviceId == thisDeviceId }
+}
 
 /** Settings › System › Diagnostics: [sentAs] is the file name the server gave the log just sent. */
 data class DiagnosticsState(
@@ -129,11 +144,14 @@ class SettingsViewModel @Inject constructor(
     home: HomeRepository,
     private val parental: ParentalControl,
     private val diagnostics: Diagnostics,
+    private val sync: SettingsSync,
     val updates: UpdateManager,
     val whatsNew: WhatsNew,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(SettingsUiState(userName = sessions.session.value?.user?.name.orEmpty()))
+    private val _state = MutableStateFlow(
+        SettingsUiState(userName = sessions.session.value?.user?.name.orEmpty(), thisDeviceId = sessions.session.value?.api?.deviceInfo?.id),
+    )
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
@@ -159,6 +177,7 @@ class SettingsViewModel @Inject constructor(
             val languages = serverPreferences.languages()
             _state.update { it.copy(languages = languages) }
         }
+        viewModelScope.launch { sync.copies.collect { copies -> _state.update { it.copy(copies = copies) } } }
         viewModelScope.launch { parental.lock.collect { lock -> _state.update { it.copy(lock = lock) } } }
         viewModelScope.launch { parental.settingsUnlocked.collect { unlocked -> _state.update { it.copy(accountUnlocked = unlocked) } } }
         viewModelScope.launch { loadPreviewImage() }
@@ -286,6 +305,64 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessions.signOut()
             _events.send(UiEvent.Navigate(ProfilesRoute(serverId), clearBackStack = true))
+        }
+    }
+
+    fun openCopies() = _state.update { it.copy(copyPicker = true) }
+
+    fun closeCopies() = _state.update { it.copy(copyPicker = false) }
+
+    fun openCopy(copy: DeviceSettings) = _state.update { it.copy(copyOpened = copy) }
+
+    fun closeCopy() = _state.update { it.copy(copyOpened = null) }
+
+    fun adoptCopy(copy: DeviceSettings) {
+        _state.update { it.copy(copyOpened = null, copyPicker = false) }
+        viewModelScope.launch {
+            sync.adopt(copy)
+            _events.send(UiEvent.Toast(R.string.settings_copy_taken, listOf(copy.deviceName)))
+        }
+    }
+
+    fun askDeleteCopy(copy: DeviceSettings) = _state.update { it.copy(deleteAsked = copy) }
+
+    fun dismissDeleteCopy() = _state.update { it.copy(deleteAsked = null) }
+
+    /** Deletes the asked copy on the server; this device's own goes together with the profile, see [removeProfile]. */
+    fun deleteCopy() {
+        val copy = _state.value.deleteAsked ?: return
+        if (copy.deviceId == _state.value.thisDeviceId) {
+            _state.update { it.copy(deleteAsked = null, copyOpened = null, copyPicker = false) }
+            removeProfile(RemoveProfile.DeleteCopy)
+            return
+        }
+        // The question stays until the server answered, so the list comes back without the copy and the focus finds a button.
+        viewModelScope.launch {
+            val deleted = sync.deleteCopy(copy.deviceId)
+            val copies = sync.copies.value
+            _state.update {
+                if (deleted) it.copy(copies = copies, deleteAsked = null, copyOpened = null, copyPicker = it.copyPicker && copies.isNotEmpty())
+                else it.copy(deleteAsked = null)
+            }
+            if (!deleted) _events.send(UiEvent.Toast(R.string.settings_copy_delete_failed))
+        }
+    }
+
+    fun askRemove() = _state.update { it.copy(removeAsked = true) }
+
+    fun dismissRemove() = _state.update { it.copy(removeAsked = false) }
+
+    /** Forgets the profile on this device, see [SessionManager.removeFromDevice]; the Jellyfin account stays. */
+    fun removeProfile(choice: RemoveProfile) {
+        val session = sessions.session.value ?: return
+        dismissRemove()
+        viewModelScope.launch {
+            if (choice == RemoveProfile.DeleteCopy && !sync.deleteOwnCopy()) {
+                _events.send(UiEvent.Toast(R.string.settings_remove_copy_failed))
+            }
+            sessions.removeFromDevice()
+            sync.forget(session.server.id, session.user.userId)
+            _events.send(UiEvent.Navigate(ProfilesRoute(session.server.id), clearBackStack = true))
         }
     }
 

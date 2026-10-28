@@ -26,6 +26,8 @@ import javax.inject.Singleton
 @Serializable
 data class SettingsState(
     val profiles: Map<String, ProfileSettings> = emptyMap(),
+    /** Profiles already asked whether to take the settings of another device (see [SettingsSync]). */
+    val restoreOffered: Set<String> = emptySet(),
 )
 
 internal fun profileKey(serverId: String, userId: String) = "$serverId/$userId"

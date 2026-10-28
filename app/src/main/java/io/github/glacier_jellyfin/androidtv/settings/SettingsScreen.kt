@@ -289,6 +289,16 @@ fun SettingsScreen(
         }
         pinWasOpen = pinPrompt != null
     }
+    // Closing the device copies or "Remove from this TV?" returns to the button that opened it.
+    val accountDialog = state.copyPicker || state.copyOpened != null || state.deleteAsked != null || state.removeAsked
+    var accountDialogWasOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(accountDialog) {
+        if (!accountDialog && accountDialogWasOpen) {
+            withFrameNanos { }
+            pinOrigins.restore()
+        }
+        accountDialogWasOpen = accountDialog
+    }
     LaunchedEffect(state.languagePicker) {
         if (state.languagePicker == null && pickerWasOpen) runCatching { languageFocus.requestFocus() }
         pickerWasOpen = state.languagePicker != null
@@ -511,6 +521,39 @@ fun SettingsScreen(
             }
         }
 
+        val deleteAsked = state.deleteAsked
+        val copyOpened = state.copyOpened
+        if (deleteAsked != null) {
+            DeleteCopyDialog(
+                deleteAsked,
+                own = deleteAsked.deviceId == state.thisDeviceId,
+                userName = state.userName,
+                onConfirm = viewModel::deleteCopy,
+                onDismiss = viewModel::dismissDeleteCopy,
+            )
+        } else if (copyOpened != null) {
+            DeviceCopyActions(
+                copyOpened,
+                own = copyOpened.deviceId == state.thisDeviceId,
+                onTake = { viewModel.adoptCopy(copyOpened) },
+                onDelete = { viewModel.askDeleteCopy(copyOpened) },
+                onDismiss = viewModel::closeCopy,
+            )
+        } else if (state.copyPicker) {
+            DeviceCopyPicker(
+                title = stringResource(R.string.settings_copy_take),
+                body = stringResource(R.string.settings_copy_pick_body),
+                copies = state.copies,
+                thisDeviceId = state.thisDeviceId,
+                dismiss = null,
+                onPick = viewModel::openCopy,
+                onDismiss = viewModel::closeCopies,
+                current = true,
+            )
+        }
+        if (state.removeAsked) {
+            RemoveProfileDialog(state.userName, hasCopy = state.hasOwnCopy, onRemove = viewModel::removeProfile, onDismiss = viewModel::dismissRemove)
+        }
         pinPrompt?.let { PinDialog(it, onKey = viewModel.pin::key, onDismiss = viewModel.pin::dismiss) }
         state.diagnostics.share?.let { LogShareScreen(it, onClose = viewModel::closeShare) }
     }
@@ -1186,7 +1229,7 @@ private fun accountRows(
     return listOf(
         SettingGroup(
             stringResource(R.string.settings_group_profile),
-            listOf(
+            listOfNotNull(
                 signedInAs,
                 SettingRow.Value(
                     stringResource(R.string.settings_ui_lang),
@@ -1195,6 +1238,18 @@ private fun accountRows(
                     onClick = { viewModel.openLanguages(LanguageTarget.Ui) },
                     focus = languageFocus,
                 ),
+                // Only once a device has saved this profile's settings.
+                if (state.copies.isNotEmpty()) {
+                    SettingRow.Action(
+                        stringResource(R.string.settings_copy_take),
+                        stringResource(R.string.settings_copy_take_sub),
+                        button = stringResource(R.string.settings_copy_take_value),
+                        onClick = pinOrigins.tap("copies", viewModel::openCopies),
+                        focus = pinOrigins.of("copies"),
+                    )
+                } else {
+                    null
+                },
             ),
         ),
         SettingGroup(
@@ -1264,6 +1319,13 @@ private fun accountRows(
                     button = stringResource(R.string.home_sign_out),
                     onClick = viewModel::signOut,
                 ),
+                SettingRow.Action(
+                    stringResource(R.string.settings_remove),
+                    stringResource(R.string.settings_remove_sub),
+                    button = stringResource(R.string.settings_remove_value),
+                    onClick = pinOrigins.tap("remove-profile", viewModel::askRemove),
+                    focus = pinOrigins.of("remove-profile"),
+                ),
             ),
         ),
     )
@@ -1273,7 +1335,7 @@ private fun accountRows(
 private fun ageLabel(limit: AgeLimit): String =
     limit.age?.let { "$it+" } ?: stringResource(R.string.settings_age_all)
 
-/** Buttons that open the PIN dialog; focus goes back to the one used once it closes. */
+/** Buttons that open a dialog (the PIN, the device copies, removing the profile); focus goes back to the one used once it closes. */
 private class PinOrigins {
     private val requesters = mutableMapOf<String, FocusRequester>()
     private var last: String? = null

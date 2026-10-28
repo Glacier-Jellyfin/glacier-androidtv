@@ -53,6 +53,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.Accent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierBackground
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierTheme
 import io.github.glacier_jellyfin.androidtv.core.log.Log
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsSync
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateManager
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
 import io.github.glacier_jellyfin.androidtv.core.updater.WhatsNew
@@ -117,6 +118,7 @@ class StartViewModel @Inject constructor(
     private val sessions: SessionManager,
     private val launches: HomeLaunches,
     private val diagnostics: Diagnostics,
+    settingsSync: SettingsSync,
 ) : ViewModel() {
     /** Library kinds of the server, for every navigation bar. */
     val libraryKinds: StateFlow<List<LibraryKind>> = home.kinds
@@ -172,6 +174,7 @@ class StartViewModel @Inject constructor(
     init {
         updates.start()
         whatsNew.start()
+        settingsSync.start()
         viewModelScope.launch {
             offerCrashLog()
             val server = accounts.current().startServerId()

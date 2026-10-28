@@ -82,6 +82,8 @@ import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 import io.github.glacier_jellyfin.androidtv.ui.yearText
+import io.github.glacier_jellyfin.androidtv.settings.RestoreOfferDialog
+import io.github.glacier_jellyfin.androidtv.settings.RestoreViewModel
 import io.github.glacier_jellyfin.androidtv.update.UpdateDialog
 import io.github.glacier_jellyfin.androidtv.update.UpdateViewModel
 import io.github.glacier_jellyfin.androidtv.update.WhatsNewDialog
@@ -99,6 +101,7 @@ fun HomeScreen(
     onNavigate: (UiEvent.Navigate) -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
     updates: UpdateViewModel = hiltViewModel(),
+    restore: RestoreViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
@@ -179,14 +182,18 @@ fun HomeScreen(
         pinWasOpen = pinPrompt != null
     }
 
+    // A profile new on this device: the settings of another device first, before any update news.
+    val restoreOffer by restore.offer.collectAsStateWithLifecycle()
+    val restoreShown = restoreOffer?.takeIf { hasContent && pinPrompt == null }
+
     // A new version found at start: shown once, a moment after the home screen has settled.
     val updatePrompt by updates.updates.prompt.collectAsStateWithLifecycle()
     var updateShown by remember { mutableStateOf<UpdateCandidate?>(null) }
     val toaster = LocalToaster.current
     val laterText = stringResource(R.string.update_later_toast)
-    LaunchedEffect(updatePrompt, hasContent, pinPrompt == null) {
+    LaunchedEffect(updatePrompt, hasContent, pinPrompt == null, restoreOffer == null) {
         val candidate = updatePrompt ?: return@LaunchedEffect
-        if (!hasContent || pinPrompt != null) return@LaunchedEffect
+        if (!hasContent || pinPrompt != null || restoreOffer != null) return@LaunchedEffect
         delay(1200)
         updateShown = candidate
         updates.updates.promptShown()
@@ -194,14 +201,14 @@ fun HomeScreen(
     // The store builds' counterpart: the changes of a version the store installed, shown the same way.
     val whatsNewPrompt by updates.whatsNew.prompt.collectAsStateWithLifecycle()
     var whatsNewShown by remember { mutableStateOf<WhatsNewPrompt?>(null) }
-    LaunchedEffect(whatsNewPrompt, hasContent, pinPrompt == null) {
+    LaunchedEffect(whatsNewPrompt, hasContent, pinPrompt == null, restoreOffer == null) {
         val prompt = whatsNewPrompt ?: return@LaunchedEffect
-        if (!hasContent || pinPrompt != null) return@LaunchedEffect
+        if (!hasContent || pinPrompt != null || restoreOffer != null) return@LaunchedEffect
         delay(1200)
         whatsNewShown = prompt
         updates.whatsNew.promptShown()
     }
-    val dialogOpen = updateShown != null || whatsNewShown != null
+    val dialogOpen = updateShown != null || whatsNewShown != null || restoreShown != null
     var updateWasOpen by remember { mutableStateOf(false) }
     LaunchedEffect(dialogOpen) {
         if (!dialogOpen && updateWasOpen) {
@@ -464,6 +471,7 @@ fun HomeScreen(
             )
         }
         whatsNewShown?.let { WhatsNewDialog(it, onClose = { whatsNewShown = null }) }
+        restoreShown?.let { RestoreOfferDialog(it, onAnswer = restore::answer) }
     }
 }
 
