@@ -1,0 +1,1 @@
+Schneller Jellyfin-Client für den Fernseher, mit Live-TV, Musik und Player

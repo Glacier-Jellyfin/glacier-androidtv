@@ -1,0 +1,18 @@
+Glacier is a modern Jellyfin client for Android TV, Google TV and Fire TV. It is built for the remote from the ground up, so you find something to watch fast.
+
+Glacier needs your own Jellyfin server (version 12.0 or newer). It does not come with any movies, shows or music.
+
+• Movies, shows and music from your server, with search, sorting, filters, collections and an A to Z rail
+• A player made for watching: skip intros, recaps and credits, previews while seeking, chapters and the next episode with a countdown
+• The TV switches to the frame rate of the video, so films play without judder
+• DTS, TrueHD and more through the built-in FFmpeg audio decoder, and surround sound that stays surround over HDMI ARC
+• Several versions of a title, such as 4K and 1080p or a Director's Cut, with the right one picked for your TV
+• Live TV with a programme guide, recordings, pause and rewind
+• Music that keeps playing while you browse, with a queue, playlists, lyrics and instant mix
+• Multiple servers and profiles, Quick Connect and parental controls with age limits and PINs
+• Requests through Seerr for titles missing from your library (needs the Jellyfin Enhanced plugin)
+• English and German, nine accent colours and a compact layout
+
+Glacier is free and open source under the GPL-3.0. There are no ads, no accounts and no tracking.
+
+Glacier is not affiliated with the Jellyfin project.

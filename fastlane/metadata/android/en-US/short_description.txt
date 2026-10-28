@@ -1,0 +1,1 @@
+A fast Jellyfin client for your TV, with Live TV, music and a great player

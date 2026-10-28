@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Datenschutz · Glacier</title>
+  <meta name="description" content="Wie Glacier, der Jellyfin-Client für Android TV, Google TV und Fire TV, mit deinen Daten umgeht.">
+  <link rel="canonical" href="https://glacier-jellyfin.github.io/glacier-androidtv/de/privacy.html">
+  <link rel="alternate" hreflang="en" href="https://glacier-jellyfin.github.io/glacier-androidtv/privacy.html">
+  <link rel="alternate" hreflang="de" href="https://glacier-jellyfin.github.io/glacier-androidtv/de/privacy.html">
+  <link rel="icon" href="../assets/mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400..700&display=swap">
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+  <nav class="nav">
+    <div class="wrap">
+      <a class="brand" href="./">
+        <img src="../assets/mark.svg" width="28" height="28" alt="">
+        Glacier
+      </a>
+      <div class="nav-right">
+        <div class="lang-toggle" role="group" aria-label="Sprache">
+          <a href="../privacy.html" hreflang="en" lang="en">EN</a>
+          <a href="privacy.html" hreflang="de" lang="de" aria-current="page">DE</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <section>
+      <div class="wrap legal">
+        <h1>Datenschutz</h1>
+        <p class="updated">Stand: 28. Oktober 2026</p>
+
+        <p><strong>Kurz gesagt:</strong> Glacier sammelt keine Daten für sich selbst. Es gibt kein Konto, keine Analyse, keine Werbung und kein Tracking. Glacier spricht mit den Jellyfin-Servern, die du hinzufügst, und für einige Funktionen mit den unten genannten Diensten.</p>
+
+        <h2>Verantwortlich</h2>
+        <p>Glacier ist eine kostenlose Open-Source-App von je.apps. Fragen zu dieser Erklärung schickst du an <a href="mailto:support@eberts.cloud">support@eberts.cloud</a> oder stellst sie als Issue auf <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/issues">GitHub</a>.</p>
+
+        <h2>Was auf deinem Gerät bleibt</h2>
+        <p>Glacier speichert Folgendes im eigenen App-Speicher auf dem Fernseher. Es verlässt das Gerät nur wie unten beschrieben und wird gelöscht, wenn du Glacier deinstallierst.</p>
+        <ul>
+          <li>Die Adressen deiner Jellyfin-Server, deine Benutzernamen und die Zugangstoken, die die Server ausstellen. Dein Passwort geht nur zur Anmeldung an deinen Server und wird nicht gespeichert.</li>
+          <li>Deine Einstellungen, auch die PINs und Altersgrenzen der Kindersicherung.</li>
+          <li>Ein App-Protokoll für Fehlerberichte. Serveradressen, Namen, Passwörter und Zugangstoken werden entfernt, bevor es gesendet oder heruntergeladen wird.</li>
+        </ul>
+
+        <h2>Dein Jellyfin-Server</h2>
+        <p>Glacier schickt deinem Server, was es zum Arbeiten braucht: deine Anmeldung, was du abspielst und wie weit du geschaut hast, deine Favoriten und deine Einstellungen für Audio und Untertitel. Dein Gerät erscheint in der Geräteliste des Servers als „Glacier“. Wählst du in den Einstellungen „Protokoll an den Server senden“, geht das bereinigte App-Protokoll an deinen Server. Den Server betreibst du selbst oder wer dich eingeladen hat. Für die dort gespeicherten Daten ist der Betreiber verantwortlich.</p>
+
+        <h2>Andere Dienste</h2>
+        <ul>
+          <li><strong>GitHub</strong>, nur in der Version von GitHub: Glacier fragt beim Start bei <code>api.github.com</code> nach einer neuen Version und lädt Updates von GitHub. Die Prüfung lässt sich in den Einstellungen abschalten. GitHub sieht deine IP-Adresse. Siehe die <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement">Datenschutzerklärung von GitHub</a>.</li>
+          <li><strong>YouTube</strong>: Hat ein Titel einen YouTube-Trailer, lädt sein Vorschaubild von YouTube, und der Trailer läuft im eingebetteten Player von YouTube. Google erhält deine IP-Adresse und Angaben zur Wiedergabe. Siehe die <a href="https://policies.google.com/privacy?hl=de">Datenschutzerklärung von Google</a>.</li>
+          <li><strong>The Movie Database (TMDB)</strong>: Hat dein Server das Plugin Jellyfin Enhanced mit Seerr, zeigt die Suche auch Titel, die in deiner Bibliothek fehlen. Deren Poster laden von <code>image.tmdb.org</code>, das deine IP-Adresse sieht. Siehe die <a href="https://www.themoviedb.org/privacy-policy">Datenschutzerklärung von TMDB</a>.</li>
+          <li><strong>App-Stores</strong>: Hast du Glacier aus Google Play oder dem Amazon Appstore installiert, installiert und aktualisiert der Store die App nach seiner eigenen Datenschutzerklärung.</li>
+        </ul>
+
+        <h2>Lokales Netzwerk</h2>
+        <p>Um Server zu finden, schickt Glacier eine Suchanfrage in dein lokales Netzwerk. „Protokoll im Netzwerk herunterladen“ startet auf dem Fernseher einen kleinen Webserver, solange der QR-Code zu sehen ist. So kann ein Handy oder Computer im selben Netzwerk das Protokoll speichern.</p>
+
+        <h2>Startbildschirm von Android TV</h2>
+        <p>Auf Android TV und Google TV füllt Glacier die Reihe zum Weiterschauen und eigene Kanäle auf dem Startbildschirm mit Titeln von deinem Server. Diese Einträge verwaltet das System auf deinem Gerät. Die Kanäle lassen sich in den Einstellungen des Startbildschirms ausblenden.</p>
+
+        <h2>Änderungen</h2>
+        <p>Geht Glacier künftig anders mit Daten um, wird zuerst diese Seite angepasst. Das Datum oben zeigt die letzte Änderung.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-row">
+      <span>Lizenziert unter GPL-3.0-or-later. Kein offizielles Projekt von Jellyfin.</span>
+      <div class="footer-links">
+        <a href="./">Startseite</a>
+        <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv">GitHub</a>
+        <a href="../privacy.html" hreflang="en">English</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
