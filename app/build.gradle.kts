@@ -26,22 +26,22 @@ fun versionCodeOf(version: String): Int {
     return major.toInt() * 1_000_000 + minor.toInt() * 10_000 + patch.toInt() * 100 + suffix
 }
 
-/** CHANGELOG.md as an asset of the store builds, for "What's new" after a store update (core/updater WhatsNew). */
+/** CHANGELOG.md and its translations as assets of the store builds, for "What's new" after a store update (core/updater WhatsNew). */
 abstract class ChangelogAsset : DefaultTask() {
-    @get:InputFile
-    abstract val changelog: RegularFileProperty
+    @get:InputFiles
+    abstract val changelogs: ConfigurableFileCollection
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
     @TaskAction
     fun copy() {
-        changelog.get().asFile.copyTo(outputDir.file("CHANGELOG.md").get().asFile, overwrite = true)
+        changelogs.forEach { it.copyTo(outputDir.file(it.name).get().asFile, overwrite = true) }
     }
 }
 
 val changelogAsset = tasks.register<ChangelogAsset>("changelogAsset") {
-    changelog.set(rootProject.layout.projectDirectory.file("CHANGELOG.md"))
+    changelogs.from(rootProject.layout.projectDirectory.files("CHANGELOG.md", "CHANGELOG.de.md"))
 }
 
 /** The store builds; each delivers its own updates. Debug can play one with -Pglacier.store=amazon|play. */

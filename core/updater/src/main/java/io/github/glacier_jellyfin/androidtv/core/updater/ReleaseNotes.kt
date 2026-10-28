@@ -19,6 +19,26 @@ object ReleaseNotes {
     private val REF = Regex("""^(.*?)\s*\((#\d+)\)\s*$""")
     private val MARKS = Regex("""\*\*|__|`""")
 
+    private val TRANSLATION = Regex("""<details lang="([a-z]{2})">.*?</details>""", RegexOption.DOT_MATCHES_ALL)
+    private val HTML_HEADING = Regex("""^<h3>(.*)</h3>$""")
+    private val HTML_ITEM = Regex("""^<li>(.*)</li>$""")
+
+    /**
+     * The notes of a release in [language]: release notes carry a translation
+     * as `<details lang="de">` with `<h3>` and `<li>` lines (scripts/release-notes.sh),
+     * which turns back into Markdown here. Without one, the English notes, never both.
+     */
+    fun localized(body: String, language: String): String {
+        val translation = TRANSLATION.findAll(body).firstOrNull { it.groupValues[1] == language }
+            ?: return TRANSLATION.replace(body, "")
+        return translation.value.lineSequence().mapNotNull { line ->
+            HTML_HEADING.matchEntire(line.trim())?.let { "### ${unescape(it.groupValues[1])}" }
+                ?: HTML_ITEM.matchEntire(line.trim())?.let { "- ${unescape(it.groupValues[1])}" }
+        }.joinToString("\n")
+    }
+
+    private fun unescape(text: String): String = text.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+
     /** [fallbackHeading] titles lines that come before any heading. */
     fun parse(markdown: String, fallbackHeading: String): List<NotesSection> {
         val sections = mutableListOf<Pair<String, MutableList<String>>>()

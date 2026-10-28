@@ -46,6 +46,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -99,7 +100,8 @@ fun UpdateDialog(candidate: UpdateCandidate, installed: AppVersion, onNow: () ->
     val scope = rememberCoroutineScope()
     val nowFocus = remember { FocusRequester() }
     val fallback = stringResource(R.string.update_notes_fallback)
-    val notes = remember(candidate) { releaseNotes(candidate, fallback) }
+    val language = notesLanguage()
+    val notes = remember(candidate, language) { releaseNotes(candidate, fallback, language) }
     GlacierBackground(
         Modifier
             .onPreviewKeyEvent { event ->
@@ -171,7 +173,8 @@ fun WhatsNewDialog(prompt: WhatsNewPrompt, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     val okFocus = remember { FocusRequester() }
     val fallback = stringResource(R.string.update_notes_fallback)
-    val notes = remember(prompt) { changelogNotes(prompt, fallback) }
+    val language = notesLanguage()
+    val notes = remember(prompt, language) { changelogNotes(prompt, fallback, language) }
     GlacierBackground(
         Modifier
             .onPreviewKeyEvent { event ->
@@ -392,16 +395,29 @@ fun DownloadingOverlay(version: AppVersion, bytes: Long, total: Long, onCancel: 
 /** The notes of one release the update brings; [version] like "0.2.2", [date] see [publishedDate]. */
 class VersionNotes(val version: String, val date: String?, val sections: List<NotesSection>)
 
-/** The notes of every release from the installed version up to [candidate], newest first; releases without notes left out. */
-fun releaseNotes(candidate: UpdateCandidate, fallbackHeading: String): List<VersionNotes> =
+/** The interface language ("de", "en"), which picks the language of the release notes. */
+@Composable
+fun notesLanguage(): String = LocalConfiguration.current.locales[0].language
+
+/**
+ * The notes of every release from the installed version up to [candidate] in [language]
+ * (English where a release has no translation), newest first; releases without notes left out.
+ */
+fun releaseNotes(candidate: UpdateCandidate, fallbackHeading: String, language: String): List<VersionNotes> =
     candidate.changes
-        .map { VersionNotes(it.tag.removePrefix("v"), publishedDate(it.publishedAt), ReleaseNotes.parse(it.body, fallbackHeading)) }
+        .map {
+            val body = ReleaseNotes.localized(it.body, language)
+            VersionNotes(it.tag.removePrefix("v"), publishedDate(it.publishedAt), ReleaseNotes.parse(body, fallbackHeading))
+        }
         .filter { it.sections.isNotEmpty() }
 
-/** The notes of every version [prompt] brings, newest first; versions without notes left out. */
-fun changelogNotes(prompt: WhatsNewPrompt, fallbackHeading: String): List<VersionNotes> =
+/** The notes of every version [prompt] brings in [language] (English where there is no translation), newest first. */
+fun changelogNotes(prompt: WhatsNewPrompt, fallbackHeading: String, language: String): List<VersionNotes> =
     prompt.changes
-        .map { VersionNotes(it.version.toString(), changelogDate(it.date), ReleaseNotes.parse(it.body, fallbackHeading)) }
+        .map { english ->
+            val entry = prompt.translations[language]?.firstOrNull { it.version == english.version } ?: english
+            VersionNotes(entry.version.toString(), changelogDate(entry.date), ReleaseNotes.parse(entry.body, fallbackHeading))
+        }
         .filter { it.sections.isNotEmpty() }
 
 /** A changelog date like "2026-10-27" in the interface language. */

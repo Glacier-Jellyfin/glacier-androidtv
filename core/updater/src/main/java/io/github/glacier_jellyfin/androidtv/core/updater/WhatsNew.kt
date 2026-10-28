@@ -10,13 +10,22 @@ import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** The changes since [previous], newest first, for the "What's new" dialog. */
-data class WhatsNewPrompt(val previous: AppVersion, val current: AppVersion, val changes: List<ChangelogEntry>)
+/**
+ * The changes since [previous], newest first, for the "What's new" dialog;
+ * [translations] by language ("de"), where a version may be missing.
+ */
+data class WhatsNewPrompt(
+    val previous: AppVersion,
+    val current: AppVersion,
+    val changes: List<ChangelogEntry>,
+    val translations: Map<String, List<ChangelogEntry>> = emptyMap(),
+)
 
 /**
  * "What's new" for a build a store updates ([UpdaterConfig.selfUpdate] off):
  * after the store installed a newer version, the home screen shows the
- * changelog the build carries (assets/CHANGELOG.md) once. A fresh
+ * changelog the build carries (assets/CHANGELOG.md, translations as
+ * CHANGELOG.de.md) once. A fresh
  * installation shows nothing. Applies to the whole device, like the updater.
  */
 @Singleton
@@ -49,7 +58,10 @@ class WhatsNew @Inject constructor(
         val current = running ?: return
         val last = prefs.getString(KEY_LAST, null)?.let(AppVersion::parse)
         val prompt = last?.takeIf { it < current && _enabled.value }?.let { previous ->
-            changesBetween(previous, current).takeIf { it.isNotEmpty() }?.let { WhatsNewPrompt(previous, current, it) }
+            changesBetween(ASSET, previous, current).takeIf { it.isNotEmpty() }?.let { changes ->
+                val translations = TRANSLATIONS.associateWith { changesBetween("CHANGELOG.$it.md", previous, current) }
+                WhatsNewPrompt(previous, current, changes, translations)
+            }
         }
         if (prompt == null) remember(current) else _prompt.value = prompt
     }
@@ -67,9 +79,9 @@ class WhatsNew @Inject constructor(
         if (!on) running?.let(::remember)
     }
 
-    private fun changesBetween(last: AppVersion, current: AppVersion): List<ChangelogEntry> =
-        runCatching { context.assets.open(ASSET).bufferedReader().use { it.readText() } }
-            .onFailure { Log.w(TAG, "No changelog in this build", it) }
+    private fun changesBetween(asset: String, last: AppVersion, current: AppVersion): List<ChangelogEntry> =
+        runCatching { context.assets.open(asset).bufferedReader().use { it.readText() } }
+            .onFailure { Log.w(TAG, "No $asset in this build", it) }
             .getOrNull()
             ?.let { Changelog.between(Changelog.parse(it), last, current) }
             .orEmpty()
@@ -81,6 +93,8 @@ class WhatsNew @Inject constructor(
     private companion object {
         const val TAG = "WhatsNew"
         const val ASSET = "CHANGELOG.md"
+        /** Languages with a CHANGELOG.<language>.md besides the English one. */
+        val TRANSLATIONS = listOf("de")
         const val KEY_LAST = "last_version"
         const val KEY_ENABLED = "enabled"
     }

@@ -121,6 +121,7 @@ import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
 import io.github.glacier_jellyfin.androidtv.core.updater.pending
 import io.github.glacier_jellyfin.androidtv.update.megabytes
 import io.github.glacier_jellyfin.androidtv.update.message
+import io.github.glacier_jellyfin.androidtv.update.notesLanguage
 import io.github.glacier_jellyfin.androidtv.update.openStorePage
 import io.github.glacier_jellyfin.androidtv.update.publishedDate
 import io.github.glacier_jellyfin.androidtv.update.VersionNotes
@@ -1629,7 +1630,8 @@ private fun notesTitle(candidate: UpdateCandidate, installed: AppVersion): Strin
 @Composable
 private fun notes(candidate: UpdateCandidate): List<VersionNotes> {
     val fallback = stringResource(R.string.update_notes_fallback)
-    return remember(candidate, fallback) { releaseNotes(candidate, fallback) }
+    val language = notesLanguage()
+    return remember(candidate, fallback, language) { releaseNotes(candidate, fallback, language) }
 }
 
 @Composable

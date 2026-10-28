@@ -5,6 +5,44 @@ import org.junit.Test
 
 class ReleaseNotesTest {
 
+    private val bilingual = """
+        ### Improved
+        - Faster libraries (#12)
+
+        <details lang="de">
+        <summary>Deutsch</summary>
+
+        <h3>Verbessert</h3>
+        <ul>
+        <li>Schnellere Bibliotheken &amp; &lt;Suche&gt; (#12)</li>
+        </ul>
+        </details>
+    """.trimIndent()
+
+    @Test
+    fun `picks the translation for its language`() {
+        assertEquals(
+            listOf(NotesSection("Verbessert", listOf(NotesItem("Schnellere Bibliotheken & <Suche>", "#12")))),
+            ReleaseNotes.parse(ReleaseNotes.localized(bilingual, "de"), fallbackHeading = "Changes"),
+        )
+    }
+
+    @Test
+    fun `other languages get the English notes without the translation`() {
+        assertEquals(
+            listOf(NotesSection("Improved", listOf(NotesItem("Faster libraries", "#12")))),
+            ReleaseNotes.parse(ReleaseNotes.localized(bilingual, "fr"), fallbackHeading = "Changes"),
+        )
+    }
+
+    @Test
+    fun `older apps read only the English notes`() {
+        assertEquals(
+            listOf(NotesSection("Improved", listOf(NotesItem("Faster libraries", "#12")))),
+            ReleaseNotes.parse(bilingual, fallbackHeading = "Changes"),
+        )
+    }
+
     @Test
     fun `reads changelog subsections with references`() {
         val notes = ReleaseNotes.parse(

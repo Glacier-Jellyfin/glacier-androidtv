@@ -78,9 +78,16 @@ adb shell "run-as $pkg mkdir -p files/updtest && run-as $pkg cp /data/local/tmp/
 
 ## Publishing a release (maintainer only)
 
-1. Move the `[Unreleased]` entries in `CHANGELOG.md` into a new section
-   `## [0.1.1] - 2026-10-03`. The section becomes the release notes and the
-   text of the in-app update dialog (`scripts/release-notes.sh` extracts it).
+1. Move the `[Unreleased]` entries in `CHANGELOG.md` and `CHANGELOG.de.md`
+   into a new section `## [0.1.1] - 2026-10-03` in both. The English section
+   becomes the release notes and the text of the in-app update dialog
+   (`scripts/release-notes.sh` extracts it). The German one follows in a
+   collapsed `<details lang="de">` block, which the app shows when its
+   language is German. App versions before 0.6.3 ignore that block.
+   For a stable version, also write the short store notes (at most 500
+   characters each) to
+   `fastlane/metadata/android/{en-US,de-DE}/changelogs/<versionCode>.txt`,
+   for example `60399.txt` for 0.6.3.
 2. Commit, then tag and push: `git tag v0.1.1 && git push origin main v0.1.1`.
 3. The `Release` workflow builds the signed APK `glacier-androidtv.apk` and
    publishes the GitHub release; tags containing `-beta.` become

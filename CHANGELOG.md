@@ -16,6 +16,10 @@ omit empty ones:
 Reference issues or pull requests at the end of a line as `(#123)`; the app
 renders the reference separately.
 
+[CHANGELOG.de.md](CHANGELOG.de.md) holds the same sections in German. The
+release notes carry them in a collapsed block, and the app shows them when its
+language is German.
+
 ## [Unreleased]
 
 ### Improved
