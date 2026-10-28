@@ -84,6 +84,8 @@ import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 import io.github.glacier_jellyfin.androidtv.ui.yearText
 import io.github.glacier_jellyfin.androidtv.update.UpdateDialog
 import io.github.glacier_jellyfin.androidtv.update.UpdateViewModel
+import io.github.glacier_jellyfin.androidtv.update.WhatsNewDialog
+import io.github.glacier_jellyfin.androidtv.core.updater.WhatsNewPrompt
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateCandidate
 import io.github.glacier_jellyfin.androidtv.ui.rememberCardPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
@@ -189,14 +191,25 @@ fun HomeScreen(
         updateShown = candidate
         updates.updates.promptShown()
     }
+    // The store builds' counterpart: the changes of a version the store installed, shown the same way.
+    val whatsNewPrompt by updates.whatsNew.prompt.collectAsStateWithLifecycle()
+    var whatsNewShown by remember { mutableStateOf<WhatsNewPrompt?>(null) }
+    LaunchedEffect(whatsNewPrompt, hasContent, pinPrompt == null) {
+        val prompt = whatsNewPrompt ?: return@LaunchedEffect
+        if (!hasContent || pinPrompt != null) return@LaunchedEffect
+        delay(1200)
+        whatsNewShown = prompt
+        updates.whatsNew.promptShown()
+    }
+    val dialogOpen = updateShown != null || whatsNewShown != null
     var updateWasOpen by remember { mutableStateOf(false) }
-    LaunchedEffect(updateShown == null) {
-        if (updateShown == null && updateWasOpen) {
+    LaunchedEffect(dialogOpen) {
+        if (!dialogOpen && updateWasOpen) {
             withFrameNanos { }
             val restored = lastFocus?.let { requesters[it] }?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true
             if (!restored) runCatching { listFocus.requestFocus() }
         }
-        updateWasOpen = updateShown != null
+        updateWasOpen = dialogOpen
     }
 
     // Home is the bottom of the stack: Back asks before it closes the app.
@@ -450,6 +463,7 @@ fun HomeScreen(
                 },
             )
         }
+        whatsNewShown?.let { WhatsNewDialog(it, onClose = { whatsNewShown = null }) }
     }
 }
 

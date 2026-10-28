@@ -121,6 +121,7 @@ import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
 import io.github.glacier_jellyfin.androidtv.core.updater.pending
 import io.github.glacier_jellyfin.androidtv.update.megabytes
 import io.github.glacier_jellyfin.androidtv.update.message
+import io.github.glacier_jellyfin.androidtv.update.openStorePage
 import io.github.glacier_jellyfin.androidtv.update.publishedDate
 import io.github.glacier_jellyfin.androidtv.update.VersionNotes
 import io.github.glacier_jellyfin.androidtv.update.releaseNotes
@@ -1321,7 +1322,8 @@ private fun systemRows(state: SettingsUiState, viewModel: SettingsViewModel): Li
     val server = state.serverSummary
     fun info(label: String, sub: String, value: String) = SettingRow.Info(label, sub, value)
     return listOf(
-        SettingGroup(
+        // A store build gets its updates from the store.
+        if (BuildConfig.STORE.isNotEmpty()) storeUpdateGroup(state, viewModel) else SettingGroup(
             stringResource(R.string.settings_group_update),
             listOf(
                 updateRow(state, viewModel),
@@ -1481,6 +1483,31 @@ private fun diagnosticsGroup(diagnostics: DiagnosticsState, viewModel: SettingsV
                 stringResource(R.string.diag_clear_sub),
                 stringResource(R.string.diag_clear_button),
                 onClick = viewModel::clearLog,
+            ),
+        ),
+    )
+}
+
+/** A store build's update group: the store page and "What's new" after an update. */
+@Composable
+private fun storeUpdateGroup(state: SettingsUiState, viewModel: SettingsViewModel): SettingGroup {
+    val context = LocalContext.current
+    val play = BuildConfig.STORE == "play"
+    return SettingGroup(
+        stringResource(R.string.settings_group_update),
+        listOf(
+            SettingRow.Update(
+                stringResource(if (play) R.string.update_store_play else R.string.update_store_amazon),
+                stringResource(if (play) R.string.update_store_play_sub else R.string.update_store_amazon_sub, BuildConfig.VERSION_NAME),
+                value = stringResource(if (play) R.string.update_store_play_open else R.string.update_store_amazon_open),
+                primary = false,
+                onClick = { openStorePage(context, BuildConfig.STORE) },
+            ),
+            SettingRow.Toggle(
+                stringResource(R.string.whats_new_setting),
+                stringResource(R.string.whats_new_setting_sub),
+                state.whatsNew,
+                onToggle = { viewModel.whatsNew.setEnabled(!state.whatsNew) },
             ),
         ),
     )

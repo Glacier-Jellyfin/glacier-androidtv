@@ -109,3 +109,44 @@ The workflow reads it from these repository secrets:
 | `GLACIER_KEYSTORE_PASSWORD` | Keystore password |
 | `GLACIER_KEY_ALIAS` | `glacier` |
 | `GLACIER_KEY_PASSWORD` | Key password |
+
+## Store versions
+
+Glacier is also published in the Amazon Appstore and on Google Play. The
+store versions come from their own build types, `amazon` (APK) and `play`
+(app bundle). They are release builds with these differences:
+
+- No self-updater: the store installs new versions. `BuildConfig.STORE` names
+  the store, and `UpdaterConfig.selfUpdate` is off, so Glacier never asks
+  GitHub. `src/store/AndroidManifest.xml` removes the permission to install
+  apps.
+- Instead of the update dialog, "What's new" shows the changes once after the
+  store installed a newer version. The notes come from `CHANGELOG.md`, which
+  the build copies into the app (`core/updater` `WhatsNew`).
+- Settings › System shows the store with a button to its page, and the
+  switch for "What's new".
+
+Only stable tags build the store versions. The `Release` workflow leaves them
+as the workflow artifact `store-builds` (kept for 30 days), never as release
+assets: a store build installed by hand would never update.
+
+Google Play signs with the same key as the GitHub release (the existing
+release key was handed over as the app signing key), so both versions can
+update each other. The Amazon Appstore signs with its own key: a version from
+GitHub cannot be installed over one from Amazon and the other way round.
+
+### Trying a store version locally
+
+A debug build plays a store version with `-Pglacier.store=amazon` or
+`-Pglacier.store=play`. To see "What's new", start an older version once,
+then install a newer one over it:
+
+```sh
+./gradlew :app:assembleDebug -Pglacier.version=0.6.1 -Pglacier.store=amazon
+adb install -r app/build/outputs/apk/debug/app-debug.apk   # start it once
+./gradlew :app:assembleDebug -Pglacier.version=0.6.2 -Pglacier.store=amazon
+adb install -r app/build/outputs/apk/debug/app-debug.apk   # "What's new" for 0.6.2
+```
+
+The version of the last start sits in `shared_prefs/whats_new.xml`
+(`last_version`). It only moves on once the dialog was shown.

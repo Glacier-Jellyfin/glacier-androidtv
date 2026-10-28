@@ -55,6 +55,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierTheme
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateManager
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
+import io.github.glacier_jellyfin.androidtv.core.updater.WhatsNew
 import io.github.glacier_jellyfin.androidtv.core.updater.pending
 import io.github.glacier_jellyfin.androidtv.diagnostics.Diagnostics
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogServer
@@ -110,6 +111,7 @@ class StartViewModel @Inject constructor(
     settings: SettingsRepository,
     parental: ParentalControl,
     val updates: UpdateManager,
+    private val whatsNew: WhatsNew,
     val music: MusicController,
     home: HomeRepository,
     private val sessions: SessionManager,
@@ -169,6 +171,7 @@ class StartViewModel @Inject constructor(
 
     init {
         updates.start()
+        whatsNew.start()
         viewModelScope.launch {
             offerCrashLog()
             val server = accounts.current().startServerId()

@@ -42,6 +42,7 @@ import io.github.glacier_jellyfin.androidtv.ui.PinReason
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.core.player.FfmpegAudio
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateChannel
+import io.github.glacier_jellyfin.androidtv.core.updater.WhatsNew
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateManager
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
 import kotlinx.coroutines.CancellationException
@@ -93,6 +94,8 @@ data class SettingsUiState(
     val autoUpdate: Boolean = true,
     /** The update dialog on the home screen after an automatic check. */
     val updatePrompt: Boolean = true,
+    /** "What's new" after a store update (store builds only). */
+    val whatsNew: Boolean = true,
     val serverSummary: ServerSummary? = null,
     /** FFmpeg's version, null when this build has no FFmpeg decoder. */
     val ffmpegVersion: String? = null,
@@ -127,6 +130,7 @@ class SettingsViewModel @Inject constructor(
     private val parental: ParentalControl,
     private val diagnostics: Diagnostics,
     val updates: UpdateManager,
+    val whatsNew: WhatsNew,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SettingsUiState(userName = sessions.session.value?.user?.name.orEmpty()))
@@ -162,6 +166,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { updates.channel.collect { channel -> _state.update { it.copy(updateChannel = channel) } } }
         viewModelScope.launch { updates.autoCheck.collect { on -> _state.update { it.copy(autoUpdate = on) } } }
         viewModelScope.launch { updates.showPrompt.collect { on -> _state.update { it.copy(updatePrompt = on) } } }
+        viewModelScope.launch { whatsNew.enabled.collect { on -> _state.update { it.copy(whatsNew = on) } } }
         viewModelScope.launch { loadServerSummary() }
         viewModelScope.launch {
             accounts.state.collect { accountState ->

@@ -1,6 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.update
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.Resources
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -48,6 +50,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
@@ -69,15 +72,19 @@ import io.github.glacier_jellyfin.androidtv.core.updater.UpdateCandidate
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateError
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateManager
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateNotice
+import io.github.glacier_jellyfin.androidtv.core.updater.WhatsNew
+import io.github.glacier_jellyfin.androidtv.core.updater.WhatsNewPrompt
 import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Date
 import javax.inject.Inject
 
-/** The updater for screens outside the settings: the home screen dialog and the app-wide overlay. */
+/** The updater for screens outside the settings: the home screen dialogs and the app-wide overlay. */
 @HiltViewModel
-class UpdateViewModel @Inject constructor(val updates: UpdateManager) : ViewModel()
+class UpdateViewModel @Inject constructor(val updates: UpdateManager, val whatsNew: WhatsNew) : ViewModel()
 
 /**
  * The design's update dialog (home screen, once per version): version and
@@ -132,7 +139,12 @@ fun UpdateDialog(candidate: UpdateCandidate, installed: AppVersion, onNow: () ->
                         FactLine(stringResource(R.string.update_size), megabytes(LocalResources.current, candidate.apk.sizeBytes), mono = true)
                     }
                 }
-                NotesPanel(candidate, installed, notes, notesScroll, Modifier.weight(1f).fillMaxHeight())
+                val range = if (notes.size > 1) {
+                    stringResource(R.string.update_release_since, installed.toString())
+                } else {
+                    stringResource(R.string.update_release, candidate.release.tag)
+                }
+                NotesPanel(notes, range, notesScroll, Modifier.weight(1f).fillMaxHeight())
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(40.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.update_hint), style = GlacierText.body(17), color = GlacierColors.Mist, modifier = Modifier.weight(1f))
@@ -146,8 +158,70 @@ fun UpdateDialog(candidate: UpdateCandidate, installed: AppVersion, onNow: () ->
     LaunchedEffect(Unit) { runCatching { nowFocus.requestFocus() } }
 }
 
+/**
+ * After the store installed a newer version (store builds, see [WhatsNew]):
+ * the update dialog's layout with the changes since the previous version and a
+ * single "OK". Up/Down scroll the notes.
+ */
 @Composable
-private fun NotesPanel(candidate: UpdateCandidate, installed: AppVersion, notes: List<VersionNotes>, scroll: ScrollState, modifier: Modifier) {
+fun WhatsNewDialog(prompt: WhatsNewPrompt, onClose: () -> Unit) {
+    BackHandler(onBack = onClose)
+    val accent = LocalAccent.current.main
+    val notesScroll = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val okFocus = remember { FocusRequester() }
+    val fallback = stringResource(R.string.update_notes_fallback)
+    val notes = remember(prompt) { changelogNotes(prompt, fallback) }
+    GlacierBackground(
+        Modifier
+            .onPreviewKeyEvent { event ->
+                val step = when (event.key) {
+                    Key.DirectionUp -> -NOTES_STEP
+                    Key.DirectionDown -> NOTES_STEP
+                    else -> return@onPreviewKeyEvent false
+                }
+                if (event.type == KeyEventType.KeyDown) scope.launch { notesScroll.animateScrollBy(step) }
+                true
+            }
+            .focusProperties { onExit = { cancelFocusChange() } }
+            .focusGroup(),
+    ) {
+        Column(Modifier.fillMaxSize().padding(start = 130.dp, end = 130.dp, top = 90.dp, bottom = 80.dp), verticalArrangement = Arrangement.spacedBy(48.dp)) {
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(100.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.width(640.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+                    UpdateMark(GlacierIcons.Sparkle)
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Text(stringResource(R.string.whats_new_eyebrow).uppercase(), style = GlacierText.label(18, 0.08), color = accent)
+                        Text(stringResource(R.string.update_title, prompt.current.displayName.replace(" Beta", "\nBeta")), style = GlacierText.display(76), color = GlacierColors.Ice)
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        VersionChip(prompt.previous.toString(), highlight = false)
+                        Icon(GlacierIcons.ChevronRight, contentDescription = null, tint = GlacierColors.Mist, modifier = Modifier.size(26.dp))
+                        VersionChip(prompt.current.toString(), highlight = true)
+                    }
+                    notes.firstOrNull()?.date?.let { date ->
+                        Box(Modifier.fillMaxWidth().height(1.dp).background(GlacierColors.GlassBorder))
+                        FactLine(stringResource(R.string.update_released), date, mono = false)
+                    }
+                }
+                val range = if (notes.size > 1) {
+                    stringResource(R.string.update_release_since, prompt.previous.toString())
+                } else {
+                    stringResource(R.string.update_release, "v${prompt.current}")
+                }
+                NotesPanel(notes, range, notesScroll, Modifier.weight(1f).fillMaxHeight())
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(40.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.whats_new_hint), style = GlacierText.body(17), color = GlacierColors.Mist, modifier = Modifier.weight(1f))
+                PillButton(stringResource(R.string.whats_new_ok), onClick = onClose, primary = true, height = 68, width = 200, modifier = Modifier.focusRequester(okFocus))
+            }
+        }
+    }
+    LaunchedEffect(Unit) { runCatching { okFocus.requestFocus() } }
+}
+
+@Composable
+private fun NotesPanel(notes: List<VersionNotes>, range: String, scroll: ScrollState, modifier: Modifier) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
     Column(
@@ -160,11 +234,6 @@ private fun NotesPanel(candidate: UpdateCandidate, installed: AppVersion, notes:
     ) {
         Row(Modifier.fillMaxWidth().padding(end = 24.dp), verticalAlignment = Alignment.Bottom) {
             Text(stringResource(R.string.update_notes), style = GlacierText.display(30), color = GlacierColors.Ice, modifier = Modifier.weight(1f))
-            val range = if (notes.size > 1) {
-                stringResource(R.string.update_release_since, installed.toString())
-            } else {
-                stringResource(R.string.update_release, candidate.release.tag)
-            }
             Text(range, style = GlacierText.mono(17), color = GlacierColors.Mist)
         }
         Column(
@@ -202,9 +271,9 @@ private fun NotesPanel(candidate: UpdateCandidate, installed: AppVersion, notes:
     }
 }
 
-/** The outlined diamond with the accent core and a down arrow. */
+/** The outlined diamond with the accent core and [icon]: a down arrow for an update, a sparkle for "What's new". */
 @Composable
-private fun UpdateMark() {
+private fun UpdateMark(icon: ImageVector = GlacierIcons.ArrowDown) {
     val accent = LocalAccent.current.main
     Box(Modifier.size(96.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
@@ -222,7 +291,7 @@ private fun UpdateMark() {
             Modifier.size(40.dp).rotate(45f).clip(RoundedCornerShape(4.dp)).background(accent),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(GlacierIcons.ArrowDown, contentDescription = null, tint = GlacierColors.Void, modifier = Modifier.size(24.dp).rotate(-45f))
+            Icon(icon, contentDescription = null, tint = GlacierColors.Void, modifier = Modifier.size(24.dp).rotate(-45f))
         }
     }
 }
@@ -328,6 +397,30 @@ fun releaseNotes(candidate: UpdateCandidate, fallbackHeading: String): List<Vers
     candidate.changes
         .map { VersionNotes(it.tag.removePrefix("v"), publishedDate(it.publishedAt), ReleaseNotes.parse(it.body, fallbackHeading)) }
         .filter { it.sections.isNotEmpty() }
+
+/** The notes of every version [prompt] brings, newest first; versions without notes left out. */
+fun changelogNotes(prompt: WhatsNewPrompt, fallbackHeading: String): List<VersionNotes> =
+    prompt.changes
+        .map { VersionNotes(it.version.toString(), changelogDate(it.date), ReleaseNotes.parse(it.body, fallbackHeading)) }
+        .filter { it.sections.isNotEmpty() }
+
+/** A changelog date like "2026-10-27" in the interface language. */
+private fun changelogDate(date: String?): String? =
+    date
+        ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        ?.let { DateFormat.getDateInstance(DateFormat.LONG).format(Date.from(it.atStartOfDay(ZoneId.systemDefault()).toInstant())) }
+
+/** Glacier's page in [store] ("amazon", "play"), where a store build gets its updates; the web page if the store app is missing. */
+fun openStorePage(context: Context, store: String) {
+    val pkg = context.packageName
+    val pages = when (store) {
+        "play" -> listOf("market://details?id=$pkg", "https://play.google.com/store/apps/details?id=$pkg")
+        else -> listOf("amzn://apps/android?p=$pkg", "https://www.amazon.com/gp/mas/dl/android?p=$pkg")
+    }
+    pages.firstOrNull { page ->
+        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, page.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
+    }
+}
 
 /** The release date in the interface language, e.g. "24 September 2026"; null if GitHub sent none. */
 fun publishedDate(candidate: UpdateCandidate): String? = publishedDate(candidate.release.publishedAt)

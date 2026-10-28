@@ -2,7 +2,9 @@ name: Release
 
 # Pushing a tag like v1.4.0 or v1.4.0-beta.2 builds a signed APK and publishes
 # it as a GitHub release. Beta tags become pre-releases, which only the app's
-# Beta update channel picks up. See docs/RELEASING.md.
+# Beta update channel picks up. Stable tags also build the store versions
+# (Amazon APK, Google Play bundle) as the workflow artifact "store-builds".
+# See docs/RELEASING.md.
 on:
   push:
     tags: ['v*']
@@ -63,6 +65,7 @@ jobs:
           GLACIER_KEY_ALIAS: ${{ secrets.GLACIER_KEY_ALIAS }}
           GLACIER_KEY_PASSWORD: ${{ secrets.GLACIER_KEY_PASSWORD }}
           VERSION: ${{ steps.tag.outputs.version }}
+          PRERELEASE: ${{ steps.tag.outputs.prerelease }}
         run: |
           if [ -z "$GLACIER_KEYSTORE_BASE64" ]; then
             echo "::error::Signing secrets are missing, see docs/RELEASING.md"
@@ -70,7 +73,10 @@ jobs:
           fi
           export GLACIER_KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
           echo "$GLACIER_KEYSTORE_BASE64" | base64 --decode > "$GLACIER_KEYSTORE_PATH"
-          ./gradlew testDebugUnitTest :app:assembleRelease -Pglacier.version="$VERSION"
+          tasks=(testDebugUnitTest :app:assembleRelease)
+          # Only stable versions go to the stores, without the self-updater
+          if [ "$PRERELEASE" = "false" ]; then tasks+=(:app:assembleAmazon :app:bundlePlay); fi
+          ./gradlew "${tasks[@]}" -Pglacier.version="$VERSION"
           rm "$GLACIER_KEYSTORE_PATH"
 
       - name: Verify signature
@@ -85,6 +91,28 @@ jobs:
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: glacier-androidtv.apk
+
+      # The store builds are no release assets: installed by hand they would never update.
+      # They wait as a workflow artifact for the upload to the Amazon Appstore and Google Play.
+      - name: Collect store builds
+        if: steps.tag.outputs.prerelease == 'false'
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          mkdir stores
+          mv app/build/outputs/apk/amazon/app-amazon.apk "stores/glacier-$VERSION-amazon.apk"
+          mv app/build/outputs/bundle/play/app-play.aab "stores/glacier-$VERSION-play.aab"
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
+          "$apksigner" verify --print-certs "stores/glacier-$VERSION-amazon.apk"
+          scripts/check-ffmpeg-apk.sh "stores/glacier-$VERSION-amazon.apk"
+          jarsigner -verify "stores/glacier-$VERSION-play.aab" | grep -q "jar verified."
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.tag.outputs.prerelease == 'false'
+        with:
+          name: store-builds
+          path: stores/
+          retention-days: 30
 
       - name: Publish release
         env:

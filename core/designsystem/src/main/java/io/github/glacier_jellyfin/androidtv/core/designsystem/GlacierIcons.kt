@@ -101,6 +101,8 @@ object GlacierIcons {
     val Check = icon("M20 6 9 17l-5-5", strokeWidth = 3.4f)
     val SortLines = icon("M4 7h16", "M7 12h10", "M10 17h4", strokeWidth = 2.2f)
     val ArrowDown = icon("M12 5v14", "m6 13 6 6 6-6", strokeWidth = 2.4f)
+    /** "What's new": a four-pointed sparkle. */
+    val Sparkle = filled("M12 3 14.2 9.8 21 12 14.2 14.2 12 21 9.8 14.2 3 12 9.8 9.8z", strokeWidth = 1.6f)
     val ChevronDown = icon("m6 9 6 6 6-6", strokeWidth = 2.4f)
     val ChevronLeft = icon("m15 18-6-6 6-6", strokeWidth = 2.4f)
     val Speaker = icon(

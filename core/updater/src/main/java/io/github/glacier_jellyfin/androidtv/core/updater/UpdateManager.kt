@@ -28,6 +28,8 @@ data class UpdaterConfig(
     val versionName: String,
     /** See [ReleaseFeed]. */
     val feedUrl: String,
+    /** False where a store delivers the updates (the Amazon and Play builds): the updater never checks then. */
+    val selfUpdate: Boolean = true,
 )
 
 /** Where the app update stands (Settings › System, update dialog). */
@@ -79,8 +81,8 @@ class UpdateManager @Inject constructor(
     private val installer = ApkInstaller(context)
     private val json = Json { ignoreUnknownKeys = true }
 
-    /** Null for a version the scheme does not know (a hand-made build): nothing is offered then. */
-    val installed: AppVersion? = AppVersion.parse(config.versionName)
+    /** Null for a version the scheme does not know (a hand-made build) or a store build: nothing is offered then. */
+    val installed: AppVersion? = if (config.selfUpdate) AppVersion.parse(config.versionName) else null
 
     private val _state = MutableStateFlow<UpdateState>(UpdateState.Unchecked)
     val state: StateFlow<UpdateState> = _state.asStateFlow()

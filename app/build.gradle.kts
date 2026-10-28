@@ -26,6 +26,36 @@ fun versionCodeOf(version: String): Int {
     return major.toInt() * 1_000_000 + minor.toInt() * 10_000 + patch.toInt() * 100 + suffix
 }
 
+/** CHANGELOG.md as an asset of the store builds, for "What's new" after a store update (core/updater WhatsNew). */
+abstract class ChangelogAsset : DefaultTask() {
+    @get:InputFile
+    abstract val changelog: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        changelog.get().asFile.copyTo(outputDir.file("CHANGELOG.md").get().asFile, overwrite = true)
+    }
+}
+
+val changelogAsset = tasks.register<ChangelogAsset>("changelogAsset") {
+    changelog.set(rootProject.layout.projectDirectory.file("CHANGELOG.md"))
+}
+
+/** The store builds; each delivers its own updates. Debug can play one with -Pglacier.store=amazon|play. */
+val stores = listOf("amazon", "play")
+
+androidComponents {
+    // Debug carries it too, for trying "What's new" with -Pglacier.store.
+    (stores + "debug").forEach { type ->
+        onVariants(selector().withBuildType(type)) { variant ->
+            variant.sources.assets?.addGeneratedSourceDirectory(changelogAsset, ChangelogAsset::outputDir)
+        }
+    }
+}
+
 android {
     namespace = "io.github.glacier_jellyfin.androidtv"
     compileSdk = 37
@@ -38,6 +68,8 @@ android {
         versionCode = versionCodeOf(glacierVersion)
         // Empty: the GitHub releases API (core/updater ReleaseFeed.GITHUB).
         buildConfigField("String", "UPDATE_FEED", "\"\"")
+        // The store that delivers the updates ("amazon", "play"); empty for the GitHub build and its self-updater.
+        buildConfigField("String", "STORE", "\"\"")
     }
 
     signingConfigs {
@@ -58,6 +90,11 @@ android {
             applicationIdSuffix = ".debug"
             // Local test releases for the updater, see docs/RELEASING.md.
             providers.gradleProperty("glacier.updateFeed").orNull?.let { buildConfigField("String", "UPDATE_FEED", "\"$it\"") }
+            // Tries out a store build's behaviour ("What's new", no updater) on a debug build.
+            providers.gradleProperty("glacier.store").orNull?.let {
+                require(it in stores) { "glacier.store must be one of $stores, was '$it'" }
+                buildConfigField("String", "STORE", "\"$it\"")
+            }
         }
         release {
             isMinifyEnabled = true
@@ -73,6 +110,20 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += "release"
         }
+        // The releases for the Amazon Appstore (APK) and Google Play (app bundle): no self-updater
+        // and no install permission (src/store/AndroidManifest.xml) but "What's new" from the
+        // changelog, see docs/RELEASING.md.
+        stores.forEach { store ->
+            create(store) {
+                initWith(getByName("release"))
+                buildConfigField("String", "STORE", "\"$store\"")
+                matchingFallbacks += "release"
+            }
+        }
+    }
+
+    sourceSets {
+        stores.forEach { getByName(it).manifest.srcFile("src/store/AndroidManifest.xml") }
     }
 
     compileOptions {

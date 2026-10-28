@@ -973,6 +973,17 @@
     <string name="update_auto_sub">Checks every time the app starts and marks a new version here and on the settings gear</string>
     <string name="update_prompt">Show the update dialog</string>
     <string name="update_prompt_sub">Opens a dialog on the home screen once when a new version is available</string>
+    <string name="update_store_amazon">Updates through the Amazon Appstore</string>
+    <string name="update_store_amazon_sub">Version %1$s · the Appstore installs new versions by itself</string>
+    <string name="update_store_amazon_open">Open Appstore</string>
+    <string name="update_store_play">Updates through Google Play</string>
+    <string name="update_store_play_sub">Version %1$s · Google Play installs new versions by itself</string>
+    <string name="update_store_play_open">Open Google Play</string>
+    <string name="whats_new_setting">Show what\'s new after an update</string>
+    <string name="whats_new_setting_sub">Shows the changes once after a new version was installed</string>
+    <string name="whats_new_eyebrow">What\'s new</string>
+    <string name="whats_new_hint">↑↓ scroll the release notes · turn this off under Settings › System</string>
+    <string name="whats_new_ok">OK</string>
     <string name="settings_device_name">Device name</string>
     <string name="settings_device_sub">Android %1$s · %2$d×%3$d @ %4$d Hz</string>
     <string name="settings_server_address">Server address</string>

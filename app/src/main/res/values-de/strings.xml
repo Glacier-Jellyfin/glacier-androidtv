@@ -967,6 +967,17 @@
     <string name="update_auto_sub">Prüft bei jedem Start der App und markiert eine neue Version hier und am Zahnrad der Einstellungen</string>
     <string name="update_prompt">Update-Dialog zeigen</string>
     <string name="update_prompt_sub">Öffnet einmal einen Dialog auf der Startseite, wenn eine neue Version bereitsteht</string>
+    <string name="update_store_amazon">Updates über den Amazon Appstore</string>
+    <string name="update_store_amazon_sub">Version %1$s · der Appstore installiert neue Versionen selbst</string>
+    <string name="update_store_amazon_open">Appstore öffnen</string>
+    <string name="update_store_play">Updates über Google Play</string>
+    <string name="update_store_play_sub">Version %1$s · Google Play installiert neue Versionen selbst</string>
+    <string name="update_store_play_open">Google Play öffnen</string>
+    <string name="whats_new_setting">Neuerungen nach einem Update zeigen</string>
+    <string name="whats_new_setting_sub">Zeigt die Änderungen einmal, nachdem eine neue Version installiert wurde</string>
+    <string name="whats_new_eyebrow">Was ist neu</string>
+    <string name="whats_new_hint">↑↓ Versionshinweise scrollen · abschaltbar unter Einstellungen › System</string>
+    <string name="whats_new_ok">OK</string>
     <string name="settings_device_name">Gerätename</string>
     <string name="settings_device_sub">Android %1$s · %2$d×%3$d @ %4$d Hz</string>
     <string name="settings_server_address">Serveradresse</string>

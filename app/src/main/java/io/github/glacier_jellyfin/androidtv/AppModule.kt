@@ -24,5 +24,9 @@ object AppModule {
 
     @Provides
     fun provideUpdaterConfig(): UpdaterConfig =
-        UpdaterConfig(versionName = BuildConfig.VERSION_NAME, feedUrl = BuildConfig.UPDATE_FEED.ifEmpty { ReleaseFeed.GITHUB })
+        UpdaterConfig(
+            versionName = BuildConfig.VERSION_NAME,
+            feedUrl = BuildConfig.UPDATE_FEED.ifEmpty { ReleaseFeed.GITHUB },
+            selfUpdate = BuildConfig.STORE.isEmpty(),
+        )
 }
