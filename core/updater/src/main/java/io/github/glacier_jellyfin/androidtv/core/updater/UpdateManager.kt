@@ -95,6 +95,10 @@ class UpdateManager @Inject constructor(
     private val _autoCheck = MutableStateFlow(prefs.getBoolean(KEY_AUTO, true))
     val autoCheck: StateFlow<Boolean> = _autoCheck.asStateFlow()
 
+    /** Whether the automatic check may open the home screen dialog. */
+    private val _showPrompt = MutableStateFlow(prefs.getBoolean(KEY_SHOW_PROMPT, true))
+    val showPrompt: StateFlow<Boolean> = _showPrompt.asStateFlow()
+
     /** An update found by the automatic check that the user has not been shown yet (home screen dialog). */
     private val _prompt = MutableStateFlow<UpdateCandidate?>(null)
     val prompt: StateFlow<UpdateCandidate?> = _prompt.asStateFlow()
@@ -264,7 +268,15 @@ class UpdateManager @Inject constructor(
         _notices.trySend(UpdateNotice.Failed(error))
     }
 
+    fun setShowPrompt(on: Boolean) {
+        _showPrompt.value = on
+        prefs.edit { putBoolean(KEY_SHOW_PROMPT, on) }
+        if (!on) _prompt.value = null
+    }
+
+    /** Without the dialog the update still shows in Settings › System and as the dot on the gear. */
     private fun offer(candidate: UpdateCandidate) {
+        if (!_showPrompt.value) return
         if (prefs.getString(KEY_PROMPTED, null) != candidate.version.toString()) _prompt.update { candidate }
     }
 
@@ -285,6 +297,7 @@ class UpdateManager @Inject constructor(
         const val KEY_CANDIDATE = "candidate"
         const val KEY_CANDIDATE_CHANNEL = "candidate_channel"
         const val KEY_PROMPTED = "prompted"
+        const val KEY_SHOW_PROMPT = "show_prompt"
     }
 }
 

@@ -18,6 +18,9 @@ renders the reference separately.
 
 ## [Unreleased]
 
+### Improved
+- The update dialog on the home screen can be turned off in Settings › System. A new version still shows there and as a dot on the settings gear
+
 ## [0.6.2] - 2026-10-27
 
 ### Improved

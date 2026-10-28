@@ -91,6 +91,8 @@ data class SettingsUiState(
     val update: UpdateState = UpdateState.Unchecked,
     val updateChannel: UpdateChannel = UpdateChannel.Stable,
     val autoUpdate: Boolean = true,
+    /** The update dialog on the home screen after an automatic check. */
+    val updatePrompt: Boolean = true,
     val serverSummary: ServerSummary? = null,
     /** FFmpeg's version, null when this build has no FFmpeg decoder. */
     val ffmpegVersion: String? = null,
@@ -159,6 +161,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { updates.state.collect { update -> _state.update { it.copy(update = update) } } }
         viewModelScope.launch { updates.channel.collect { channel -> _state.update { it.copy(updateChannel = channel) } } }
         viewModelScope.launch { updates.autoCheck.collect { on -> _state.update { it.copy(autoUpdate = on) } } }
+        viewModelScope.launch { updates.showPrompt.collect { on -> _state.update { it.copy(updatePrompt = on) } } }
         viewModelScope.launch { loadServerSummary() }
         viewModelScope.launch {
             accounts.state.collect { accountState ->

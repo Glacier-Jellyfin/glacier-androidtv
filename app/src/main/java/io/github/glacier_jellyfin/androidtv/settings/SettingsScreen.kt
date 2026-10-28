@@ -1338,6 +1338,13 @@ private fun systemRows(state: SettingsUiState, viewModel: SettingsViewModel): Li
                     state.autoUpdate,
                     onToggle = { viewModel.updates.setAutoCheck(!state.autoUpdate) },
                 ),
+                SettingRow.Toggle(
+                    stringResource(R.string.update_prompt),
+                    stringResource(R.string.update_prompt_sub),
+                    state.updatePrompt,
+                    onToggle = { viewModel.updates.setShowPrompt(!state.updatePrompt) },
+                    enabled = state.autoUpdate,
+                ),
             ),
         ),
         startGroup(state, viewModel),
