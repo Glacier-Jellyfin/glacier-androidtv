@@ -7,5 +7,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-10-28
+
 ### Verbessert
 - Der Update-Dialog auf der Startseite lässt sich unter Einstellungen › System abschalten. Eine neue Version erscheint dort weiter und als Punkt am Zahnrad der Einstellungen

@@ -1,0 +1,1 @@
+Glacier is now in the Amazon Appstore and on Google Play. The store installs new versions, and after each update Glacier shows once what changed. You can turn that off in Settings › System.

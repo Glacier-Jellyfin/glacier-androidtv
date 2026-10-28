@@ -22,6 +22,8 @@ language is German.
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-10-28
+
 ### Improved
 - The update dialog on the home screen can be turned off in Settings › System. A new version still shows there and as a dot on the settings gear
 
