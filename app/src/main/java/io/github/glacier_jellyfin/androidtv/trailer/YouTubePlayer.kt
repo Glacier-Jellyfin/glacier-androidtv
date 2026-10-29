@@ -100,8 +100,13 @@ fun YouTubePlayer(
 }
 
 @SuppressLint("SetJavaScriptEnabled")
-private fun createWebView(context: Context, videoId: String, subtitles: String, listener: YouTubeListener): WebView =
-    WebView(context).apply {
+private fun createWebView(context: Context, videoId: String, subtitles: String, listener: YouTubeListener): WebView {
+    val webView = WebView(context)
+    // The page only needs the network: no files or content providers of the device.
+    // Set on the variable, not inside apply: CodeQL does not follow the WebView into the lambda.
+    webView.settings.allowFileAccess = false
+    webView.settings.allowContentAccess = false
+    with(webView) {
         layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         isFocusable = false
         isFocusableInTouchMode = false
@@ -110,9 +115,6 @@ private fun createWebView(context: Context, videoId: String, subtitles: String, 
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
         settings.mediaPlaybackRequiresUserGesture = false
-        // The page only needs the network: no files or content providers of the device.
-        settings.allowFileAccess = false
-        settings.allowContentAccess = false
         webChromeClient = object : WebChromeClient() {
             // Without a poster, WebView shows a grey play symbol until the video starts.
             override fun getDefaultVideoPoster(): Bitmap = createBitmap(1, 1)
@@ -125,6 +127,8 @@ private fun createWebView(context: Context, videoId: String, subtitles: String, 
         // YouTube refuses embeds without a referrer (error 153): the page claims the project's website as its origin.
         loadDataWithBaseURL("$ORIGIN/", page(videoId, subtitles), "text/html", "utf-8", null)
     }
+    return webView
+}
 
 /** Relays the page's calls, which arrive on a WebView thread, to the main thread. */
 private class Bridge(private val videoId: String, private val listener: YouTubeListener) {

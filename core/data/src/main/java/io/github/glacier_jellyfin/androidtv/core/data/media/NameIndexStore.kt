@@ -63,6 +63,8 @@ class NameIndexStore @Inject constructor(@ApplicationContext context: Context) {
     fun write(key: String, index: SavedIndex) {
         runCatching {
             folder.mkdirs()
+            // Files named by SHA-1 (up to 0.6.3) are never read again.
+            folder.listFiles { f -> f.name.length == 40 + ".txt".length }?.forEach { it.delete() }
             val file = File(folder, fileName(key))
             val partial = File(folder, file.name + ".part")
             partial.bufferedWriter().use { out ->
@@ -88,7 +90,7 @@ class NameIndexStore @Inject constructor(@ApplicationContext context: Context) {
 
     /** The key itself is the first line of the file, so a clash of names is noticed. */
     private fun fileName(key: String): String =
-        MessageDigest.getInstance("SHA-1").digest(key.toByteArray()).joinToString("") { "%02x".format(it) } + ".txt"
+        MessageDigest.getInstance("SHA-256").digest(key.toByteArray()).joinToString("") { "%02x".format(it) } + ".txt"
 
     private companion object {
         const val TAG = "NameIndex"
