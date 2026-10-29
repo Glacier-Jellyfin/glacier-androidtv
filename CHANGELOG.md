@@ -26,6 +26,9 @@ language is German.
 - Each profile's settings are saved on its Jellyfin server, once per device. A profile new on a device (after installing again, switching to the Play Store or Amazon Appstore version, or on another TV) is offered the settings of a known device once. Settings › Account › Saved settings can take them over later. It can also delete copies no longer needed, such as an old install’s
 - Settings › Account › Remove from this device forgets sign-in, PIN, parental control and settings of a profile on this TV, optionally with its settings saved on the server. The Jellyfin account stays
 
+### Improved
+- The skip button fades away in one second instead of two and a half, and its border fades along with it instead of staying visible last
+
 ## [0.6.3] - 2026-10-28
 
 ### Improved

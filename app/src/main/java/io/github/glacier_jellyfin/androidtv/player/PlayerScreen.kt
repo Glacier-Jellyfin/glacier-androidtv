@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -71,7 +72,11 @@ private const val OSD_TIMEOUT_MS = 3_000L
 private const val SCRUB_COMMIT_MS = 1_200L
 
 /** How long the skip button takes to fade away over the bare picture. */
-private const val SKIP_FADE_MS = 2_500
+private const val SKIP_FADE_MS = 1_000
+
+/** Room around the skip button inside its fading layer: the focus scale-up and ring at the sides, the drop shadow below. */
+private val SKIP_LAYER_SIDE = 40.dp
+private val SKIP_LAYER_BOTTOM = 64.dp
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -335,19 +340,26 @@ fun PlayerScreen(
                         onDismiss = viewModel::dismissUpNext,
                     )
                 } else if (skip != null) {
-                    SkipButton(
-                        skip,
-                        progress.positionMs,
-                        playing = state.playing,
-                        onClick = viewModel::skipSegment,
-                        modifier = Modifier
-                            .focusRequester(skipFocus)
+                    // The button fades as one picture: with the alpha on each draw, the border over the
+                    // glass fill added up and stayed last. The offscreen layer gets room around the button
+                    // for the focus scale-up, ring and shadow, and the offset puts the button back in place.
+                    Box(
+                        Modifier
+                            .offset(x = SKIP_LAYER_SIDE, y = SKIP_LAYER_BOTTOM)
                             .graphicsLayer {
                                 alpha = skipAlpha.value
-                                // An offscreen layer would clip the focused button's scale-up.
-                                compositingStrategy = CompositingStrategy.ModulateAlpha
-                            },
-                    )
+                                compositingStrategy = CompositingStrategy.Offscreen
+                            }
+                            .padding(start = SKIP_LAYER_SIDE, top = SKIP_LAYER_SIDE, end = SKIP_LAYER_SIDE, bottom = SKIP_LAYER_BOTTOM),
+                    ) {
+                        SkipButton(
+                            skip,
+                            progress.positionMs,
+                            playing = state.playing,
+                            onClick = viewModel::skipSegment,
+                            modifier = Modifier.focusRequester(skipFocus),
+                        )
+                    }
                 }
             }
         }
