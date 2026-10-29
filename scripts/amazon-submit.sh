@@ -15,15 +15,21 @@ notes="${2:?usage: amazon-submit.sh <apk> <notes-dir>}"
 : "${AMAZON_CLIENT_ID:?}" "${AMAZON_CLIENT_SECRET:?}" "${AMAZON_APP_ID:?AMAZON_APP_ID is not set, see docs/RELEASING.md}"
 api="https://developer.amazon.com/api/appstore/v1/applications/$AMAZON_APP_ID"
 
-token="$(curl -fsS https://api.amazon.com/auth/o2/token \
+headers="$(mktemp)"
+body="$(mktemp)"
+
+status="$(curl -sS -o "$body" -w '%{http_code}' https://api.amazon.com/auth/o2/token \
   --data-urlencode grant_type=client_credentials \
   --data-urlencode "client_id=$AMAZON_CLIENT_ID" \
   --data-urlencode "client_secret=$AMAZON_CLIENT_SECRET" \
-  --data-urlencode scope=appstore::apps:readwrite | jq -r .access_token)"
+  --data-urlencode scope=appstore::apps:readwrite)"
+if [ "$status" -ge 300 ]; then
+  # The answer names the cause, such as invalid_client or invalid_scope, and holds no secret.
+  echo "::error::Amazon refused the sign-in with $status: $(cat "$body")" >&2
+  exit 1
+fi
+token="$(jq -r .access_token "$body")"
 echo "::add-mask::$token"
-
-headers="$(mktemp)"
-body="$(mktemp)"
 
 # call METHOD PATH [curl options]: prints the answer, fails with it on an HTTP error.
 call() {
