@@ -15,6 +15,7 @@
 <p align="center">
   <a href="https://glacier-jellyfin.github.io/glacier-androidtv/">Website</a> ·
   <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest">Download</a> ·
+  <a href="https://www.amazon.com/dp/B0HPL2YVVQ">Amazon Appstore</a> ·
   <a href="CHANGELOG.md">Changelog</a>
 </p>
 
@@ -59,7 +60,7 @@
   Fire TV)
 - English and German user interface, accent colours and a compact layout
 - Diagnostics that send a cleaned error log to your server for bug reports
-- Built-in updates from GitHub releases, with a Stable and a Beta channel
+- Built-in updates for the GitHub version, with a Stable and a Beta channel
 
 ## Requirements
 
@@ -70,10 +71,19 @@
 
 ## Installation
 
-Glacier is free and needs no account. It is distributed only through
+Glacier is free and needs no account. Get it from a store or straight from
 [GitHub releases](https://github.com/Glacier-Jellyfin/glacier-androidtv/releases).
 
-### With Downloader (recommended)
+### From a store
+
+| Store | |
+|---|---|
+| [Amazon Appstore](https://www.amazon.com/dp/B0HPL2YVVQ) | Fire TV |
+| Google Play | Coming soon, now in closed testing |
+
+The store keeps Glacier up to date, like any other app.
+
+### With Downloader
 
 1. Install the free [Downloader](https://www.aftvnews.com/downloader/) app from
    the app store on your TV.
@@ -89,7 +99,7 @@ and sideload it, for example with `adb install glacier-androidtv.apk`.
 
 ### Updates
 
-Once installed, Glacier keeps itself up to date. It checks for new versions
+Installed from GitHub, Glacier keeps itself up to date. It checks for new versions
 at every start and installs them from GitHub releases. Android asks once for
 permission to install updates from Glacier. You can pick the Stable or Beta
 channel in Settings › System.

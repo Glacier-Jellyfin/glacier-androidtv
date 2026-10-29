@@ -168,8 +168,7 @@ The environment holds the secrets and variables:
 
 Google Play signs with the same key as the GitHub release (the existing
 release key was handed over as the app signing key), so both versions can
-update each other. The Amazon Appstore signs with its own key: a version from
-GitHub cannot be installed over one from Amazon and the other way round.
+update each other.
 
 ### Trying a store version locally
 
