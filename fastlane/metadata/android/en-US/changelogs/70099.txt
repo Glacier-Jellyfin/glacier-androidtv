@@ -1,0 +1,1 @@
+Your settings now travel with your profile: Glacier saves them on your Jellyfin server and offers them on a new TV or after reinstalling. Settings › Account manages saved copies and can remove a profile from this device. The skip button also fades away faster.

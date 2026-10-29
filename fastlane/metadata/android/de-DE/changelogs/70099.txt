@@ -1,0 +1,1 @@
+Deine Einstellungen ziehen mit deinem Profil um: Glacier speichert sie auf deinem Jellyfin-Server und bietet sie auf einem neuen Fernseher oder nach einer Neuinstallation an. Unter Einstellungen › Konto verwaltest du gespeicherte Stände und entfernst ein Profil von diesem Gerät. Außerdem blendet der Überspringen-Button schneller aus.
