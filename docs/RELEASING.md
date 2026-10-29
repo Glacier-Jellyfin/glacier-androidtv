@@ -137,6 +137,35 @@ Only stable tags build the store versions. The `Release` workflow leaves them
 as the workflow artifact `store-builds` (kept for 30 days), never as release
 assets: a store build installed by hand would never update.
 
+### Uploading to the stores
+
+After the GitHub release the job `stores` waits for approval in the GitHub
+environment `stores` (Actions › the run › Review deployments). Then it
+uploads the bundle to Google Play and submits the APK to the Amazon Appstore
+for review. The store notes come from
+`fastlane/metadata/android/<language>/changelogs/<versionCode>.txt`
+(`scripts/store-notes.sh`). The workflow checks them before it builds
+anything, so a missing or too long one stops the release early. If one store
+fails, the other is still tried. Rerun the failed job once the cause is fixed.
+
+The environment holds the secrets and variables:
+
+| Name | Kind | Value |
+|---|---|---|
+| `PLAY_SERVICE_ACCOUNT_JSON` | Secret | JSON key of a Google Cloud service account that may release Glacier in the Play Console |
+| `AMAZON_CLIENT_ID`, `AMAZON_CLIENT_SECRET` | Secret | Security profile linked to the App Submission API |
+| `AMAZON_APP_ID` | Variable | App ID from the Amazon Developer Console (`amzn1.devportal.mobileapp.…`) |
+| `PLAY_TRACK` | Variable | Google Play track, `alpha` (closed testing) if unset, later `production` |
+| `PLAY_STATUS` | Variable | `completed` if unset. `draft` as long as the app was never published, which Google Play requires |
+
+- Google Play: the upload uses the Play Developer API
+  (`r0adkll/upload-google-play`) and sends the R8 mapping along for readable
+  crash reports.
+- Amazon: `scripts/amazon-submit.sh` opens an edit (or takes the one already
+  open), replaces the APK, sets "Recent changes" of each listing and commits
+  the edit, which starts Amazon's review. While a version is still in review,
+  Amazon opens no new edit and the step fails with Amazon's message.
+
 Google Play signs with the same key as the GitHub release (the existing
 release key was handed over as the app signing key), so both versions can
 update each other. The Amazon Appstore signs with its own key: a version from
