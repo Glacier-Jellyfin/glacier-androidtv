@@ -1,0 +1,6 @@
+Filme, Serien und Musik von deinem eigenen Jellyfin-Server
+Intros, Rückblicke und Abspann überspringen, mit Vorschau beim Spulen
+Bildratenanpassung sowie DTS und TrueHD über FFmpeg
+Live-TV mit Programmführer und Aufnahmen
+Mehrere Server und Profile, mit Kindersicherung und PINs
+Kostenlos und Open Source, ohne Werbung und Tracking
