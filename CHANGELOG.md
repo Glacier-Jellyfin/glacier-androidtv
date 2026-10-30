@@ -27,6 +27,7 @@ language is German.
 
 ### Fixed
 - Right from the profile in the navigation bar no longer jumps down to the A–Z rail of a library
+- Left from a library's A–Z rail lands on the title the letter jumped to, not on the title focused before
 
 ## [0.7.0] - 2026-10-29
 

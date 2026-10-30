@@ -12,6 +12,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ### Behoben
 - Rechts vom Profil in der Navigationsleiste springt der Fokus nicht mehr hinunter zur A–Z-Leiste einer Bibliothek
+- Links aus der A–Z-Leiste einer Bibliothek landet auf dem Titel, zu dem der Buchstabe gesprungen ist, statt auf dem zuvor gewählten
 
 ## [0.7.0] - 2026-10-29
 
