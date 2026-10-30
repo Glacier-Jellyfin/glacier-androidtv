@@ -22,8 +22,14 @@ language is German.
 
 ## [Unreleased]
 
+### New
+- Home video and photo libraries get their own entry, Photos & videos, in the navigation bar. Browse them by folder, with the folders apart from the videos and photos and the path above the title. The other videos of a folder follow one after another
+- Photos and videos open full screen, a video playing right there. Left and right browse the folder with an animated transition, OK on a photo starts or stops a slideshow, and OK on a video opens the player where it is. A line along the bottom shows how far a video has played or a photo's time in the slideshow. Settings › Playback sets how long the slideshow shows each photo
+- A folder shows its videos and photos as cards, or as a gallery: the focused picture fills the screen behind the title and folders, with a row of small pictures along the bottom to click through. Moving into the row brings the whole picture to the front above the row and slides the navigation bar away, and a video plays in it. Chips at the left show all, only videos or only photos, and menus at the right pick the view and sort by the date taken or by name. Back first goes up to the chips. Sorted by date, each month gets a heading among the cards, and sorted by name an A–Z rail jumps to a letter. The full-screen view browses the videos too. Settings › Appearance shapes the cards 16:9 or 4:3
+
 ### Improved
 - The navigation bar leaves room for notices at the top right. When its entries need more room, the ones between search and settings scroll, and search, settings and the profile always stay in view
+- The player no longer calls music videos and recordings "Movies"
 
 ### Fixed
 - Right from the profile in the navigation bar no longer jumps down to the A–Z rail of a library

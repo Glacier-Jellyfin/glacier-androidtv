@@ -30,6 +30,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -47,10 +48,18 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
 
 /**
  * The sort button at the right of a toolbar: the current sort, its direction when it has
- * one ([descending] null: none), and a chevron for the [SortMenu] it opens.
+ * one ([descending] null: none), and a chevron for the [SortMenu] it opens. With another
+ * [icon] it opens any such choice, such as a folder's mixing of videos and photos.
  */
 @Composable
-fun SortButton(label: String, open: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, descending: Boolean? = null) {
+fun SortButton(
+    label: String,
+    open: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    descending: Boolean? = null,
+    icon: ImageVector = GlacierIcons.SortLines,
+) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -67,7 +76,7 @@ fun SortButton(label: String, open: Boolean, onClick: () -> Unit, modifier: Modi
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Icon(GlacierIcons.SortLines, contentDescription = null, tint = foreground, modifier = Modifier.size(20.dp))
+        Icon(icon, contentDescription = null, tint = foreground, modifier = Modifier.size(20.dp))
         Text(label, style = GlacierText.body(19, FontWeight.SemiBold), color = foreground)
         if (descending != null) {
             Icon(

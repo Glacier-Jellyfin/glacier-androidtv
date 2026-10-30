@@ -2,8 +2,8 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import java.util.UUID
 
-/** Library types Glacier shows in v1; everything else is hidden. */
-enum class LibraryKind { Movies, Shows, Music, MusicVideos }
+/** Library types Glacier shows; everything else is hidden. Home videos are browsed by folder. */
+enum class LibraryKind { Movies, Shows, Music, MusicVideos, HomeVideos }
 
 data class Library(
     val id: UUID,

@@ -37,6 +37,7 @@ class DetailRepository @Inject constructor(
     private val sessions: SessionManager,
     private val ageFilter: AgeFilter,
     private val serverPreferences: ServerPreferencesRepository,
+    private val folders: FolderRepository,
 ) {
 
     private val _playedChanged = MutableSharedFlow<UUID>(extraBufferCapacity = 8)
@@ -227,9 +228,12 @@ class DetailRepository @Inject constructor(
             .let { ageFilter.screen(it) }
     }
 
-    /** What the video player plays one after another: a playlist's videos, or an artist's music videos. */
-    suspend fun videoQueue(sourceId: UUID): List<MediaItem> =
-        if (details(sourceId).item.kind == ItemKind.Artist) artistVideos(sourceId) else playlistVideos(sourceId)
+    /** What the video player plays one after another: a playlist's videos, an artist's music videos, or a home video folder's. */
+    suspend fun videoQueue(sourceId: UUID): List<MediaItem> = when (details(sourceId).item.kind) {
+        ItemKind.Artist -> artistVideos(sourceId)
+        ItemKind.Playlist -> playlistVideos(sourceId)
+        else -> folders.videos(sourceId)
+    }
 
     /** [id]'s neighbours in [queue] (see [videoQueue]). */
     fun neighboursIn(queue: List<MediaItem>, id: UUID): EpisodeNeighbours {

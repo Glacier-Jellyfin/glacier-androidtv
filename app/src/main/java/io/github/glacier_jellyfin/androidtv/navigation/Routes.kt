@@ -39,15 +39,29 @@ data class LibraryRoute(
 )
 
 /**
+ * A folder of a home video library ([folderId], named [title]). Without one, the top:
+ * the home video libraries, or the content of the only one.
+ */
+@Serializable
+data class FolderRoute(val folderId: String? = null, val title: String? = null)
+
+/** The photos of a home video folder ([folderId]) full screen, starting with [photoId]. */
+@Serializable
+data class PhotoRoute(val folderId: String, val photoId: String)
+
+/**
  * [themeArea] is the show of an episode opened from its show, known before the page loads (theme song).
  * [seasonId] opens a show on that season instead of the first one with something unwatched.
  */
 @Serializable
 data class DetailRoute(val itemId: String, val themeArea: String? = null, val seasonId: String? = null)
 
-/** The video player; with [queueOf] (a playlist, or an artist for its music videos) the next video follows. */
+/**
+ * The video player; with [queueOf] (a playlist, or an artist for its music videos) the next video follows.
+ * [startMs] starts there instead of the resume point, such as where a slideshow's video had come to.
+ */
 @Serializable
-data class PlayerRoute(val itemId: String, val fromStart: Boolean = false, val queueOf: String? = null)
+data class PlayerRoute(val itemId: String, val fromStart: Boolean = false, val queueOf: String? = null, val startMs: Long? = null)
 
 /** Trailers of a library title ([itemId]), or of a Seerr title ([seerrType] and [tmdbId]) not in the library yet. */
 @Serializable

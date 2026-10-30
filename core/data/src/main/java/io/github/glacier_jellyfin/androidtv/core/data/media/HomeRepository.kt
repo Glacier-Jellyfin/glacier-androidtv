@@ -80,7 +80,8 @@ class HomeRepository @Inject constructor(
         val libraries = librariesAsync.await()
         _kinds.value = libraries.map { it.kind }.distinct().sorted()
         val excludes = excludesAsync.await()
-        val latestLibraries = libraries.filterNot { it.id in excludes }
+        // Home videos have no detail pages to open from a row; they are browsed by folder.
+        val latestLibraries = libraries.filterNot { it.id in excludes || it.kind == LibraryKind.HomeVideos }
         _libraries.value = libraries
         _latestLibraries.value = latestLibraries
         val latest = latestLibraries
@@ -304,6 +305,7 @@ class HomeRepository @Inject constructor(
             LibraryKind.Shows -> BaseItemKind.SERIES
             LibraryKind.Music -> BaseItemKind.MUSIC_ALBUM
             LibraryKind.MusicVideos -> BaseItemKind.MUSIC_VIDEO
+            LibraryKind.HomeVideos -> BaseItemKind.VIDEO
         }
 
     private companion object {

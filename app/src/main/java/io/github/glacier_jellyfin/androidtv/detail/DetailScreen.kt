@@ -376,11 +376,12 @@ internal fun ScrollingBackdrop(url: String?, height: Int, listState: LazyListSta
     )
 }
 
+/** One line; too long, it gives up [overflow]'s end (a folder path keeps its nearest part with a start ellipsis). */
 @Composable
-internal fun Crumb(text: String) {
+internal fun Crumb(text: String, overflow: TextOverflow = TextOverflow.Ellipsis) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Icon(GlacierIcons.ChevronLeft, contentDescription = null, tint = GlacierColors.Mist, modifier = Modifier.size(16.dp))
-        Text(text.uppercase(), style = GlacierText.body(17).copy(letterSpacing = 0.06.em), color = GlacierColors.Mist)
+        Text(text.uppercase(), style = GlacierText.body(17).copy(letterSpacing = 0.06.em), color = GlacierColors.Mist, maxLines = 1, overflow = overflow)
     }
 }
 

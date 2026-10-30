@@ -72,6 +72,8 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentAction
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.UpNextMode
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AccentColor
+import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderAspect
+import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AudioChannels
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeRow
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeRowChoice
@@ -739,6 +741,15 @@ private fun appearanceRows(
                     appearance.collectionMoviesWithShows,
                     onToggle = { viewModel.updateAppearance { it.copy(collectionMoviesWithShows = !it.collectionMoviesWithShows) } },
                 ),
+            ) + listOfNotNull(
+                // Only with a home video library.
+                SettingRow.Choice(
+                    stringResource(R.string.settings_folder_aspect),
+                    stringResource(R.string.settings_folder_aspect_sub),
+                    FolderAspect.entries.map { "${it.width}:${it.height}" },
+                    state.profile.folders.aspect.ordinal,
+                    onSelect = { i -> viewModel.updateFolders { it.copy(aspect = FolderAspect.entries[i]) } },
+                ).takeIf { LibraryKind.HomeVideos in LocalLibraryKinds.current },
             ),
         ),
         navGroup,
@@ -970,6 +981,20 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
             ),
         ),
         SettingGroup(stringResource(R.string.settings_group_segments), segments),
+    ) + listOfNotNull(
+        // Only with a home video library, whose photos have slideshows.
+        SettingGroup(
+            stringResource(R.string.settings_group_slideshow),
+            listOf(
+                SettingRow.Choice(
+                    stringResource(R.string.settings_slide_time),
+                    stringResource(R.string.settings_slide_time_sub),
+                    FolderSettings.SlideSeconds.map { stringResource(R.string.settings_slide_seconds, it) },
+                    FolderSettings.SlideSeconds.indexOf(state.profile.folders.slideSeconds).coerceAtLeast(0),
+                    onSelect = { i -> viewModel.updateFolders { it.copy(slideSeconds = FolderSettings.SlideSeconds[i]) } },
+                ),
+            ),
+        ).takeIf { LibraryKind.HomeVideos in LocalLibraryKinds.current },
     )
 }
 

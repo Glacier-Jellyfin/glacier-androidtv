@@ -36,7 +36,55 @@ data class ProfileSettings(
     val liveTv: LiveTvSettings = LiveTvSettings(),
     /** The version picked for a movie, or for all episodes of a show, keyed by the movie's or show's id. */
     val versions: Map<String, VersionKey> = emptyMap(),
+    /** How home video folders show their videos and photos. */
+    val folders: FolderSettings = FolderSettings(),
 )
+
+/** The toolbar of a home video folder, kept from one time to the next; the slideshow (Settings › Playback) and the card shape (Settings › Appearance). */
+@Serializable
+data class FolderSettings(
+    val view: FolderView = FolderView.Grid,
+    /** Only videos, only photos, or both in one list; a folder with one kind shows it whatever this says. */
+    val show: FolderShow = FolderShow.All,
+    val sort: FolderSort = FolderSort.Date,
+    /** Newest or Z first. */
+    val descending: Boolean = false,
+    /** How long a slideshow shows each photo; videos play to their end. */
+    val slideSeconds: Int = 5,
+    /** The shape of video and photo cards (Settings › Appearance); previews show the whole picture anyway. */
+    val aspect: FolderAspect = FolderAspect.Wide,
+) {
+    companion object {
+        /** The times Settings offers. */
+        val SlideSeconds = listOf(3, 5, 8, 12, 20)
+    }
+}
+
+@Serializable
+enum class FolderView {
+    /** Cards with the name below, as large as "Continue watching". */
+    Grid,
+    /** Small pictures without names; the focused one is named at the bottom. */
+    Gallery,
+}
+
+@Serializable
+enum class FolderShow { All, Videos, Photos }
+
+@Serializable
+enum class FolderAspect(val width: Int, val height: Int) {
+    /** 16:9, like videos and the TV. */
+    Wide(16, 9),
+    /** 4:3, like most camera photos and old camcorder videos. */
+    Standard(4, 3),
+}
+
+@Serializable
+enum class FolderSort {
+    /** When a photo or video was taken, else the file's date. */
+    Date,
+    Name,
+}
 
 /**
  * Which Live TV channels are radio, and the order of the channels. Jellyfin's own

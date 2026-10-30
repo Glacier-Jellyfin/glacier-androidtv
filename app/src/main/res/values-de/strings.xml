@@ -169,6 +169,7 @@
     <string name="favorites_empty_body">Markiere Titel mit dem Herz, dann erscheinen sie hier.</string>
     <string name="favorites_error">Favoriten konnten nicht geladen werden</string>
     <string name="nav_music_videos">Videos</string>
+    <string name="nav_home_videos">Fotos &amp; Videos</string>
     <string name="nav_settings">Einstellungen</string>
     <string name="nav_profile">Profil wechseln</string>
     <string name="nav_now_playing">Läuft gerade: %1$s</string>
@@ -186,6 +187,10 @@
     <plurals name="count_titles">
         <item quantity="one">%1$d Titel</item>
         <item quantity="other">%1$d Titel</item>
+    </plurals>
+    <plurals name="count_videos">
+        <item quantity="one">%1$d Video</item>
+        <item quantity="other">%1$d Videos</item>
     </plurals>
     <plurals name="count_albums">
         <item quantity="one">%1$d Album</item>
@@ -219,6 +224,22 @@
     <string name="library_shows">Serien</string>
     <string name="library_music">Musik</string>
     <string name="library_music_videos">Musikvideos</string>
+    <string name="library_home_videos">Fotos &amp; Videos</string>
+    <string name="folder_section_folders">Ordner</string>
+    <string name="folder_section_videos">Videos</string>
+    <string name="folder_section_photos">Fotos</string>
+    <string name="folder_section_mixed">Videos und Fotos</string>
+    <string name="folder_view_grid">Raster</string>
+    <string name="folder_view_gallery">Galerie</string>
+    <string name="folder_show_videos">Videos</string>
+    <string name="folder_show_photos">Fotos</string>
+    <string name="folder_show_all">Alle</string>
+    <string name="folder_sort_date">Datum</string>
+    <string name="folder_sort_name">Name</string>
+    <string name="folder_undated">Ohne Datum</string>
+    <string name="folder_empty">Dieser Ordner ist leer.</string>
+    <string name="photo_position">%1$d / %2$d</string>
+    <string name="photo_error">Dieses Foto konnte nicht geladen werden.</string>
     <string name="scope_all">Alle</string>
     <string name="scope_collections">Sammlungen</string>
     <string name="scope_genres">Genres</string>
@@ -669,6 +690,12 @@
     <string name="settings_group_sets_sub">Zusammengehörige Filme erscheinen in der Bibliothek als eine Sammlungskarte statt einzeln</string>
     <string name="settings_collection_together">Filme und Serien in Sammlungen zusammen</string>
     <string name="settings_collection_together_sub">Eine Sammlung zeigt ihre Filme und Serien in einer Reihe statt in zwei</string>
+    <string name="settings_group_slideshow">Diashow</string>
+    <string name="settings_slide_time">Anzeigedauer pro Foto</string>
+    <string name="settings_slide_time_sub">Wie lange eine Diashow in Fotos &amp; Videos jedes Foto zeigt. Videos laufen bis zu ihrem Ende</string>
+    <string name="settings_slide_seconds">%1$d s</string>
+    <string name="settings_folder_aspect">Kartenform in Fotos &amp; Videos</string>
+    <string name="settings_folder_aspect_sub">Die Form der Video- und Fotokarten in Fotos &amp; Videos. 16:9 passt zu Videos, 4:3 zu Fotos</string>
     <string name="settings_spot_source">Inhalte</string>
     <string name="settings_spot_source_sub">Zusammengemischt · Weiterschauen steht vorne</string>
     <string name="settings_spot_source_off">Nichts gewählt · das Spotlight ist aus</string>

@@ -526,10 +526,10 @@ private fun continueSubtitle(item: MediaItem): String {
 @Composable
 private fun libraryCount(library: Library): String? {
     val count = library.itemCount ?: return null
-    return if (library.kind == LibraryKind.Music) {
-        pluralStringResource(R.plurals.count_albums, count, count)
-    } else {
-        pluralStringResource(R.plurals.count_titles, count, count)
+    return when (library.kind) {
+        LibraryKind.Music -> pluralStringResource(R.plurals.count_albums, count, count)
+        LibraryKind.HomeVideos -> pluralStringResource(R.plurals.count_videos, count, count)
+        else -> pluralStringResource(R.plurals.count_titles, count, count)
     }
 }
 

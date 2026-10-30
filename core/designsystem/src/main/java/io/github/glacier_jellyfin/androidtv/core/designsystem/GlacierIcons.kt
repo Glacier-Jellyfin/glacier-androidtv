@@ -96,6 +96,8 @@ object GlacierIcons {
         "M7 3v18", "M3 7.5h4", "M3 12h18", "M3 16.5h4", "M17 3v18", "M17 7.5h4", "M17 16.5h4",
         strokeWidth = 2.2f,
     )
+    val Grid = icon("M3 3h7v7H3z", "M14 3h7v7h-7z", "M14 14h7v7h-7z", "M3 14h7v7H3z")
+    val Folder = icon("M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z")
     val Chapters = icon("M3 5h.01", "M3 12h.01", "M3 19h.01", "M8 5h13", "M8 12h13", "M8 19h13")
     val PlaylistAdd = icon("M16 6H3", "M11 12H3", "M16 18H3", "M18 9v6", "M21 12h-6")
     val Check = icon("M20 6 9 17l-5-5", strokeWidth = 3.4f)

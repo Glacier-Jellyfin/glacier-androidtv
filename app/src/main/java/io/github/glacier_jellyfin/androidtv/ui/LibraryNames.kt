@@ -15,6 +15,7 @@ val LibraryKind.title: Int
         LibraryKind.Shows -> R.string.library_shows
         LibraryKind.Music -> R.string.library_music
         LibraryKind.MusicVideos -> R.string.library_music_videos
+        LibraryKind.HomeVideos -> R.string.library_home_videos
     }
 
 /** Name of a library kind in the top navigation, e.g. "Film". */
@@ -25,6 +26,7 @@ val LibraryKind.navTitle: Int
         LibraryKind.Shows -> R.string.nav_shows
         LibraryKind.Music -> R.string.nav_music
         LibraryKind.MusicVideos -> R.string.nav_music_videos
+        LibraryKind.HomeVideos -> R.string.nav_home_videos
     }
 
 /**

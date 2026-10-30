@@ -150,6 +150,9 @@ class PlayerViewModel @Inject constructor(
     /** Changes when playback moves on to another episode. */
     private var itemId = UUID.fromString(route.itemId)
     private var fromStart = route.fromStart
+
+    /** Where the first open starts, given by the caller; later opens use the resume point. */
+    private var startOverride = route.startMs
     /** The file that plays of a title with several; null until known, and for a single file. */
     private var versionId: String? = null
     /** Playlist or artist whose videos play one after another; its list once loaded. */
@@ -290,7 +293,8 @@ class PlayerViewModel @Inject constructor(
         val selection = trackSelections.get(itemId)
         versionId = selection?.versionId
         // A choice made on the detail page wins; "off" there is sent as -1 so the server does not pick one.
-        open(startMs = null, audio = selection?.audio, subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE }, fromLastTitle = selection == null)
+        open(startMs = startOverride, audio = selection?.audio, subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE }, fromLastTitle = selection == null)
+        startOverride = null
     }
 
     /**

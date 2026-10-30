@@ -1,6 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.navigation
 
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 
@@ -15,7 +16,7 @@ fun SessionManager.navEvent(target: NavTarget, current: NavTarget?): UiEvent.Nav
         NavTarget.Home -> UiEvent.Navigate(HomeRoute, clearBackStack = true)
         NavTarget.Search -> UiEvent.Navigate(SearchRoute())
         NavTarget.Settings -> UiEvent.Navigate(SettingsRoute)
-        is NavTarget.Library -> UiEvent.Navigate(LibraryRoute(target.kind.name))
+        is NavTarget.Library -> UiEvent.Navigate(if (target.kind == LibraryKind.HomeVideos) FolderRoute() else LibraryRoute(target.kind.name))
         NavTarget.Favorites -> UiEvent.Navigate(FavoritesRoute)
         NavTarget.NowPlaying -> UiEvent.Navigate(MusicRoute())
         NavTarget.LiveTv -> UiEvent.Navigate(LiveTvRoute)

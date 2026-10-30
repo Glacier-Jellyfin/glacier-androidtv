@@ -49,6 +49,7 @@ internal fun CollectionType?.toLibraryKind(): LibraryKind? = when (this) {
     CollectionType.TVSHOWS -> LibraryKind.Shows
     CollectionType.MUSIC -> LibraryKind.Music
     CollectionType.MUSICVIDEOS -> LibraryKind.MusicVideos
+    CollectionType.HOMEVIDEOS -> LibraryKind.HomeVideos
     else -> null
 }
 
@@ -170,7 +171,8 @@ internal class MediaMapper(private val api: ApiClient) {
 
     private fun thumb(dto: BaseItemDto): String? {
         // An episode's primary image is its own 16:9 still: more specific than any series art.
-        if (dto.type == BaseItemKind.EPISODE) {
+        // A home video's is a frame of the video itself.
+        if (dto.type == BaseItemKind.EPISODE || dto.type == BaseItemKind.VIDEO) {
             dto.imageTags?.get(ImageType.PRIMARY)?.let { return image(dto.id, ImageType.PRIMARY, it, ImageWidth.THUMB) }
         }
         dto.imageTags?.get(ImageType.THUMB)?.let { return image(dto.id, ImageType.THUMB, it, ImageWidth.THUMB) }
@@ -202,6 +204,17 @@ internal class MediaMapper(private val api: ApiClient) {
         val parent = dto.parentBackdropItemId ?: return null
         val tag = dto.parentBackdropImageTags?.firstOrNull() ?: return null
         return image(parent, ImageType.BACKDROP, tag, width)
+    }
+
+    /** A photo of a home video library; null without an image to show. */
+    fun photo(dto: BaseItemDto): MediaPhoto? {
+        val tag = dto.imageTags?.get(ImageType.PRIMARY) ?: return null
+        return MediaPhoto(
+            id = dto.id,
+            name = dto.name.orEmpty(),
+            thumbUrl = image(dto.id, ImageType.PRIMARY, tag, ImageWidth.THUMB),
+            fullUrl = image(dto.id, ImageType.PRIMARY, tag, ImageWidth.BACKDROP),
+        )
     }
 
     private fun image(id: UUID, type: ImageType, tag: String, maxWidth: Int) =

@@ -163,7 +163,13 @@ private fun TitleBlock(state: PlayerUiState, modifier: Modifier) {
         val crumb = if (item.kind == ItemKind.Episode) {
             listOfNotNull(item.parentTitle, item.seasonNumber?.let { seasonLabel(it) })
         } else {
-            listOfNotNull(stringResource(R.string.library_movies), item.year?.toString(), item.genres.firstOrNull())
+            // Home videos and recordings have no kind to name.
+            val kind = when (item.kind) {
+                ItemKind.Movie -> stringResource(R.string.library_movies)
+                ItemKind.MusicVideo -> stringResource(R.string.library_music_videos)
+                else -> null
+            }
+            listOfNotNull(kind, item.year?.toString(), item.genres.firstOrNull())
         }.joinToString(" · ")
         Text(crumb.uppercase(), style = GlacierText.body(18).copy(letterSpacing = 0.06.em), color = OsdSecondary)
         val title = item.episodeNumber?.takeIf { item.kind == ItemKind.Episode }

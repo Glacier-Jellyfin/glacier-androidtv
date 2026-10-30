@@ -528,6 +528,8 @@ class LibraryRepository @Inject constructor(
             LibraryKind.Shows -> BaseItemKind.SERIES
             LibraryKind.Music -> BaseItemKind.MUSIC_ALBUM
             LibraryKind.MusicVideos -> BaseItemKind.MUSIC_VIDEO
+            // Browsed by folder (FolderRepository), never listed here.
+            LibraryKind.HomeVideos -> BaseItemKind.VIDEO
         }
 
     private companion object {

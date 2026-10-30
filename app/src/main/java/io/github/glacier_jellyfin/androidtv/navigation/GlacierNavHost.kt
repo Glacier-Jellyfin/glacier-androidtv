@@ -15,7 +15,9 @@ import io.github.glacier_jellyfin.androidtv.player.PlayerScreen
 import io.github.glacier_jellyfin.androidtv.search.SearchScreen
 import io.github.glacier_jellyfin.androidtv.seerr.SeerrScreen
 import io.github.glacier_jellyfin.androidtv.home.HomeScreen
+import io.github.glacier_jellyfin.androidtv.library.FolderScreen
 import io.github.glacier_jellyfin.androidtv.library.LibraryScreen
+import io.github.glacier_jellyfin.androidtv.library.PhotoScreen
 import io.github.glacier_jellyfin.androidtv.livetv.LiveTvPlayerScreen
 import io.github.glacier_jellyfin.androidtv.livetv.LiveTvScreen
 import io.github.glacier_jellyfin.androidtv.music.MusicPlayerScreen
@@ -70,6 +72,8 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
         composable<ProfilesRoute> { ProfilesScreen(onNavigate = navigate) }
         composable<HomeRoute> { HomeScreen(onNavigate = navigate) }
         composable<LibraryRoute> { LibraryScreen(onNavigate = navigate) }
+        composable<FolderRoute> { FolderScreen(onNavigate = navigate) }
+        composable<PhotoRoute> { PhotoScreen(onNavigate = navigate) }
         composable<DetailRoute> { DetailScreen(onNavigate = navigate, onBack = back) }
         composable<PersonRoute> { PersonScreen(onNavigate = navigate) }
 

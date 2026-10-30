@@ -122,7 +122,10 @@ fun Artwork(url: String?, modifier: Modifier = Modifier) {
 private const val ARTWORK_RETRIES = 1
 private const val ARTWORK_RETRY_DELAY_MS = 800L
 
-/** "Continue watching": 16:9 still, progress bar, play button on focus, title and time left. */
+/**
+ * "Continue watching": 16:9 still, progress bar, play button on focus, title and time left.
+ * [imageHeight] makes the still taller at the same width, such as 4:3 for home videos.
+ */
 @Composable
 fun ContinueCard(
     title: String,
@@ -132,6 +135,7 @@ fun ContinueCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     locked: Boolean = false,
+    imageHeight: Int? = null,
 ) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
@@ -139,7 +143,7 @@ fun ContinueCard(
     GlacierCard(onClick = onClick, modifier = modifier.width(sizes.continueWidth.dp)) { focused ->
         Box(
             Modifier
-                .size(sizes.continueWidth.dp, sizes.continueHeight.dp)
+                .size(sizes.continueWidth.dp, (imageHeight ?: sizes.continueHeight).dp)
                 .focusFrame(focused, shape)
                 .clip(shape),
         ) {

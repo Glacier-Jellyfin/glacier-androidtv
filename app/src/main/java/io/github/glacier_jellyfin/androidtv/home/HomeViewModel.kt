@@ -18,12 +18,14 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepositor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightSource
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.Library
+import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveChannel
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
+import io.github.glacier_jellyfin.androidtv.navigation.FolderRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LiveTvPlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
@@ -238,7 +240,13 @@ class HomeViewModel @Inject constructor(
     /** Tunes in full screen; Back comes back here. */
     fun playChannel(channel: LiveChannel) = navigate(LiveTvPlayerRoute(channel.id.toString(), handBack = false))
 
-    fun openLibrary(library: Library) = navigate(LibraryRoute(library.kind.name, library.id.toString(), title = library.name))
+    fun openLibrary(library: Library) = navigate(
+        if (library.kind == LibraryKind.HomeVideos) {
+            FolderRoute(library.id.toString(), library.name)
+        } else {
+            LibraryRoute(library.kind.name, library.id.toString(), title = library.name)
+        },
+    )
 
     fun onNav(target: NavTarget) {
         val event = sessions.navEvent(target, current = NavTarget.Home) ?: return

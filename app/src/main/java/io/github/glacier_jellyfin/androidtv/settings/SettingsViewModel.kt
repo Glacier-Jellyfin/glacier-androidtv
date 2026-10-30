@@ -23,6 +23,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AppearanceSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.DeviceSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsSync
+import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.NavigationSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.Language
@@ -219,6 +220,10 @@ class SettingsViewModel @Inject constructor(
 
     fun updateNavigation(transform: (NavigationSettings) -> NavigationSettings) {
         viewModelScope.launch { settings.updateNavigation(transform) }
+    }
+
+    fun updateFolders(transform: (FolderSettings) -> FolderSettings) {
+        viewModelScope.launch { settings.update { it.copy(folders = transform(it.folders)) } }
     }
 
     fun updateSubtitleStyle(transform: (SubtitleStyle) -> SubtitleStyle) {
