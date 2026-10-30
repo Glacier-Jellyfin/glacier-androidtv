@@ -262,7 +262,7 @@ private fun MediaDetail(state: DetailState, details: ItemDetails, viewModel: Det
                                     imageUrl = similar.posterUrl,
                                     title = similar.title,
                                     caption = yearText(similar),
-                                    onClick = { viewModel.openItem(similar) },
+                                    onClick = { viewModel.openSimilar(similar) },
                                     watched = similar.played,
                                     locked = similar.showsLock(),
                                 )

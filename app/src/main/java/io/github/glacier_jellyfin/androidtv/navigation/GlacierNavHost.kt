@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -31,6 +32,9 @@ import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 /** Screens without arguments; navigating to one that is already on top does nothing. */
 private val SingleScreens = setOf(ServerListRoute, ServerAddressRoute, HomeRoute, SettingsRoute, FavoritesRoute, LiveTvRoute)
 
+/** Pages about one title or person, which a jump to another title through "More like this" leaves. */
+private val TitlePages = listOf(DetailRoute::class, PersonRoute::class, SeerrRoute::class)
+
 private const val TAG = "Navigation"
 
 @Composable
@@ -38,10 +42,17 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
     val navigate: (UiEvent.Navigate) -> Unit = { event ->
         Log.d(TAG, "Open ${event.route}")
         val current = navController.currentDestination?.id
+        // The screen under the title and cast pages on top, such as a library or search.
+        val base = if (event.leaveTitles) {
+            navController.currentBackStack.value.lastOrNull { entry -> TitlePages.none { entry.destination.hasRoute(it) } }?.destination?.id
+        } else {
+            null
+        }
         navController.navigate(event.route) {
             when {
                 event.clearBackStack -> popUpTo(0) { inclusive = true }
-                event.replace && current != null -> popUpTo(current) { inclusive = true }
+                base != null -> popUpTo(base)
+                (event.replace || event.leaveTitles) && current != null -> popUpTo(current) { inclusive = true }
             }
             // Only parameterless screens are kept single: a library, genre or
             // detail page with other arguments is a new screen of the same kind.

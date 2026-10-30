@@ -338,7 +338,7 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                     imageUrl = similar.posterUrl,
                                     title = similar.title,
                                     caption = similar.parentTitle,
-                                    onClick = { viewModel.openItem(similar) },
+                                    onClick = { viewModel.openSimilar(similar) },
                                     shape = CardShape.Square,
                                 )
                             }
