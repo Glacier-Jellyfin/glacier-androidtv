@@ -610,6 +610,12 @@ class DetailViewModel @Inject constructor(
 
     fun openItem(item: MediaItem) = navigate(DetailRoute(item.id.toString()))
 
+    /**
+     * A title of "More like this" leaves the titles and cast pages opened so far:
+     * Back returns to where the first of them was opened from (a library, search).
+     */
+    fun openSimilar(item: MediaItem) = navigate(DetailRoute(item.id.toString()), leaveTitles = true)
+
     /** An album's artist page. */
     fun openArtist() {
         val artistId = _state.value.item?.artistId ?: return
@@ -630,8 +636,8 @@ class DetailViewModel @Inject constructor(
         viewModelScope.launch { _events.send(UiEvent.Toast(message)) }
     }
 
-    private fun navigate(route: Any) {
-        viewModelScope.launch { _events.send(UiEvent.Navigate(route)) }
+    private fun navigate(route: Any, leaveTitles: Boolean = false) {
+        viewModelScope.launch { _events.send(UiEvent.Navigate(route, leaveTitles = leaveTitles)) }
     }
 
     private companion object {
