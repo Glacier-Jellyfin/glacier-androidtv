@@ -359,6 +359,7 @@ a.store:hover { background: var(--glass-fill-strong); border-color: var(--accent
 }
 .store.is-soon { border-style: dashed; border-color: var(--glass-border); }
 .store.is-soon .store-icon { color: var(--mist); }
+.stores-hint { grid-column: 1 / -1; margin: -24px 0 0; color: var(--mist); font-size: 15px; line-height: 1.55; }
 .install-sub { margin: 0 0 6px; font-size: 22px; font-weight: 700; }
 .install-sub + p { margin: 0; color: var(--mist); font-size: 15.5px; line-height: 1.55; }
 

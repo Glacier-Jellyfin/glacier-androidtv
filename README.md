@@ -83,6 +83,16 @@ Glacier is free and needs no account. Get it from a store or straight from
 
 The store keeps Glacier up to date, like any other app.
 
+#### Become a tester on Google Play
+
+Google Play needs at least 12 testers for 14 days before Glacier can go
+public. If you have an Android TV or Google TV device, you can help:
+
+1. Join the [tester group](https://groups.google.com/g/glacier-jellyfin-client-testers).
+2. [Opt in to the test](https://play.google.com/apps/testing/io.github.glacier_jellyfin.androidtv)
+   with the same Google account.
+3. Install Glacier from the Play Store on your TV and keep it for two weeks.
+
 ### With Downloader
 
 1. Install the free [Downloader](https://www.aftvnews.com/downloader/) app from
