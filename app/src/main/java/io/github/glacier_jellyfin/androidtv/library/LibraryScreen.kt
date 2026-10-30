@@ -54,10 +54,11 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -122,7 +123,8 @@ import kotlinx.coroutines.launch
 private const val HEADER_ITEMS = 2
 private const val ROW_PIVOT = 330
 private const val ROW_TOLERANCE = 48
-private const val RAIL_TOP = 150
+/** Where the A–Z rail sits until the first row of cards is known. */
+internal const val RAIL_TOP = 150
 
 @OptIn(ExperimentalFoundationApi::class) // LocalBringIntoViewSpec
 @Composable
@@ -277,7 +279,14 @@ fun LibraryScreen(
                     contentPadding = PaddingValues(start = 80.dp, end = if (showRail) 22.dp else RAIL_SPACE.dp, top = 150.dp, bottom = 120.dp),
                     horizontalArrangement = Arrangement.spacedBy(sizes.gridGap.dp),
                     verticalArrangement = Arrangement.spacedBy(if (songList) SONG_ROW_GAP.dp else 38.dp),
-                    modifier = Modifier.weight(1f).fillMaxSize().focusRequester(gridFocus).focusRestorer(),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxSize()
+                        .focusRequester(gridFocus)
+                        // Moving in with the D-pad (Down from the bar) lands on the card left last. Not a focus
+                        // restorer: it would also take a request for another card, such as Left from the A–Z rail.
+                        .focusProperties { onEnter = { if (requestedFocusDirection != FocusDirection.Enter) runCatching { restoreFocus.requestFocus() } } }
+                        .focusGroup(),
                 ) {
                     item(span = { GridItemSpan(maxLineSpan) }, key = "title") { Header(state) }
                     item(span = { GridItemSpan(maxLineSpan) }, key = "chips") {
@@ -430,15 +439,14 @@ fun LibraryScreen(
                     current = current,
                     focus = railFocus,
                     onLetter = { viewModel.jumpToLetter(it, columns) },
+                    // Left lands on the title a letter jumped to, while it is on screen (visible items carry the titles' ids as keys).
+                    onLeft = {
+                        val target = jumpTarget
+                        target != null && gridState.layoutInfo.visibleItemsInfo.any { it.key.toString() == target } &&
+                            runCatching { jumpFocus.requestFocus() }.getOrDefault(false)
+                    },
                     modifier = Modifier
                         .onFocusChanged { if (it.hasFocus) inContent = true }
-                        .focusProperties {
-                            val target = jumpTarget
-                            // Visible items carry the titles' ids as keys.
-                            if (target != null && gridState.layoutInfo.visibleItemsInfo.any { it.key.toString() == target }) {
-                                left = jumpFocus
-                            }
-                        }
                         .padding(end = 22.dp)
                         .offset { IntOffset(0, if (railTop >= 0) railTop else RAIL_TOP.dp.roundToPx()) },
                 )
@@ -632,7 +640,7 @@ private fun Toolbar(
 
 /** A–Z rail next to the grid, shown when sorting by title. Letters without titles are dimmed. */
 @Composable
-private fun AlphabetRail(
+internal fun AlphabetRail(
     letters: Set<Char>,
     descending: Boolean,
     current: Char?,
@@ -640,6 +648,11 @@ private fun AlphabetRail(
     focus: FocusRequester,
     onLetter: (Char) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Left from a letter: true when it put the focus somewhere itself, such as on the title a letter
+     * jumped to; false leaves Left to the nearest title.
+     */
+    onLeft: (() -> Boolean)? = null,
 ) {
     val order = if (descending) AlphabetLetters.reversed() else AlphabetLetters
     val focused = current?.takeIf { it in letters } ?: order.firstOrNull { it in letters }
@@ -649,6 +662,9 @@ private fun AlphabetRail(
         Modifier
             .focusProperties { onEnter = { runCatching { focus.requestFocus() } } }
             .focusGroup()
+            .onPreviewKeyEvent { event ->
+                event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft && onLeft?.invoke() == true
+            }
             .then(modifier)
             .width(48.dp)
             .clip(PillShape)
@@ -710,14 +726,14 @@ private fun RailLetter(letter: Char, available: Boolean, current: Boolean, onCli
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun rememberGridPivotSpec(gridState: LazyGridState): BringIntoViewSpec {
+internal fun rememberGridPivotSpec(gridState: LazyGridState, headerItems: Int = HEADER_ITEMS): BringIntoViewSpec {
     val density = LocalDensity.current
-    return remember(gridState, density) {
+    return remember(gridState, density, headerItems) {
         val pivot = with(density) { ROW_PIVOT.dp.toPx() }
         val tolerance = with(density) { ROW_TOLERANCE.dp.toPx() }
         object : BringIntoViewSpec {
             override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
-                if (gridState.firstVisibleItemIndex < HEADER_ITEMS && offset < pivot) return 0f
+                if (gridState.firstVisibleItemIndex < headerItems && offset < pivot) return 0f
                 val distance = offset - pivot
                 return if (abs(distance) < tolerance) 0f else distance
             }
@@ -726,13 +742,13 @@ private fun rememberGridPivotSpec(gridState: LazyGridState): BringIntoViewSpec {
 }
 
 /**
- * The first row's top while the grid is scrolled all the way up, else null. The A–Z rail
+ * The top of the first row of cards ([firstCard] the grid item it starts with) while the grid is scrolled all the way up, else null. The A–Z rail
  * stays there and does not scroll with the grid; [RAIL_TOP] until it is known.
  */
-private fun firstRowHome(gridState: LazyGridState): Int? {
+internal fun firstRowHome(gridState: LazyGridState, firstCard: Int = HEADER_ITEMS): Int? {
     if (gridState.firstVisibleItemIndex != 0 || gridState.firstVisibleItemScrollOffset != 0) return null
     val info = gridState.layoutInfo
-    val firstRow = info.visibleItemsInfo.firstOrNull { it.index == HEADER_ITEMS } ?: return null
+    val firstRow = info.visibleItemsInfo.firstOrNull { it.index == firstCard } ?: return null
     return firstRow.offset.y - info.viewportStartOffset
 }
 
