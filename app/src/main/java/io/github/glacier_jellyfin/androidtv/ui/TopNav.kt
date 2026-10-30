@@ -1,15 +1,20 @@
 package io.github.glacier_jellyfin.androidtv.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,8 +22,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,21 +35,31 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.shadow.Shadow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
@@ -91,7 +110,12 @@ sealed interface NavTarget {
  * entry per library kind the server has, favorites, settings and the profile avatar.
  * While music is loaded the [MiniPlayer] sits at the right edge of the same
  * row; Right from the avatar goes there.
+ *
+ * The pill leaves the top right corner free for a toast. When the entries need
+ * more room, the ones between search and settings scroll; search, settings and
+ * the avatar always stay in view.
  */
+@OptIn(ExperimentalFoundationApi::class) // LocalBringIntoViewSpec
 @Composable
 fun TopNav(
     active: NavTarget,
@@ -117,11 +141,40 @@ fun TopNav(
     val miniFocus = remember { FocusRequester() }
     val nowPlaying = LocalNowPlaying.current
     val middle = LocalNavTargets.current ?: (listOf(NavTarget.Home) + kinds.map(NavTarget::Library) + NavTarget.Favorites)
-    val targets = listOf(NavTarget.Search) + middle + listOf(NavTarget.Settings, NavTarget.Profile)
     // The page's own entry may be switched off: entering from below lands on search then.
-    val focusTarget = active.takeIf { it in targets } ?: NavTarget.Search
+    val focusTarget = active.takeIf { it in middle || it == NavTarget.Settings } ?: NavTarget.Search
+    val scroll = rememberScrollState()
+    var activeBounds by remember { mutableStateOf<IntRange?>(null) }
+    val inset = with(LocalDensity.current) { NAV_SCROLL_INSET.dp.roundToPx() }
+    // Show the page's entry on arrival, even when it sits beyond the scrolled part.
+    LaunchedEffect(activeBounds, scroll.viewportSize) {
+        val bounds = activeBounds ?: return@LaunchedEffect
+        val viewport = scroll.viewportSize.takeIf { it > 0 } ?: return@LaunchedEffect
+        if (bounds.first < scroll.value || bounds.last > scroll.value + viewport) {
+            scroll.scrollTo((bounds.first + bounds.last) / 2 - viewport / 2)
+        }
+    }
+
+    @Composable
+    fun Entry(target: NavTarget, modifier: Modifier = Modifier) = NavItem(
+        target = target,
+        active = target == active,
+        userName = userName,
+        onClick = { onSelect(target) },
+        down = down,
+        // Right from the avatar goes to the mini player, or nowhere: not down to the page (the A–Z rail).
+        right = if (target == NavTarget.Profile) (if (nowPlaying != null) miniFocus else FocusRequester.Cancel) else null,
+        modifier = modifier.then(
+            when (target) {
+                focusTarget -> Modifier.focusRequester(activeFocus)
+                NavTarget.Profile -> Modifier.focusRequester(profileFocus)
+                else -> Modifier
+            },
+        ),
+    )
+
     // The pill sits in the middle while there is room. With many entries it moves left, away from the
-    // mini player, but not past the page edge; when even that is not enough, the mini player gets narrower.
+    // toast corner and the mini player, but not past the page edge; beyond that its middle scrolls.
     Layout(
         modifier = modifier.fillMaxWidth().onFocusChanged { focused = it.hasFocus },
         content = {
@@ -135,25 +188,39 @@ fun TopNav(
                     .background(GlacierColors.Deep.copy(alpha = 0.72f))
                     .background(GlacierColors.GlassFill2)
                     .border(1.dp, GlacierColors.GlassBorder2, PillShape)
-                    .padding(7.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    // The middle adds the rest vertically, so its fade leaves room for the focus scale.
+                    .padding(horizontal = 7.dp, vertical = (7 - NAV_SCROLL_INSET).dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                targets.forEach { target ->
-                    NavItem(
-                        target = target,
-                        active = target == active,
-                        userName = userName,
-                        onClick = { onSelect(target) },
-                        down = down,
-                        right = miniFocus.takeIf { target == NavTarget.Profile && nowPlaying != null },
-                        modifier = when (target) {
-                            focusTarget -> Modifier.focusRequester(activeFocus)
-                            NavTarget.Profile -> Modifier.focusRequester(profileFocus)
-                            else -> Modifier
-                        },
-                    )
+                Entry(NavTarget.Search)
+                CompositionLocalProvider(LocalBringIntoViewSpec provides rememberEdgeSpec(NAV_FADE)) {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .edgeFade(scroll, NAV_FADE.dp)
+                            .padding(vertical = NAV_SCROLL_INSET.dp)
+                            .horizontalScroll(scroll)
+                            // Also the spacing to search and settings, which the pill row leaves out.
+                            .padding(horizontal = NAV_SCROLL_INSET.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        middle.forEach { target ->
+                            Entry(
+                                target,
+                                if (target == active) {
+                                    // Relative to the row's padded content; add the padding for scroll offsets.
+                                    Modifier.onPlaced { activeBounds = (it.positionInParent().x.toInt() + inset).let { x -> x..x + it.size.width } }
+                                } else {
+                                    Modifier
+                                },
+                            )
+                        }
+                    }
                 }
+                Entry(NavTarget.Settings)
+                Spacer(Modifier.width(6.dp))
+                Entry(NavTarget.Profile)
             }
             if (nowPlaying != null) {
                 MiniPlayer(
@@ -171,14 +238,16 @@ fun TopNav(
     ) { measurables, constraints ->
         val width = constraints.maxWidth
         val loose = constraints.copy(minWidth = 0, minHeight = 0)
-        val pill = measurables[0].measure(loose)
         val edge = PageEdge.dp.roundToPx()
         val gap = NAV_MINI_GAP.dp.roundToPx()
-        // Where the toast shows, which moves below it meanwhile.
+        // Where the toast shows, which moves below the mini player meanwhile.
         val miniEnd = width - MINI_PLAYER_END.dp.roundToPx()
+        val toast = TOAST_WIDTH.dp.roundToPx()
+        val pill = measurables[0].measure(loose.copy(maxWidth = (miniEnd - toast - gap - edge).coerceAtLeast(0)))
         val mini = measurables.getOrNull(1)?.measure(loose.copy(maxWidth = (miniEnd - edge - pill.width - gap).coerceAtLeast(0)))
         val centred = (width - pill.width) / 2
-        val pillX = if (mini == null) centred else minOf(centred, miniEnd - mini.width - gap - pill.width).coerceAtLeast(edge)
+        val corner = maxOf(toast, mini?.width ?: 0)
+        val pillX = minOf(centred, miniEnd - corner - gap - pill.width).coerceAtLeast(edge)
         layout(width, maxOf(pill.height, mini?.height ?: 0)) {
             pill.place(pillX, 0)
             mini?.place(miniEnd - mini.width, 0)
@@ -186,8 +255,37 @@ fun TopNav(
     }
 }
 
-/** Space between the navigation pill and the mini player when they come close. */
+/** Space between the navigation pill and the mini player or toast when they come close. */
 private const val NAV_MINI_GAP = 24
+
+/** Room around the scrolling entries for their focus scale; also their spacing to search and settings. */
+private const val NAV_SCROLL_INSET = 6
+
+/** How far the scrolling entries fade out at an edge with more behind it; a focused entry stays clear of it. */
+private const val NAV_FADE = 40
+
+/** Fades the content out at the left and right edge while [scroll] has more to show there. */
+private fun Modifier.edgeFade(scroll: ScrollState, width: Dp): Modifier = this
+    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        val fade = width.toPx().coerceAtMost(size.width / 2)
+        if (scroll.value > 0) {
+            drawRect(
+                Brush.horizontalGradient(0f to Color.Transparent, 1f to Color.Black, startX = 0f, endX = fade),
+                size = Size(fade, size.height),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+        if (scroll.value < scroll.maxValue) {
+            drawRect(
+                Brush.horizontalGradient(0f to Color.Black, 1f to Color.Transparent, startX = size.width - fade, endX = size.width),
+                topLeft = Offset(size.width - fade, 0f),
+                size = Size(fade, size.height),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+    }
 
 /** The mini player's distance from the right edge of the screen: the same as from the top. */
 const val MINI_PLAYER_END = MINI_PLAYER_TOP

@@ -50,6 +50,9 @@ class Toaster {
 
 val LocalToaster = staticCompositionLocalOf { Toaster() }
 
+/** Width of a toast; the navigation pill keeps this much room free at the top right. */
+const val TOAST_WIDTH = 440
+
 /**
  * The design's toast outside the player: a card at the top right that
  * disappears after 2.2 s, below the [MiniPlayer] while music is loaded. Only
@@ -76,7 +79,7 @@ fun BoxScope.ToastHost(toaster: Toaster) {
         val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
         Row(
             modifier = Modifier
-                .width(440.dp)
+                .width(TOAST_WIDTH.dp)
                 .clip(shape)
                 .background(GlacierColors.Deep)
                 .border(1.dp, GlacierColors.GlassBorder2, shape)

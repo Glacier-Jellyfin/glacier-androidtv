@@ -22,6 +22,12 @@ language is German.
 
 ## [Unreleased]
 
+### Improved
+- The navigation bar leaves room for notices at the top right. When its entries need more room, the ones between search and settings scroll, and search, settings and the profile always stay in view
+
+### Fixed
+- Right from the profile in the navigation bar no longer jumps down to the A–Z rail of a library
+
 ## [0.7.0] - 2026-10-29
 
 ### New
