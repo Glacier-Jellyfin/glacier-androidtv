@@ -61,9 +61,9 @@
         </div>
         <div class="hero-glow" aria-hidden="true"></div>
         <div class="hero-shot reveal">
-          <video autoplay loop muted playsinline poster="../assets/screenshots/home.jpg">
-            <source src="../assets/screenshots/demo.webm" type="video/webm">
-            <source src="../assets/screenshots/demo.mp4" type="video/mp4">
+          <video autoplay loop muted playsinline poster="../assets/screenshots/home-de.jpg">
+            <source src="../assets/screenshots/demo-de.webm" type="video/webm">
+            <source src="../assets/screenshots/demo-de.mp4" type="video/mp4">
           </video>
         </div>
         <ul class="facts">
@@ -100,7 +100,34 @@
       <div class="wrap">
         <div class="showcase reveal">
           <div class="showcase-media">
-            <img src="../assets/screenshots/library.jpg" width="1280" height="720" alt="Glacier-Filmbibliothek als Raster" loading="lazy">
+            <video class="clip" muted loop playsinline preload="none" poster="../assets/screenshots/home-de.jpg" aria-label="Ein Profil bei „Wer schaut?“ wählen, dann das Kinderprofil mit Titeln nur für sein Alter">
+              <source src="../assets/clips/family-de.webm" type="video/webm">
+              <source src="../assets/clips/family-de.mp4" type="video/mp4">
+            </video>
+          </div>
+          <div class="showcase-copy">
+            <p class="eyebrow">Profile</p>
+            <h2 class="title">Ein Fernseher, die ganze Familie</h2>
+            <p class="lede">Alle bekommen ein eigenes Profil mit eigenem Bild, eigener Akzentfarbe und eigenem Fortschritt. Bei „Wer schaut?“ das eigene wählen und dort weiterschauen, wo man aufgehört hat.</p>
+            <ul>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Die Einstellungen jedes Profils liegen auf seinem Jellyfin-Server und kommen auf einen neuen Fernseher mit</li>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Ein Kinderprofil zeigt nur, was seine Altersfreigabe erlaubt</li>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Auf einem neuen Fernseher mit einem sechsstelligen Quick-Connect-Code anmelden</li>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Ein Profil von einem Fernseher entfernen, das Jellyfin-Konto bleibt bestehen</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tight">
+      <div class="wrap">
+        <div class="showcase reverse reveal">
+          <div class="showcase-media">
+            <video class="clip" muted loop playsinline preload="none" poster="../assets/screenshots/library-de.jpg" aria-label="Durch die Filmbibliothek blättern und mit der A–Z-Leiste zu einem Buchstaben springen">
+              <source src="../assets/clips/library-de.webm" type="video/webm">
+              <source src="../assets/clips/library-de.mp4" type="video/mp4">
+            </video>
           </div>
           <div class="showcase-copy">
             <p class="eyebrow">Bibliothek</p>
@@ -119,9 +146,12 @@
 
     <section class="tight">
       <div class="wrap">
-        <div class="showcase reverse reveal">
+        <div class="showcase reveal">
           <div class="showcase-media">
-            <img src="../assets/screenshots/detail.jpg" width="1280" height="720" alt="Glacier-Detailseite eines Films mit Besetzung und ähnlichen Titeln" loading="lazy">
+            <video class="clip" muted loop playsinline preload="none" poster="../assets/screenshots/detail-de.jpg" aria-label="Eine Filmseite: Fassung, Tonspur und Untertitel wählen">
+              <source src="../assets/clips/detail-de.webm" type="video/webm">
+              <source src="../assets/clips/detail-de.mp4" type="video/mp4">
+            </video>
           </div>
           <div class="showcase-copy">
             <p class="eyebrow">Details</p>
@@ -131,7 +161,7 @@
               <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Besetzung, Crew und ähnliche Titel</li>
               <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Mehrere Fassungen eines Titels, etwa 2160p und 1080p oder ein Director's Cut, und Glacier wählt die passende für deinen Fernseher</li>
               <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Lokale und YouTube-Trailer, direkt abspielbar</li>
-              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Audio- und Untertitelspuren klar benannt, mit Kennzeichen für Erzwungen, Kommentar oder Sing-Along</li>
+              <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Audio- und Untertitelspuren klar benannt, mit Kennzeichen für Erzwungen, SDH, Kommentar, Audiodeskription oder Sing-Along</li>
               <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Wann ein Titel endet, wenn du ihn jetzt startest</li>
             </ul>
           </div>
@@ -141,14 +171,12 @@
 
     <section class="tight">
       <div class="wrap">
-        <div class="showcase reveal">
-          <div class="media-stack">
-            <div class="showcase-media">
-              <img src="../assets/screenshots/player-upnext.jpg" width="1280" height="720" alt="Glacier-Player mit Countdown zur nächsten Episode" loading="lazy">
-            </div>
-            <div class="showcase-media">
-              <img src="../assets/screenshots/player-trickplay.jpg" width="1280" height="720" alt="Glacier-Player mit Trickplay-Vorschau beim Spulen" loading="lazy">
-            </div>
+        <div class="showcase reverse reveal">
+          <div class="showcase-media">
+            <video class="clip" muted loop playsinline preload="none" poster="../assets/screenshots/player-skip-de.jpg" aria-label="Ein Intro überspringen, Vorschaubilder beim Spulen und die nächste Folge im Abspann">
+              <source src="../assets/clips/player-de.webm" type="video/webm">
+              <source src="../assets/clips/player-de.mp4" type="video/mp4">
+            </video>
           </div>
           <div class="showcase-copy">
             <p class="eyebrow">Player</p>
@@ -167,9 +195,12 @@
 
     <section class="tight">
       <div class="wrap">
-        <div class="showcase reverse reveal">
+        <div class="showcase reveal">
           <div class="showcase-media">
-            <img src="../assets/screenshots/music.jpg" width="1280" height="720" alt="Glacier-Musikplayer mit Albumcover und Warteschlange" loading="lazy">
+            <video class="clip" muted loop playsinline preload="none" poster="../assets/screenshots/music-de.jpg" aria-label="Ein Album mit mitlaufenden Songtexten abspielen, dann mit dem Mini-Player weiterstöbern">
+              <source src="../assets/clips/music-de.webm" type="video/webm">
+              <source src="../assets/clips/music-de.mp4" type="video/mp4">
+            </video>
           </div>
           <div class="showcase-copy">
             <p class="eyebrow">Musik</p>
@@ -188,14 +219,12 @@
 
     <section class="tight">
       <div class="wrap">
-        <div class="showcase reveal">
-          <div class="media-stack">
-            <div class="showcase-media">
-              <img src="../assets/screenshots/livetv.jpg" width="1280" height="720" alt="Glacier-Live-TV-Seite mit Senderliste und Live-Vorschau" loading="lazy">
-            </div>
-            <div class="showcase-media">
-              <img src="../assets/screenshots/livetv-guide.jpg" width="1280" height="720" alt="Glacier-Programmführer mit drei Stunden aller Sender" loading="lazy">
-            </div>
+        <div class="showcase reverse reveal">
+          <div class="showcase-media">
+            <video class="clip" muted loop playsinline preload="none" poster="../assets/screenshots/livetv-de.jpg" aria-label="Live-TV-Sender mit laufender Vorschau wechseln, dann der Programmführer">
+              <source src="../assets/clips/livetv-de.webm" type="video/webm">
+              <source src="../assets/clips/livetv-de.mp4" type="video/mp4">
+            </video>
           </div>
           <div class="showcase-copy">
             <p class="eyebrow">Live-TV</p>
@@ -220,8 +249,8 @@
         <div class="features">
           <div class="feature reveal">
             <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-            <h3>Profile &amp; Quick Connect</h3>
-            <p>Ein Gerät, mehrere Personen. Profile sofort wechseln und sich per sechsstelligem Quick-Connect-Code an einem neuen Server anmelden.</p>
+            <h3>Kennt deinen Fernseher</h3>
+            <p>Einstellungen › System › Wiedergabe prüfen spielt kurze Testdateien ab und zeigt, welche Bild- und Tonformate dein Fernseher beherrscht. Dolby Vision, das er nicht dekodieren kann, läuft als HDR10.</p>
           </div>
           <div class="feature reveal">
             <div class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg></div>
@@ -319,6 +348,7 @@
   </footer>
 
   <script src="../assets/reveal.js"></script>
+  <script src="../assets/clips.js"></script>
   <script src="../assets/latest.js"></script>
 </body>
 </html>

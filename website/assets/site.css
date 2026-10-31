@@ -239,10 +239,7 @@ a.pill:hover { color: var(--ice); border-color: var(--accent); }
   background: var(--deep);
   box-shadow: 0 30px 80px -32px rgba(0,0,0,.6);
 }
-.showcase-media img { display: block; width: 100%; height: auto; }
-
-/* Two screenshots in one showcase, stacked */
-.media-stack { display: grid; gap: 20px; }
+.showcase-media img, .showcase-media video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; }
 
 @media (max-width: 900px) {
   .showcase, .showcase.reverse { grid-template-columns: 1fr; gap: 32px; }
