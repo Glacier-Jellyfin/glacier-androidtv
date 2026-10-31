@@ -20,6 +20,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.Library
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
+import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AppearanceSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.DeviceSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsSync
@@ -145,6 +146,7 @@ class SettingsViewModel @Inject constructor(
     home: HomeRepository,
     private val parental: ParentalControl,
     private val diagnostics: Diagnostics,
+    private val playback: PlaybackRepository,
     private val sync: SettingsSync,
     val updates: UpdateManager,
     val whatsNew: WhatsNew,
@@ -375,6 +377,9 @@ class SettingsViewModel @Inject constructor(
         val event = sessions.navEvent(target, current = NavTarget.Settings) ?: return
         viewModelScope.launch { _events.send(event) }
     }
+
+    /** For the playback check, which runs in a process of its own and is told this. */
+    val dolbyVisionBaseLayer: Boolean get() = playback.dolbyVisionBaseLayer
 
     fun sendLog() {
         if (_state.value.diagnostics.sending) return

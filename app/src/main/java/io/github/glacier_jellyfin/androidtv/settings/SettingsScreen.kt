@@ -49,6 +49,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.core.view.DisplayCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
@@ -103,6 +104,8 @@ import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.SubtitleBurnI
 import io.github.glacier_jellyfin.androidtv.player.subtitleTypeface
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogShareScreen
+import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
+import io.github.glacier_jellyfin.androidtv.diagnostics.PlaybackCheckActivity
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
@@ -307,6 +310,12 @@ fun SettingsScreen(
     }
     // A new interface language recreates the activity; once it runs in that language, focus goes back.
     val context = LocalContext.current
+    // Back from a playback check whose process a decoder took down: it goes on with the next sample.
+    val accent = LocalAccent.current
+    LifecycleResumeEffect(Unit) {
+        PlaybackCheckActivity.resumeIfInterrupted(context, accent, viewModel.dolbyVisionBaseLayer)
+        onPauseOrDispose { }
+    }
     LaunchedEffect(state.refocusLanguage) {
         val language = state.refocusLanguage ?: return@LaunchedEffect
         if (UiLocale.current(context) != language.tag) return@LaunchedEffect
@@ -558,6 +567,7 @@ fun SettingsScreen(
         }
         pinPrompt?.let { PinDialog(it, onKey = viewModel.pin::key, onDismiss = viewModel.pin::dismiss) }
         state.diagnostics.share?.let { LogShareScreen(it, onClose = viewModel::closeShare) }
+
     }
 }
 
@@ -1523,6 +1533,8 @@ private fun diagnosticsGroup(diagnostics: DiagnosticsState, viewModel: SettingsV
     // Back on "Show" when the download dialog closes; otherwise focus would fall to the top bar.
     val shareFocus = remember { FocusRequester() }
     var shareOpened by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val accent = LocalAccent.current
     LaunchedEffect(diagnostics.share) {
         if (diagnostics.share != null) {
             shareOpened = true
@@ -1557,6 +1569,12 @@ private fun diagnosticsGroup(diagnostics: DiagnosticsState, viewModel: SettingsV
                 stringResource(R.string.diag_share_button),
                 onClick = viewModel::shareLog,
                 focus = shareFocus,
+            ),
+            SettingRow.Action(
+                stringResource(R.string.diag_check),
+                stringResource(R.string.diag_check_sub),
+                stringResource(R.string.diag_check_button),
+                onClick = { PlaybackCheckActivity.start(context, accent, viewModel.dolbyVisionBaseLayer) },
             ),
             SettingRow.Toggle(
                 stringResource(R.string.diag_verbose),

@@ -10,6 +10,7 @@ import dagger.hilt.android.HiltAndroidApp
 import io.github.glacier_jellyfin.androidtv.channels.HomeChannelsSync
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.player.Media3Logs
+import io.github.glacier_jellyfin.androidtv.diagnostics.PlaybackCheckActivity
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -30,7 +31,8 @@ class GlacierApplication : Application(), SingletonImageLoader.Factory {
         Media3Logs.install()
         super.onCreate()
         Log.i("Glacier", "Started ${BuildConfig.VERSION_NAME} (${BuildConfig.BUILD_TYPE}) on ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE}")
-        homeChannels.start()
+        // The playback check's own process only plays its samples.
+        if (!PlaybackCheckActivity.isCheckProcess(getProcessName())) homeChannels.start()
     }
 
     init {

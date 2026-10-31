@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Plays files that declare Dolby Vision profile 7 (from
- * scripts/make-dolby-vision-sample.py) through the base layer path. Needs a
+ * scripts/make-playback-samples.py) through the base layer path. Needs a
  * device or emulator: `./gradlew :core:player:connectedDebugAndroidTest`.
  */
 @RunWith(AndroidJUnit4::class)

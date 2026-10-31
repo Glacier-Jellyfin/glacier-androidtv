@@ -9,6 +9,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
@@ -100,8 +101,8 @@ class GlacierPlayback(val player: ExoPlayer, private val ass: AssHandler) {
         subtitleView.addView(AssSubtitleView(subtitleView.context, ass))
     }
 
-    private companion object {
-        const val TAG = "Player"
+    internal companion object {
+        private const val TAG = "Player"
 
         /** "E-AC-3 bitstream", "PCM 16-bit": whether the receiver gets the bitstream or decoded sound. */
         fun encodingName(encoding: Int): String = when (encoding) {
@@ -133,7 +134,9 @@ object GlacierPlayer {
         val ass = AssHandler(AssRenderType.OVERLAY_OPEN_GL)
         val assParsers = AssSubtitleParserFactory(ass)
         val extractors = DefaultExtractorsFactory().withAssMkvSupport(assParsers, ass)
-        val mediaSources = DefaultMediaSourceFactory(dataSource, if (request.dolbyVisionBaseLayer) DolbyVisionBaseLayerExtractors(extractors) else extractors)
+        // HTTP for the server's streams; asset:// for the playback check's samples.
+        val sources = DefaultDataSource.Factory(context, dataSource)
+        val mediaSources = DefaultMediaSourceFactory(sources, if (request.dolbyVisionBaseLayer) DolbyVisionBaseLayerExtractors(extractors) else extractors)
             // Side-loaded .ass files go through the same parser.
             .setSubtitleParserFactory(assParsers)
         val renderers = DefaultRenderersFactory(context)
