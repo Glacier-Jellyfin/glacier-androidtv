@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
@@ -227,31 +228,51 @@ class LibraryViewModel @Inject constructor(
             val index = runSuspendCatching { repository.indexOfLetter(current.query, letter) }
                 .onFailure { Log.w(TAG, "A-Z jump failed", it) }
                 .getOrNull() ?: return@launch
-            val state = _state.value
-            val end = state.offset + state.items.size
-            if (index >= state.offset && index < end + PAGE_SIZE) {
-                loadUpTo(index + PAGE_SIZE / 2)?.join()
-            } else {
-                val start = runSuspendCatching { repository.rowStart(state.query, (index - JUMP_ROWS_BEFORE * columns).coerceAtLeast(0), columns) }
-                    .getOrElse { return@launch }
-                loadJob?.cancel()
-                refreshJob?.cancel()
-                val query = state.query
-                loadJob = viewModelScope.launch {
-                    _state.update { it.copy(loading = true, failed = false) }
-                    try {
-                        val page = repository.page(query, start = start, limit = PAGE_SIZE)
-                        _state.update { if (it.query == query) it.copy(items = page.items, offset = start, total = page.total, loading = false) else it }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Loading library failed", e)
-                        _state.update { it.copy(loading = false, failed = true) }
-                    }
-                }.also { it.join() }
-            }
+            if (!loadAround(index, columns)) return@launch
             _state.update { it.copy(jumpTo = (index - it.offset).coerceIn(0, (it.items.size - 1).coerceAtLeast(0))) }
         }
+    }
+
+    /**
+     * Loads the title [id] when it is further down than what is loaded, as an A–Z jump would;
+     * true when it is loaded then. Back after "More like this" focuses the title it came from.
+     */
+    suspend fun reveal(id: String, columns: Int): Boolean {
+        val current = _state.value
+        if (current.items.any { it.id.toString() == id }) return true
+        val uuid = runCatching { UUID.fromString(id) }.getOrNull() ?: return false
+        return viewModelScope.async {
+            val index = runSuspendCatching { repository.indexOf(current.query, uuid) }.getOrNull() ?: return@async false
+            loadAround(index, columns) && _state.value.items.any { it.id == uuid }
+        }.await()
+    }
+
+    /** Loads up to position [index], or a list that starts a few rows of [columns] before it when that is far beyond what is loaded. */
+    private suspend fun loadAround(index: Int, columns: Int): Boolean {
+        val state = _state.value
+        val end = state.offset + state.items.size
+        if (index >= state.offset && index < end + PAGE_SIZE) {
+            loadUpTo(index + PAGE_SIZE / 2)?.join()
+            return true
+        }
+        val start = runSuspendCatching { repository.rowStart(state.query, (index - JUMP_ROWS_BEFORE * columns).coerceAtLeast(0), columns) }
+            .getOrElse { return false }
+        loadJob?.cancel()
+        refreshJob?.cancel()
+        val query = state.query
+        loadJob = viewModelScope.launch {
+            _state.update { it.copy(loading = true, failed = false) }
+            try {
+                val page = repository.page(query, start = start, limit = PAGE_SIZE)
+                _state.update { if (it.query == query) it.copy(items = page.items, offset = start, total = page.total, loading = false) else it }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Loading library failed", e)
+                _state.update { it.copy(loading = false, failed = true) }
+            }
+        }.also { it.join() }
+        return true
     }
 
     fun jumpHandled() = _state.update { it.copy(jumpTo = null) }

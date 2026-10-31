@@ -30,7 +30,7 @@ language is German.
 ### Improved
 - The navigation bar leaves room for notices at the top right. When its entries need more room, the ones between search and settings scroll, and search, settings and the profile always stay in view
 - The player no longer calls music videos and recordings "Movies"
-- Back from a title opened through "More like this" returns to the library or search you started in, even after a detour through the cast. Cast, episodes and albums still lead back to their title
+- Back from a "More like this" title returns to the library or search you started in, with the last title in focus
 
 ### Fixed
 - Right from the profile in the navigation bar no longer jumps down to the A–Z rail of a library

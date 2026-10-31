@@ -45,8 +45,11 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
         Log.d(TAG, "Open ${event.route}")
         val current = navController.currentDestination?.id
         // The screen under the title and cast pages on top, such as a library or search.
+        // It learns the title opened last, to focus that one when Back returns to it.
         val base = if (event.leaveTitles) {
-            navController.currentBackStack.value.lastOrNull { entry -> TitlePages.none { entry.destination.hasRoute(it) } }?.destination?.id
+            navController.currentBackStack.value.lastOrNull { entry -> TitlePages.none { entry.destination.hasRoute(it) } }
+                ?.also { entry -> (event.route as? DetailRoute)?.let { entry.savedStateHandle[RETURN_FOCUS] = it.itemId } }
+                ?.destination?.id
         } else {
             null
         }
@@ -82,7 +85,9 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
         composable<QuickConnectRoute> { QuickConnectScreen(onNavigate = navigate, onBack = back) }
         composable<ProfilesRoute> { ProfilesScreen(onNavigate = navigate) }
         composable<HomeRoute> { HomeScreen(onNavigate = navigate) }
-        composable<LibraryRoute> { LibraryScreen(onNavigate = navigate) }
+        composable<LibraryRoute> { entry ->
+            LibraryScreen(onNavigate = navigate, takeReturnFocus = { entry.savedStateHandle.remove<String>(RETURN_FOCUS) })
+        }
         composable<FolderRoute> { FolderScreen(onNavigate = navigate) }
         composable<PhotoRoute> { PhotoScreen(onNavigate = navigate) }
         composable<DetailRoute> { DetailScreen(onNavigate = navigate, onBack = back) }

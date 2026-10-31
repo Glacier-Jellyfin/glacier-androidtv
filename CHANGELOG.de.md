@@ -15,7 +15,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 ### Verbessert
 - Die Navigationsleiste lässt oben rechts Platz für Hinweise. Brauchen ihre Einträge mehr Platz, scrollen die zwischen Suche und Einstellungen, und Suche, Einstellungen und Profil bleiben immer sichtbar
 - Der Player nennt Musikvideos und Aufnahmen nicht mehr „Filme“
-- Zurück von einem Titel aus „Ähnliche Titel“ führt in die Bibliothek oder Suche, in der du angefangen hast, auch nach einem Umweg über die Besetzung. Besetzung, Episoden und Alben führen weiter zurück zu ihrem Titel
+- Zurück von einem Titel aus „Ähnliche Titel“ führt in die Bibliothek oder Suche, in der du angefangen hast, mit dem letzten Titel im Fokus
 
 ### Behoben
 - Rechts vom Profil in der Navigationsleiste springt der Fokus nicht mehr hinunter zur A–Z-Leiste einer Bibliothek
