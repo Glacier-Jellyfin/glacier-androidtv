@@ -11,16 +11,24 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Bibliotheken mit Heimvideos und Fotos bekommen einen eigenen Eintrag in der Navigationsleiste, Fotos & Videos. Du blätterst sie nach Ordnern durch, die Ordner getrennt von Videos und Fotos und der Pfad über dem Titel. Die übrigen Videos eines Ordners laufen danach eins nach dem anderen
 - Fotos und Videos öffnen sich im Vollbild, ein Video läuft gleich dort. Links und rechts blättern mit animiertem Übergang durch den Ordner, OK auf einem Foto startet oder stoppt eine Diashow, OK auf einem Video öffnet den Player an der aktuellen Stelle. Eine Linie am unteren Rand zeigt, wie weit ein Video gelaufen ist oder wie lange die Diashow ein Foto noch zeigt. Unter Einstellungen › Wiedergabe stellst du ein, wie lange sie jedes Foto zeigt
 - Ein Ordner zeigt seine Videos und Fotos als Karten oder als Galerie: Das gewählte Bild füllt den Bildschirm hinter Titel und Ordnern, unten liegt eine Zeile kleiner Bilder zum Durchklicken. Gehst du in die Zeile, kommt das ganze Bild über der Zeile nach vorn, die Navigationsleiste fährt weg, und ein Video spielt darin. Chips links zeigen alle, nur Videos oder nur Fotos, Menüs rechts wählen die Ansicht und sortieren nach Aufnahmedatum oder Name. Zurück springt zuerst zu den Chips. Nach Datum sortiert bekommt jeder Monat unter den Karten eine Überschrift, nach Name sortiert springt eine A–Z-Leiste zu einem Buchstaben. Die Vollbildansicht blättert auch durch die Videos. Unter Einstellungen › Darstellung haben die Karten 16:9 oder 4:3
-- Einstellungen › System › Wiedergabe prüfen spielt kurze Testdateien ab und zeigt, welche Bild- und Tonformate das Gerät schafft. Die Ergebnisse kommen für Fehlerberichte ins Protokoll
 
 ### Verbessert
 - Die Navigationsleiste lässt oben rechts Platz für Hinweise. Brauchen ihre Einträge mehr Platz, scrollen die zwischen Suche und Einstellungen, und Suche, Einstellungen und Profil bleiben immer sichtbar
 - Der Player nennt Musikvideos und Aufnahmen nicht mehr „Filme“
+
+### Behoben
+- Rechts vom Profil in der Navigationsleiste springt der Fokus nicht mehr hinunter zur A–Z-Leiste einer Bibliothek
+
+## [0.7.1] - 2026-10-31
+
+### Neu
+- Einstellungen › System › Wiedergabe prüfen spielt kurze Testdateien ab und zeigt, welche Bild- und Tonformate das Gerät schafft. Die Ergebnisse kommen für Fehlerberichte ins Protokoll
+
+### Verbessert
 - Zurück von einem Titel aus „Ähnliche Titel“ führt in die Bibliothek oder Suche, in der du angefangen hast, mit dem letzten Titel im Fokus
 - Logs für Fehlerberichte beschreiben Decoder und Tonausgänge des Geräts und jede Wiedergabe genauer
 
 ### Behoben
-- Rechts vom Profil in der Navigationsleiste springt der Fokus nicht mehr hinunter zur A–Z-Leiste einer Bibliothek
 - Links aus der A–Z-Leiste einer Bibliothek landet auf dem Titel, zu dem der Buchstabe gesprungen ist, statt auf dem zuvor gewählten
 - Dolby-Vision-Titel mit Enhancement Layer laufen direkt in HDR10, wenn das Gerät die Ebene nicht dekodieren kann, statt zu scheitern (#21)
 - Kann das Gerät Bild oder Ton einer Datei nicht dekodieren, sagt der Player das, statt zur Prüfung des Servers aufzufordern (#21)

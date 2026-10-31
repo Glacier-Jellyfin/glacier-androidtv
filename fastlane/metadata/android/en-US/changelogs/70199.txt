@@ -1,0 +1,1 @@
+Dolby Vision titles with an enhancement layer now play in HDR10 on devices that cannot decode the layer, and the player says clearly when the device cannot decode a file. Settings › System › Check playback shows which picture and sound formats your device handles. Logs for bug reports are more detailed, and Back from "More like this" returns to where you started.
