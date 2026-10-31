@@ -28,6 +28,12 @@ data class ProfilesRoute(val serverId: String, val appStart: Boolean = false, va
 @Serializable
 data object HomeRoute
 
+/**
+ * Saved state key of a screen under title pages: the id of the title opened last
+ * through "More like this", to focus when Back returns to the screen.
+ */
+const val RETURN_FOCUS = "returnFocus"
+
 /** Movies, shows or music across all libraries of that kind, or one library when [libraryId] is set. */
 @Serializable
 data class LibraryRoute(

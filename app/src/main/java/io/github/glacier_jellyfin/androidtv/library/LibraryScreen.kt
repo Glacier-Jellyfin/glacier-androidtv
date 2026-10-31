@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -130,6 +131,8 @@ internal const val RAIL_TOP = 150
 @Composable
 fun LibraryScreen(
     onNavigate: (UiEvent.Navigate) -> Unit,
+    /** The title Back came from after "More like this" led away from the one opened here, once. */
+    takeReturnFocus: () -> String? = { null },
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -220,9 +223,13 @@ fun LibraryScreen(
     // A key pressed on the page before the titles came: the user moved on (the first load of a
     // big library takes a while) and the focus stays where they put it.
     var keyPressed by remember { mutableStateOf(false) }
+    // Revealing the title Back came from can load more titles while the effect runs.
+    val currentPositions by rememberUpdatedState(positions)
     LaunchedEffect(state.items.isNotEmpty()) {
         if (state.items.isEmpty() || focusPlaced) return@LaunchedEffect
         focusPlaced = true
+        // Back after "More like this": the title the user came back from, when it is here.
+        takeReturnFocus()?.takeIf { viewModel.reveal(it, columns) }?.let { lastFocusId = it }
         withFrameNanos { }
         if (!initialFocusDone && keyPressed) {
             initialFocusDone = true
@@ -237,8 +244,8 @@ fun LibraryScreen(
             runCatching { firstCardFocus.requestFocus() }
             return@LaunchedEffect
         }
-        if (gridState.layoutInfo.visibleItemsInfo.none { it.index == positions[index] }) {
-            gridState.scrollToItem(positions[index])
+        if (gridState.layoutInfo.visibleItemsInfo.none { it.index == currentPositions[index] }) {
+            gridState.scrollToItem(currentPositions[index])
             withFrameNanos { }
         }
         runCatching { restoreFocus.requestFocus() }

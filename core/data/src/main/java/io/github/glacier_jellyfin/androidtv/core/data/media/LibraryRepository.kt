@@ -177,6 +177,11 @@ class LibraryRepository @Inject constructor(
         (0 until list.size).firstOrNull { list.letterAt(it) == letter } ?: 0
     }
 
+    /** Position of the title [id] in the current order; null when the list does not hold it. */
+    suspend fun indexOf(query: LibraryQuery, id: UUID): Int? = withContext(Dispatchers.IO) {
+        listing(requireSession(), query).list.entries.indexOfFirst { it.id == id }.takeIf { it >= 0 }
+    }
+
     /** Where the row that holds [index] starts in a grid of [columns] (see [ArrangedList.rowStart]). */
     suspend fun rowStart(query: LibraryQuery, index: Int, columns: Int): Int = withContext(Dispatchers.IO) {
         listing(requireSession(), query).list.rowStart(index, columns)
