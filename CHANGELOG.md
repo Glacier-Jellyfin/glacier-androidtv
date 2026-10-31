@@ -35,7 +35,7 @@ language is German.
 ### Fixed
 - Right from the profile in the navigation bar no longer jumps down to the A–Z rail of a library
 - Left from a library's A–Z rail lands on the title the letter jumped to, not on the title focused before
-- Dolby Vision titles in a profile the device cannot decode are converted by the server instead of failing to play (#21)
+- Dolby Vision titles with an enhancement layer play directly in HDR10 when the device cannot decode the layer, instead of failing (#21)
 - When the device cannot decode the picture or sound of a file, the player says so instead of asking to check the server (#21)
 
 ## [0.7.0] - 2026-10-29

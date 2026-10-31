@@ -191,6 +191,9 @@ class PlaybackRepository @Inject constructor(
      */
     val stopped: SharedFlow<UUID> = _stopped.asSharedFlow()
 
+    /** No decoder for Dolby Vision profile 7: the player plays its HDR10 base layer. */
+    val dolbyVisionBaseLayer: Boolean get() = !capabilities.capabilities.decodesDolbyVisionProfile7
+
     /**
      * Ids of the files of [itemId] this device plays as they are, without the
      * server converting the picture: the server weighs every file against the

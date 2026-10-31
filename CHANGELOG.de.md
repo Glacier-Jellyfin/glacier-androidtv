@@ -20,7 +20,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 ### Behoben
 - Rechts vom Profil in der Navigationsleiste springt der Fokus nicht mehr hinunter zur A–Z-Leiste einer Bibliothek
 - Links aus der A–Z-Leiste einer Bibliothek landet auf dem Titel, zu dem der Buchstabe gesprungen ist, statt auf dem zuvor gewählten
-- Dolby-Vision-Titel in einem Profil, das das Gerät nicht dekodieren kann, wandelt der Server um, statt dass die Wiedergabe scheitert (#21)
+- Dolby-Vision-Titel mit Enhancement Layer laufen direkt in HDR10, wenn das Gerät die Ebene nicht dekodieren kann, statt zu scheitern (#21)
 - Kann das Gerät Bild oder Ton einer Datei nicht dekodieren, sagt der Player das, statt zur Prüfung des Servers aufzufordern (#21)
 
 ## [0.7.0] - 2026-10-29

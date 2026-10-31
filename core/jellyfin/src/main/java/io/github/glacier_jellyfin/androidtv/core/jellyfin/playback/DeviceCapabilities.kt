@@ -24,7 +24,11 @@ data class DeviceCapabilities(
      * Amlogic decoders take profile 7 and then fail on it.
      */
     val dolbyVisionProfiles: Set<Int>? = null,
-)
+) {
+    /** Profile 7 plays as Dolby Vision; otherwise the player plays its HDR10 base layer with the HEVC decoder. */
+    val decodesDolbyVisionProfile7: Boolean
+        get() = HdrType.DolbyVision in hdr && dolbyVisionProfiles?.contains(7) != false
+}
 
 data class VideoCodecSupport(
     val maxWidth: Int,

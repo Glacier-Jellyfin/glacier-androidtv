@@ -37,6 +37,8 @@ data class StreamRequest(
     val subtitles: List<SideloadedSubtitle> = emptyList(),
     /** A Live TV channel: starts at the live edge, [startPositionMs] does not apply. */
     val live: Boolean = false,
+    /** Dolby Vision profile 7 plays its HDR10 base layer: the device has no decoder for the profile. */
+    val dolbyVisionBaseLayer: Boolean = false,
 )
 
 data class SideloadedSubtitle(
@@ -105,7 +107,8 @@ object GlacierPlayer {
         // Rendered on its own GL thread above the video, with animation and embedded fonts.
         val ass = AssHandler(AssRenderType.OVERLAY_OPEN_GL)
         val assParsers = AssSubtitleParserFactory(ass)
-        val mediaSources = DefaultMediaSourceFactory(dataSource, DefaultExtractorsFactory().withAssMkvSupport(assParsers, ass))
+        val extractors = DefaultExtractorsFactory().withAssMkvSupport(assParsers, ass)
+        val mediaSources = DefaultMediaSourceFactory(dataSource, if (request.dolbyVisionBaseLayer) DolbyVisionBaseLayerExtractors(extractors) else extractors)
             // Side-loaded .ass files go through the same parser.
             .setSubtitleParserFactory(assParsers)
         val renderers = DefaultRenderersFactory(context)

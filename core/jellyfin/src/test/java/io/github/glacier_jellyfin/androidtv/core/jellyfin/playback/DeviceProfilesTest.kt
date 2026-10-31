@@ -85,16 +85,25 @@ class DeviceProfilesTest {
     }
 
     @Test
-    fun `dolby vision profiles the decoder does not declare are left to the server`() {
-        val hdr = setOf(HdrType.Hdr10, HdrType.DolbyVision)
+    fun `dolby vision profile 7 plays its hdr10 base layer, profile 5 needs the decoder`() {
         // Like the DuneHD Pro 8K Plus's Amlogic decoder: no profile 7.
-        val amlogic = DeviceProfiles.supportedRanges(hdr, dolbyVisionProfiles = setOf(4, 5, 8, 9))
+        val amlogic = DeviceProfiles.supportedRanges(setOf(HdrType.Hdr10, HdrType.DolbyVision), dolbyVisionProfiles = setOf(4, 5, 8, 9))
         assertTrue(VideoRangeType.DOVI in amlogic)
-        assertTrue(VideoRangeType.DOVI_WITH_HDR10 in amlogic)
-        assertFalse(VideoRangeType.DOVI_WITH_EL in amlogic)
-        assertFalse(VideoRangeType.DOVI_WITH_ELHDR10_PLUS in amlogic)
-        // A decoder that declares no profiles is trusted with all of them.
-        assertTrue(VideoRangeType.DOVI_WITH_EL in DeviceProfiles.supportedRanges(hdr, dolbyVisionProfiles = null))
+        assertTrue(VideoRangeType.DOVI_WITH_EL in amlogic)
+        val noProfile5 = DeviceProfiles.supportedRanges(setOf(HdrType.Hdr10, HdrType.DolbyVision), dolbyVisionProfiles = setOf(8))
+        assertFalse(VideoRangeType.DOVI in noProfile5)
+        // Without HDR10 the base layer cannot be shown: profile 7 needs a decoder that declares it.
+        assertFalse(VideoRangeType.DOVI_WITH_EL in DeviceProfiles.supportedRanges(setOf(HdrType.DolbyVision), dolbyVisionProfiles = setOf(8)))
+        assertTrue(VideoRangeType.DOVI_WITH_EL in DeviceProfiles.supportedRanges(setOf(HdrType.DolbyVision), dolbyVisionProfiles = null))
+    }
+
+    @Test
+    fun `the player plays profile 7 as dolby vision only when the decoder declares it`() {
+        val dolbyVisionTv = fullHdTv.copy(hdr = setOf(HdrType.Hdr10, HdrType.DolbyVision))
+        assertFalse(dolbyVisionTv.copy(dolbyVisionProfiles = setOf(5, 8)).decodesDolbyVisionProfile7)
+        assertTrue(dolbyVisionTv.copy(dolbyVisionProfiles = setOf(5, 7, 8)).decodesDolbyVisionProfile7)
+        assertTrue(dolbyVisionTv.decodesDolbyVisionProfile7)
+        assertFalse(fullHdTv.decodesDolbyVisionProfile7)
     }
 
     @Test
