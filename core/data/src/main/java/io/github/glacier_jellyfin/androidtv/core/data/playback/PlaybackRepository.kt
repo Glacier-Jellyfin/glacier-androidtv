@@ -393,9 +393,13 @@ class PlaybackRepository @Inject constructor(
             val reasons = source.transcodingUrl?.takeIf { method != PlaybackMethod.DirectPlay }?.let { TRANSCODE_REASONS.find(it)?.groupValues?.get(1) }
             // The tracks asked for, and for a stream the server builds the audio it was told to put in.
             val streamAudio = source.transcodingUrl?.takeIf { method != PlaybackMethod.DirectPlay }?.let { AUDIO_STREAM_INDEX.find(it)?.groupValues?.get(1) }
+            // What the file holds, so a bug report shows the formats without detailed logging.
+            val video = streams.firstOrNull { it.type == MediaStreamType.VIDEO }
+            val audio = streams.firstOrNull { it.type == MediaStreamType.AUDIO && it.index == (audioIndex ?: source.defaultAudioStreamIndex) }
             Log.i(
                 TAG,
                 "Playing $itemId: $method, container ${source.container}, ${source.bitrate} bit/s" + reasons?.let { ", because $it" }.orEmpty() +
+                    video?.let { ", video ${it.describe()}" }.orEmpty() + audio?.let { ", audio track ${it.describe()}" }.orEmpty() +
                     ", audio ${audioIndex ?: "default " + source.defaultAudioStreamIndex}, subtitles ${subtitleIndex ?: "default " + source.defaultSubtitleStreamIndex}" +
                     streamAudio?.let { ", stream audio $it" }.orEmpty(),
             )
@@ -647,6 +651,7 @@ class PlaybackRepository @Inject constructor(
         codec,
         profile,
         videoRangeType.name,
+        dvProfile?.let { "Dolby Vision profile $it" },
         width?.let { "${it}x$height" },
         channels?.let { "${it}ch" },
         language,
