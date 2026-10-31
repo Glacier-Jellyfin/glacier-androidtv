@@ -17,6 +17,7 @@ import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.ui.SubtitleView
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.peerless2012.ass.media.AssHandler
 import io.github.peerless2012.ass.media.factory.AssRenderersFactory
 import io.github.peerless2012.ass.media.kt.withAssMkvSupport
@@ -75,17 +76,21 @@ class GlacierPlayback(val player: ExoPlayer, private val ass: AssHandler) {
     @OptIn(UnstableApi::class)
     private fun addDecoderListener() {
         player.addAnalyticsListener(object : AnalyticsListener {
+            // Logged on every playback: a bug report shows the decoders and the sound output without detailed logging.
             override fun onVideoDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
                 videoDecoder = decoderName
+                Log.i(TAG, "Video decoder: $decoderName")
             }
 
             override fun onAudioDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
                 audioDecoder = decoderName
+                Log.i(TAG, "Audio decoder: $decoderName")
             }
 
             override fun onAudioTrackInitialized(eventTime: AnalyticsListener.EventTime, audioTrackConfig: AudioSink.AudioTrackConfig) {
                 audioEncoding = audioTrackConfig.encoding
                 audioChannelMask = audioTrackConfig.channelConfig
+                Log.i(TAG, "Audio output: ${encodingName(audioTrackConfig.encoding)}, ${Integer.bitCount(audioTrackConfig.channelConfig)} channels, ${audioTrackConfig.sampleRate} Hz")
             }
         })
     }
@@ -93,6 +98,26 @@ class GlacierPlayback(val player: ExoPlayer, private val ass: AssHandler) {
     @OptIn(UnstableApi::class)
     fun attachAss(subtitleView: SubtitleView) {
         subtitleView.addView(AssSubtitleView(subtitleView.context, ass))
+    }
+
+    private companion object {
+        const val TAG = "Player"
+
+        /** "E-AC-3 bitstream", "PCM 16-bit": whether the receiver gets the bitstream or decoded sound. */
+        fun encodingName(encoding: Int): String = when (encoding) {
+            C.ENCODING_AC3 -> "AC-3 bitstream"
+            C.ENCODING_E_AC3 -> "E-AC-3 bitstream"
+            C.ENCODING_E_AC3_JOC -> "E-AC-3 JOC bitstream"
+            C.ENCODING_AC4 -> "AC-4 bitstream"
+            C.ENCODING_DOLBY_TRUEHD -> "TrueHD bitstream"
+            C.ENCODING_DTS -> "DTS bitstream"
+            C.ENCODING_DTS_HD -> "DTS-HD bitstream"
+            C.ENCODING_PCM_16BIT -> "PCM 16-bit"
+            C.ENCODING_PCM_24BIT -> "PCM 24-bit"
+            C.ENCODING_PCM_32BIT -> "PCM 32-bit"
+            C.ENCODING_PCM_FLOAT -> "PCM float"
+            else -> "encoding $encoding"
+        }
     }
 }
 

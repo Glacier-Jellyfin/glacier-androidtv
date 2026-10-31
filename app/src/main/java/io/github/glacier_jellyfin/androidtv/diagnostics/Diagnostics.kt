@@ -12,6 +12,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.glacier_jellyfin.androidtv.BuildConfig
 import io.github.glacier_jellyfin.androidtv.core.data.AccountRepository
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.MediaCapabilityDetector
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.player.FfmpegAudio
 import io.github.glacier_jellyfin.androidtv.ui.TvPlatform
@@ -36,6 +37,7 @@ class Diagnostics @Inject constructor(
     @ApplicationContext private val context: Context,
     private val sessions: SessionManager,
     private val accounts: AccountRepository,
+    private val capabilities: MediaCapabilityDetector,
 ) {
 
     /**
@@ -106,6 +108,13 @@ class Diagnostics @Inject constructor(
         appendLine("ABIs: ${Build.SUPPORTED_ABIS.joinToString()}")
         appendLine("Display: ${display()}")
         appendLine("Video decoders: ${videoDecoders()}")
+        appendLine("Video decoder profiles:")
+        DeviceReport.videoDecoderProfiles().forEach(::appendLine)
+        appendLine("Audio outputs:")
+        DeviceReport.audioOutputs(context).forEach(::appendLine)
+        appendLine("Media3 audio: ${DeviceReport.media3Audio(context)}")
+        appendLine("Device profile built from:")
+        DeviceReport.capabilities(capabilities.capabilities).forEach(::appendLine)
         appendLine("FFmpeg: ${FfmpegAudio.version() ?: "not included"}")
         appendLine("Server: Jellyfin ${serverVersion ?: "unknown"}")
         appendLine("Detailed logging: ${if (Log.verbose) "on" else "off"}")

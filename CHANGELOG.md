@@ -31,6 +31,7 @@ language is German.
 - The navigation bar leaves room for notices at the top right. When its entries need more room, the ones between search and settings scroll, and search, settings and the profile always stay in view
 - The player no longer calls music videos and recordings "Movies"
 - Back from a "More like this" title returns to the library or search you started in, with the last title in focus
+- Logs for bug reports describe the device's decoders, sound outputs and each playback in more detail
 
 ### Fixed
 - Right from the profile in the navigation bar no longer jumps down to the A–Z rail of a library
