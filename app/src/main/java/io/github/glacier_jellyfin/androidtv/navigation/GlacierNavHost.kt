@@ -1,6 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.navigation
 
 import io.github.glacier_jellyfin.androidtv.favorites.FavoritesScreen
+import android.annotation.SuppressLint
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -41,6 +42,9 @@ private const val TAG = "Navigation"
 
 @Composable
 fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
+    // The whole back stack is readable only through currentBackStack, which lint reports as
+    // library-restricted although Navigation offers no public way to it.
+    @SuppressLint("RestrictedApi")
     val navigate: (UiEvent.Navigate) -> Unit = { event ->
         Log.d(TAG, "Open ${event.route}")
         val current = navController.currentDestination?.id
