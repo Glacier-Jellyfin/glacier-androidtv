@@ -455,6 +455,7 @@
     <string name="player_loading">Wird geladen …</string>
     <string name="player_error">Wiedergabe fehlgeschlagen</string>
     <string name="player_error_body">Prüfe, ob der Server erreichbar ist, und versuche es noch einmal.</string>
+    <string name="player_error_device_body">Dieses Gerät konnte Bild oder Ton dieser Datei nicht dekodieren. Versuche eine andere Tonspur oder Version.</string>
     <string name="player_play">Abspielen</string>
     <string name="player_pause">Pause</string>
     <string name="player_rewind">10 Sekunden zurück</string>

@@ -19,6 +19,11 @@ data class DeviceCapabilities(
     val passthroughAudio: Set<String> = emptySet(),
     /** HDR formats both a decoder and the display can show. */
     val hdr: Set<HdrType>,
+    /**
+     * Dolby Vision profiles (5, 7, 8 …) the Dolby Vision decoder declares; null when it declares none.
+     * Amlogic decoders take profile 7 and then fail on it.
+     */
+    val dolbyVisionProfiles: Set<Int>? = null,
 )
 
 data class VideoCodecSupport(

@@ -387,7 +387,7 @@ fun PlayerScreen(
             val retryFocus = remember { FocusRequester() }
             OverlayCard {
                 Text(stringResource(R.string.player_error), style = GlacierText.display(30), color = GlacierColors.Ice)
-                Text(stringResource(R.string.player_error_body), style = GlacierText.body(21), color = GlacierColors.Mist)
+                Text(stringResource(if (state.failedOnDevice) R.string.player_error_device_body else R.string.player_error_body), style = GlacierText.body(21), color = GlacierColors.Mist)
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     PillButton(stringResource(R.string.action_retry), onClick = viewModel::load, primary = true, modifier = Modifier.focusRequester(retryFocus))
                     PillButton(stringResource(R.string.action_back), onClick = viewModel::stop)
