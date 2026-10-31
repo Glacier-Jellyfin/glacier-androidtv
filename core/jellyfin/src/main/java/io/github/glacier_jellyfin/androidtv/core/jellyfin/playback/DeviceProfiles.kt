@@ -127,9 +127,10 @@ object DeviceProfiles {
     /**
      * Range types to play directly. SDR always; Dolby Vision streams with an
      * HDR10, HLG or SDR base layer play that layer when there is no Dolby
-     * Vision decoder, which Media3 does by falling back to HEVC. Profile 5
-     * (no base layer) and profile 7 (enhancement layer, which Media3 does not
-     * hand to HEVC) play directly only when the decoder declares the profile.
+     * Vision decoder, which Media3 does by falling back to HEVC. Profile 7
+     * (enhancement layer) plays its HDR10 base layer the same way, which the
+     * player arranges itself (see GlacierPlayer). Profile 5 has no base layer
+     * and plays only when the Dolby Vision decoder declares it.
      */
     internal fun supportedRanges(hdr: Set<HdrType>, dolbyVisionProfiles: Set<Int>? = null): List<VideoRangeType> = buildList {
         add(VideoRangeType.SDR)
@@ -139,11 +140,10 @@ object DeviceProfiles {
         if (HdrType.Hdr10Plus in hdr) addAll(listOf(VideoRangeType.HDR10_PLUS, VideoRangeType.DOVI_WITH_HDR10_PLUS))
         if (HdrType.Hdr10 in hdr && HdrType.Hdr10Plus !in hdr) add(VideoRangeType.DOVI_WITH_HDR10_PLUS)
         if (HdrType.Hlg in hdr) addAll(listOf(VideoRangeType.HLG, VideoRangeType.DOVI_WITH_HLG))
-        if (HdrType.DolbyVision in hdr) {
-            fun declares(profile: Int) = dolbyVisionProfiles == null || profile in dolbyVisionProfiles
-            if (declares(5)) add(VideoRangeType.DOVI)
-            if (declares(7)) addAll(listOf(VideoRangeType.DOVI_WITH_EL, VideoRangeType.DOVI_WITH_ELHDR10_PLUS))
-        }
+        val dolbyVision = HdrType.DolbyVision in hdr
+        fun declares(profile: Int) = dolbyVision && dolbyVisionProfiles?.contains(profile) != false
+        if (declares(5)) add(VideoRangeType.DOVI)
+        if (HdrType.Hdr10 in hdr || declares(7)) addAll(listOf(VideoRangeType.DOVI_WITH_EL, VideoRangeType.DOVI_WITH_ELHDR10_PLUS))
     }.distinct()
 
     private fun DeviceProfileBuilder.videoLimits(codec: String, support: VideoCodecSupport, profiles: List<String>?) {

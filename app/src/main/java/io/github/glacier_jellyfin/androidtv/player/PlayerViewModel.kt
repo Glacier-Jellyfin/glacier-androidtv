@@ -331,6 +331,7 @@ class PlayerViewModel @Inject constructor(
                     subtitles = opened.subtitles
                         .filter { it.delivery == SubtitleDelivery.External && it.url != null }
                         .map { SideloadedSubtitle(it.track.index, it.url!!, it.track.codec, it.track.language) },
+                    dolbyVisionBaseLayer = playback.dolbyVisionBaseLayer,
                 )
                 val playback = GlacierPlayer.create(context, request)
                 val player = playback.player

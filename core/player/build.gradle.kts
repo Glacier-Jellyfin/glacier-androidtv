@@ -8,6 +8,8 @@ android {
 
     defaultConfig {
         minSdk = 28
+        // DolbyVisionBaseLayerTest: ./gradlew :core:player:connectedDebugAndroidTest on a device or emulator.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
@@ -27,4 +29,7 @@ dependencies {
     implementation(project(":core:ffmpeg"))
     // Full ASS/SSA rendering (signs, fonts, animation) that Media3's own parser lacks.
     api(libs.libass.media)
+
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.junit)
 }
