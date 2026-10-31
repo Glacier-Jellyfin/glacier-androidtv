@@ -7,6 +7,20 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-31
+
+### Neu
+- Einstellungen › System › Wiedergabe prüfen spielt kurze Testdateien ab und zeigt, welche Bild- und Tonformate das Gerät schafft. Die Ergebnisse kommen für Fehlerberichte ins Protokoll
+
+### Verbessert
+- Zurück von einem Titel aus „Ähnliche Titel“ führt in die Bibliothek oder Suche, in der du angefangen hast, mit dem letzten Titel im Fokus
+- Logs für Fehlerberichte beschreiben Decoder und Tonausgänge des Geräts und jede Wiedergabe genauer
+
+### Behoben
+- Links aus der A–Z-Leiste einer Bibliothek landet auf dem Titel, zu dem der Buchstabe gesprungen ist, statt auf dem zuvor gewählten
+- Dolby-Vision-Titel mit Enhancement Layer laufen direkt in HDR10, wenn das Gerät die Ebene nicht dekodieren kann, statt zu scheitern (#21)
+- Kann das Gerät Bild oder Ton einer Datei nicht dekodieren, sagt der Player das, statt zur Prüfung des Servers aufzufordern (#21)
+
 ## [0.7.0] - 2026-10-29
 
 ### Neu

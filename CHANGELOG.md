@@ -22,6 +22,20 @@ language is German.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-31
+
+### New
+- Settings › System › Check playback plays short test files and shows which picture and sound formats the device handles. The results go into the log for bug reports
+
+### Improved
+- Back from a "More like this" title returns to the library or search you started in, with the last title in focus
+- Logs for bug reports describe the device's decoders, sound outputs and each playback in more detail
+
+### Fixed
+- Left from a library's A–Z rail lands on the title the letter jumped to, not on the title focused before
+- Dolby Vision titles with an enhancement layer play directly in HDR10 when the device cannot decode the layer, instead of failing (#21)
+- When the device cannot decode the picture or sound of a file, the player says so instead of asking to check the server (#21)
+
 ## [0.7.0] - 2026-10-29
 
 ### New
