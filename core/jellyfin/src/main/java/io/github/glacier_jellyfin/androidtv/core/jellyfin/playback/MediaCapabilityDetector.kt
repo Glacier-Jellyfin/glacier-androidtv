@@ -67,8 +67,13 @@ class MediaCapabilityDetector @Inject constructor(
             maxAudioChannels = maxAudioChannels(),
             passthroughAudio = passthrough,
             hdr = hdr,
+            dolbyVisionProfiles = dolbyVisionProfiles(profiles(decodersFor(MIME_DOLBY_VISION), MIME_DOLBY_VISION)),
         )
     }
+
+    /** Android's Dolby Vision profile constants are one bit per profile: DvavPer (profile 0) is 1, DvheDtb (7) is 0x80. */
+    private fun dolbyVisionProfiles(constants: Set<Int>): Set<Int>? =
+        constants.filter { it > 0 && it and (it - 1) == 0 }.mapTo(HashSet()) { Integer.numberOfTrailingZeros(it) }.ifEmpty { null }
 
     private fun videoSupport(
         codecs: List<MediaCodecInfo>,

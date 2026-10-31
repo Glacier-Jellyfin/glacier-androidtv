@@ -440,6 +440,7 @@
     <string name="player_loading">Loading …</string>
     <string name="player_error">Playback failed</string>
     <string name="player_error_body">Check that the server is reachable and try again.</string>
+    <string name="player_error_device_body">This device could not decode the picture or sound of this file. Try another audio track or version.</string>
     <string name="player_play">Play</string>
     <string name="player_pause">Pause</string>
     <string name="player_rewind">Back 10 seconds</string>

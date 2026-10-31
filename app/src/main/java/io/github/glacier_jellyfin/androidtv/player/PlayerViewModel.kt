@@ -79,6 +79,8 @@ data class PlayerUiState(
     /** Until the first frame can be shown. */
     val loading: Boolean = true,
     val failed: Boolean = false,
+    /** The device could not decode or output the stream: no point in checking the server. */
+    val failedOnDevice: Boolean = false,
     val method: PlaybackMethod? = null,
     val playing: Boolean = false,
     /** Playing or about to (buffering after a seek); drives the play/pause button. */
@@ -261,7 +263,7 @@ class PlayerViewModel @Inject constructor(
             }
             Log.w(TAG, "Playback failed", error)
             source?.let { playback.reportStopped(it, currentPositionMs(), failed = true) }
-            _state.update { it.copy(failed = true, loading = false) }
+            _state.update { it.copy(failed = true, failedOnDevice = error.isDeviceFailure(), loading = false) }
         }
     }
 
@@ -301,7 +303,7 @@ class PlayerViewModel @Inject constructor(
         opening?.cancel()
         opening = viewModelScope.launch {
             releasePlayer()
-            _state.update { it.copy(loading = true, failed = false, trackPanel = null) }
+            _state.update { it.copy(loading = true, failed = false, failedOnDevice = false, trackPanel = null) }
             try {
                 val item = _state.value.details ?: details.details(itemId).let { loaded ->
                     // The file the detail page showed, else the one picked for the title or show.
@@ -676,6 +678,10 @@ class PlayerViewModel @Inject constructor(
             errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED ||
                 errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED ||
                 (this is ExoPlaybackException && type == ExoPlaybackException.TYPE_UNEXPECTED)
+
+        /** A decoder or the audio output failed (Media3's 4xxx and 5xxx codes), not the network or the server. */
+        fun PlaybackException.isDeviceFailure() =
+            errorCode in PlaybackException.ERROR_CODE_DECODER_INIT_FAILED until PlaybackException.ERROR_CODE_DRM_UNSPECIFIED
         val FMP4_ERRORS = setOf(
             PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
             PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,

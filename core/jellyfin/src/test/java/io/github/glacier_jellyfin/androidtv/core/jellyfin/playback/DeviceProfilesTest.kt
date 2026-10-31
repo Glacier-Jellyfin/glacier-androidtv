@@ -85,6 +85,19 @@ class DeviceProfilesTest {
     }
 
     @Test
+    fun `dolby vision profiles the decoder does not declare are left to the server`() {
+        val hdr = setOf(HdrType.Hdr10, HdrType.DolbyVision)
+        // Like the DuneHD Pro 8K Plus's Amlogic decoder: no profile 7.
+        val amlogic = DeviceProfiles.supportedRanges(hdr, dolbyVisionProfiles = setOf(4, 5, 8, 9))
+        assertTrue(VideoRangeType.DOVI in amlogic)
+        assertTrue(VideoRangeType.DOVI_WITH_HDR10 in amlogic)
+        assertFalse(VideoRangeType.DOVI_WITH_EL in amlogic)
+        assertFalse(VideoRangeType.DOVI_WITH_ELHDR10_PLUS in amlogic)
+        // A decoder that declares no profiles is trusted with all of them.
+        assertTrue(VideoRangeType.DOVI_WITH_EL in DeviceProfiles.supportedRanges(hdr, dolbyVisionProfiles = null))
+    }
+
+    @Test
     fun `picture subtitles are never delivered as separate files`() {
         val subtitles = DeviceProfiles.build(fullHdTv, MAX).subtitleProfiles
         assertTrue(subtitles.none { it.format == "pgssub" && it.method == SubtitleDeliveryMethod.EXTERNAL })
