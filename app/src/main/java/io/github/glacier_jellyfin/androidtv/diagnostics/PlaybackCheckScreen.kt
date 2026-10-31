@@ -1,6 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.diagnostics
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
@@ -33,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import androidx.tv.material3.Text
@@ -55,6 +57,7 @@ import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
  * the check does and how far it is on the left, every format with its result
  * on the right.
  */
+@OptIn(UnstableApi::class)
 @Composable
 fun PlaybackCheckScreen(viewModel: PlaybackCheckViewModel, onClose: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
