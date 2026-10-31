@@ -58,8 +58,8 @@ class Scene:
 
 
 SCENES = [
-    Scene("profiles", 1.0, 9.5, {"en": "Profiles", "de": "Profile"},
-          {"en": "One TV, the whole family", "de": "Ein Fernseher, die ganze Familie"}),
+    Scene("family", 3.0, 26.5, {"en": "Profiles", "de": "Profile"},
+          {"en": "One TV, the whole family, kids included", "de": "Ein Fernseher, die ganze Familie, Kinder inklusive"}),
     Scene("library", 1.0, 13.0, {"en": "Library", "de": "Bibliothek"},
           {"en": "Big libraries, found in seconds", "de": "Große Bibliotheken, in Sekunden durchsucht"}),
     Scene("detail", 1.5, 22.0, {"en": "Details", "de": "Details"},
@@ -71,15 +71,15 @@ SCENES = [
           {"en": "See where you're going", "de": "Sehen, wohin du spulst"}),
     Scene("upnext", 17.0, 30.0, {"en": "Player", "de": "Player"},
           {"en": "The next episode, ready when you are", "de": "Die nächste Folge, sobald du willst"}),
-    Scene("music", 2.5, 27.0, {"en": "Music", "de": "Musik"},
+    Scene("music", 8.5, 27.0, {"en": "Music", "de": "Musik"},
           {"en": "Music with lyrics that keeps playing", "de": "Musik mit Songtexten, die weiterläuft"}),
+    Scene("photos", 9.0, 34.0, {"en": "Photos & videos", "de": "Fotos & Videos"},
+          {"en": "Your photos and home videos, on the big screen", "de": "Deine Fotos und Heimvideos, ganz groß"}),
     Scene("livetv", 1.0, 26.0, {"en": "Live TV", "de": "Live-TV"},
           {"en": "Live TV with a full guide", "de": "Live-TV mit Programmführer"}),
-    Scene("kids", 1.0, 11.0, {"en": "Parental controls", "de": "Jugendschutz"},
-          {"en": "Only what's right for their age", "de": "Nur, was zum Alter passt"}),
 ]
 # The short cut: the same scenes, fewer and shorter.
-SHORT = [("profiles", 1.0, 6.5), ("library", 4.0, 10.0), ("skip", 9.0, 15.0), ("music", 9.0, 14.5), ("livetv", 12.0, 18.0)]
+SHORT = [("family", 14.0, 20.0), ("library", 4.0, 10.0), ("skip", 9.0, 15.0), ("music", 13.0, 18.5), ("livetv", 12.0, 18.0)]
 INTRO = {"en": "Jellyfin, made simple.", "de": "Jellyfin, ganz einfach."}
 OUTRO = {
     "en": ("Free. No ads. No tracking.", "Android TV · Google TV · Fire TV",
@@ -214,8 +214,10 @@ class Cutter:
                  f"tpad=stop_mode=clone:stop_duration={end - start},trim=duration={end - start}[app];"
                  f"[2:v]format=gray[m];[app][m]alphamerge[framed];"
                  f"[0:v][framed]overlay={FRAME_X}:{FRAME_Y}:shortest=1,format=yuv420p")
-        self.run(["-loop", 1, "-framerate", FPS, "-i", png, "-ss", start, "-to", end, "-i", take,
-                  "-loop", 1, "-i", self.work / "mask.png", "-filter_complex", graph,
+        # The looped stills end with the scene, or ffmpeg would wait for them forever.
+        self.run(["-loop", 1, "-framerate", FPS, "-t", end - start, "-i", png, "-ss", start, "-to", end, "-i", take,
+                  "-loop", 1, "-framerate", FPS, "-t", end - start, "-i", self.work / "mask.png",
+                  "-filter_complex", graph,
                   "-c:v", "libx264", "-crf", 12, "-an", out])
         return out
 

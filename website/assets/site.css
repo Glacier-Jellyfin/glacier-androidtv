@@ -452,3 +452,11 @@ footer.site-footer {
   section { padding: 64px 0; }
   .wrap { padding: 0 20px; }
 }
+
+/* The promo film: full width under a centred heading */
+.film { text-align: center; }
+.film .lede { margin-left: auto; margin-right: auto; }
+.film-media { margin-top: 40px; }
+.film-media video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: var(--void); }
+.film-credit { margin-top: 16px; color: var(--mist-dim); font-size: 13px; }
+.film-credit a { color: inherit; }

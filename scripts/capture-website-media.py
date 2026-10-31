@@ -159,7 +159,10 @@ class Device:
         while time.time() < deadline:
             out = subprocess.run(self.base + ["shell", "getprop sys.boot_completed"], capture_output=True,
                                  text=True, env=self.env, timeout=30)
-            if out.stdout.strip() == "1":
+            # A snapshot restores sys.boot_completed at once; the services the takes use come a bit later.
+            if out.stdout.strip() == "1" and "not found" not in subprocess.run(
+                    self.base + ["shell", "service check alarm"], capture_output=True, text=True,
+                    env=self.env, timeout=30).stdout:
                 return True
             time.sleep(2)
         return False
@@ -288,18 +291,33 @@ TAKES: dict[str, Take] = {
                                "DPAD_UP*4:0.15", "sleep0.5", "DPAD_UP:0.6", "DPAD_RIGHT:0.5", "DPAD_CENTER:2.5",
                                "DPAD_DOWN:1.2", "DPAD_RIGHT*3:0.9", "DPAD_DOWN*2:0.9", "sleep1.5"],
                    clip=(1.0, 26.0), still=("livetv", 2.0)),
+    # The profiles section in one take: Kids first, then back through the profile button to Nora.
+    "family": Take("picker", ["sleep1.5", "DPAD_RIGHT:1.3", "DPAD_CENTER:5.5", "DPAD_DOWN:1.3", "DPAD_RIGHT:0.8",
+                              "DPAD_RIGHT:1.2", "DPAD_UP:0.5", "DPAD_UP:0.8", "DPAD_RIGHT*10:0.12", "sleep0.6",
+                              "DPAD_CENTER:2.2", "DPAD_RIGHT:0.9", "DPAD_RIGHT:1.1", "DPAD_CENTER:6"]),
+    # The hero video in one take: a first look around, from the home screen to a title's page.
+    "hero": Take("home", ["sleep2.5", "DPAD_DOWN:1.6", "DPAD_RIGHT:1.0", "DPAD_RIGHT:1.6", "DPAD_UP:0.6",
+                          "DPAD_UP:0.9", "DPAD_RIGHT:0.6", "DPAD_CENTER:3.4", "DPAD_RIGHT:0.8", "DPAD_RIGHT:0.8",
+                          "DPAD_DOWN:1.2", "DPAD_CENTER:3.8", "DPAD_DOWN:2.6"]),
+    # A folder of photos and videos: switch it to the gallery, browse the row, then full screen and
+    # the slideshow.
+    "photos": Take("Photos", ["sleep1.5", "DPAD_CENTER:3", "DPAD_UP:0.8", "DPAD_RIGHT*3:0.4", "DPAD_CENTER:1",
+                              "DPAD_DOWN:0.6", "DPAD_CENTER:2.5", "DPAD_DOWN:1.6", "DPAD_LEFT*6:0.2", "sleep1",
+                              "DPAD_RIGHT:1.4", "DPAD_RIGHT:1.4", "DPAD_RIGHT:1.6", "DPAD_CENTER:2.5",
+                              "DPAD_RIGHT:2.2", "DPAD_RIGHT:2.2", "DPAD_CENTER:9"],
+                   clip=(5.0, 36.5), still=("photos", 22.0)),
     # The Kids profile: limited to FSK 6 on the demo server, so only its titles show.
     "kids": Take("picker", ["sleep1.5", "DPAD_RIGHT:1.4", "DPAD_CENTER:6", "DPAD_DOWN:1.4", "DPAD_RIGHT*3:0.8",
                             "sleep1"]),
 }
 # The demo server's own watch state for the titles the takes move, put back at the end.
 RESTORE = {"Harbor Lights/1/2": (0, True), "Glass Mountain": (4700, False)}
-# Clips cut from several takes, cross-faded: (take, start, end). One clip per website section,
+# Clips cut from one or more takes, cross-faded: (take, start, end). One clip per website section,
 # and the hero video at the top of the page.
 MONTAGES = {
-    "family": [("profiles", 1.0, 11.0), ("kids", 4.0, 12.5)],
+    "family": [("family", 3.0, 26.5)],
     "player": [("skip", 7.5, 15.8), ("trickplay", 19.0, 27.0), ("upnext", 21.0, 30.0)],
-    "hero": [("profiles", 1.0, 9.0), ("library", 1.0, 9.5), ("detail", 1.5, 9.0), ("skip", 8.0, 15.0)],
+    "hero": [("hero", 2.0, 24.0)],
 }
 FADE = 0.5
 
