@@ -13,14 +13,20 @@
 </p>
 
 <p align="center">
+  <a href="https://www.amazon.com/dp/B0HPL2YVVQ"><img src="docs/badges/amazon-appstore.png" height="56" alt="Available at Amazon Appstore"></a>
+  &nbsp;
+  <a href="https://play.google.com/apps/testing/io.github.glacier_jellyfin.androidtv"><img src="docs/badges/google-play.png" height="56" alt="Get it on Google Play"></a>
+  &nbsp;
+  <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest"><img src="docs/badges/github.png" height="56" alt="Get it on GitHub"></a>
+</p>
+
+<p align="center">
   <a href="https://glacier-jellyfin.github.io/glacier-androidtv/">Website</a> ·
-  <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest">Download</a> ·
-  <a href="https://www.amazon.com/dp/B0HPL2YVVQ">Amazon Appstore</a> ·
   <a href="CHANGELOG.md">Changelog</a>
 </p>
 
 <p align="center">
-  <img src="website/assets/screenshots/demo.gif" width="800" alt="Browsing Glacier on a TV">
+  <img src="website/assets/screenshots/demo.gif" width="800" alt="Highlights of Glacier on a TV">
 </p>
 
 > [!NOTE]
@@ -76,12 +82,12 @@ Glacier is free and needs no account. Get it from a store or straight from
 
 ### From a store
 
-| Store | |
-|---|---|
-| [Amazon Appstore](https://www.amazon.com/dp/B0HPL2YVVQ) | Fire TV |
-| Google Play | Coming soon, now in closed testing |
+<a href="https://www.amazon.com/dp/B0HPL2YVVQ"><img src="docs/badges/amazon-appstore.png" height="56" alt="Available at Amazon Appstore"></a>
+&nbsp;
+<a href="https://play.google.com/apps/testing/io.github.glacier_jellyfin.androidtv"><img src="docs/badges/google-play.png" height="56" alt="Get it on Google Play"></a>
 
-The store keeps Glacier up to date, like any other app.
+The Amazon Appstore has Glacier for Fire TV. Google Play is coming soon and is
+in closed testing now. The store keeps Glacier up to date, like any other app.
 
 #### Become a tester on Google Play
 
@@ -172,3 +178,5 @@ Glacier is free and stays that way. If you'd like to support development, you ca
 Glacier is licensed under the [GNU General Public License v3.0 or later](LICENSE).
 
 Glacier is an independent project and is not affiliated with the Jellyfin project.
+Amazon, Amazon Appstore and the Amazon logo are trademarks of Amazon.com, Inc. or
+its affiliates. Google Play and the Google Play logo are trademarks of Google LLC.

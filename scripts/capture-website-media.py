@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""Records the website's clips and screenshots from the running app.
+"""Records the takes for the website and the promo video from the running app.
 
 Drives a debug build on an Android TV emulator over adb, against the Glacier demo
-server (github.com/Glacier-Jellyfin/glacier-demo), and writes per language:
-
-  website/assets/clips/<take>[-de].mp4 and .webm   short muted loops for each section
-  website/assets/screenshots/<still>[-de].jpg      their posters and the stills
-  website/assets/screenshots/demo[-de].mp4/.webm   the hero video, demo.gif for the README
+server (github.com/Glacier-Jellyfin/glacier-demo), and keeps each take as a
+1080p recording in the --takes folder, <take>[-de].mp4 per language.
+scripts/make-promo-video.py turns them into the promo film and the website's
+media.
 
 The demo library is made up and licensed for advertising (see the demo repo's
 CREDITS.md), so everything recorded here may be published. Never capture another
@@ -24,10 +23,8 @@ Before running:
 Needs Python 3.9+, adb and ffmpeg on PATH (or ADB / FFMPEG set). The script sets
 resume points of the demo profile Nora before each take.
 
-Usage: scripts/capture-website-media.py [--serial emulator-5560] [--lang en,de]
-                                        [--only library,detail,...] [--takes DIR]
---takes keeps the full 1080p recordings in DIR, for the promo video. With it, a montage
-(family, player, hero) alone is cut again from the kept takes.
+Usage: scripts/capture-website-media.py --takes DIR [--serial emulator-5560] [--lang en,de]
+                                        [--only library,detail,...]
 """
 from __future__ import annotations
 
@@ -38,7 +35,6 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 import time
 import urllib.parse
 import urllib.request
@@ -47,8 +43,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SHOTS = ROOT / "website" / "assets" / "screenshots"
-CLIPS = ROOT / "website" / "assets" / "clips"
 PACKAGE = "io.github.glacier_jellyfin.androidtv.debug"
 ACTIVITY = "io.github.glacier_jellyfin.androidtv.MainActivity"
 # The server as this machine sees it; the emulator reaches it on 10.0.2.2.
@@ -252,45 +246,37 @@ class Server:
 
 @dataclass
 class Take:
-    """One recording: where it starts, the keys pressed while recording, and the part kept."""
+    """One recording: where it starts and the keys pressed while recording."""
     start: str  # "picker", "home", a navigation entry from NAV, or "open:Title" / "open:Show/S/E"
     steps: list[str]
-    clip: tuple[float, float] | None = None  # seconds kept for the website clip; None for no clip
-    still: tuple[str, float] | None = None  # name and second of a still taken from the recording
     resume: dict[str, float] = field(default_factory=dict)  # title or Show/S/E -> seconds
     played: tuple[str, ...] = ()
 
 
 TAKES: dict[str, Take] = {
-    "profiles": Take("picker", ["sleep1.8", "DPAD_RIGHT:1.1", "DPAD_RIGHT:1.4", "DPAD_CENTER:6", "DPAD_DOWN:1.5",
-                                "DPAD_RIGHT:1", "DPAD_RIGHT:1.5"],
-                     still=("home", 9.0)),
     "library": Take("Movie", ["sleep1.5", "DPAD_RIGHT:0.6", "DPAD_RIGHT:0.6", "DPAD_RIGHT:0.9", "DPAD_RIGHT*4:0.15",
                               "sleep0.5", "DPAD_RIGHT:0.8", "DPAD_DOWN*12:0.05", "sleep0.5", "DPAD_CENTER:1.6",
-                              "DPAD_LEFT:1.4", "DPAD_DOWN:1.2", "DPAD_RIGHT:1.5"],
-                    clip=(1.0, 14.0), still=("library", 1.2)),
+                              "DPAD_LEFT:1.4", "DPAD_DOWN:1.2", "DPAD_RIGHT:1.5"]),
     "detail": Take("open:Glass Mountain", ["sleep1.5", "DPAD_RIGHT*4:0.3", "sleep0.3", "DPAD_CENTER:1.4", "DPAD_UP:1.2",
                                            "BACK:0.6", "DPAD_RIGHT:0.5", "DPAD_CENTER:1.0", "DPAD_DOWN*3:0.6", "sleep0.6",
                                            "BACK:0.6", "DPAD_RIGHT:0.5", "DPAD_CENTER:1.0", "DPAD_DOWN*4:0.45", "sleep0.8",
                                            "BACK:0.7", "DPAD_DOWN:1.4", "DPAD_RIGHT*3:0.5", "sleep0.4", "DPAD_DOWN:1.8"],
-                   clip=(1.5, 23.0), still=("detail", 1.6), resume={"Glass Mountain": 4700}),
+                   resume={"Glass Mountain": 4700}),
     # Play, then OK on "Skip intro" while the controls still show, so the timeline jumps visibly.
     "skip": Take("open:Harbor Lights/1/2", ["sleep1.2", "DPAD_CENTER:8.6", "DPAD_CENTER:6"],
-                 still=("player-skip", 10.5), resume={"Harbor Lights/1/2": 0},
-                 played=("Harbor Lights/1/2",)),
+                 resume={"Harbor Lights/1/2": 0}, played=("Harbor Lights/1/2",)),
     "upnext": Take("open:Harbor Lights/1/2", ["sleep1.2", "DPAD_CENTER:28"],
                    resume={"Harbor Lights/1/2": 2566}),
     # The emulator cannot decode the German E-AC-3 track, so the server converts it and playback takes a while.
     "trickplay": Take("open:Glass Mountain", ["sleep1", "DPAD_CENTER:18", "DPAD_RIGHT*7:0.5", "sleep3"],
                       resume={"Glass Mountain": 4700}),
+    # The first lyric line comes 12 s into the song: the lyrics stay up until a few have lit up.
     "music": Take("Music", ["sleep1", "DPAD_DOWN:0.7", "DPAD_RIGHT:0.9", "DPAD_CENTER:2.2", "DPAD_CENTER:4",
-                            "DPAD_RIGHT*3:0.35", "sleep0.4", "DPAD_CENTER:7", "BACK:1.5", "BACK:2.5",
-                            "DPAD_RIGHT:0.8", "DPAD_RIGHT:1.5"],
-                  clip=(2.5, 27.5), still=("music", 16.0)),
+                            "DPAD_RIGHT*3:0.35", "sleep0.4", "DPAD_CENTER:16", "BACK:1.5", "BACK:2.5",
+                            "DPAD_RIGHT:0.8", "DPAD_RIGHT:1.5"]),
     "livetv": Take("Live TV", ["sleep2.5", "DPAD_DOWN:2.4", "DPAD_DOWN:2.4", "DPAD_DOWN:2.4", "DPAD_DOWN:2.4",
                                "DPAD_UP*4:0.15", "sleep0.5", "DPAD_UP:0.6", "DPAD_RIGHT:0.5", "DPAD_CENTER:2.5",
-                               "DPAD_DOWN:1.2", "DPAD_RIGHT*3:0.9", "DPAD_DOWN*2:0.9", "sleep1.5"],
-                   clip=(1.0, 26.0), still=("livetv", 2.0)),
+                               "DPAD_DOWN:1.2", "DPAD_RIGHT*3:0.9", "DPAD_DOWN*2:0.9", "sleep1.5"]),
     # The profiles section in one take: Kids first, then back through the profile button to Nora.
     "family": Take("picker", ["sleep1.5", "DPAD_RIGHT:1.3", "DPAD_CENTER:5.5", "DPAD_DOWN:1.3", "DPAD_RIGHT:0.8",
                               "DPAD_RIGHT:1.2", "DPAD_UP:0.5", "DPAD_UP:0.8", "DPAD_RIGHT*10:0.12", "sleep0.6",
@@ -304,32 +290,18 @@ TAKES: dict[str, Take] = {
     "photos": Take("Photos", ["sleep1.5", "DPAD_CENTER:3", "DPAD_UP:0.8", "DPAD_RIGHT*3:0.4", "DPAD_CENTER:1",
                               "DPAD_DOWN:0.6", "DPAD_CENTER:2.5", "DPAD_DOWN:1.6", "DPAD_LEFT*6:0.2", "sleep1",
                               "DPAD_RIGHT:1.4", "DPAD_RIGHT:1.4", "DPAD_RIGHT:1.6", "DPAD_CENTER:2.5",
-                              "DPAD_RIGHT:2.2", "DPAD_RIGHT:2.2", "DPAD_CENTER:9"],
-                   clip=(5.0, 36.5), still=("photos", 22.0)),
-    # The Kids profile: limited to FSK 6 on the demo server, so only its titles show.
-    "kids": Take("picker", ["sleep1.5", "DPAD_RIGHT:1.4", "DPAD_CENTER:6", "DPAD_DOWN:1.4", "DPAD_RIGHT*3:0.8",
-                            "sleep1"]),
+                              "DPAD_RIGHT:2.2", "DPAD_RIGHT:2.2", "DPAD_CENTER:9"]),
 }
 # The demo server's own watch state for the titles the takes move, put back at the end.
 RESTORE = {"Harbor Lights/1/2": (0, True), "Glass Mountain": (4700, False)}
-# Clips cut from one or more takes, cross-faded: (take, start, end). One clip per website section,
-# and the hero video at the top of the page.
-MONTAGES = {
-    "family": [("family", 3.0, 26.5)],
-    "player": [("skip", 7.5, 15.8), ("trickplay", 19.0, 27.0), ("upnext", 21.0, 30.0)],
-    "hero": [("hero", 2.0, 24.0)],
-}
-FADE = 0.5
 
 
 class Capture:
-    def __init__(self, device: Device, server: Server, work: Path, lang: str, keep: Path | None):
+    def __init__(self, device: Device, server: Server, takes: Path, lang: str):
         self.d = device
         self.server = server
-        self.work = work
+        self.takes = takes
         self.lang = lang
-        self.keep = keep
-        self.ffmpeg = tool("ffmpeg", "FFMPEG")
         self.suffix = "" if lang == "en" else f"-{lang}"
 
     def item(self, ref: str) -> dict:
@@ -376,86 +348,26 @@ class Capture:
             self.d.key(*["DPAD_RIGHT"] * NAV[take.start], pause=0.4)
             self.d.key("DPAD_CENTER", pause=5)
 
-    # Output -------------------------------------------------------------------
-
-    def encode(self, args: list) -> None:
-        subprocess.run([self.ffmpeg, "-v", "error", "-y"] + [str(a) for a in args], check=True)
-
-    def web(self, source: Path, start: float, end: float, name: str) -> None:
-        """A 720p muted loop as MP4 and WebM."""
-        # screenrecord writes frames only when the screen changes: hold the last one to the full length.
-        scale = (f"fps=30,scale=1280:720:flags=lanczos,setpts=PTS-STARTPTS,"
-                 f"tpad=stop_mode=clone:stop_duration={end - start},trim=duration={end - start}")
-        cut = ["-ss", start, "-to", end, "-i", source, "-vf", scale, "-an"]
-        self.encode(cut + ["-c:v", "libx264", "-preset", "slow", "-crf", 26, "-pix_fmt", "yuv420p",
-                           "-movflags", "+faststart", CLIPS / f"{name}.mp4"])
-        self.encode(cut + ["-c:v", "libvpx-vp9", "-crf", 40, "-b:v", 0, "-row-mt", 1, CLIPS / f"{name}.webm"])
-
     def capture(self, name: str, take: Take) -> Path:
         self.prepare(take)
         remote = f"/sdcard/glacier-{name}.mp4"
         self.d.record(remote, take.steps)
-        raw = self.work / f"{name}{self.suffix}.mp4"
-        self.d.run("pull", remote, str(raw))
+        out = self.takes / f"{name}{self.suffix}.mp4"
+        self.d.run("pull", remote, str(out))
         self.d.shell(f"rm -f {remote}")
-        if self.keep:
-            shutil.copy(raw, self.keep / raw.name)
-        if take.clip:
-            self.web(raw, *take.clip, f"{name}{self.suffix}")
-        if take.still:
-            still, at = take.still
-            self.encode(["-ss", at, "-i", raw, "-frames:v", 1, "-vf", "scale=1280:720:flags=lanczos:out_range=full,format=yuvj420p", "-q:v", 3,
-                         SHOTS / f"{still}{self.suffix}.jpg"])
         print(f"  {name}{self.suffix}")
-        return raw
-
-    def raw(self, raws: dict[str, Path], name: str) -> Path:
-        """A take of this run, or one kept by an earlier run with --takes."""
-        if name in raws:
-            return raws[name]
-        kept = self.keep / f"{name}{self.suffix}.mp4" if self.keep else None
-        if kept is None or not kept.exists():
-            sys.exit(f"No take '{name}' for {self.lang}: record it in this run or keep takes with --takes")
-        return kept
-
-    def montage(self, name: str, raws: dict[str, Path]) -> None:
-        """Parts of several takes, cross-faded, as MP4 and WebM. The hero video goes next to the
-        screenshots as demo.*, with a GIF for the README."""
-        parts = MONTAGES[name]
-        hero = name == "hero"
-        width, height = (1120, 630) if hero else (1280, 720)
-        inputs, chain = [], []
-        for i, (take, start, end) in enumerate(parts):
-            inputs += ["-ss", start, "-to", end, "-i", self.raw(raws, take)]
-            # screenrecord writes frames only when the screen changes: hold the last one to the full length.
-            chain.append(f"[{i}:v]fps=30,scale={width}:{height}:flags=lanczos,setpts=PTS-STARTPTS,"
-                         f"tpad=stop_mode=clone:stop_duration={end - start},trim=duration={end - start}[v{i}]")
-        last, length = "v0", parts[0][2] - parts[0][1]
-        for i in range(1, len(parts)):
-            chain.append(f"[{last}][v{i}]xfade=transition=fade:duration={FADE}:offset={length - FADE:.2f}[x{i}]")
-            last, length = f"x{i}", length + parts[i][2] - parts[i][1] - FADE
-        out = SHOTS / f"demo{self.suffix}" if hero else CLIPS / f"{name}{self.suffix}"
-        base = inputs + ["-filter_complex", ";".join(chain), "-map", f"[{last}]", "-an"]
-        self.encode(base + ["-c:v", "libx264", "-preset", "slow", "-crf", 27 if hero else 26, "-pix_fmt", "yuv420p",
-                            "-movflags", "+faststart", f"{out}.mp4"])
-        self.encode(base + ["-c:v", "libvpx-vp9", "-crf", 40, "-b:v", 0, "-row-mt", 1, f"{out}.webm"])
-        if hero and self.lang == "en":
-            # The README shows the same animation as a GIF.
-            self.encode(["-i", f"{out}.mp4", "-vf",
-                         "fps=15,scale=800:450:flags=lanczos,split[a][b];[a]palettegen=stats_mode=diff[p];"
-                         "[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle", SHOTS / "demo.gif"])
-        print(f"  {out.name}")
+        return out
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--serial", help="adb serial of the emulator")
     parser.add_argument("--lang", default="en,de", help="comma-separated app languages, of " + ",".join(SNAPSHOTS))
-    parser.add_argument("--only", help=f"comma-separated subset of {','.join(list(TAKES) + list(MONTAGES))}")
-    parser.add_argument("--takes", type=Path, help="keep the full recordings in this folder")
+    parser.add_argument("--only", help=f"comma-separated subset of {','.join(TAKES)}")
+    parser.add_argument("--takes", type=Path, required=True, help="folder for the recordings")
     args = parser.parse_args()
-    wanted = args.only.split(",") if args.only else list(TAKES) + list(MONTAGES)
-    unknown = set(wanted) - set(TAKES) - set(MONTAGES)
+    wanted = args.only.split(",") if args.only else list(TAKES)
+    unknown = set(wanted) - set(TAKES)
     langs = args.lang.split(",")
     if unknown or set(langs) - set(SNAPSHOTS):
         sys.exit(f"Unknown: {', '.join(sorted(unknown | (set(langs) - set(SNAPSHOTS))))}")
@@ -465,20 +377,15 @@ def main() -> None:
     if "1920x1080" not in size:
         sys.exit(f"Expected a 1920x1080 screen, got '{size}'")
     server = Server()
-    CLIPS.mkdir(parents=True, exist_ok=True)
-    if args.takes:
-        args.takes.mkdir(parents=True, exist_ok=True)
-
-    with tempfile.TemporaryDirectory() as work:
-        for lang in langs:
-            print(lang)
-            capture = Capture(device, server, Path(work), lang, args.takes)
-            raws = {name: capture.capture(name, take) for name, take in TAKES.items() if name in wanted}
-            for name in MONTAGES:
-                if name in wanted:
-                    capture.montage(name, raws)
-        for ref, (seconds, played) in RESTORE.items():
-            server.resume_at(capture.item(ref), seconds, played)
+    args.takes.mkdir(parents=True, exist_ok=True)
+    for lang in langs:
+        print(lang)
+        capture = Capture(device, server, args.takes, lang)
+        for name, take in TAKES.items():
+            if name in wanted:
+                capture.capture(name, take)
+    for ref, (seconds, played) in RESTORE.items():
+        server.resume_at(capture.item(ref), seconds, played)
     device.shell(f"am force-stop {PACKAGE}")
 
 
