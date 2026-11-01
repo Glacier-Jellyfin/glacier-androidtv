@@ -70,6 +70,14 @@ unknown fields and hides Seerr results quietly when anything fails.
 Jellyfin 12.0 or newer. Older servers are shown greyed out and can be
 connected to only after an explicit confirmation.
 
+Glacier follows the current Jellyfin release and, like Jellyfin itself,
+expects servers to be kept up to date. The Jellyfin Kotlin SDK is updated
+with each server release; older SDK lines get no fixes, so Glacier does not
+support older server versions in parallel. When a new Jellyfin version
+requires it, the minimum version above is raised and the change is noted in
+the changelog. Users then have to update their server to keep using new
+Glacier releases.
+
 ### Self-update
 
 See [RELEASING.md](RELEASING.md#how-the-app-updates-itself).

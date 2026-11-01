@@ -101,6 +101,18 @@ adb shell "run-as $pkg mkdir -p files/updtest && run-as $pkg cp /data/local/tmp/
    a release takes longer than a CI run) and attaches a build provenance
    attestation to the APK (see `SECURITY.md`).
 
+### Raising the minimum server version
+
+When a release needs a newer Jellyfin version (see
+[ARCHITECTURE.md](ARCHITECTURE.md#server-compatibility)), change it in all of
+these places and say in both changelogs that servers have to be updated:
+
+- `MinimumServerVersion` in `core/jellyfin` `ServerInfo.kt`, and
+  `ServerInfoTest.kt`
+- `setup_unsupported_body` in `app/src/main/res/values{,-de}/strings.xml`
+- `README.md` (requirements table) and `docs/ARCHITECTURE.md`
+- `fastlane/metadata/android/{en-US,de-DE}/full_description.txt`
+
 ### Signing key
 
 The release keystore (`keytool -genkeypair -keystore glacier-release.jks
