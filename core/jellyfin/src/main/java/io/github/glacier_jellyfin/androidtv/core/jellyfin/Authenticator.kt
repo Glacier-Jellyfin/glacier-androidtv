@@ -37,6 +37,12 @@ data class PublicUser(
     val primaryImageTag: String?,
 )
 
+internal fun UserDto.toPublicUser() = PublicUser(
+    id = id,
+    name = name.orEmpty(),
+    primaryImageTag = primaryImageTag,
+)
+
 sealed interface SignInResult {
     data class Success(val user: SignedInUser) : SignInResult
     data object InvalidCredentials : SignInResult
@@ -159,12 +165,6 @@ class Authenticator @Inject constructor(
             accessToken = token,
         )
     }
-
-    private fun UserDto.toPublicUser() = PublicUser(
-        id = id,
-        name = name.orEmpty(),
-        primaryImageTag = primaryImageTag,
-    )
 
     private companion object {
         const val HTTP_UNAUTHORIZED = 401

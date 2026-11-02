@@ -30,9 +30,14 @@ language is German.
 ### Improved
 - The navigation bar leaves room for notices at the top right. When its entries need more room, the ones between search and settings scroll, and search, settings and the profile always stay in view
 - The player no longer calls music videos and recordings "Movies"
+- When the server does not answer, Glacier opens the server list, marks the server as not reachable and removes the mark as soon as it answers again
+- The server setup no longer shows a step count
+- The question whether to take over the settings of another device opens full screen, with the devices and the day each saved its settings
+- The server list counts the profiles of a server as "Who's watching?" shows them, including those set up only on this device
 
 ### Fixed
 - Right from the profile in the navigation bar no longer jumps down to the A–Z rail of a library
+- A server that was set up again at the same address replaces its old entry instead of being listed twice
 
 ## [0.7.1] - 2026-10-31
 

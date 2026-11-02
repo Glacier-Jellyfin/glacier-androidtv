@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.AccountRepository
+import io.github.glacier_jellyfin.androidtv.core.data.AccountState
+import io.github.glacier_jellyfin.androidtv.core.data.profilesFor
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.DiscoveredServer
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.ServerFinder
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.ServerInfo
@@ -17,14 +19,17 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ServerEntry(
     val server: ServerInfo,
-    val publicUserCount: Int? = null,
+    /** Profiles as "Who's watching?" lists them: the server's public users and those set up on this device; null while unknown. */
+    val profileCount: Int? = null,
     val latencyMillis: Long? = null,
-    /** False while a saved server has not answered (yet). */
+    /** False while a saved server does not answer. */
     val reachable: Boolean = true,
 )
 
@@ -45,6 +50,7 @@ class ServerListViewModel @Inject constructor(
     private val accounts: AccountRepository,
     private val finder: ServerFinder,
     private val connector: ServerConnector,
+    private val reachability: ServerReachability,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ServerListState())
@@ -63,20 +69,41 @@ class ServerListViewModel @Inject constructor(
     }
 
     private suspend fun loadSaved() {
-        val saved = accounts.current().servers.sortedByDescending { it.lastUsedAt }
+        val current = accounts.current()
+        val saved = current.servers.sortedByDescending { it.lastUsedAt }
         _state.update { state ->
             state.copy(
-                saved = saved.map { ServerEntry(ServerInfo(it.id, it.name, it.address, it.version)) },
+                saved = saved.map { stored ->
+                    ServerEntry(
+                        ServerInfo(stored.id, stored.name, stored.address, stored.version),
+                        profileCount = current.profilesFor(stored.id, publicUsers = null).size,
+                        reachable = reachability.isReachable(stored.id),
+                    )
+                },
                 savedLoaded = true,
             )
         }
-        saved.forEach { stored ->
-            viewModelScope.launch {
+        probeSaved()
+    }
+
+    /** Checks the saved servers again every [RECHECK_MILLIS] while the list is shown; one that answers again loses its hint. */
+    suspend fun watchReachability() {
+        while (true) {
+            delay(RECHECK_MILLIS)
+            probeSaved()
+        }
+    }
+
+    private suspend fun probeSaved() = coroutineScope {
+        _state.value.saved.map { it.server }.forEach { stored ->
+            launch {
                 val probe = finder.probe(stored.address)
+                reachability.report(stored.id, probe != null)
+                val accountState = accounts.current()
                 _state.update { state ->
                     state.copy(saved = state.saved.map { entry ->
                         if (entry.server.id != stored.id) entry
-                        else probe?.toEntry() ?: entry.copy(reachable = false)
+                        else probe?.toEntry(accountState) ?: entry.copy(reachable = false, latencyMillis = null)
                     })
                 }
             }
@@ -85,7 +112,7 @@ class ServerListViewModel @Inject constructor(
 
     private fun onDiscovered(found: DiscoveredServer) = _state.update { state ->
         if (state.saved.any { it.server.id == found.server.id } || state.discovered.any { it.server.id == found.server.id }) state
-        else state.copy(discovered = state.discovered + found.toEntry())
+        else state.copy(discovered = state.discovered + found.toEntry(AccountState()))
     }
 
     fun select(entry: ServerEntry) {
@@ -125,5 +152,11 @@ class ServerListViewModel @Inject constructor(
         _state.update { it.copy(connecting = null) }
     }
 
-    private fun DiscoveredServer.toEntry() = ServerEntry(server, publicUserCount, latencyMillis)
+    /** Public users and the profiles set up here, each counted once; only the local ones when the server did not list its users. */
+    private fun DiscoveredServer.toEntry(accountState: AccountState) =
+        ServerEntry(server, profileCount = accountState.profilesFor(server.id, publicUsers).size, latencyMillis = latencyMillis)
+
+    private companion object {
+        const val RECHECK_MILLIS = 10_000L
+    }
 }

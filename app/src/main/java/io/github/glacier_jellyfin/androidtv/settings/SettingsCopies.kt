@@ -1,6 +1,28 @@
 package io.github.glacier_jellyfin.androidtv.settings
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.tv.material3.Icon
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierBackground
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
+import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
+import io.github.glacier_jellyfin.androidtv.update.DialogMark
+import io.github.glacier_jellyfin.androidtv.update.FactLine
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
@@ -49,18 +71,105 @@ class RestoreViewModel @Inject constructor(private val sync: SettingsSync) : Vie
     }
 }
 
-/** "Take the settings of another device?" once a profile is new on this device; Back keeps them as they are. */
+/**
+ * "Take the settings of another device?" once a profile is new on this device, in the
+ * update dialog's layout: the question on the left, the devices with a copy on the
+ * right, newest first. Back or "Not now" keeps the settings as they are.
+ */
 @Composable
 fun RestoreOfferDialog(offer: RestoreOffer, onAnswer: (DeviceSettings?) -> Unit) {
-    DeviceCopyPicker(
-        title = stringResource(R.string.settings_restore_title),
-        body = stringResource(R.string.settings_restore_body, offer.userName),
-        copies = offer.copies,
-        thisDeviceId = offer.thisDeviceId,
-        dismiss = stringResource(R.string.settings_restore_skip),
-        onPick = onAnswer,
-        onDismiss = { onAnswer(null) },
-    )
+    BackHandler { onAnswer(null) }
+    val accent = LocalAccent.current.main
+    val first = remember { FocusRequester() }
+    val format = remember { DateFormat.getDateInstance(DateFormat.MEDIUM) }
+    GlacierBackground(Modifier.focusProperties { onExit = { cancelFocusChange() } }.focusGroup()) {
+        Column(Modifier.fillMaxSize().padding(start = 130.dp, end = 130.dp, top = 90.dp, bottom = 80.dp), verticalArrangement = Arrangement.spacedBy(48.dp)) {
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(100.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.width(640.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+                    DialogMark(GlacierIcons.Settings)
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Text(stringResource(R.string.settings_copy_take).uppercase(), style = GlacierText.label(18, 0.08), color = accent)
+                        Text(stringResource(R.string.settings_restore_title), style = GlacierText.display(64).copy(lineHeight = 70.sp), color = GlacierColors.Ice)
+                    }
+                    Text(
+                        stringResource(R.string.settings_restore_body, offer.userName),
+                        style = GlacierText.body(22).copy(lineHeight = 33.sp),
+                        color = GlacierColors.Mist,
+                    )
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(GlacierColors.GlassBorder))
+                    FactLine(stringResource(R.string.settings_restore_profile), offer.userName, mono = false)
+                }
+                val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .clip(shape)
+                        .background(GlacierColors.GlassFill)
+                        .border(1.dp, GlacierColors.GlassBorder, shape)
+                        .padding(40.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(stringResource(R.string.settings_restore_devices), style = GlacierText.display(30), color = GlacierColors.Ice, modifier = Modifier.weight(1f))
+                        Text(offer.copies.size.toString(), style = GlacierText.mono(17), color = GlacierColors.Mist)
+                    }
+                    Column(
+                        Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState()).padding(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        offer.copies.forEachIndexed { index, copy ->
+                            DeviceCard(
+                                copy,
+                                saved = stringResource(R.string.settings_restore_saved, format.format(Date(copy.savedAt))),
+                                tag = if (copy.deviceId == offer.thisDeviceId) stringResource(R.string.settings_copy_this_device) else null,
+                                onClick = { onAnswer(copy) },
+                                modifier = if (index == 0) Modifier.focusRequester(first) else Modifier,
+                            )
+                        }
+                    }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(40.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.settings_restore_hint), style = GlacierText.body(17), color = GlacierColors.Mist, modifier = Modifier.weight(1f))
+                PillButton(stringResource(R.string.settings_restore_skip), onClick = { onAnswer(null) }, height = 68, width = 260)
+            }
+        }
+    }
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        runCatching { first.requestFocus() }
+    }
+}
+
+/** One device with a copy of the settings in [RestoreOfferDialog]: its name, when it saved them, and [tag] for this device. */
+@Composable
+private fun DeviceCard(copy: DeviceSettings, saved: String, tag: String?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val accent = LocalAccent.current.main
+    val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
+    GlacierClickable(onClick = onClick, shape = shape, modifier = modifier.fillMaxWidth(), unfocusedBorder = GlacierColors.GlassBorder) { focused ->
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(GlacierColors.GlassFill)
+                .padding(horizontal = 28.dp, vertical = 22.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            Box(
+                Modifier.size(60.dp).clip(RoundedCornerShape(GlacierShapes.RadiusSm)).background(accent.copy(alpha = 0.16f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(GlacierIcons.Settings, contentDescription = null, tint = accent, modifier = Modifier.size(28.dp))
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(copy.deviceName, style = GlacierText.display(24), color = if (focused) accent else GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(saved, style = GlacierText.body(17), color = GlacierColors.Mist)
+            }
+            if (tag != null) AccentChip(tag)
+            Icon(GlacierIcons.ChevronRight, contentDescription = null, tint = if (focused) accent else GlacierColors.Ice, modifier = Modifier.size(22.dp))
+        }
+    }
 }
 
 /**

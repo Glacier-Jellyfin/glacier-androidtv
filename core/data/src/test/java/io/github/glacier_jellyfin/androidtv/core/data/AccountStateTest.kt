@@ -28,6 +28,15 @@ class AccountStateTest {
     }
 
     @Test
+    fun `a new server at a saved address replaces the old one and its profiles`() {
+        val reset = server.copy(id = "s2", address = "http://HOME:8096/")
+        val state = AccountState().withServer(server, now = 1).withSignIn(signIn(anna, "Anna"), now = 2).withServer(reset, now = 3)
+        assertEquals(listOf("s2"), state.servers.map { it.id })
+        assertTrue(state.users.isEmpty())
+        assertEquals("s2", state.lastServerId)
+    }
+
+    @Test
     fun `signing in again keeps the local pin`() {
         val pin = Pins.hash("1234", salt = ByteArray(16), iterations = 1)
         val state = AccountState()

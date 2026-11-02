@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
-import io.github.glacier_jellyfin.androidtv.core.designsystem.AccentChip
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
@@ -84,19 +83,6 @@ fun SetupHeading(title: String, body: String, brand: String? = null) {
     }
     Text(title, style = GlacierText.display(60).copy(lineHeight = 63.sp), color = GlacierColors.Ice)
     Text(body, style = GlacierText.body(23).copy(lineHeight = 34.sp), color = GlacierColors.Mist, modifier = Modifier.widthIn(max = 490.dp))
-}
-
-/** "Step 1 of 2 · Server" under the intro. */
-@Composable
-fun SetupStep(step: Int, label: String) {
-    Row(
-        modifier = Modifier.padding(top = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        AccentChip(stringResource(R.string.setup_step, step, 2))
-        Text(label, style = GlacierText.body(18), color = GlacierColors.Mist)
-    }
 }
 
 /** The accent dot in front of status lines; it pulses while something is going on. */

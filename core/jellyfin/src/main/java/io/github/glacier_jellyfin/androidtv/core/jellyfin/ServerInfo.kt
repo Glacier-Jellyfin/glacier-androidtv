@@ -22,7 +22,7 @@ data class ServerInfo(
 /** A server found on the local network, with the extra details the server list shows. */
 data class DiscoveredServer(
     val server: ServerInfo,
-    /** Number of users visible on the login screen, null when the server did not tell. */
-    val publicUserCount: Int?,
+    /** Users visible on the login screen, null when the server did not tell. */
+    val publicUsers: List<PublicUser>?,
     val latencyMillis: Long,
 )

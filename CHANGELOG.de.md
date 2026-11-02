@@ -15,9 +15,14 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 ### Verbessert
 - Die Navigationsleiste lässt oben rechts Platz für Hinweise. Brauchen ihre Einträge mehr Platz, scrollen die zwischen Suche und Einstellungen, und Suche, Einstellungen und Profil bleiben immer sichtbar
 - Der Player nennt Musikvideos und Aufnahmen nicht mehr „Filme“
+- Antwortet der Server nicht, öffnet Glacier die Serverauswahl, markiert den Server als nicht erreichbar und entfernt die Markierung, sobald er wieder antwortet
+- Die Servereinrichtung zeigt keine Schrittzahl mehr
+- Die Frage, ob die Einstellungen eines anderen Geräts übernommen werden sollen, öffnet sich im Vollbild, mit den Geräten und dem Tag, an dem jedes seine Einstellungen gespeichert hat
+- Die Serverauswahl zählt die Profile eines Servers so, wie „Wer schaut?“ sie zeigt, auch die nur auf diesem Gerät eingerichteten
 
 ### Behoben
 - Rechts vom Profil in der Navigationsleiste springt der Fokus nicht mehr hinunter zur A–Z-Leiste einer Bibliothek
+- Ein unter derselben Adresse neu eingerichteter Server ersetzt seinen alten Eintrag, statt doppelt in der Liste zu stehen
 
 ## [0.7.1] - 2026-10-31
 

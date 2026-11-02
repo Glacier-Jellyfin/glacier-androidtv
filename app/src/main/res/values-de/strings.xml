@@ -3,16 +3,14 @@
     <!-- Einrichtung: Server -->
     <string name="setup_welcome">Willkommen</string>
     <string name="setup_intro">Verbinde dieses Gerät mit deinem Jellyfin-Server. Server im gleichen Netzwerk werden automatisch gefunden.</string>
-    <string name="setup_step">Schritt %1$d von %2$d</string>
-    <string name="setup_step_server">Server</string>
     <string name="setup_found_on_network">Im Netzwerk gefunden</string>
     <string name="setup_saved_servers">Gespeicherte Server</string>
     <string name="setup_searching">Suche im Netzwerk …</string>
     <string name="setup_nothing_found">Kein Server in diesem Netzwerk gefunden.</string>
     <string name="setup_manual_address">Serveradresse manuell eingeben</string>
-    <plurals name="setup_users">
-        <item quantity="one">%1$d Benutzer</item>
-        <item quantity="other">%1$d Benutzer</item>
+    <plurals name="setup_profiles">
+        <item quantity="one">%1$d Profil</item>
+        <item quantity="other">%1$d Profile</item>
     </plurals>
     <string name="setup_latency">%1$d ms</string>
     <string name="setup_unsupported">Jellyfin %1$s · nicht unterstützt</string>
@@ -47,7 +45,6 @@
     <string name="profiles_title">Wer schaut?</string>
     <string name="profiles_other_user">Anderer Benutzer</string>
     <string name="profiles_server_line">%1$s · Jellyfin %2$s · Glacier %3$s</string>
-    <string name="profiles_offline">Server nicht erreichbar · Profile dieses Geräts werden angezeigt</string>
     <string name="pin_title">PIN für %1$s</string>
     <string name="pin_hint">Vier Ziffern eingeben</string>
     <string name="pin_wheel_delete">Löschen</string>
@@ -433,7 +430,6 @@
     <string name="address_port">Port</string>
     <string name="signin_intro">Melde dich mit deinem Jellyfin-Konto an. Dieses Gerät bleibt danach angemeldet.</string>
     <string name="signin_change_server">Server wechseln</string>
-    <string name="setup_step_account">Konto</string>
     <string name="field_ok">OK</string>
     <string name="field_typing">Tippen …</string>
     <string name="keyboard_open_hint">Systemtastatur aktiv · mit OK bestätigen, mit Zurück schließen</string>
@@ -932,7 +928,11 @@
     <string name="settings_copy_delete_server">Vom Server löschen</string>
     <string name="settings_copy_delete_own">Löschen und Profil entfernen</string>
     <string name="settings_restore_title">Einstellungen übernehmen?</string>
-    <string name="settings_restore_body">Für %1$s sind Einstellungen auf dem Server gespeichert. Wähle ein Gerät, um seine Einstellungen hier zu übernehmen. Das geht auch später unter Einstellungen › Konto.</string>
+    <string name="settings_restore_body">Für %1$s sind Einstellungen auf dem Server gespeichert. Wähle ein Gerät, um seine Einstellungen hier zu übernehmen.</string>
+    <string name="settings_restore_hint">Das geht auch später unter Einstellungen › Konto. Anmeldung, PIN und Jugendschutz bleiben, wie sie sind.</string>
+    <string name="settings_restore_devices">Geräte</string>
+    <string name="settings_restore_saved">Gespeichert am %1$s</string>
+    <string name="settings_restore_profile">Profil</string>
     <string name="settings_restore_skip">Nicht übernehmen</string>
     <string name="settings_remove">Von diesem Gerät entfernen</string>
     <string name="settings_remove_sub">Löscht Anmeldung, PIN, Jugendschutz und Einstellungen hier. Das Jellyfin-Konto bleibt bestehen</string>

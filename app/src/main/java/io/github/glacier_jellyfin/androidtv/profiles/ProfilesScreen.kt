@@ -121,13 +121,8 @@ fun ProfilesScreen(
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 46.dp),
                 contentAlignment = Alignment.Center,
             ) { focused ->
-                val line = if (state.offline) {
-                    stringResource(R.string.profiles_offline)
-                } else {
-                    stringResource(R.string.profiles_server_line, server.address, server.version.orEmpty(), BuildConfig.VERSION_NAME)
-                }
                 Text(
-                    line,
+                    stringResource(R.string.profiles_server_line, server.address, server.version.orEmpty(), BuildConfig.VERSION_NAME),
                     style = GlacierText.body(17),
                     color = if (focused) LocalAccent.current.main else GlacierColors.Mist,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),

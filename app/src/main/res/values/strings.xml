@@ -5,16 +5,14 @@
     <!-- Setup: server -->
     <string name="setup_welcome">Welcome</string>
     <string name="setup_intro">Connect this device to your Jellyfin server. Servers on the same network are found automatically.</string>
-    <string name="setup_step">Step %1$d of %2$d</string>
-    <string name="setup_step_server">Server</string>
     <string name="setup_found_on_network">Found on network</string>
     <string name="setup_saved_servers">Saved servers</string>
     <string name="setup_searching">Searching the network …</string>
     <string name="setup_nothing_found">No server found on this network.</string>
     <string name="setup_manual_address">Enter server address manually</string>
-    <plurals name="setup_users">
-        <item quantity="one">%1$d user</item>
-        <item quantity="other">%1$d users</item>
+    <plurals name="setup_profiles">
+        <item quantity="one">%1$d profile</item>
+        <item quantity="other">%1$d profiles</item>
     </plurals>
     <string name="setup_latency">%1$d ms</string>
     <string name="setup_unsupported">Jellyfin %1$s · not supported</string>
@@ -52,7 +50,6 @@
     <string name="platform_fire_tv" translatable="false">Fire TV</string>
     <string name="profiles_other_user">Other user</string>
     <string name="profiles_server_line">%1$s · Jellyfin %2$s · Glacier %3$s</string>
-    <string name="profiles_offline">Server not reachable · showing profiles known on this device</string>
     <string name="pin_title">PIN for %1$s</string>
     <string name="pin_hint">Enter four digits</string>
     <string name="pin_wheel_delete">Delete</string>
@@ -439,7 +436,6 @@
     <string name="address_port">Port</string>
     <string name="signin_intro">Sign in with your Jellyfin account. This device stays signed in afterwards.</string>
     <string name="signin_change_server">Change server</string>
-    <string name="setup_step_account">Account</string>
     <string name="field_ok">OK</string>
     <string name="field_typing">Typing …</string>
     <string name="keyboard_open_hint">System keyboard active · confirm with OK, close with Back</string>
@@ -938,7 +934,11 @@
     <string name="settings_copy_delete_server">Delete from the server</string>
     <string name="settings_copy_delete_own">Delete and remove profile</string>
     <string name="settings_restore_title">Take over your settings?</string>
-    <string name="settings_restore_body">Settings of %1$s are saved on the server. Pick a device to use its settings here. You can still do this later in Settings › Account.</string>
+    <string name="settings_restore_body">Settings of %1$s are saved on the server. Pick a device to use its settings here.</string>
+    <string name="settings_restore_hint">You can still do this later in Settings › Account. Sign-in, PIN and parental control stay as they are.</string>
+    <string name="settings_restore_devices">Devices</string>
+    <string name="settings_restore_saved">Saved on %1$s</string>
+    <string name="settings_restore_profile">Profile</string>
     <string name="settings_restore_skip">Not now</string>
     <string name="settings_remove">Remove from this device</string>
     <string name="settings_remove_sub">Deletes sign-in, PIN, parental control and settings here. The Jellyfin account stays</string>

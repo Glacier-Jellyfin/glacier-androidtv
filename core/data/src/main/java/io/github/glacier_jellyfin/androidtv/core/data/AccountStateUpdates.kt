@@ -8,10 +8,18 @@ import io.github.glacier_jellyfin.androidtv.core.jellyfin.SignedInUser
  * Pure state transitions, kept apart from DataStore so they can be unit tested.
  */
 
+/**
+ * Another server saved at the same address is gone (a reinstalled or reset server has a new id),
+ * so it is replaced together with its profiles instead of being listed twice.
+ */
 internal fun AccountState.withServer(server: ServerInfo, now: Long): AccountState {
     val stored = StoredServer(server.id, server.name, server.address, server.version, lastUsedAt = now)
-    return copy(servers = servers.filterNot { it.id == server.id } + stored, lastServerId = server.id)
+    val replaced = servers.filter { it.id != server.id && sameAddress(it.address, server.address) }
+    val remaining = replaced.fold(this) { state, old -> state.withoutServer(old.id) }
+    return remaining.copy(servers = remaining.servers.filterNot { it.id == server.id } + stored, lastServerId = server.id)
 }
+
+private fun sameAddress(a: String, b: String) = a.trimEnd('/').equals(b.trimEnd('/'), ignoreCase = true)
 
 internal fun AccountState.withSignIn(user: SignedInUser, now: Long): AccountState {
     val key = user.serverId to user.userId.toString()

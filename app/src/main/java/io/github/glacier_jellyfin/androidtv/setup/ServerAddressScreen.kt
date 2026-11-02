@@ -49,7 +49,6 @@ fun ServerAddressScreen(
     SetupLayout(
         intro = {
             SetupHeading(stringResource(R.string.address_heading), stringResource(R.string.address_intro))
-            SetupStep(1, stringResource(R.string.setup_step_server))
         },
     ) {
         InputField(

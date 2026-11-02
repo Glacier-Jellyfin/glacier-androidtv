@@ -29,7 +29,10 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
@@ -59,6 +62,10 @@ fun ServerListScreen(
     LaunchedEffect(state.savedLoaded) {
         if (state.savedLoaded) runCatching { firstFocus.requestFocus() }
     }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { viewModel.watchReachability() }
+    }
 
     Row(
         modifier = Modifier.fillMaxSize().padding(horizontal = 130.dp),
@@ -71,7 +78,6 @@ fun ServerListScreen(
                 body = stringResource(R.string.setup_intro),
                 brand = stringResource(R.string.app_name),
             )
-            SetupStep(1, stringResource(R.string.setup_step_server))
         }
 
         Column(
@@ -153,10 +159,15 @@ private fun ServerCard(entry: ServerEntry, onClick: () -> Unit, modifier: Modifi
                 Modifier
                     .size(66.dp)
                     .clip(RoundedCornerShape(GlacierShapes.RadiusSm))
-                    .background(accent.copy(alpha = 0.16f)),
+                    .background(if (entry.reachable) accent.copy(alpha = 0.16f) else GlacierColors.GlassFill2),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(GlacierIcons.Server, contentDescription = null, tint = accent, modifier = Modifier.size(30.dp))
+                // A server that does not answer shows it in place of the server symbol.
+                if (entry.reachable) {
+                    Icon(GlacierIcons.Server, contentDescription = null, tint = accent, modifier = Modifier.size(30.dp))
+                } else {
+                    Icon(GlacierIcons.WifiOff, contentDescription = null, tint = GlacierColors.Ice, modifier = Modifier.size(34.dp))
+                }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 Text(
@@ -178,12 +189,12 @@ private fun ServerCard(entry: ServerEntry, onClick: () -> Unit, modifier: Modifi
                 val meta = when {
                     !entry.reachable -> stringResource(R.string.setup_offline)
                     latency == null -> null
-                    entry.publicUserCount != null ->
-                        pluralStringResource(R.plurals.setup_users, entry.publicUserCount, entry.publicUserCount) +
+                    entry.profileCount != null ->
+                        pluralStringResource(R.plurals.setup_profiles, entry.profileCount, entry.profileCount) +
                             " · " + stringResource(R.string.setup_latency, latency)
                     else -> stringResource(R.string.setup_latency, latency)
                 }
-                if (meta != null) Text(meta, style = GlacierText.body(16), color = GlacierColors.Mist)
+                if (meta != null) Text(meta, style = GlacierText.body(16), color = if (entry.reachable) GlacierColors.Mist else GlacierColors.Ice)
             }
             Icon(
                 GlacierIcons.ChevronRight,

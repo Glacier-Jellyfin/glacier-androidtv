@@ -119,7 +119,7 @@ fun UpdateDialog(candidate: UpdateCandidate, installed: AppVersion, onNow: () ->
         Column(Modifier.fillMaxSize().padding(start = 130.dp, end = 130.dp, top = 90.dp, bottom = 80.dp), verticalArrangement = Arrangement.spacedBy(48.dp)) {
             Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(100.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.width(640.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
-                    UpdateMark()
+                    DialogMark()
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Text(
                             stringResource(if (candidate.version.isBeta) R.string.update_eyebrow_beta else R.string.update_eyebrow).uppercase(),
@@ -192,7 +192,7 @@ fun WhatsNewDialog(prompt: WhatsNewPrompt, onClose: () -> Unit) {
         Column(Modifier.fillMaxSize().padding(start = 130.dp, end = 130.dp, top = 90.dp, bottom = 80.dp), verticalArrangement = Arrangement.spacedBy(48.dp)) {
             Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(100.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.width(640.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
-                    UpdateMark(GlacierIcons.Sparkle)
+                    DialogMark(GlacierIcons.Sparkle)
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Text(stringResource(R.string.whats_new_eyebrow).uppercase(), style = GlacierText.label(18, 0.08), color = accent)
                         Text(stringResource(R.string.update_title, prompt.current.displayName.replace(" Beta", "\nBeta")), style = GlacierText.display(76), color = GlacierColors.Ice)
@@ -276,7 +276,7 @@ private fun NotesPanel(notes: List<VersionNotes>, range: String, scroll: ScrollS
 
 /** The outlined diamond with the accent core and [icon]: a down arrow for an update, a sparkle for "What's new". */
 @Composable
-private fun UpdateMark(icon: ImageVector = GlacierIcons.ArrowDown) {
+internal fun DialogMark(icon: ImageVector = GlacierIcons.ArrowDown) {
     val accent = LocalAccent.current.main
     Box(Modifier.size(96.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
@@ -320,7 +320,7 @@ private fun VersionChip(text: String, highlight: Boolean) {
 }
 
 @Composable
-private fun FactLine(label: String, value: String, mono: Boolean) {
+internal fun FactLine(label: String, value: String, mono: Boolean) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
         Text(label, style = GlacierText.body(19), color = GlacierColors.Mist, modifier = Modifier.weight(1f))
         Text(value, style = if (mono) GlacierText.mono(19) else GlacierText.body(19), color = GlacierColors.Ice)
@@ -367,7 +367,7 @@ fun DownloadingOverlay(version: AppVersion, bytes: Long, total: Long, onCancel: 
         contentAlignment = Alignment.Center,
     ) {
         Column(Modifier.width(640.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(26.dp)) {
-            UpdateMark()
+            DialogMark()
             Text(stringResource(R.string.update_downloading_title, version.displayName), style = GlacierText.display(28), color = GlacierColors.Ice)
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.fillMaxWidth().height(8.dp).clip(PillShape).background(GlacierColors.GlassFill2)) {

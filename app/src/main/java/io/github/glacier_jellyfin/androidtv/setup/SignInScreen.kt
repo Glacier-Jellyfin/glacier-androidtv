@@ -66,7 +66,6 @@ fun SignInScreen(
         intro = {
             SetupHeading(stringResource(R.string.signin_title), stringResource(R.string.signin_intro))
             state.server?.let { ServerBadge(it) }
-            SetupStep(2, stringResource(R.string.setup_step_account))
         },
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(26.dp)) {

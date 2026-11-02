@@ -57,7 +57,7 @@ class ServerFinder @Inject constructor(
             measureTimedValue { api.systemApi.getPublicSystemInfo().content }
         }.getOrNull() ?: return null
         val server = info.toServerInfo(address) ?: return null
-        val users = runSuspendCatching { api.userApi.getPublicUsers().content.size }.getOrNull()
+        val users = runSuspendCatching { api.userApi.getPublicUsers().content.map { it.toPublicUser() } }.getOrNull()
         return DiscoveredServer(server, users, latency.inWholeMilliseconds)
     }
 

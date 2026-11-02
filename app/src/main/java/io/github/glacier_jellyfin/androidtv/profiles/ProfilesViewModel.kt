@@ -25,6 +25,7 @@ import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ServerListRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SignInRoute
+import io.github.glacier_jellyfin.androidtv.setup.ServerReachability
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -45,8 +46,6 @@ data class ProfilesState(
     val server: StoredServer? = null,
     val profiles: List<ProfileCard> = emptyList(),
     val loading: Boolean = true,
-    /** The server did not answer; only profiles known on this device are shown. */
-    val offline: Boolean = false,
     val pinFor: Profile? = null,
     val pin: String = "",
     val pinWrong: Boolean = false,
@@ -63,6 +62,7 @@ class ProfilesViewModel @Inject constructor(
     private val authenticator: Authenticator,
     private val sessions: SessionManager,
     private val settings: SettingsRepository,
+    private val reachability: ServerReachability,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<ProfilesRoute>()
@@ -89,6 +89,10 @@ class ProfilesViewModel @Inject constructor(
                 return@launch
             }
             val users = runSuspendCatching { authenticator.publicUsers(server.address) }
+            if (users.isFailure) {
+                leaveUnreachable()
+                return@launch
+            }
             publicUsers.value = users.getOrNull()
             // Nobody to pick (no public users, nobody signed in here before): go straight to sign-in.
             if (users.getOrNull()?.isEmpty() == true && accounts.current().users.none { it.serverId == serverId }) {
@@ -96,7 +100,7 @@ class ProfilesViewModel @Inject constructor(
                 return@launch
             }
             if (_state.value.starting) start(users.getOrNull())
-            _state.update { it.copy(loading = false, offline = users.isFailure) }
+            _state.update { it.copy(loading = false) }
         }
         viewModelScope.launch {
             combine(accounts.state, publicUsers, settings.accents(serverId)) { state, public, accents ->
@@ -115,7 +119,7 @@ class ProfilesViewModel @Inject constructor(
         }
     }
 
-    /** Opens the start profile, or focuses it when it needs its PIN (see [startChoice]). Returns true when it opened. */
+    /** Opens the start profile, or focuses it when it needs its PIN (see [startChoice]). Returns true when this screen is left (see [open]). */
     private suspend fun start(publicUsers: List<PublicUser>?): Boolean {
         val state = accounts.current()
         val profiles = state.profilesFor(serverId, publicUsers)
@@ -169,13 +173,17 @@ class ProfilesViewModel @Inject constructor(
         }
     }
 
-    /** Returns true when the profile opened (and Home is on its way). */
+    /** Returns true when this screen is left: the profile opened (and Home is on its way), or the server did not answer. */
     private suspend fun open(profile: Profile): Boolean {
         val server = _state.value.server ?: return false
         val token = accounts.current().users.firstOrNull { it.serverId == serverId && it.userId == profile.userId }?.accessToken
-        // A revoked token sends the user to sign-in; an unreachable server does not.
-        val valid = token != null && runSuspendCatching { authenticator.isTokenValid(server.address, token) }.getOrDefault(true)
-        if (!valid) {
+        // A revoked token sends the user to sign-in, an unreachable server to the server list.
+        val check = token?.let { runSuspendCatching { authenticator.isTokenValid(server.address, it) } }
+        if (check?.isFailure == true) {
+            leaveUnreachable()
+            return true
+        }
+        if (check?.getOrNull() != true) {
             accounts.forgetToken(serverId, profile.userId)
             navigate(SignInRoute(serverId, profile.name))
             return false
@@ -183,6 +191,12 @@ class ProfilesViewModel @Inject constructor(
         if (!sessions.open(serverId, profile.userId)) return false
         _events.send(UiEvent.Navigate(HomeRoute, clearBackStack = true))
         return true
+    }
+
+    /** The server did not answer: the server list shows it as not reachable, and another server can be picked. */
+    private suspend fun leaveUnreachable() {
+        reachability.report(serverId, reachable = false)
+        _events.send(UiEvent.Navigate(ServerListRoute, clearBackStack = true))
     }
 
     private fun navigate(route: Any) {
