@@ -388,8 +388,9 @@ private fun NavLabel(text: String, color: Color) {
 }
 
 /** Ids of the entries Settings › Appearance arranges, in their default order; Live TV only when the server has it. */
+/** Music videos are a tab of music; they have their own entry only on a server without music. */
 fun navEntryIds(kinds: List<LibraryKind>, liveTv: Boolean): List<String> =
-    listOf(NAV_HOME) + kinds.map { it.name } + listOfNotNull(NAV_LIVE_TV.takeIf { liveTv }) + NAV_FAVORITES
+    listOf(NAV_HOME) + kinds.filterNot { it == LibraryKind.MusicVideos && LibraryKind.Music in kinds }.map { it.name } + listOfNotNull(NAV_LIVE_TV.takeIf { liveTv }) + NAV_FAVORITES
 
 fun navTargetOf(id: String): NavTarget? = when (id) {
     NAV_HOME -> NavTarget.Home

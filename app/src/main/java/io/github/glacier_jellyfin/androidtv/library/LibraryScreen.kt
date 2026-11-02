@@ -187,7 +187,9 @@ fun LibraryScreen(
     val songsTitle = stringResource(R.string.scope_songs)
     // Songs are a one-column list: title, artist and album need the width.
     val songList = state.query.scope == LibraryScope.Songs
-    val columns = if (songList) 1 else sizes.gridColumns
+    // Music videos are 16:9 cards, fewer to a row.
+    val wide = state.query.scope == LibraryScope.MusicVideos
+    val columns = if (songList) 1 else if (wide) sizes.wideColumns else sizes.gridColumns
     // Where each title sits in the grid: after the title and toolbar, and after the heading of its group and those before.
     val positions = remember(state.items) { gridPositions(state.items) }
     val gridCount = HEADER_ITEMS + state.items.size + (positions.lastOrNull()?.let { it - HEADER_ITEMS - state.items.lastIndex } ?: 0)
@@ -281,7 +283,7 @@ fun LibraryScreen(
                     state = gridState,
                     // Cells as wide as the cards, packed from the left like the design's rows.
                     // The song list is as wide as the cards' rows, so the toolbar ends in the same place on every tab.
-                    columns = GridCells.FixedSize(if (songList) (sizes.gridColumns * sizes.posterWidth + (sizes.gridColumns - 1) * sizes.gridGap).dp else sizes.posterWidth.dp),
+                    columns = GridCells.FixedSize(if (songList) (sizes.gridColumns * sizes.posterWidth + (sizes.gridColumns - 1) * sizes.gridGap).dp else if (wide) sizes.wideWidth.dp else sizes.posterWidth.dp),
                     // Without the A–Z rail the list keeps its width, so the toolbar and songs stay where they are.
                     contentPadding = PaddingValues(start = 80.dp, end = if (showRail) 22.dp else RAIL_SPACE.dp, top = 150.dp, bottom = 120.dp),
                     horizontalArrangement = Arrangement.spacedBy(sizes.gridGap.dp),
@@ -357,13 +359,14 @@ fun LibraryScreen(
                                     modifier = focus.then(onFocus),
                                 )
                             } else GridCard(
-                                imageUrl = item.posterUrl,
+                                imageUrl = if (item.kind == ItemKind.MusicVideo) item.thumbUrl ?: item.posterUrl else item.posterUrl,
                                 title = item.title,
                                 caption = captionFor(item, sort = state.query.sort.takeUnless { state.query.listedByName }),
                                 onClick = { viewModel.open(item) },
                                 shape = when (item.kind) {
                                     ItemKind.Album, ItemKind.Playlist -> CardShape.Square
                                     ItemKind.Artist -> CardShape.Round
+                                    ItemKind.MusicVideo -> CardShape.Wide
                                     else -> CardShape.Poster
                                 },
                                 watched = item.played && item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode, ItemKind.MusicVideo, ItemKind.Collection),
@@ -785,7 +788,7 @@ private fun gridPositions(items: List<MediaItem>): IntArray {
 /** The card's caption, plus the value the grid is sorted by when the caption does not show it yet. */
 @Composable
 private fun captionFor(item: MediaItem, sort: LibrarySort?): String? {
-    val showsYear = item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode, ItemKind.MusicVideo)
+    val showsYear = item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode)
     val sorted = when (sort) {
         LibrarySort.Year -> item.year?.takeUnless { showsYear }?.toString()
         LibrarySort.Runtime ->
@@ -800,6 +803,7 @@ private fun captionFor(item: MediaItem, sort: LibrarySort?): String? {
 @Composable
 private fun baseCaption(item: MediaItem): String? = when (item.kind) {
     ItemKind.Album, ItemKind.Song -> item.parentTitle
+    ItemKind.MusicVideo -> item.parentTitle ?: stringResource(R.string.group_unknown_artist)
     ItemKind.Collection, ItemKind.Genre, ItemKind.Playlist -> item.childCount?.let { pluralStringResource(R.plurals.count_titles, it, it) }
     ItemKind.Artist -> item.childCount?.let { pluralStringResource(R.plurals.count_albums, it, it) }
     else -> yearText(item)
@@ -813,6 +817,7 @@ private fun countText(scope: LibraryScope, kind: LibraryKind, count: Int): Strin
     LibraryScope.Playlists -> pluralStringResource(R.plurals.count_playlists, count, count)
     LibraryScope.Albums -> pluralStringResource(R.plurals.count_albums, count, count)
     LibraryScope.Songs -> pluralStringResource(R.plurals.count_songs, count, count)
+    LibraryScope.MusicVideos -> pluralStringResource(R.plurals.count_videos, count, count)
     else -> if (kind == LibraryKind.Music) pluralStringResource(R.plurals.count_albums, count, count) else pluralStringResource(R.plurals.count_titles, count, count)
 }
 
@@ -824,6 +829,7 @@ private val LibraryScope.label: Int
         LibraryScope.Albums -> R.string.scope_albums
         LibraryScope.Artists -> R.string.scope_artists
         LibraryScope.Songs -> R.string.scope_songs
+        LibraryScope.MusicVideos -> R.string.scope_music_videos
         LibraryScope.Playlists -> R.string.scope_playlists
     }
 

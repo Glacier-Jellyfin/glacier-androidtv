@@ -36,7 +36,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /** The filter chips of the library screen. */
-enum class LibraryScope { All, Collections, Genres, Albums, Artists, Songs, Playlists }
+enum class LibraryScope { All, Collections, Genres, Albums, Artists, Songs, MusicVideos, Playlists }
 
 enum class LibrarySort { DateAdded, Title, Artist, Album, Year, Rating, Runtime }
 
@@ -88,6 +88,7 @@ data class LibraryQuery(
         LibraryScope.Songs -> listOf(
             LibrarySort.DateAdded, LibrarySort.Title, LibrarySort.Artist, LibrarySort.Album, LibrarySort.Year, LibrarySort.Runtime,
         )
+        LibraryScope.MusicVideos -> listOf(LibrarySort.DateAdded, LibrarySort.Title, LibrarySort.Year, LibrarySort.Artist)
         else -> listOf(LibrarySort.DateAdded, LibrarySort.Title, LibrarySort.Year, LibrarySort.Rating, LibrarySort.Runtime)
     }
 
@@ -109,8 +110,11 @@ data class LibraryQuery(
     companion object {
         fun defaultScope(kind: LibraryKind) = if (kind == LibraryKind.Music) LibraryScope.Albums else LibraryScope.All
 
-        fun scopes(kind: LibraryKind, inGenre: Boolean): List<LibraryScope> = when {
-            kind == LibraryKind.Music -> listOf(LibraryScope.Albums, LibraryScope.Artists, LibraryScope.Songs, LibraryScope.Playlists)
+        /** Music has a tab for the music videos when the server has a library of them ([musicVideos]). */
+        fun scopes(kind: LibraryKind, inGenre: Boolean, musicVideos: Boolean = false): List<LibraryScope> = when {
+            kind == LibraryKind.Music -> listOfNotNull(
+                LibraryScope.Albums, LibraryScope.Artists, LibraryScope.Songs, LibraryScope.MusicVideos.takeIf { musicVideos }, LibraryScope.Playlists,
+            )
             inGenre -> listOf(LibraryScope.All)
             kind == LibraryKind.Movies || kind == LibraryKind.Shows -> listOf(LibraryScope.All, LibraryScope.Collections, LibraryScope.Genres)
             else -> listOf(LibraryScope.All, LibraryScope.Genres)
@@ -208,7 +212,11 @@ class LibraryRepository @Inject constructor(
             year = dto.productionYear,
             rating = dto.communityRating,
             runtimeMs = dto.runTimeTicks?.div(10_000),
-            artist = (if (query.scope == LibraryScope.Songs) dto.artists?.firstOrNull() ?: dto.albumArtist else dto.albumArtist)?.once(),
+            artist = when (query.scope) {
+                LibraryScope.Songs -> dto.artists?.firstOrNull() ?: dto.albumArtist
+                LibraryScope.MusicVideos -> dto.artists?.firstOrNull()
+                else -> dto.albumArtist
+            }?.once(),
             albumId = dto.albumId?.toString()?.once(),
             album = dto.album?.once(),
             disc = dto.parentIndexNumber,
@@ -497,7 +505,8 @@ class LibraryRepository @Inject constructor(
             ).content
             else -> session.api.libraryApi.getItems(
                 userId = userId,
-                parentId = if (query.scope == LibraryScope.Playlists) null else query.libraryId,
+                // Music videos come from their own libraries, not the music library the tab belongs to.
+                parentId = if (query.scope == LibraryScope.Playlists || query.scope == LibraryScope.MusicVideos) null else query.libraryId,
                 ids = only,
                 recursive = true,
                 includeItemTypes = listOf(itemTypeFor(query)),
@@ -524,6 +533,7 @@ class LibraryRepository @Inject constructor(
         LibraryScope.Collections -> BaseItemKind.BOX_SET
         LibraryScope.Playlists -> BaseItemKind.PLAYLIST
         LibraryScope.Songs -> BaseItemKind.AUDIO
+        LibraryScope.MusicVideos -> BaseItemKind.MUSIC_VIDEO
         else -> query.kind.itemType
     }
 

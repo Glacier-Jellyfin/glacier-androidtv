@@ -67,6 +67,10 @@ data class CardSizes(
     val castSize: Int,
     val castGap: Int,
 ) {
+    /** 16:9 cards in a grid as wide as the poster grid, two columns fewer. */
+    val wideColumns: Int get() = gridColumns - 2
+    val wideWidth: Int get() = (gridColumns * posterWidth + (gridColumns - wideColumns) * gridGap) / wideColumns
+
     companion object {
         val Comfortable = CardSizes(
             continueWidth = 316, continueHeight = 178, posterWidth = 216, posterHeight = 324, rowGap = 26, rowBottom = 46,
@@ -309,7 +313,7 @@ fun ProgressBar(progress: Float, modifier: Modifier = Modifier, track: Color = G
     }
 }
 
-enum class CardShape { Poster, Square, Round }
+enum class CardShape { Poster, Square, Round, Wide }
 
 /**
  * Library grid tile (design: `libGrid`): artwork, title and one caption line,
@@ -330,13 +334,17 @@ fun GridCard(
 ) {
     val accent = LocalAccent.current.main
     val outline: Shape = when (shape) {
-        CardShape.Poster -> RoundedCornerShape(GlacierShapes.RadiusLg)
+        CardShape.Poster, CardShape.Wide -> RoundedCornerShape(GlacierShapes.RadiusLg)
         CardShape.Square -> RoundedCornerShape(GlacierShapes.RadiusMd)
         CardShape.Round -> PillShape
     }
     val sizes = LocalCardSizes.current
-    val width = sizes.posterWidth
-    val height = if (shape == CardShape.Poster) sizes.posterHeight else sizes.posterWidth
+    val width = if (shape == CardShape.Wide) sizes.wideWidth else sizes.posterWidth
+    val height = when (shape) {
+        CardShape.Poster -> sizes.posterHeight
+        CardShape.Wide -> sizes.wideWidth * 9 / 16
+        else -> sizes.posterWidth
+    }
     GlacierCard(onClick = onClick, modifier = modifier.width(width.dp)) { focused ->
         Box(
             Modifier

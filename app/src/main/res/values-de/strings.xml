@@ -165,7 +165,7 @@
     <string name="favorites_empty">Noch keine Favoriten</string>
     <string name="favorites_empty_body">Markiere Titel mit dem Herz, dann erscheinen sie hier.</string>
     <string name="favorites_error">Favoriten konnten nicht geladen werden</string>
-    <string name="nav_music_videos">Videos</string>
+    <string name="nav_music_videos">Musikvideos</string>
     <string name="nav_home_videos">Fotos &amp; Videos</string>
     <string name="nav_settings">Einstellungen</string>
     <string name="nav_profile">Profil wechseln</string>
@@ -245,6 +245,7 @@
     <string name="scope_albums">Alben</string>
     <string name="scope_artists">Künstler</string>
     <string name="scope_songs">Songs</string>
+    <string name="scope_music_videos">Musikvideos</string>
     <string name="scope_playlists">Wiedergabelisten</string>
     <string name="sort_date_added">Zuletzt hinzugefügt</string>
     <string name="sort_title">Titel</string>

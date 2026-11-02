@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryQuery
@@ -62,8 +63,10 @@ data class LibraryState(
     /** Grid index to scroll to and focus after an A–Z jump; consumed by the screen. */
     val jumpTo: Int? = null,
     val userName: String = "",
+    /** The server has a music video library: music gets their tab. */
+    val musicVideos: Boolean = false,
 ) {
-    val scopes: List<LibraryScope> get() = LibraryQuery.scopes(query.kind, inGenre = query.genreId != null)
+    val scopes: List<LibraryScope> get() = LibraryQuery.scopes(query.kind, inGenre = query.genreId != null, musicVideos = musicVideos)
     val complete: Boolean get() = total != null && offset + items.size >= total
 }
 
@@ -77,6 +80,7 @@ class LibraryViewModel @Inject constructor(
     private val songs: MusicRepository,
     details: DetailRepository,
     playback: PlaybackRepository,
+    home: HomeRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<LibraryRoute>()
@@ -126,6 +130,7 @@ class LibraryViewModel @Inject constructor(
         // also while it waits behind the detail page.
         viewModelScope.launch { details.playedChanged.collect { refresh() } }
         viewModelScope.launch { playback.stopped.collect { refresh() } }
+        viewModelScope.launch { home.kinds.collect { kinds -> _state.update { it.copy(musicVideos = LibraryKind.MusicVideos in kinds) } } }
     }
 
     /**

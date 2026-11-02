@@ -325,7 +325,7 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                             items(videos, key = { it.id }) { video ->
                                 ContinueCard(
                                     title = video.title,
-                                    subtitle = listOfNotNull(video.parentTitle, video.year?.toString(), video.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) })
+                                    subtitle = listOfNotNull(video.parentTitle.takeIf { item.kind != ItemKind.Artist }, video.year?.toString(), video.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) })
                                         .joinToString(" · "),
                                     imageUrl = video.thumbUrl ?: video.posterUrl,
                                     progress = video.progress,

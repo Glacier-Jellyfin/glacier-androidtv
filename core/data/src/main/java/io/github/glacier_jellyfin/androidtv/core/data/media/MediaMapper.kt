@@ -90,7 +90,7 @@ internal class MediaMapper(private val api: ApiClient) {
             overview = plainText(dto.overview),
             parentTitle = when (kind) {
                 ItemKind.Album -> dto.albumArtist
-                ItemKind.Song -> artists(dto)
+                ItemKind.Song, ItemKind.MusicVideo -> artists(dto)
                 else -> dto.seriesName
             },
             album = dto.album.takeIf { kind == ItemKind.Song },
