@@ -37,7 +37,7 @@ language is German.
 
 ### Fixed
 - Right from the profile in the navigation bar no longer jumps down to the A–Z rail of a library
-- A server that was set up again at the same address replaces its old entry instead of being listed twice
+- A server that was set up again at the same address replaces its old entry instead of being listed twice. Profiles it still signs in keep their sign-in, PIN, parental control and settings
 
 ## [0.7.1] - 2026-10-31
 

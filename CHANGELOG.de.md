@@ -22,7 +22,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ### Behoben
 - Rechts vom Profil in der Navigationsleiste springt der Fokus nicht mehr hinunter zur A–Z-Leiste einer Bibliothek
-- Ein unter derselben Adresse neu eingerichteter Server ersetzt seinen alten Eintrag, statt doppelt in der Liste zu stehen
+- Ein unter derselben Adresse neu eingerichteter Server ersetzt seinen alten Eintrag, statt doppelt in der Liste zu stehen. Profile, deren Anmeldung er noch akzeptiert, behalten Anmeldung, PIN, Jugendschutz und Einstellungen
 
 ## [0.7.1] - 2026-10-31
 

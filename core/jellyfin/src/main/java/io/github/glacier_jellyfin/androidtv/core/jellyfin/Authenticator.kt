@@ -141,6 +141,18 @@ class Authenticator @Inject constructor(
         }
     }
 
+    /**
+     * The id of the user a stored token signs in, as the server at [address] knows it;
+     * null when the server does not accept the token. Throws when it cannot be reached.
+     */
+    suspend fun tokenUserId(address: String, accessToken: String): String? = withContext(Dispatchers.IO) {
+        try {
+            jellyfin.createApi(baseUrl = address, accessToken = accessToken).userApi.getCurrentUser().content.id.toString()
+        } catch (e: InvalidStatusException) {
+            if (e.status == HTTP_UNAUTHORIZED) null else throw e
+        }
+    }
+
     /** Checks whether a stored token is still accepted. */
     suspend fun isTokenValid(address: String, accessToken: String): Boolean = withContext(Dispatchers.IO) {
         try {

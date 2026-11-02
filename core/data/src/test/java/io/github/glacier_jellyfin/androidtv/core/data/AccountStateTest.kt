@@ -37,6 +37,24 @@ class AccountStateTest {
     }
 
     @Test
+    fun `a server set up again keeps the profiles it still signs in`() {
+        val pin = PinHash("salt", "hash", 1)
+        val again = server.copy(id = "s2")
+        val state = AccountState()
+            .withServer(server, now = 1)
+            .withSignIn(signIn(anna, "Anna"), now = 2)
+            .withSignIn(signIn(jonas, "Jonas"), now = 3)
+            .updateUser("s1", anna.toString()) { it.copy(pin = pin) }
+            .copy(startProfile = StartProfile(StartMode.Fixed, "s1", anna.toString()))
+            .withServerReplaced("s1", again, kept = mapOf(anna.toString() to anna.toString()), now = 4)
+        assertEquals(listOf("s2"), state.servers.map { it.id })
+        val user = state.users.single()
+        assertEquals("s2" to "Anna", user.serverId to user.name)
+        assertEquals(pin, user.pin)
+        assertEquals(StartProfile(StartMode.Fixed, "s2", anna.toString()), state.startProfile)
+    }
+
+    @Test
     fun `signing in again keeps the local pin`() {
         val pin = Pins.hash("1234", salt = ByteArray(16), iterations = 1)
         val state = AccountState()

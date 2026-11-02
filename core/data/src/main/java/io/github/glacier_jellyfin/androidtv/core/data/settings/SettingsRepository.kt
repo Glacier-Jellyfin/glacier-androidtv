@@ -81,6 +81,23 @@ class SettingsRepository @Inject constructor(
         }.toMap()
     }
 
+    /**
+     * A server set up again under a new id: the settings of the profiles in [users]
+     * (old user id to new one) move from [fromServer] to [toServer], the others go.
+     */
+    suspend fun moveServer(fromServer: String, toServer: String, users: Map<String, String>) {
+        fun move(key: String): String? {
+            val userId = key.removePrefix("$fromServer/").takeIf { it != key } ?: return key
+            return users[userId]?.let { profileKey(toServer, it) }
+        }
+        store.updateData { state ->
+            state.copy(
+                profiles = state.profiles.entries.mapNotNull { (key, value) -> move(key)?.let { it to value } }.toMap(),
+                restoreOffered = state.restoreOffered.mapNotNullTo(HashSet()) { move(it) },
+            )
+        }
+    }
+
     /** The current value, read from the file when [settings] has not caught up yet (right after start). */
     suspend fun current(): ProfileSettings {
         val session = sessions.session.value ?: return ProfileSettings()

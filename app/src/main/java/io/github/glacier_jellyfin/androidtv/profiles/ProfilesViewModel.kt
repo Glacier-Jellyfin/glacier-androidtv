@@ -20,11 +20,13 @@ import io.github.glacier_jellyfin.androidtv.core.data.startChoice
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinKey
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.Authenticator
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.PublicUser
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.ServerFinder
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ServerListRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SignInRoute
+import io.github.glacier_jellyfin.androidtv.setup.ServerConnector
 import io.github.glacier_jellyfin.androidtv.setup.ServerReachability
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.channels.Channel
@@ -63,6 +65,8 @@ class ProfilesViewModel @Inject constructor(
     private val sessions: SessionManager,
     private val settings: SettingsRepository,
     private val reachability: ServerReachability,
+    private val finder: ServerFinder,
+    private val connector: ServerConnector,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<ProfilesRoute>()
@@ -81,6 +85,14 @@ class ProfilesViewModel @Inject constructor(
             val server = accounts.current().servers.firstOrNull { it.id == serverId }
             if (server == null) {
                 _events.send(UiEvent.Navigate(ServerListRoute, clearBackStack = true))
+                return@launch
+            }
+            // Another server answering here was set up again: its profiles continue under its new id.
+            val answering = finder.identify(server.address)
+            if (answering != null && answering.id != serverId) {
+                val moved = connector.adopt(answering)
+                val next = ProfilesRoute(answering.id, appStart = route.appStart, userId = route.userId?.let(moved::get))
+                _events.send(UiEvent.Navigate(next, replace = true))
                 return@launch
             }
             _state.update { it.copy(server = server) }

@@ -48,6 +48,11 @@ class ServerFinder @Inject constructor(
         return ResolveResult.NotFound
     }
 
+    /** The server answering at a known address, without the extras of [probe]; null when none does. */
+    suspend fun identify(address: String): ServerInfo? = withContext(Dispatchers.IO) {
+        runSuspendCatching { jellyfin.createApi(baseUrl = address).systemApi.getPublicSystemInfo().content }.getOrNull()?.toServerInfo(address)
+    }
+
     /** Checks a known address; null when it does not answer as a Jellyfin server. */
     suspend fun probe(address: String): DiscoveredServer? = withContext(Dispatchers.IO) { probeBlocking(address) }
 

@@ -78,6 +78,11 @@ class AccountRepository @Inject constructor(
         store.updateData { it.copy(startProfile = startProfile) }
     }
 
+    /** [server] was set up again at the address of [oldId]; see [withServerReplaced]. */
+    suspend fun replaceServer(oldId: String, server: ServerInfo, kept: Map<String, String>) {
+        store.updateData { it.withServerReplaced(oldId, server, kept, now()) }
+    }
+
     suspend fun removeServer(serverId: String) {
         store.updateData { it.withoutServer(serverId) }
     }
