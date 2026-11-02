@@ -180,6 +180,16 @@ jobs:
           whatsNewDirectory: whatsnew
           mappingFile: stores/play-mapping.txt
 
+      # Texts, graphics, screenshots and video of the listings, from fastlane/metadata/android.
+      - name: Update the Google Play listing
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          TRACK: ${{ vars.PLAY_TRACK || 'alpha' }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          sudo gem install fastlane -v 2.241.1 --no-document
+          scripts/play-listing.sh "$VERSION" "$TRACK"
+
       # Also when Google Play failed: the two stores do not depend on each other.
       - name: Submit to the Amazon Appstore
         if: ${{ !cancelled() && steps.play.conclusion != 'skipped' }}

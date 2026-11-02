@@ -184,9 +184,15 @@ update each other.
 
 ### Store listings
 
-The workflow only uploads builds and notes. Texts and graphics of the
-listings live in `fastlane/metadata/` and are entered in the Play Console and
-the Amazon Developer Console by hand when they change.
+Texts and graphics of the listings live in `fastlane/metadata/`. After the
+bundle, the job `stores` updates the Google Play listing of each language
+from `fastlane/metadata/android` (`scripts/play-listing.sh`, fastlane
+supply): title, descriptions, video, feature graphic, icon, TV banner and TV
+screenshots. Only images Google Play does not have yet are uploaded, and
+screenshots no longer in the folder are removed there. Changes in the Play
+Console are overwritten with the next release, so change the files instead.
+The Amazon listing (`fastlane/metadata/amazon` and the same screenshots) is
+still entered in the Amazon Developer Console by hand.
 
 - Screenshots (1920×1080, one set per language in
   `fastlane/metadata/android/{en-US,de-DE}/images/tvScreenshots/`) come from
@@ -195,9 +201,8 @@ the Amazon Developer Console by hand when they change.
   pictures.
 - Promo video: Google Play only takes a YouTube link. Upload
   `build/promo/glacier-promo[-de].mp4` to YouTube (public or unlisted, ads
-  off, with the music credit from the end card in the description) and enter
-  the link in each listing. The links are kept in
-  `fastlane/metadata/android/<language>/video.txt`.
+  off, with the music credit from the end card in the description) and put
+  the link into `fastlane/metadata/android/<language>/video.txt`.
 
 ### Trying a store version locally
 
