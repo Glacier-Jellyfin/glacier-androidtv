@@ -24,9 +24,11 @@ Needs Python 3.9+ with Pillow and numpy, and ffmpeg on PATH (or FFMPEG set).
 
 With --only website it also writes the website's media: the section pictures and
 the highlight video into website/assets/screenshots/, the film into
-website/assets/promo/ (render the full film first).
+website/assets/promo/ (render the full film first). With --only store it
+writes the same pictures at 1080p as the Google Play screenshots into
+fastlane/metadata/android/<locale>/images/tvScreenshots/.
 
-Usage: scripts/make-promo-video.py --takes DIR [--lang en,de] [--only full,short,website]
+Usage: scripts/make-promo-video.py --takes DIR [--lang en,de] [--only full,short,website,store]
 """
 from __future__ import annotations
 
@@ -167,6 +169,8 @@ HIGHLIGHT = [(0, 2.7, 6.4), (1, 3.5, 10.3), (2, 5.0, 12.8), (3, 6.8, 11.0), (4, 
 STILLS = {"home": ("family", 3.8), "library": ("library", 12.2), "detail": ("detail", 10.6),
           "player": ("skip", 7.8), "music": ("music", 21.5), "photos": ("photos", 19.0), "livetv": ("livetv", 9.0)}
 SITE_DIR = ROOT / "website" / "assets"
+STORE_DIR = ROOT / "fastlane" / "metadata" / "android"
+STORE_LOCALES = {"en": "en-US", "de": "de-DE"}
 # The short cut: the strongest moment of a few shots, one caption each (shot, from, to).
 SHORT = [(1, 3.5, 10.3), (2, 5.0, 12.8), (4, 2.2, 7.2), (5, 3.6, 12.6), (7, 0.0, 9.0)]
 
@@ -673,19 +677,37 @@ def encode(source: Path, out: Path, *args) -> None:
     subprocess.run([FFMPEG, "-v", "error", "-y", "-i", str(source), *[str(a) for a in args], str(out)], check=True)
 
 
+def still(takes: Path, lang: str, take: str, at: float) -> Image.Image:
+    """A picture from a take. A still moment has little motion to match on, so the other languages are
+    matched on the seconds that lead up to it."""
+    suffix = "" if lang == "en" else f"-{lang}"
+    path = takes / f"{take}{suffix}.mp4"
+    if suffix:
+        at += offset(takes / f"{take}.mp4", path, max(0.0, at - 6), at + 2, search=6.0)
+    reader = Reader(path, at, at + 0.2, 1.0)
+    picture = reader.next()
+    reader.close()
+    return picture
+
+
 def stills(takes: Path, lang: str) -> None:
-    """The website's section pictures. A still moment has little motion to match on, so the other
-    languages are matched on the seconds that lead up to it."""
+    """The website's section pictures."""
     suffix = "" if lang == "en" else f"-{lang}"
     for name, (take, at) in STILLS.items():
-        path = takes / f"{take}{suffix}.mp4"
-        if suffix:
-            at += offset(takes / f"{take}.mp4", path, max(0.0, at - 6), at + 2, search=6.0)
-        reader = Reader(path, at, at + 0.2, 1.0)
-        reader.next().resize((1280, 720), Image.LANCZOS).save(SITE_DIR / "screenshots" / f"{name}{suffix}.jpg",
-                                                               quality=88)
-        reader.close()
+        still(takes, lang, take, at).resize((1280, 720), Image.LANCZOS).save(
+            SITE_DIR / "screenshots" / f"{name}{suffix}.jpg", quality=88)
     print(f"  {len(STILLS)} section pictures")
+
+
+def store(takes: Path, lang: str) -> None:
+    """The Google Play screenshots: the section pictures at the takes' 1080p, numbered in their order."""
+    folder = STORE_DIR / STORE_LOCALES[lang] / "images" / "tvScreenshots"
+    if folder.exists():
+        shutil.rmtree(folder)
+    folder.mkdir(parents=True)
+    for n, (name, (take, at)) in enumerate(STILLS.items(), 1):
+        still(takes, lang, take, at).convert("RGB").save(folder / f"{n}-{name}.jpg", quality=92)
+    print(f"  {len(STILLS)} store screenshots ({STORE_LOCALES[lang]})")
 
 
 def website(art: Art, takes: Path, lang: str) -> None:
@@ -721,7 +743,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--takes", type=Path, required=True, help="folder with the takes of capture-website-media.py")
     parser.add_argument("--lang", default="en,de", help="comma-separated languages")
-    parser.add_argument("--only", default="full,short,website", help="any of full, short, website, stills")
+    parser.add_argument("--only", default="full,short,website", help="any of full, short, website, stills, store")
     args = parser.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     art = Art(fetch(*FONT))
@@ -744,6 +766,8 @@ def main() -> None:
             website(art, args.takes, lang)
         elif "stills" in wanted:
             stills(args.takes, lang)
+        if "store" in wanted:
+            store(args.takes, lang)
 
 
 if __name__ == "__main__":

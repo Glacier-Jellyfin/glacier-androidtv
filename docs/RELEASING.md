@@ -182,6 +182,23 @@ Google Play signs with the same key as the GitHub release (the existing
 release key was handed over as the app signing key), so both versions can
 update each other.
 
+### Store listings
+
+The workflow only uploads builds and notes. Texts and graphics of the
+listings live in `fastlane/metadata/` and are entered in the Play Console and
+the Amazon Developer Console by hand when they change.
+
+- Screenshots (1920×1080, one set per language in
+  `fastlane/metadata/android/{en-US,de-DE}/images/tvScreenshots/`) come from
+  the takes of the promo video: `scripts/make-promo-video.py --takes DIR
+  --only store`. They show the same moments as the website's section
+  pictures.
+- Promo video: Google Play only takes a YouTube link. Upload
+  `build/promo/glacier-promo[-de].mp4` to YouTube (public or unlisted, ads
+  off, with the music credit from the end card in the description) and enter
+  the link in each listing. The links are kept in
+  `fastlane/metadata/android/<language>/video.txt`.
+
 ### Trying a store version locally
 
 A debug build plays a store version with `-Pglacier.store=amazon` or
