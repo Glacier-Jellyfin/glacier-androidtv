@@ -23,17 +23,21 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** A folder of a home video library, or the library itself when there are several. */
-data class MediaFolder(val id: UUID, val name: String)
+/** What a folder lists, sorted by [name] or [date]: a subfolder, video or photo. */
+interface FolderEntry {
+    val name: String
+    val date: LocalDateTime?
+}
+
+/** A folder of a home video library, or the library itself when there are several; dated like a photo. */
+data class MediaFolder(val id: UUID, override val name: String, override val date: LocalDateTime? = null) : FolderEntry
 
 /** A photo: [thumbUrl] for its card, [fullUrl] screen-sized for the viewer. */
 data class MediaPhoto(val id: UUID, val name: String, val thumbUrl: String, val fullUrl: String)
 
 /** A video or photo of a folder, with the time it was taken, else the file's date. */
-sealed interface FolderMedia {
+sealed interface FolderMedia : FolderEntry {
     val id: UUID
-    val name: String
-    val date: LocalDateTime?
 
     data class Video(val item: MediaItem, override val date: LocalDateTime?) : FolderMedia {
         override val id: UUID get() = item.id
@@ -47,7 +51,7 @@ sealed interface FolderMedia {
 }
 
 /**
- * What a folder holds: its subfolders by name, and its videos and photos ([media], by name too).
+ * What a folder holds: its subfolders and its videos and photos ([media]), both by name; the page sorts them for the profile.
  * [id] is the folder shown, null for the list of several libraries. [trail] names the folders
  * above it, from the top: the library only when there are several. Empty at the top.
  */
@@ -79,14 +83,14 @@ class FolderRepository @Inject constructor(
             val ancestors = folderId?.let { async { runSuspendCatching { ancestors(session, it) }.getOrNull() } }
             val parent = folderId ?: libraries.await().let { all ->
                 if (all.size != 1) {
-                    return@coroutineScope FolderContent(null, all.map { MediaFolder(it.id, it.name.orEmpty()) })
+                    return@coroutineScope FolderContent(null, all.map { MediaFolder(it.id, it.name.orEmpty(), it.taken) })
                 }
                 all.single().id
             }
             val items = children(session, parent)
             FolderContent(
                 id = parent,
-                folders = items.filter { it.isFolder == true }.map { MediaFolder(it.id, it.name.orEmpty()) },
+                folders = items.filter { it.isFolder == true }.map { MediaFolder(it.id, it.name.orEmpty(), it.taken) },
                 media = media(session, items),
                 trail = ancestors?.await()?.let { trail(it, severalLibraries = libraries.await().size > 1) }.orEmpty(),
             )
@@ -138,7 +142,7 @@ class FolderRepository @Inject constructor(
     private val BaseItemDto.isPhoto: Boolean get() = isFolder != true && type == BaseItemKind.PHOTO
 
     /**
-     * Jellyfin keeps the time a photo or video was taken as its premiere date; the file's date otherwise.
+     * Jellyfin keeps the time a photo or video was taken as its premiere date; the file's (or folder's) date otherwise.
      * The SDK hands both over in the TV's own time already.
      */
     private val BaseItemDto.taken: LocalDateTime? get() = premiereDate ?: dateCreated
@@ -150,14 +154,14 @@ class FolderRepository @Inject constructor(
  * [settings]' order: by date, undated last and same dates by name, or by name. [FolderSettings.descending]
  * turns either around, except that undated stay last.
  */
-fun List<FolderMedia>.sortedFor(settings: FolderSettings): List<FolderMedia> {
+fun <T : FolderEntry> List<T>.sortedFor(settings: FolderSettings): List<T> {
     // As a library lists titles, so the A–Z rail's letters follow the same order.
-    val byName = compareBy<FolderMedia, String>(NameOrder) { it.name }
+    val byName = compareBy<T, String>(NameOrder) { it.name }
     return when (settings.sort) {
         FolderSort.Name -> sortedWith(if (settings.descending) byName.reversed() else byName)
         FolderSort.Date -> {
             val (dated, undated) = partition { it.date != null }
-            val byDate = compareBy<FolderMedia> { it.date }.then(byName)
+            val byDate = compareBy<T> { it.date }.then(byName)
             dated.sortedWith(if (settings.descending) byDate.reversed() else byDate) + undated.sortedWith(byName)
         }
     }

@@ -37,4 +37,15 @@ class FolderSortTest {
         assertEquals(listOf("Album", "Beach", "cake", "Scan"), names(FolderSettings(sort = FolderSort.Name)))
         assertEquals(listOf("Scan", "cake", "Beach", "Album"), names(FolderSettings(sort = FolderSort.Name, descending = true)))
     }
+
+    @Test
+    fun `folders follow the same order`() {
+        val folders = listOf(
+            MediaFolder(UUID(1, 0), "Summer", LocalDateTime.of(2023, 7, 1, 0, 0)),
+            MediaFolder(UUID(1, 1), "Archive", null),
+            MediaFolder(UUID(1, 2), "Norway", LocalDateTime.of(2024, 7, 12, 9, 0)),
+        )
+        assertEquals(listOf("Norway", "Summer", "Archive"), folders.sortedFor(FolderSettings(sort = FolderSort.Date, descending = true)).map { it.name })
+        assertEquals(listOf("Archive", "Norway", "Summer"), folders.sortedFor(FolderSettings(sort = FolderSort.Name)).map { it.name })
+    }
 }

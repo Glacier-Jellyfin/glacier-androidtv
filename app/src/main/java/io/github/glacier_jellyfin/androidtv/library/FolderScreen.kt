@@ -99,6 +99,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaFolder
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.railLetter
+import io.github.glacier_jellyfin.androidtv.core.data.media.sortedFor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderAspect
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderShow
@@ -187,11 +188,12 @@ fun FolderScreen(
             runCatching { menuButtons.getValue(closed).requestFocus() }
         }
     }
-    val content = state.content
+    // Subfolders in the profile's order like the media below them.
+    val content = remember(state.content, settings) { state.content?.let { it.copy(folders = it.folders.sortedFor(settings)) } }
     val empty = content?.isEmpty == true
     val gallery = settings.view == FolderView.Gallery
     // Back among the folders and pictures first goes up to the view's chip; from there to the bar or the folder above.
-    BackHandler(enabled = onPage && !inToolbar && content?.media?.isNotEmpty() == true) {
+    BackHandler(enabled = onPage && !inToolbar && content?.isEmpty == false) {
         scope.launch {
             // Scrolled away, the toolbar is not composed and cannot take the focus yet.
             if (!gallery) gridState.scrollToItem(0)
@@ -203,9 +205,11 @@ fun FolderScreen(
         if (content == null || empty) return@LaunchedEffect
         withFrameNanos { }
         fun focus(key: String?) = key?.let { requesters[it] }?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true
-        // The first folder or picture, not the toolbar above them.
-        val first = content.folders.firstOrNull()?.id ?: mediaSections(content, settings).firstOrNull()?.media?.firstOrNull()?.id
-        if (!focus(lastFocus) && !focus(first?.toString())) runCatching { pageFocus.requestFocus() }
+        // The first folder; without folders the toolbar's active filter (or the view's button), so the
+        // gallery does not bring its picture to the front at once.
+        if (!focus(lastFocus) && !focus(content.folders.firstOrNull()?.id?.toString()) &&
+            !runCatching { activeView.requestFocus() }.getOrDefault(false)
+        ) runCatching { pageFocus.requestFocus() }
     }
     // Switched between grid and gallery in its dropdown: the new view starts at its top, with the
     // focus back on the dropdown's button, as after any other dropdown.
@@ -240,20 +244,19 @@ fun FolderScreen(
                         Text(title, style = GlacierText.display(50), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
-                val toolbar: (@Composable () -> Unit)? = if (content.media.isEmpty()) null else {
-                    {
-                        Box(Modifier.onFocusChanged { inToolbar = it.hasFocus }) {
-                            Toolbar(
-                                settings = settings,
-                                canFilter = content.canFilter,
-                                menu = state.menu,
-                                onShow = viewModel::setShow,
-                                onMenu = viewModel::toggleMenu,
-                                onAnchor = { menu, rect -> anchors[menu] = rect },
-                                menuButtons = menuButtons,
-                                active = activeView,
-                            )
-                        }
+                // Also over folders alone: the view and order chosen there hold for the folders below.
+                val toolbar: @Composable () -> Unit = {
+                    Box(Modifier.onFocusChanged { inToolbar = it.hasFocus }) {
+                        Toolbar(
+                            settings = settings,
+                            canFilter = content.canFilter,
+                            menu = state.menu,
+                            onShow = viewModel::setShow,
+                            onMenu = viewModel::toggleMenu,
+                            onAnchor = { menu, rect -> anchors[menu] = rect },
+                            menuButtons = menuButtons,
+                            active = activeView,
+                        )
                     }
                 }
                 val page = Modifier
@@ -262,7 +265,7 @@ fun FolderScreen(
                     .focusRequester(pageFocus)
                 CompositionLocalProvider(LocalFolderAspect provides settings.aspect) {
                     if (gallery) {
-                        GalleryLayout(content, sections, header, toolbar, viewModel, remembered, page, onStage = { stageInFront = it })
+                        GalleryLayout(content, sections, header, toolbar, viewModel, remembered, { requesters.getOrPut(it) { FocusRequester() } }, page, onStage = { stageInFront = it })
                     } else {
                         GridLayout(content, sections, settings, header, toolbar, viewModel, remembered, { requesters.getOrPut(it) { FocusRequester() } }, page, gridState)
                     }
@@ -328,7 +331,7 @@ private fun GridLayout(
     sections: List<MediaSection>,
     settings: FolderSettings,
     header: @Composable () -> Unit,
-    toolbar: (@Composable () -> Unit)?,
+    toolbar: @Composable () -> Unit,
     viewModel: FolderViewModel,
     remembered: (String) -> Modifier,
     requester: (String) -> FocusRequester,
@@ -338,10 +341,11 @@ private fun GridLayout(
     val sizes = LocalCardSizes.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
-    // Videos and photos always carry their heading ("Videos", "Photos", "Videos and photos"); folders
-    // carry theirs only above media, alone they need none.
+    // Folders and media always carry their heading ("Folders", "Videos", "Photos", "Videos and photos").
     val headed = sections.isNotEmpty()
-    val headerItems = 1 + (if (toolbar != null) 1 else 0) + (if (headed) 1 else 0)
+    val foldersHeaded = content.folders.isNotEmpty()
+    // Title, toolbar and the first heading come before the first row.
+    val headerItems = 3
     val media = sections.firstOrNull()?.media.orEmpty()
     val showRail = settings.sort == FolderSort.Name && media.isNotEmpty()
     val letters = remember(media) { media.mapTo(mutableSetOf()) { railLetter(it.name) } }
@@ -352,10 +356,9 @@ private fun GridLayout(
     // The card a letter jumped to; Left from the rail goes there.
     var jumpTarget by remember { mutableStateOf<String?>(null) }
     // Sorted by name there are no month headings: the first card follows the folders and the section's heading.
-    val firstMedia = 1 + (if (toolbar != null) 1 else 0) + (if (headed && content.folders.isNotEmpty()) 1 else 0) +
-        content.folders.size + (if (headed) 1 else 0)
+    val firstMedia = 2 + (if (foldersHeaded) 1 else 0) + content.folders.size + (if (headed) 1 else 0)
     // The first thing below the toolbar, folders or cards, so the rail sits as high in every folder as in a library.
-    val firstBelowToolbar = 1 + (if (toolbar != null) 1 else 0)
+    val firstBelowToolbar = 2
     LaunchedEffect(gridState, firstBelowToolbar) {
         snapshotFlow { firstRowHome(gridState, firstBelowToolbar) }.collect { top -> if (top != null) railTop = top }
     }
@@ -369,13 +372,11 @@ private fun GridLayout(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             ) {
                 item(span = { GridItemSpan(maxLineSpan) }, key = "title") { Box(Modifier.padding(bottom = 24.dp)) { header() } }
-                if (toolbar != null) {
-                    item(span = { GridItemSpan(maxLineSpan) }, key = "toolbar") {
-                        // Coming up from the cards, the page scrolls back to its top with the title.
-                        Box(Modifier.padding(bottom = 34.dp).onFocusChanged { if (it.hasFocus) scope.launch { gridState.animateScrollToItem(0) } }) { toolbar() }
-                    }
+                item(span = { GridItemSpan(maxLineSpan) }, key = "toolbar") {
+                    // Coming up from the cards, the page scrolls back to its top with the title.
+                    Box(Modifier.padding(bottom = 34.dp).onFocusChanged { if (it.hasFocus) scope.launch { gridState.animateScrollToItem(0) } }) { toolbar() }
                 }
-                if (headed && content.folders.isNotEmpty()) {
+                if (foldersHeaded) {
                     item(span = { GridItemSpan(maxLineSpan) }, key = "folders") { SectionHeading(stringResource(R.string.folder_section_folders)) }
                 }
                 content.folders.forEach { folder ->
@@ -483,15 +484,17 @@ private fun LazyGridScope.mediaCards(
  * dimmed picture. Moving down into the row ([onStage]) fades them and the navigation bar away: the
  * picture comes to the front with its name above the row, a video plays. Up to the folders brings them
  * back. Nothing scrolls, so the row is in sight from the start, like the spotlight on the home screen.
+ * Moving into the row lands on the picture shown, the first one until another had the focus.
  */
 @Composable
 private fun GalleryLayout(
     content: FolderContent,
     sections: List<MediaSection>,
     header: @Composable () -> Unit,
-    toolbar: (@Composable () -> Unit)?,
+    toolbar: @Composable () -> Unit,
     viewModel: FolderViewModel,
     remembered: (String) -> Modifier,
+    requester: (String) -> FocusRequester,
     modifier: Modifier,
     onStage: (Boolean) -> Unit,
 ) {
@@ -511,7 +514,7 @@ private fun GalleryLayout(
         Backdrop(
             preview,
             previewVideo,
-            playSign = onRow,
+            inFront = onRow,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(start = PageEdge.dp * front, end = PageEdge.dp * front, top = PICTURE_TOP.dp * front, bottom = below * front)
@@ -530,9 +533,9 @@ private fun GalleryLayout(
                     .padding(start = PageEdge.dp, end = PageEdge.dp, top = 150.dp, bottom = 24.dp),
             ) {
                 Box(Modifier.padding(bottom = 24.dp)) { header() }
-                if (toolbar != null) Box(Modifier.padding(bottom = 34.dp)) { toolbar() }
+                Box(Modifier.padding(bottom = 34.dp)) { toolbar() }
                 if (content.folders.isNotEmpty()) {
-                    if (sections.isNotEmpty()) SectionHeading(stringResource(R.string.folder_section_folders))
+                    SectionHeading(stringResource(R.string.folder_section_folders))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(sizes.gridGap.dp), verticalArrangement = Arrangement.spacedBy(sizes.gridGap.dp)) {
                         content.folders.forEach { folder ->
                             FolderTile(folder, onClick = { viewModel.open(folder) }, modifier = remembered(folder.id.toString()).width(sizes.continueWidth.dp))
@@ -550,6 +553,13 @@ private fun GalleryLayout(
                             viewModel.showPreview(if (it.hasFocus) preview else null)
                         }
                         .onSizeChanged { rowHeight = it.height }
+                        // Not the tile nearest to where the focus came from: a request for one tile is left alone.
+                        .focusProperties {
+                            onEnter = {
+                                if (requestedFocusDirection != FocusDirection.Enter) preview?.let { requester(it.id.toString()).requestFocus() }
+                            }
+                        }
+                        .focusGroup()
                         .padding(bottom = 40.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp),
                 ) {
@@ -615,12 +625,14 @@ private fun Strip(
 }
 
 /**
- * The focused picture whole, as large as the screen allows; a video plays in it once [video] has its
- * stream, with the play sign until then when [playSign].
+ * The focused picture: behind the title and folders filling the screen, cropped; [inFront] whole, as
+ * large as its space allows. A video plays in it once [video] has its stream, in front with the play
+ * sign until then.
  */
 @androidx.annotation.OptIn(UnstableApi::class) // ContentFrame
 @Composable
-private fun Backdrop(media: FolderMedia?, video: InlineVideoState, playSign: Boolean, modifier: Modifier) {
+private fun Backdrop(media: FolderMedia?, video: InlineVideoState, inFront: Boolean, modifier: Modifier) {
+    val scale = if (inFront) ContentScale.Fit else ContentScale.Crop
     Box(modifier.background(GlacierColors.Void)) {
         Crossfade(targetState = media, label = "preview") { shown ->
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -628,7 +640,7 @@ private fun Backdrop(media: FolderMedia?, video: InlineVideoState, playSign: Boo
                     is FolderMedia.Photo -> AsyncImage(
                         model = shown.photo.fullUrl,
                         contentDescription = shown.name,
-                        contentScale = ContentScale.Fit,
+                        contentScale = scale,
                         modifier = Modifier.fillMaxSize(),
                     )
                     is FolderMedia.Video -> {
@@ -636,12 +648,12 @@ private fun Backdrop(media: FolderMedia?, video: InlineVideoState, playSign: Boo
                         AsyncImage(
                             model = shown.item.thumbUrl,
                             contentDescription = shown.name,
-                            contentScale = ContentScale.Fit,
+                            contentScale = scale,
                             modifier = Modifier.fillMaxSize(),
                         )
                         if (player != null) {
-                            ContentFrame(player = player, modifier = Modifier.fillMaxSize(), surfaceType = SURFACE_TYPE_TEXTURE_VIEW, contentScale = ContentScale.Fit)
-                        } else if (playSign) {
+                            ContentFrame(player = player, modifier = Modifier.fillMaxSize(), surfaceType = SURFACE_TYPE_TEXTURE_VIEW, contentScale = scale)
+                        } else if (inFront) {
                             Box(
                                 Modifier.size(84.dp).clip(PillShape).background(LocalAccent.current.main),
                                 contentAlignment = Alignment.Center,
