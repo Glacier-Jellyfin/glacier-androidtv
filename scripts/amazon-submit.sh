@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Submits the Amazon APK to the Amazon Appstore through the App Submission API.
 # It opens an edit, which starts as a copy of the live version, or takes the
-# one already open, replaces its APK and sets "Recent changes" of each listing
-# from <notes-dir>/whatsnew-<language> (see store-notes.sh). Committing the
-# edit sends it to Amazon's review. See docs/RELEASING.md.
+# one already open, and replaces its APK. Each listing gets "Recent changes"
+# from <notes-dir>/whatsnew-<language> (see store-notes.sh) and its texts,
+# graphics, screenshots and video from fastlane/metadata and the website's
+# promo film. Committing the edit sends it to Amazon's review. See
+# docs/RELEASING.md.
 #
 # Usage: scripts/amazon-submit.sh <apk> <notes-dir>
 # Needs AMAZON_CLIENT_ID, AMAZON_CLIENT_SECRET and AMAZON_APP_ID.
@@ -72,15 +74,94 @@ call PUT "/edits/$edit/apks/$apk_id/replace" \
   --data-binary "@$apk" > /dev/null
 echo "Replaced the APK"
 
+# The number of images or videos in a list answer.
+count() {
+  jq '[.. | objects | select(has("id"))] | length'
+}
+
+# upload PATH FILE: adds an image or video. Icons and backgrounds hold one, which it replaces.
+upload() {
+  local target="$1/upload"
+  [[ "$1" != */videos ]] || target="$1"
+  call GET "$1" > /dev/null
+  call POST "$target" \
+    -H "If-Match: $(etag)" \
+    -H 'Content-Type: application/octet-stream' \
+    --data-binary "@$2" > /dev/null
+}
+
+# clear_all PATH: removes all images of a type, or all videos.
+clear_all() {
+  if [ "$(call GET "$1" | count)" -gt 0 ]; then
+    call DELETE "$1" -H "If-Match: $(etag)" > /dev/null
+  fi
+}
+
+# A graphic of the language, or the English one if the language has none of its own.
+graphic() {
+  local file="$metadata/android/$language/images/$1"
+  [ -f "$file" ] || file="$metadata/android/en-US/images/$1"
+  echo "$file"
+}
+
+# The listing of each language, from the same files as the Google Play listing
+# and fastlane/metadata/amazon. Amazon's edit keeps the images of the live
+# version but has no checksums to compare, so all of them are replaced.
+metadata="$(dirname "$0")/../fastlane/metadata"
 for file in "$notes"/whatsnew-*; do
   language="${file##*/whatsnew-}"
-  listing="$(call GET "/edits/$edit/listings/$language")"
-  jq --rawfile notes "$file" '.recentChanges = $notes' <<< "$listing" |
-    call PUT "/edits/$edit/listings/$language" \
+  path="/edits/$edit/listings/$language"
+  listing="$(call GET "$path")"
+  jq --rawfile notes "$file" \
+    --rawfile title "$metadata/android/$language/title.txt" \
+    --rawfile short "$metadata/android/$language/short_description.txt" \
+    --rawfile full "$metadata/android/$language/full_description.txt" \
+    --rawfile bullets "$metadata/amazon/$language/feature_bullets.txt" \
+    --rawfile keywords "$metadata/amazon/$language/keywords.txt" '
+    .recentChanges = $notes
+    | .title = ($title | rtrimstr("\n"))
+    | .shortDescription = ($short | rtrimstr("\n"))
+    | .fullDescription = ($full | rtrimstr("\n"))
+    | .featureBullets = ($bullets | split("\n") | map(select(length > 0)))
+    | .keywords = ($keywords | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0)))' \
+    <<< "$listing" |
+    call PUT "$path" \
       -H "If-Match: $(etag)" \
       -H 'Content-Type: application/json' \
       --data-binary @- > /dev/null
-  echo "Set the recent changes for $language"
+  echo "Set the texts and recent changes for $language"
+
+  upload "$path/small-icons" "$metadata/amazon/images/smallIcon.png"
+  upload "$path/large-icons" "$(graphic icon.png)"
+  upload "$path/firetv-icons" "$(graphic tvBanner.png)"
+  upload "$path/firetv-backgrounds" "$metadata/amazon/images/fireTvBackground.png"
+  upload "$path/promo-images" "$(graphic featureGraphic.png)"
+  echo "Replaced the icons, background and promo image for $language"
+
+  # Fire TV screenshots sit in whichever list the Developer Console put them into.
+  shots="$metadata/android/$language/images/tvScreenshots"
+  [ -d "$shots" ] || shots="$metadata/android/en-US/images/tvScreenshots"
+  types=()
+  for type in screenshots firetv-screenshots; do
+    if [ "$(call GET "$path/$type" | count)" -gt 0 ]; then types+=("$type"); fi
+  done
+  [ "${#types[@]}" -gt 0 ] || types=(screenshots)
+  for type in "${types[@]}"; do
+    clear_all "$path/$type"
+    for shot in "$shots"/*.jpg; do
+      upload "$path/$type" "$shot"
+    done
+    echo "Replaced the $type for $language"
+  done
+
+  # The promo film from the website, the one Google Play shows from YouTube.
+  code="${language%%-*}"
+  video="$(dirname "$0")/../website/assets/promo/glacier-promo$([ "$code" = en ] || echo "-$code").mp4"
+  if [ -f "$video" ]; then
+    clear_all "$path/videos"
+    upload "$path/videos" "$video"
+    echo "Replaced the video for $language"
+  fi
 done
 
 call POST "/edits/$edit/validate" > /dev/null

@@ -174,8 +174,8 @@ The environment holds the secrets and variables:
   (`r0adkll/upload-google-play`) and sends the R8 mapping along for readable
   crash reports.
 - Amazon: `scripts/amazon-submit.sh` opens an edit (or takes the one already
-  open), replaces the APK, sets "Recent changes" of each listing and commits
-  the edit, which starts Amazon's review. While a version is still in review,
+  open), replaces the APK, updates each listing (see below) and commits the
+  edit, which starts Amazon's review. While a version is still in review,
   Amazon opens no new edit and the step fails with Amazon's message.
 
 Google Play signs with the same key as the GitHub release (the existing
@@ -191,8 +191,14 @@ supply): title, descriptions, video, feature graphic, icon, TV banner and TV
 screenshots. Only images Google Play does not have yet are uploaded, and
 screenshots no longer in the folder are removed there. Changes in the Play
 Console are overwritten with the next release, so change the files instead.
-The Amazon listing (`fastlane/metadata/amazon` and the same screenshots) is
-still entered in the Amazon Developer Console by hand.
+
+The Amazon submission fills each listing from the same files, with
+`fastlane/metadata/amazon` for what only Amazon has (feature bullets,
+keywords, small icon, Fire TV background) and the website's promo film
+(`website/assets/promo/glacier-promo[-de].mp4`) as video. The Fire TV icon is
+the TV banner, the promo image the feature graphic. Amazon has no checksums
+to compare, so every submission replaces all images and the video. Changes in
+the Amazon Developer Console are overwritten as well.
 
 - Screenshots (1920×1080, one set per language in
   `fastlane/metadata/android/{en-US,de-DE}/images/tvScreenshots/`) come from
