@@ -118,6 +118,12 @@ private const val EPISODE_BACKDROP = 720
 /** Height of the part above the first row; focus there scrolls the page to the top. */
 internal const val HEADER_REGION = 700
 
+/** The same on every detail page: room between the buttons and the first row of cards, */
+internal const val FIRST_ROW_TOP = 48
+
+/** and below the last row, so it scrolls clear of the screen's bottom edge. */
+internal const val LAST_ROW_BOTTOM = 120
+
 private val MusicKinds = setOf(ItemKind.Album, ItemKind.Artist, ItemKind.Playlist)
 
 /** Titles with the film page: one video to play (or a show with its seasons). */
@@ -244,7 +250,7 @@ private fun MediaDetail(state: DetailState, details: ItemDetails, viewModel: Det
                 }
                 if (details.cast.isNotEmpty()) {
                     item(key = "cast") {
-                        MediaRow(title = stringResource(R.string.detail_cast), gap = LocalCardSizes.current.castGap, modifier = Modifier.padding(top = 48.dp)) {
+                        MediaRow(title = stringResource(R.string.detail_cast), gap = LocalCardSizes.current.castGap, modifier = Modifier.padding(top = FIRST_ROW_TOP.dp)) {
                             items(details.cast, key = { it.id }) { person -> CastCard(person, onClick = { viewModel.openPerson(person) }) }
                         }
                     }
@@ -254,8 +260,8 @@ private fun MediaDetail(state: DetailState, details: ItemDetails, viewModel: Det
                         // Without a cast row this row sits right under the buttons, so it takes the cast row's gap.
                         MediaRow(
                             title = stringResource(R.string.detail_similar),
-                            bottomPadding = 120,
-                            modifier = Modifier.padding(top = if (details.cast.isEmpty()) 48.dp else 0.dp),
+                            bottomPadding = LAST_ROW_BOTTOM,
+                            modifier = Modifier.padding(top = if (details.cast.isEmpty()) FIRST_ROW_TOP.dp else 0.dp),
                         ) {
                             items(state.similar, key = { it.id }) { similar ->
                                 GridCard(

@@ -19,6 +19,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Die Servereinrichtung zeigt keine Schrittzahl mehr
 - Die Frage, ob die Einstellungen eines anderen Geräts übernommen werden sollen, öffnet sich im Vollbild, mit den Geräten und dem Tag, an dem jedes seine Einstellungen gespeichert hat
 - Die Serverauswahl zählt die Profile eines Servers so, wie „Wer schaut?“ sie zeigt, auch die nur auf diesem Gerät eingerichteten
+- Detailseiten lassen über und unter ihren Kartenzeilen überall gleich viel Platz
 
 ### Behoben
 - Rechts vom Profil in der Navigationsleiste springt der Fokus nicht mehr hinunter zur A–Z-Leiste einer Bibliothek

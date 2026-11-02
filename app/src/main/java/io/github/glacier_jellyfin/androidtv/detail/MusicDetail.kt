@@ -289,9 +289,17 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                         Box(Modifier.height(coverRest.dp + if (state.similar.isEmpty()) 98.dp else 20.dp))
                     }
                 }
+                // An artist's music videos, a playlist's videos: each plays with the rest following.
+                val videos = if (item.kind == ItemKind.Artist) state.artistVideos else state.playlistVideos
+                // Only the page's last row keeps room below it; between rows the usual gap.
                 if (state.artistAlbums.isNotEmpty()) {
                     item(key = "albums") {
-                        MediaRow(title = stringResource(R.string.music_albums), bottomPadding = 120, modifier = Modifier.padding(top = 20.dp)) {
+                        MediaRow(
+                            title = stringResource(R.string.music_albums),
+                            bottomPadding = LAST_ROW_BOTTOM.takeIf { videos.isEmpty() && state.similar.isEmpty() },
+                            // Right below the buttons on an artist's page.
+                            modifier = Modifier.padding(top = if (tracks.isEmpty()) FIRST_ROW_TOP.dp else 20.dp),
+                        ) {
                             items(state.artistAlbums, key = { it.id }) { album ->
                                 GridCard(
                                     imageUrl = album.posterUrl,
@@ -307,14 +315,12 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                         }
                     }
                 }
-                // An artist's music videos, a playlist's videos: each plays with the rest following.
-                val videos = if (item.kind == ItemKind.Artist) state.artistVideos else state.playlistVideos
                 if (videos.isNotEmpty()) {
                     item(key = "videos") {
                         MediaRow(
                             title = stringResource(if (item.kind == ItemKind.Artist) R.string.library_music_videos else R.string.music_videos),
-                            bottomPadding = 120,
-                            modifier = Modifier.padding(top = if (tracks.isEmpty()) 34.dp else 0.dp),
+                            bottomPadding = LAST_ROW_BOTTOM.takeIf { state.similar.isEmpty() },
+                            modifier = Modifier.padding(top = if (tracks.isEmpty() && state.artistAlbums.isEmpty()) FIRST_ROW_TOP.dp else 0.dp),
                         ) {
                             items(videos, key = { it.id }) { video ->
                                 ContinueCard(
@@ -332,7 +338,11 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                 }
                 if (state.similar.isNotEmpty()) {
                     item(key = "similar") {
-                        MediaRow(title = stringResource(R.string.detail_similar), bottomPadding = 120) {
+                        MediaRow(
+                            title = stringResource(R.string.detail_similar),
+                            bottomPadding = LAST_ROW_BOTTOM,
+                            modifier = Modifier.padding(top = if (tracks.isEmpty() && state.artistAlbums.isEmpty() && videos.isEmpty()) FIRST_ROW_TOP.dp else 0.dp),
+                        ) {
                             items(state.similar, key = { it.id }) { similar ->
                                 GridCard(
                                     imageUrl = similar.posterUrl,

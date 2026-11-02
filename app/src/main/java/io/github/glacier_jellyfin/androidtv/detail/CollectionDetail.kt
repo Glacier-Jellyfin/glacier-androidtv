@@ -214,8 +214,8 @@ fun CollectionDetail(state: DetailState, details: ItemDetails, viewModel: Detail
                         MediaRow(
                             title = stringResource(rowTitle(row, single = rows.size == 1)),
                             subtitle = stringResource(R.string.collection_chronological).takeIf { row !in UndatedRows },
-                            bottomPadding = if (index == rows.lastIndex) 110 else null,
-                            modifier = if (index == 0) Modifier.padding(top = 46.dp) else Modifier,
+                            bottomPadding = if (index == rows.lastIndex) LAST_ROW_BOTTOM else null,
+                            modifier = if (index == 0) Modifier.padding(top = FIRST_ROW_TOP.dp) else Modifier,
                         ) {
                             items(rowItems, key = { it.id }) { item -> CollectionCard(item, viewModel) }
                         }

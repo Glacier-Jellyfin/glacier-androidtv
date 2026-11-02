@@ -317,8 +317,8 @@ fun PersonScreen(
                                 MediaRow(
                                     title = stringResource(R.string.person_filmography),
                                     subtitle = stringResource(R.string.person_by_year),
-                                    bottomPadding = 120,
-                                    modifier = Modifier.padding(top = 46.dp),
+                                    bottomPadding = LAST_ROW_BOTTOM,
+                                    modifier = Modifier.padding(top = FIRST_ROW_TOP.dp),
                                 ) {
                                     items(person.credits, key = { it.item.id }) { credit ->
                                         Box {

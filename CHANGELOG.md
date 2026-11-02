@@ -34,6 +34,7 @@ language is German.
 - The server setup no longer shows a step count
 - The question whether to take over the settings of another device opens full screen, with the devices and the day each saved its settings
 - The server list counts the profiles of a server as "Who's watching?" shows them, including those set up only on this device
+- Detail pages leave the same room above and below their rows of cards
 
 ### Fixed
 - Right from the profile in the navigation bar no longer jumps down to the A–Z rail of a library
