@@ -812,7 +812,7 @@ internal fun takenText(date: LocalDateTime?): String? {
 
 /** A subfolder: a low tile with the folder sign and its name, as wide as its cell. */
 @Composable
-private fun FolderTile(folder: MediaFolder, onClick: () -> Unit, modifier: Modifier) {
+internal fun FolderTile(folder: MediaFolder, onClick: () -> Unit, modifier: Modifier) {
     val accent = LocalAccent.current
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     GlacierCard(onClick = onClick, modifier = modifier.fillMaxWidth()) { focused ->

@@ -246,6 +246,8 @@
     <string name="scope_artists">Künstler</string>
     <string name="scope_songs">Songs</string>
     <string name="scope_music_videos">Musikvideos</string>
+    <string name="music_videos_view_all">Alle</string>
+    <string name="music_videos_view_folders">Ordner</string>
     <string name="scope_playlists">Wiedergabelisten</string>
     <string name="sort_date_added">Zuletzt hinzugefügt</string>
     <string name="sort_title">Titel</string>

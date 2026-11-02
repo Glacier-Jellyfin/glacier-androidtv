@@ -9,6 +9,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.media.FolderContent
+import io.github.glacier_jellyfin.androidtv.core.data.media.FolderMedia
+import io.github.glacier_jellyfin.androidtv.core.data.media.FolderRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
@@ -19,7 +22,11 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.LibrarySortChoice
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
 import io.github.glacier_jellyfin.androidtv.core.data.media.LoadProgress
+import io.github.glacier_jellyfin.androidtv.core.data.media.MediaFolder
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
+import io.github.glacier_jellyfin.androidtv.core.data.media.NameOrder
+import io.github.glacier_jellyfin.androidtv.core.data.settings.MusicVideoView
+import org.jellyfin.sdk.model.api.CollectionType
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicRepository
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.music.MusicActions
@@ -65,7 +72,17 @@ data class LibraryState(
     val userName: String = "",
     /** The server has a music video library: music gets their tab. */
     val musicVideos: Boolean = false,
+    /** How the music videos tab lists them; null until known (picked, or decided by their metadata). */
+    val musicVideoView: MusicVideoView? = null,
+    /** The folders opened in the music videos' folder view, from the top; empty at the top. */
+    val folderPath: List<MediaFolder> = emptyList(),
+    /** The folder shown in the folder view, its subfolders and videos in the tab's order. */
+    val folder: FolderContent? = null,
+    val viewMenuOpen: Boolean = false,
 ) {
+    /** The music videos tab shows folders instead of the paged grid. */
+    val inFolders: Boolean get() = query.scope == LibraryScope.MusicVideos && musicVideoView == MusicVideoView.Folders
+
     val scopes: List<LibraryScope> get() = LibraryQuery.scopes(query.kind, inGenre = query.genreId != null, musicVideos = musicVideos)
     val complete: Boolean get() = total != null && offset + items.size >= total
 }
@@ -81,6 +98,7 @@ class LibraryViewModel @Inject constructor(
     details: DetailRepository,
     playback: PlaybackRepository,
     home: HomeRepository,
+    private val folders: FolderRepository,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<LibraryRoute>()
@@ -124,6 +142,8 @@ class LibraryViewModel @Inject constructor(
                 .onFailure { Log.w(TAG, "Reading the library sort failed", it) }
                 .getOrNull()
             if (kept != null) _state.update { it.copy(query = it.query.withKeptSort(kept)) }
+            val view = runSuspendCatching { settings.current().musicVideoView }.getOrNull()
+            _state.update { it.copy(musicVideoView = view) }
             reload()
         }
         // Marked watched (here, on a detail page or by watching it): the grid shows it at once,
@@ -157,7 +177,7 @@ class LibraryViewModel @Inject constructor(
     /** Called by the grid when it gets near the end of what is loaded. */
     fun loadMore() {
         val current = _state.value
-        if (current.loading || current.failed || current.complete) return
+        if (current.inFolders || current.loading || current.failed || current.complete) return
         loadUpTo(current.offset + current.items.size + PAGE_SIZE - 1)
     }
 
@@ -206,6 +226,34 @@ class LibraryViewModel @Inject constructor(
     fun toggleUnwatchedOnly() = update { it.copy(unwatchedOnly = !it.unwatchedOnly) }
 
     fun toggleSortMenu(open: Boolean = !_state.value.sortMenuOpen) = _state.update { it.copy(sortMenuOpen = open) }
+
+    fun toggleViewMenu(open: Boolean = !_state.value.viewMenuOpen) = _state.update { it.copy(viewMenuOpen = open) }
+
+    /** The music videos tab's view, kept for the profile; a new view starts at the top folder. */
+    fun setMusicVideoView(view: MusicVideoView) {
+        _state.update { it.copy(viewMenuOpen = false) }
+        if (view == _state.value.musicVideoView) return
+        _state.update { it.copy(musicVideoView = view, folderPath = emptyList(), folder = null) }
+        reload()
+        viewModelScope.launch {
+            runSuspendCatching { settings.update { it.copy(musicVideoView = view) } }
+                .onFailure { Log.w(TAG, "Saving the music video view failed", it) }
+        }
+    }
+
+    /** Opens a subfolder in the folder view. */
+    fun openFolder(folder: MediaFolder) {
+        _state.update { it.copy(folderPath = it.folderPath + folder, folder = null) }
+        reload()
+    }
+
+    /** Up a folder in the folder view; false at the top. */
+    fun folderUp(): Boolean {
+        if (_state.value.folderPath.isEmpty()) return false
+        _state.update { it.copy(folderPath = it.folderPath.dropLast(1), folder = null) }
+        reload()
+        return true
+    }
 
     /** The design's sort menu: picking the active sort again flips the direction. */
     fun setSort(sort: LibrarySort) {
@@ -331,6 +379,11 @@ class LibraryViewModel @Inject constructor(
     private fun reload() {
         loadJob?.cancel()
         _state.update { it.copy(items = emptyList(), offset = 0, total = null, loading = false, failed = false, letters = emptySet(), jumpTo = null) }
+        val current = _state.value
+        if (current.query.scope == LibraryScope.MusicVideos) {
+            if (current.musicVideoView == null) return chooseMusicVideoView()
+            if (current.inFolders) return loadFolder()
+        }
         loadUpTo(PAGE_SIZE - 1)
         lettersJob?.cancel()
         val query = _state.value.query
@@ -343,10 +396,51 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    /**
+     * The music videos tab before the profile picked a view: the grid when most videos name their
+     * artist (tagged libraries), else their folders. Decided anew each time until a view is picked.
+     */
+    private fun chooseMusicVideoView() {
+        val query = _state.value.query
+        loadJob = viewModelScope.launch {
+            _state.update { it.copy(loading = true) }
+            val share = runSuspendCatching { repository.artistShare(query) }
+                .onFailure { Log.w(TAG, "Counting the music videos' artists failed", it) }
+                .getOrDefault(1f)
+            val view = if (share >= TAGGED_SHARE) MusicVideoView.All else MusicVideoView.Folders
+            _state.update { it.copy(musicVideoView = view, loading = false) }
+            reload()
+        }
+    }
+
+    /** The folder at the end of the folder path, its subfolders and videos in the tab's order. */
+    private fun loadFolder() {
+        val state = _state.value
+        val query = state.query
+        val path = state.folderPath
+        loadJob = viewModelScope.launch {
+            // A new sort keeps the folder on screen until it comes back in the new order.
+            _state.update { it.copy(loading = true, failed = false) }
+            try {
+                val content = folders.load(path.lastOrNull()?.id, CollectionType.MUSICVIDEOS)
+                val sorted = content.copy(folders = content.folders.foldersFor(query), media = content.media.filterIsInstance<FolderMedia.Video>().videosFor(query))
+                _state.update {
+                    if (it.query != query || it.folderPath != path) it
+                    else it.copy(folder = sorted, total = sorted.folders.size + sorted.media.size, loading = false)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Loading the music video folder failed", e)
+                _state.update { it.copy(loading = false, failed = true) }
+            }
+        }
+    }
+
     /** Loads pages until position [index] is covered (or everything is loaded). */
     private fun loadUpTo(index: Int): Job? {
         val current = _state.value
-        if (current.complete) return null
+        if (current.complete || current.inFolders) return null
         if (index < current.offset + current.items.size) return null
         loadJob?.let { if (it.isActive) return it }
         val query = current.query
@@ -379,6 +473,8 @@ class LibraryViewModel @Inject constructor(
     }
 
     companion object {
+        /** From this share of music videos naming their artist on, their tab starts with all of them in one grid. */
+        private const val TAGGED_SHARE = 0.5f
         /** Ten rows of seven posters. */
         const val PAGE_SIZE = 70
         /** Names sort A to Z first; dates, years, ratings and runtimes newest or largest first. */
@@ -388,5 +484,32 @@ class LibraryViewModel @Inject constructor(
         /** Songs queued from the songs tab; their ids go into one request. */
         private const val SONG_QUEUE = 100
         private const val TAG = "Library"
+    }
+}
+
+/** Subfolders by name, or newest first when the videos go by when they were added; [query]'s direction turns them around. */
+private fun List<MediaFolder>.foldersFor(query: LibraryQuery): List<MediaFolder> {
+    val byName = compareBy<MediaFolder, String>(NameOrder) { it.name }
+    val order = if (query.sort == LibrarySort.DateAdded) compareBy<MediaFolder> { it.date }.then(byName) else byName
+    return sortedWith(if (query.descending) order.reversed() else order)
+}
+
+/** A folder's videos in [query]'s order; those without what it sorts by come last, by title. */
+private fun List<FolderMedia.Video>.videosFor(query: LibraryQuery): List<FolderMedia.Video> {
+    val byTitle = compareBy<FolderMedia.Video, String>(NameOrder) { it.item.title }
+    fun <K : Comparable<K>> by(key: (FolderMedia.Video) -> K?): List<FolderMedia.Video> {
+        val (known, unknown) = partition { key(it) != null }
+        val order = compareBy<FolderMedia.Video> { key(it) }.then(byTitle)
+        return known.sortedWith(if (query.descending) order.reversed() else order) + unknown.sortedWith(byTitle)
+    }
+    return when (query.sort) {
+        LibrarySort.DateAdded -> by { it.added }
+        LibrarySort.Year -> by { it.item.year }
+        LibrarySort.Artist -> {
+            val (known, unknown) = partition { it.item.parentTitle != null }
+            val order = compareBy<FolderMedia.Video, String>(NameOrder) { it.item.parentTitle.orEmpty() }.then(byTitle)
+            known.sortedWith(if (query.descending) order.reversed() else order) + unknown.sortedWith(byTitle)
+        }
+        else -> sortedWith(if (query.descending) byTitle.reversed() else byTitle)
     }
 }

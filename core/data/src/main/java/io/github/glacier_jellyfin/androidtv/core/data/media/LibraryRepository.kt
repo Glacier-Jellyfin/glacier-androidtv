@@ -170,6 +170,12 @@ class LibraryRepository @Inject constructor(
     }
 
     /** Letters that have at least one title, for greying out the rest of the A–Z rail. */
+    /** The share of [query]'s titles that name an artist, from the same index the grid pages through. */
+    suspend fun artistShare(query: LibraryQuery): Float = withContext(Dispatchers.IO) {
+        val entries = listing(requireSession(), query).source
+        if (entries.isEmpty()) 1f else entries.count { it.artist != null } / entries.size.toFloat()
+    }
+
     suspend fun availableLetters(query: LibraryQuery): Set<Char> = withContext(Dispatchers.IO) {
         val list = listing(requireSession(), query).list
         (0 until list.size).mapNotNullTo(mutableSetOf()) { list.letterAt(it) }

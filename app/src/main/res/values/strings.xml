@@ -251,6 +251,8 @@
     <string name="scope_artists">Artists</string>
     <string name="scope_songs">Songs</string>
     <string name="scope_music_videos">Music videos</string>
+    <string name="music_videos_view_all">All</string>
+    <string name="music_videos_view_folders">Folders</string>
     <string name="scope_playlists">Playlists</string>
     <string name="sort_date_added">Recently added</string>
     <string name="sort_title">Title</string>

@@ -39,7 +39,8 @@ data class MediaPhoto(val id: UUID, val name: String, val thumbUrl: String, val 
 sealed interface FolderMedia : FolderEntry {
     val id: UUID
 
-    data class Video(val item: MediaItem, override val date: LocalDateTime?) : FolderMedia {
+    /** [added]: when it came to the library, for music videos sorted by that. */
+    data class Video(val item: MediaItem, override val date: LocalDateTime?, val added: LocalDateTime? = null) : FolderMedia {
         override val id: UUID get() = item.id
         override val name: String get() = item.title
     }
@@ -64,7 +65,7 @@ data class FolderContent(
     val isEmpty: Boolean get() = folders.isEmpty() && media.isEmpty()
 }
 
-/** Home video libraries, browsed by their folders on the server's disk. */
+/** Home video libraries, and music video libraries in their folder view, browsed by their folders on the server's disk. */
 @Singleton
 class FolderRepository @Inject constructor(
     private val sessions: SessionManager,
@@ -72,13 +73,13 @@ class FolderRepository @Inject constructor(
     private val settings: SettingsRepository,
 ) {
     /**
-     * The folder [folderId]. Without one, the top: the home video libraries as folders,
+     * The folder [folderId]. Without one, the top: the libraries of [type] as folders,
      * or the content of the only one right away.
      */
-    suspend fun load(folderId: UUID?): FolderContent = withContext(Dispatchers.IO) {
+    suspend fun load(folderId: UUID?, type: CollectionType = CollectionType.HOMEVIDEOS): FolderContent = withContext(Dispatchers.IO) {
         val session = checkNotNull(sessions.session.value) { "No profile is signed in" }
         coroutineScope {
-            val libraries = async { libraries(session) }
+            val libraries = async { libraries(session, type) }
             // The path is only shown, so the folder opens without it when it fails.
             val ancestors = folderId?.let { async { runSuspendCatching { ancestors(session, it) }.getOrNull() } }
             val parent = folderId ?: libraries.await().let { all ->
@@ -113,16 +114,16 @@ class FolderRepository @Inject constructor(
         val screened = ageFilter.screen(videos.map(mapper::item)).associateBy { it.id }
         return items.mapNotNull { dto ->
             when {
-                dto.isVideo -> screened[dto.id]?.let { FolderMedia.Video(it, dto.taken) }
+                dto.isVideo -> screened[dto.id]?.let { FolderMedia.Video(it, dto.taken, dto.dateCreated) }
                 dto.isPhoto -> mapper.photo(dto)?.let { FolderMedia.Photo(it, dto.taken) }
                 else -> null
             }
         }
     }
 
-    private suspend fun libraries(session: Session) =
+    private suspend fun libraries(session: Session, type: CollectionType) =
         session.api.userViewApi.getUserViews(userId = session.userId).content.items
-            .filter { it.collectionType == CollectionType.HOMEVIDEOS }
+            .filter { it.collectionType == type }
 
     private suspend fun children(session: Session, parentId: UUID) =
         session.api.libraryApi.getItems(

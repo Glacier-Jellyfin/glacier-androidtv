@@ -38,7 +38,17 @@ data class ProfileSettings(
     val versions: Map<String, VersionKey> = emptyMap(),
     /** How home video folders show their videos and photos. */
     val folders: FolderSettings = FolderSettings(),
+    /** How the music videos tab lists them; null until picked, when their metadata decides. */
+    val musicVideoView: MusicVideoView? = null,
 )
+
+@Serializable
+enum class MusicVideoView {
+    /** Every music video in one grid, sorted and grouped like a library. */
+    All,
+    /** The folders of the music video libraries, browsed one by one. */
+    Folders,
+}
 
 /** The toolbar of a home video folder, kept from one time to the next; the slideshow (Settings › Playback) and the card shape (Settings › Appearance). */
 @Serializable

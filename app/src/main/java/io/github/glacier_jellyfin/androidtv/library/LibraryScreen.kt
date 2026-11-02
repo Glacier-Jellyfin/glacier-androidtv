@@ -79,7 +79,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.AlphabetLetters
+import io.github.glacier_jellyfin.androidtv.core.data.media.FolderMedia
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
+import io.github.glacier_jellyfin.androidtv.core.data.settings.MusicVideoView
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryScope
 import io.github.glacier_jellyfin.androidtv.core.data.media.ListGroup
@@ -172,6 +174,18 @@ fun LibraryScreen(
             runCatching { sortButtonFocus.requestFocus() }
         }
     }
+    var viewAnchor by remember { mutableStateOf<Rect?>(null) }
+    val viewButtonFocus = remember { FocusRequester() }
+    var viewMenuWasOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(state.viewMenuOpen) {
+        if (state.viewMenuOpen) {
+            viewMenuWasOpen = true
+        } else if (viewMenuWasOpen) {
+            viewMenuWasOpen = false
+            withFrameNanos { }
+            runCatching { viewButtonFocus.requestFocus() }
+        }
+    }
     // A song's options sheet takes the focus with it when it closes; it goes back to the song.
     val sheet by viewModel.musicActions.sheet.collectAsStateWithLifecycle()
     var sheetWasOpen by remember { mutableStateOf(false) }
@@ -211,7 +225,28 @@ fun LibraryScreen(
             runCatching { activeChip.requestFocus() }.onFailure { runCatching { sortButtonFocus.requestFocus() } }
         }
     }
-    BackHandler(enabled = inToolbar) { runCatching { navFocus.requestFocus() } }
+    // In a music video folder, Back on the toolbar goes up a folder before it goes to the bar.
+    BackHandler(enabled = inToolbar) { if (!(state.inFolders && viewModel.folderUp())) runCatching { navFocus.requestFocus() } }
+
+    // The folder view: an entry's focus is kept like a card's. Into a subfolder, the focus goes to its first entry.
+    val folder = state.folder?.takeIf { state.inFolders }
+    var enteredFolder by remember { mutableStateOf(false) }
+    fun entryFocus(id: String, first: Boolean): Modifier =
+        (if (first) Modifier.focusRequester(firstCardFocus) else Modifier)
+            .then(if (id == lastFocusId) Modifier.focusRequester(restoreFocus) else Modifier)
+            .onFocusChanged {
+                if (it.isFocused) {
+                    inContent = true
+                    focusedId = id
+                    lastFocusId = id
+                }
+            }
+    LaunchedEffect(folder) {
+        if (folder == null || folder.isEmpty || (initialFocusDone && !enteredFolder)) return@LaunchedEffect
+        enteredFolder = false
+        withFrameNanos { }
+        initialFocusDone = runCatching { firstCardFocus.requestFocus() }.isSuccess
+    }
 
     // Load the next page when the grid gets within three rows of the end.
     LaunchedEffect(gridState, gridCount, songList) {
@@ -317,7 +352,47 @@ fun LibraryScreen(
                             onSortAnchor = { sortAnchor = it },
                             sortButtonFocus = sortButtonFocus,
                             activeChip = activeChip,
+                            onViewMenu = viewModel::toggleViewMenu,
+                            onViewAnchor = { viewAnchor = it },
+                            viewButtonFocus = viewButtonFocus,
                         )
+                    }
+                    if (folder != null) {
+                        // Folders and videos each in rows of their own, headed like groups when the folder has both.
+                        val headed = folder.folders.isNotEmpty() && folder.media.isNotEmpty()
+                        if (headed) {
+                            item(span = { GridItemSpan(maxLineSpan) }, key = "section-folders") { SectionHeading(stringResource(R.string.folder_section_folders)) }
+                        }
+                        folder.folders.forEachIndexed { index, sub ->
+                            item(key = "folder-${sub.id}") {
+                                FolderTile(
+                                    sub,
+                                    onClick = {
+                                        enteredFolder = true
+                                        viewModel.openFolder(sub)
+                                    },
+                                    modifier = entryFocus(sub.id.toString(), first = index == 0)
+                                        .then(if (index == folder.folders.lastIndex) Modifier.focusProperties { right = FocusRequester.Cancel } else Modifier),
+                                )
+                            }
+                        }
+                        if (headed) {
+                            item(span = { GridItemSpan(maxLineSpan) }, key = "section-videos") { SectionHeading(stringResource(R.string.folder_section_videos)) }
+                        }
+                        folder.media.filterIsInstance<FolderMedia.Video>().forEachIndexed { index, video ->
+                            val media = video.item
+                            item(key = media.id) {
+                                GridCard(
+                                    imageUrl = media.thumbUrl ?: media.posterUrl,
+                                    title = media.title,
+                                    caption = media.parentTitle,
+                                    onClick = { viewModel.open(media) },
+                                    shape = CardShape.Wide,
+                                    locked = media.showsLock(),
+                                    modifier = entryFocus(media.id.toString(), first = folder.folders.isEmpty() && index == 0),
+                                )
+                            }
+                        }
                     }
                     state.items.forEachIndexed { index, item ->
                         val group = item.group
@@ -395,7 +470,7 @@ fun LibraryScreen(
                                 }
                             }
                         }
-                        state.loading && state.items.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }, key = "loading") {
+                        state.loading && state.items.isEmpty() && folder == null -> item(span = { GridItemSpan(maxLineSpan) }, key = "loading") {
                             InFreeSpace(gridState, "loading", screenCentred = true) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(28.dp)) {
                                     SpinningDiamond(90)
@@ -424,6 +499,7 @@ fun LibraryScreen(
                                 Text(
                                     stringResource(
                                         when {
+                                            state.inFolders -> R.string.folder_empty
                                             state.query.favoritesOnly && state.query.kind == LibraryKind.Music -> R.string.library_empty_music_favorites
                                             state.query.favoritesOnly -> R.string.library_empty_favorites
                                             state.query.unwatchedOnly -> R.string.library_empty_unwatched
@@ -473,6 +549,19 @@ fun LibraryScreen(
                 onSort = viewModel::setSort,
                 onDismiss = { viewModel.toggleSortMenu(false) },
                 descending = state.query.descending,
+            )
+        }
+
+        val view = state.musicVideoView
+        val viewMenuAnchor = viewAnchor
+        if (state.viewMenuOpen && view != null && viewMenuAnchor != null) {
+            SortMenu(
+                sorts = MusicVideoView.entries,
+                current = view,
+                label = { stringResource(it.label) },
+                anchor = viewMenuAnchor,
+                onSort = viewModel::setMusicVideoView,
+                onDismiss = { viewModel.toggleViewMenu(false) },
             )
         }
 
@@ -542,6 +631,12 @@ private fun GroupHeading(group: ListGroup, sort: LibrarySort, cards: Boolean) {
     )
 }
 
+/** The heading over a music video folder's subfolders or videos, drawn like a group heading. */
+@Composable
+private fun SectionHeading(text: String) {
+    Text(text, style = GlacierText.body(19, FontWeight.SemiBold), color = GlacierColors.Mist, modifier = Modifier.offset(y = GROUP_HEADING_DROP.dp))
+}
+
 @Composable
 private fun groupLabel(group: ListGroup, sort: LibrarySort): String = when (group) {
     is ListGroup.Month -> {
@@ -577,8 +672,13 @@ private fun Header(state: LibraryState) {
         // The sort button already shows sort and order, so the line only counts. It keeps its
         // height while a filter loads, so the chips below do not jump up.
         val total = state.total
+        // In the folder view, the way down to the folder shown instead.
         Text(
-            if (total != null) countText(state.query.scope, state.query.kind, total) else " ",
+            when {
+                state.inFolders -> (listOf(stringResource(R.string.scope_music_videos)) + state.folderPath.map { it.name }).joinToString(" › ")
+                total != null -> countText(state.query.scope, state.query.kind, total)
+                else -> " "
+            },
             style = GlacierText.body(19),
             color = GlacierColors.Mist,
         )
@@ -596,6 +696,9 @@ private fun Toolbar(
     onSortAnchor: (Rect) -> Unit,
     sortButtonFocus: FocusRequester,
     activeChip: FocusRequester,
+    onViewMenu: (Boolean) -> Unit,
+    onViewAnchor: (Rect) -> Unit,
+    viewButtonFocus: FocusRequester,
 ) {
     Row(
         modifier
@@ -616,8 +719,19 @@ private fun Toolbar(
             )
         }
         Spacer(Modifier.weight(1f))
-        // The filters narrow every tab, so they sit apart from the tabs, by the sort.
-        if (state.query.filterable) {
+        // The filters narrow every tab, so they sit apart from the tabs, by the sort. Music videos choose their view there instead.
+        val view = state.musicVideoView
+        if (state.query.scope == LibraryScope.MusicVideos) {
+            if (view != null) {
+                SortButton(
+                    label = stringResource(view.label),
+                    open = state.viewMenuOpen,
+                    onClick = { onViewMenu(!state.viewMenuOpen) },
+                    icon = GlacierIcons.Grid,
+                    modifier = Modifier.focusRequester(viewButtonFocus).onGloballyPositioned { onViewAnchor(it.boundsInRoot()) },
+                )
+            }
+        } else if (state.query.filterable) {
             if (state.query.kind != LibraryKind.Music) {
                 ToggleChip(
                     label = stringResource(R.string.scope_unwatched),
@@ -803,7 +917,7 @@ private fun captionFor(item: MediaItem, sort: LibrarySort?): String? {
 @Composable
 private fun baseCaption(item: MediaItem): String? = when (item.kind) {
     ItemKind.Album, ItemKind.Song -> item.parentTitle
-    ItemKind.MusicVideo -> item.parentTitle ?: stringResource(R.string.group_unknown_artist)
+    ItemKind.MusicVideo -> item.parentTitle
     ItemKind.Collection, ItemKind.Genre, ItemKind.Playlist -> item.childCount?.let { pluralStringResource(R.plurals.count_titles, it, it) }
     ItemKind.Artist -> item.childCount?.let { pluralStringResource(R.plurals.count_albums, it, it) }
     else -> yearText(item)
@@ -831,6 +945,12 @@ private val LibraryScope.label: Int
         LibraryScope.Songs -> R.string.scope_songs
         LibraryScope.MusicVideos -> R.string.scope_music_videos
         LibraryScope.Playlists -> R.string.scope_playlists
+    }
+
+private val MusicVideoView.label: Int
+    get() = when (this) {
+        MusicVideoView.All -> R.string.music_videos_view_all
+        MusicVideoView.Folders -> R.string.music_videos_view_folders
     }
 
 private val LibrarySort.label: Int
