@@ -115,7 +115,7 @@ fun PhotoScreen(
     var overlay by remember { mutableStateOf(true) }
     LaunchedEffect(overlayKey, state.index, state.slideshow) {
         overlay = true
-        delay(OVERLAY_MS)
+        delay(if (state.slideshow) SLIDESHOW_OVERLAY_MS else OVERLAY_MS)
         overlay = false
     }
     // The neighbours load ahead, so browsing does not wait for them.
@@ -316,5 +316,6 @@ private fun longTakenText(date: LocalDateTime?): String? {
 /** The slideshow's progress line at the bottom edge. */
 private const val SLIDE_PROGRESS_HEIGHT = 5
 
-/** How long name and position stay after a change. */
+/** How long name and position stay after a change; in a slideshow shorter, so they do not lie over every photo. */
 private const val OVERLAY_MS = 4_000L
+private const val SLIDESHOW_OVERLAY_MS = 1_500L
