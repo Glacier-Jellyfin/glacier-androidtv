@@ -11,6 +11,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.glacier_jellyfin.androidtv.core.designsystem.Accent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierTheme
+import io.github.glacier_jellyfin.androidtv.core.player.DolbyVisionProfile7
+import io.github.glacier_jellyfin.androidtv.core.player.PlaybackSetup
 import io.github.glacier_jellyfin.androidtv.UiLocale
 
 /**
@@ -26,7 +28,12 @@ class PlaybackCheckActivity : ComponentActivity() {
     private val viewModel: PlaybackCheckViewModel by viewModels {
         viewModelFactory {
             initializer {
-                PlaybackCheckViewModel(application, intent.getBooleanExtra(EXTRA_BASE_LAYER, false), intent.getBooleanExtra(EXTRA_RESUME, false))
+                val setup = PlaybackSetup(
+                    dolbyVisionProfile7 = runCatching { DolbyVisionProfile7.valueOf(intent.getStringExtra(EXTRA_PROFILE7).orEmpty()) }
+                        .getOrDefault(DolbyVisionProfile7.AsIs),
+                    iec61937 = intent.getBooleanExtra(EXTRA_IEC61937, false),
+                )
+                PlaybackCheckViewModel(application, setup, intent.getBooleanExtra(EXTRA_RESUME, false))
             }
         }
     }
@@ -47,23 +54,25 @@ class PlaybackCheckActivity : ComponentActivity() {
 
     companion object {
         private const val EXTRA_ACCENT = "accent"
-        private const val EXTRA_BASE_LAYER = "dolbyVisionBaseLayer"
+        private const val EXTRA_PROFILE7 = "dolbyVisionProfile7"
+        private const val EXTRA_IEC61937 = "iec61937"
         private const val EXTRA_RESUME = "resume"
         private const val PROCESS_SUFFIX = ":playbackcheck"
 
-        fun start(context: Context, accent: Accent, dolbyVisionBaseLayer: Boolean, resume: Boolean = false) {
+        fun start(context: Context, accent: Accent, setup: PlaybackSetup, resume: Boolean = false) {
             context.startActivity(
                 Intent(context, PlaybackCheckActivity::class.java)
                     .putExtra(EXTRA_ACCENT, accent.name)
-                    .putExtra(EXTRA_BASE_LAYER, dolbyVisionBaseLayer)
+                    .putExtra(EXTRA_PROFILE7, setup.dolbyVisionProfile7.name)
+                    .putExtra(EXTRA_IEC61937, setup.iec61937)
                     .putExtra(EXTRA_RESUME, resume),
             )
         }
 
         /** Opens the check again when its process died in the middle of a sample; true if it did. */
-        fun resumeIfInterrupted(context: Context, accent: Accent, dolbyVisionBaseLayer: Boolean): Boolean {
+        fun resumeIfInterrupted(context: Context, accent: Accent, setup: PlaybackSetup): Boolean {
             if (PlaybackCheckJournal(context).interruptedAt() == null || running(context)) return false
-            start(context, accent, dolbyVisionBaseLayer, resume = true)
+            start(context, accent, setup, resume = true)
             return true
         }
 

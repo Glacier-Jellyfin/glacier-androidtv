@@ -319,6 +319,8 @@ data class PlaybackSettings(
     val segments: Map<SegmentKind, SegmentAction> = SegmentPolicy.DefaultActions,
     val skipButtonHide: SkipButtonHide = SkipButtonHide.S10,
     val audioChannels: AudioChannels = AudioChannels.Auto,
+    val hdAudio: HdAudioOutput = HdAudioOutput.Glacier,
+    val dolbyVisionProfile7: DolbyVisionProfile7Choice = DolbyVisionProfile7Choice.DolbyVision,
     val subtitleBurnIn: SubtitleBurnIn = SubtitleBurnIn.Auto,
 ) {
     val segmentPolicy: SegmentPolicy get() = SegmentPolicy(SegmentPolicy.DefaultActions + segments, upNext.mode)
@@ -371,6 +373,27 @@ enum class MaxBitrate(val bitsPerSecond: Int?) {
 @Serializable
 enum class AudioChannels(val max: Int?) {
     Auto(null), Stereo(2), Surround51(6), Surround71(8),
+}
+
+/**
+ * How Dolby Vision profile 7 (UHD Blu-ray) plays where the decoder takes
+ * profile 8 but not 7; with neither it always plays as HDR10.
+ */
+@Serializable
+enum class DolbyVisionProfile7Choice {
+    /** Rewritten as profile 8.1: Dolby Vision without the enhancement layer. */
+    DolbyVision,
+    /** The HDR10 base layer. */
+    Hdr10,
+}
+
+/** Who hands TrueHD and DTS-HD to HDMI, where it takes IEC 61937 bursts. */
+@Serializable
+enum class HdAudioOutput {
+    /** Glacier packs the bursts itself: the whole stream, also where Android sends only the DTS core. */
+    Glacier,
+    /** Android passes the bitstream on. */
+    Android,
 }
 
 /** Look of text subtitles (not ASS, which brings its own styles). */

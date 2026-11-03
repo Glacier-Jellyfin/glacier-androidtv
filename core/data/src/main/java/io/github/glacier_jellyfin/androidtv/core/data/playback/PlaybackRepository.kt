@@ -11,6 +11,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.toTrack
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleMode
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.DeviceCapabilities
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.DeviceProfiles
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.HlsSegments
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.MediaCapabilityDetector
@@ -191,8 +192,8 @@ class PlaybackRepository @Inject constructor(
      */
     val stopped: SharedFlow<UUID> = _stopped.asSharedFlow()
 
-    /** No decoder for Dolby Vision profile 7: the player plays its HDR10 base layer. */
-    val dolbyVisionBaseLayer: Boolean get() = !capabilities.capabilities.decodesDolbyVisionProfile7
+    /** What this device decodes and passes on, for the player's setup. */
+    val device: DeviceCapabilities get() = capabilities.capabilities
 
     /**
      * Ids of the files of [itemId] this device plays as they are, without the

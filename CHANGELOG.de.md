@@ -13,6 +13,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Ein Ordner zeigt seine Videos und Fotos als Karten oder als Galerie: Das gewählte Bild füllt den Bildschirm hinter Titel und Ordnern, unten liegt eine Zeile kleiner Bilder zum Durchklicken. Gehst du in die Zeile, kommt das ganze Bild über der Zeile nach vorn, die Navigationsleiste fährt weg, und ein Video spielt darin. Chips links zeigen alle, nur Videos oder nur Fotos, Menüs rechts wählen die Ansicht und sortieren nach Aufnahmedatum oder Name. Zurück springt zuerst zu den Chips. Nach Datum sortiert bekommt jeder Monat unter den Karten eine Überschrift, nach Name sortiert springt eine A–Z-Leiste zu einem Buchstaben. Die Vollbildansicht blättert auch durch die Videos. Unter Einstellungen › Darstellung haben die Karten 16:9 oder 4:3
 - Musikvideos sind ein Reiter in Musik statt eines eigenen Eintrags in der Navigationsleiste, als 16:9-Karten sortiert nach Hinzugefügt, Titel, Erscheinungsjahr oder Künstler
 - Der Reiter Musikvideos zeigt alle Videos oder blättert durch ihre Ordner. Solange keine Ansicht gewählt ist, beginnt er mit allen Videos, wenn die meisten ihren Künstler nennen
+- Glacier schickt TrueHD und DTS-HD als vollständigen verlustfreien Bitstream an den Receiver, auch auf Geräten, auf denen Android nur den DTS-Kern weitergibt oder bei TrueHD scheitert. Unter Einstellungen › Audio lässt sich das Android überlassen
 
 ### Verbessert
 - Die Navigationsleiste lässt oben rechts Platz für Hinweise. Brauchen ihre Einträge mehr Platz, scrollen die zwischen Suche und Einstellungen, und Suche, Einstellungen und Profil bleiben immer sichtbar
@@ -22,6 +23,8 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Die Frage, ob die Einstellungen eines anderen Geräts übernommen werden sollen, öffnet sich im Vollbild, mit den Geräten und dem Tag, an dem jedes seine Einstellungen gespeichert hat
 - Die Serverauswahl zählt die Profile eines Servers so, wie „Wer schaut?“ sie zeigt, auch die nur auf diesem Gerät eingerichteten
 - Detailseiten lassen über und unter ihren Kartenzeilen überall gleich viel Platz
+- Dolby-Vision-Titel mit Enhancement Layer laufen auf Geräten, deren Decoder ihr Profil nicht kennt, in Dolby Vision, ohne den Enhancement Layer. Unter Einstellungen › Wiedergabe laufen sie stattdessen in HDR10
+- Die Wiedergabeprüfung erkennt auch Tonformate, die erst nach einem Moment aussetzen
 
 ### Behoben
 - Rechts vom Profil in der Navigationsleiste springt der Fokus nicht mehr hinunter zur A–Z-Leiste einer Bibliothek

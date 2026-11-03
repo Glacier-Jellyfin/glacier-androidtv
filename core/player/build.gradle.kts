@@ -30,6 +30,7 @@ dependencies {
     // Full ASS/SSA rendering (signs, fonts, animation) that Media3's own parser lacks.
     api(libs.libass.media)
 
+    testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.junit)
 }

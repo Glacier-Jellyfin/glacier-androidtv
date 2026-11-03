@@ -15,6 +15,7 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.ui.SubtitleView
@@ -39,8 +40,14 @@ data class StreamRequest(
     val subtitles: List<SideloadedSubtitle> = emptyList(),
     /** A Live TV channel: starts at the live edge, [startPositionMs] does not apply. */
     val live: Boolean = false,
-    /** Dolby Vision profile 7 plays its HDR10 base layer: the device has no decoder for the profile. */
-    val dolbyVisionBaseLayer: Boolean = false,
+    val setup: PlaybackSetup = PlaybackSetup(),
+)
+
+/** How this device plays what it cannot take as it is, decided by the app from its capabilities and settings. */
+data class PlaybackSetup(
+    val dolbyVisionProfile7: DolbyVisionProfile7 = DolbyVisionProfile7.AsIs,
+    /** TrueHD and DTS-HD go to HDMI as IEC 61937 bursts that Glacier packs itself. */
+    val iec61937: Boolean = false,
 )
 
 data class SideloadedSubtitle(
@@ -136,10 +143,14 @@ object GlacierPlayer {
         val extractors = DefaultExtractorsFactory().withAssMkvSupport(assParsers, ass)
         // HTTP for the server's streams; asset:// for the playback check's samples.
         val sources = DefaultDataSource.Factory(context, dataSource)
-        val mediaSources = DefaultMediaSourceFactory(sources, if (request.dolbyVisionBaseLayer) DolbyVisionBaseLayerExtractors(extractors) else extractors)
+        val profile7 = request.setup.dolbyVisionProfile7
+        val mediaSources = DefaultMediaSourceFactory(
+            sources,
+            if (profile7 == DolbyVisionProfile7.AsIs) extractors else DolbyVisionProfile7Extractors(extractors, profile7),
+        )
             // Side-loaded .ass files go through the same parser.
             .setSubtitleParserFactory(assParsers)
-        val renderers = DefaultRenderersFactory(context)
+        val renderers = (if (request.setup.iec61937) Iec61937RenderersFactory(context) else DefaultRenderersFactory(context))
             // Platform decoders first; a software fallback only when a hardware decoder fails.
             .setEnableDecoderFallback(true)
             // FFmpeg (core/ffmpeg) for audio formats no platform decoder or passthrough handles, e.g. DTS.
@@ -213,6 +224,17 @@ object GlacierPlayer {
                 }
             }
             .build()
+
+    /** Media3's renderers with an audio sink that packs TrueHD and DTS-HD itself ([Iec61937OutputProvider]). */
+    @OptIn(UnstableApi::class)
+    private class Iec61937RenderersFactory(context: Context) : DefaultRenderersFactory(context) {
+        override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioOutputPlaybackParams: Boolean): AudioSink =
+            DefaultAudioSink.Builder(context)
+                .setEnableFloatOutput(enableFloatOutput)
+                .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
+                .setAudioOutputProvider(Iec61937OutputProvider.create(context))
+                .build()
+    }
 
     private fun SideloadedSubtitle.toConfiguration() =
         MediaItem.SubtitleConfiguration.Builder(Uri.parse(url))

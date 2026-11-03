@@ -59,10 +59,16 @@ internal object DeviceReport {
         add("  Video: ${video.joinToString()}")
         add("  HDR: ${device.hdr.joinToString { it.name }.ifEmpty { "none" }}")
         add("  Dolby Vision profiles: ${device.dolbyVisionProfiles?.sorted()?.joinToString() ?: "not declared"}")
-        add("  Dolby Vision profile 7: ${if (device.decodesDolbyVisionProfile7) "Dolby Vision decoder" else "HDR10 base layer"}")
+        val profile7 = when {
+            device.decodesDolbyVisionProfile7 -> "Dolby Vision decoder"
+            device.decodesDolbyVisionProfile8 -> "as profile 8.1, or HDR10 base layer if set"
+            else -> "HDR10 base layer"
+        }
+        add("  Dolby Vision profile 7: $profile7")
         add("  Audio: ${device.audioCodecs.sorted().joinToString()}")
         add("  Passthrough: ${device.passthroughAudio.sorted().joinToString().ifEmpty { "none" }}")
         add("  Audio channels: ${device.maxAudioChannels}")
+        add("  IEC 61937 on HDMI: ${if (device.iec61937) "yes" else "no"}")
     }
 
     private fun VideoCodecSupport.text() =

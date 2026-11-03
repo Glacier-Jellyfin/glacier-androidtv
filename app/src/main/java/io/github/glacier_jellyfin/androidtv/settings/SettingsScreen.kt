@@ -76,6 +76,8 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.AccentColor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderAspect
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AudioChannels
+import io.github.glacier_jellyfin.androidtv.core.data.settings.DolbyVisionProfile7Choice
+import io.github.glacier_jellyfin.androidtv.core.data.settings.HdAudioOutput
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeRow
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeRowChoice
 import io.github.glacier_jellyfin.androidtv.core.data.settings.Language
@@ -313,7 +315,7 @@ fun SettingsScreen(
     // Back from a playback check whose process a decoder took down: it goes on with the next sample.
     val accent = LocalAccent.current
     LifecycleResumeEffect(Unit) {
-        PlaybackCheckActivity.resumeIfInterrupted(context, accent, viewModel.dolbyVisionBaseLayer)
+        PlaybackCheckActivity.resumeIfInterrupted(context, accent, viewModel.playbackSetup)
         onPauseOrDispose { }
     }
     LaunchedEffect(state.refocusLanguage) {
@@ -951,6 +953,15 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
                     playback.matchFrameRate,
                     onToggle = { viewModel.updatePlayback { it.copy(matchFrameRate = !it.matchFrameRate) } },
                 ),
+            ) + listOfNotNull(
+                // Only where the decoder takes profile 8 but not 7; otherwise there is nothing to choose.
+                SettingRow.Choice(
+                    stringResource(R.string.settings_dv_profile7),
+                    stringResource(R.string.settings_dv_profile7_sub),
+                    listOf("Dolby Vision", "HDR10"),
+                    playback.dolbyVisionProfile7.ordinal,
+                    onSelect = { i -> viewModel.updatePlayback { it.copy(dolbyVisionProfile7 = DolbyVisionProfile7Choice.entries[i]) } },
+                ).takeIf { viewModel.choosesDolbyVisionProfile7 },
             ),
         ),
         SettingGroup(
@@ -1024,6 +1035,15 @@ private fun audioRows(state: SettingsUiState, viewModel: SettingsViewModel, lang
                     playback.audioChannels.ordinal,
                     onSelect = { i -> viewModel.updatePlayback { it.copy(audioChannels = AudioChannels.entries[i]) } },
                 ),
+            ) + listOfNotNull(
+                // Only where HDMI takes IEC 61937; elsewhere Android hands the bitstreams on anyway.
+                SettingRow.Choice(
+                    stringResource(R.string.settings_hd_audio),
+                    stringResource(R.string.settings_hd_audio_sub),
+                    listOf(stringResource(R.string.settings_hd_audio_glacier), stringResource(R.string.settings_hd_audio_android)),
+                    playback.hdAudio.ordinal,
+                    onSelect = { i -> viewModel.updatePlayback { it.copy(hdAudio = HdAudioOutput.entries[i]) } },
+                ).takeIf { viewModel.iec61937Available },
             ),
         ),
         SettingGroup(
@@ -1574,7 +1594,7 @@ private fun diagnosticsGroup(diagnostics: DiagnosticsState, viewModel: SettingsV
                 stringResource(R.string.diag_check),
                 stringResource(R.string.diag_check_sub),
                 stringResource(R.string.diag_check_button),
-                onClick = { PlaybackCheckActivity.start(context, accent, viewModel.dolbyVisionBaseLayer) },
+                onClick = { PlaybackCheckActivity.start(context, accent, viewModel.playbackSetup) },
             ),
             SettingRow.Toggle(
                 stringResource(R.string.diag_verbose),

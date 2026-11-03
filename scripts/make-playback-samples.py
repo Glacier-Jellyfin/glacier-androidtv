@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """
 Makes the short samples the playback check plays (core/player/src/main/assets/
-playback-check) and the Dolby Vision samples of DolbyVisionBaseLayerTest
-(core/player/src/androidTest/assets). Needs ffmpeg with libx264, libx265,
-libsvtav1 and libvpx.
+playback-check), the Dolby Vision samples of DolbyVisionBaseLayerTest
+(core/player/src/androidTest/assets) and the bitstreams of Iec61937PackerTest
+(core/player/src/test/resources/iec61937) with the SHA-256 of what ffmpeg's
+spdif muxer makes of them. Needs ffmpeg with libx264, libx265, libsvtav1 and
+libvpx.
 
 The Dolby Vision samples are HEVC that declares a profile through its
 configuration record (dvcC), as Media3 and Jellyfin read it. They carry no
@@ -12,6 +14,7 @@ and whether it plays, not the Dolby Vision picture itself.
 
     python3 scripts/make-playback-samples.py
 """
+import hashlib
 import os
 import struct
 import subprocess
@@ -20,6 +23,7 @@ import tempfile
 ROOT = os.path.join(os.path.dirname(__file__), "..", "core", "player", "src")
 CHECK = os.path.join(ROOT, "main", "assets", "playback-check")
 TEST = os.path.join(ROOT, "androidTest", "assets")
+IEC = os.path.join(ROOT, "test", "resources", "iec61937")
 
 SIZE = "640x360"
 HDR10 = (
@@ -93,8 +97,20 @@ def audio(out, codec, layout, bitrate, *extra):
     ffmpeg(*silence(layout, 3), "-c:a", codec, "-b:a", bitrate, *extra, out)
 
 
+def iec61937(name, codec, bitrate, *spdif):
+    """A raw bitstream and the SHA-256 of its IEC 61937 bursts as ffmpeg packs them."""
+    out = os.path.join(IEC, name)
+    ffmpeg("-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000,aformat=channel_layouts=5.1", "-t", "1",
+           "-c:a", codec, "-b:a", bitrate, "-strict", "-2", out)
+    with tempfile.TemporaryDirectory() as tmp:
+        bursts = os.path.join(tmp, "bursts.spdif")
+        ffmpeg("-i", out, "-c", "copy", "-f", "spdif", *spdif, bursts)
+        return f"{name} {hashlib.sha256(open(bursts, 'rb').read()).hexdigest()}\n"
+
+
 os.makedirs(CHECK, exist_ok=True)
 os.makedirs(TEST, exist_ok=True)
+os.makedirs(IEC, exist_ok=True)
 
 # The playback check, in the order it plays them.
 ffmpeg(*picture("yuv420p", 1), "-c:v", "libx264", "-preset", "veryfast", "-crf", "32", "-profile:v", "high", os.path.join(CHECK, "h264.mkv"))
@@ -119,6 +135,11 @@ audio(os.path.join(CHECK, "dts.mka"), "dca", "5.1", "768k", "-strict", "-2")
 hevc(os.path.join(TEST, "dv-profile7.mkv"), "yuv420p10le", HDR10, seconds=2, dolby_vision=(7, 6, True))
 hevc(os.path.join(TEST, "dv-profile7-8bit.mkv"), "yuv420p", HDR10, seconds=2, dolby_vision=(7, 6, True))
 
-for folder in (CHECK, TEST):
+# Iec61937PackerTest: TrueHD in MAT frames, DTS as type IV bursts at the HDMI high bitrate rate.
+with open(os.path.join(IEC, "expected.txt"), "w", newline="\n") as expected:
+    expected.write(iec61937("truehd.thd", "truehd", "0"))
+    expected.write(iec61937("dts.dts", "dca", "768k", "-dtshd_rate", "768000"))
+
+for folder in (CHECK, TEST, IEC):
     for name in sorted(os.listdir(folder)):
         print(f"{os.path.getsize(os.path.join(folder, name)):>8}  {os.path.normpath(os.path.join(folder, name))}")

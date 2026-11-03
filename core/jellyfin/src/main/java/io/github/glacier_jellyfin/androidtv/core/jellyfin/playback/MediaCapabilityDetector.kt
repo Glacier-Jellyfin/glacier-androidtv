@@ -3,6 +3,7 @@ package io.github.glacier_jellyfin.androidtv.core.jellyfin.playback
 import android.annotation.SuppressLint
 import android.content.Context
 import android.hardware.display.DisplayManager
+import android.media.AudioDeviceInfo
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.MediaCodecInfo
@@ -68,6 +69,7 @@ class MediaCapabilityDetector @Inject constructor(
             passthroughAudio = passthrough,
             hdr = hdr,
             dolbyVisionProfiles = dolbyVisionProfiles(profiles(decodersFor(MIME_DOLBY_VISION), MIME_DOLBY_VISION)),
+            iec61937 = iec61937(),
         )
     }
 
@@ -120,6 +122,16 @@ class MediaCapabilityDetector @Inject constructor(
         }
     }
 
+    /** An HDMI output that takes IEC 61937 on 8 channels, the high bitrate rate TrueHD and DTS-HD need. */
+    private fun iec61937(): Boolean {
+        val audioManager = context.getSystemService(AudioManager::class.java) ?: return false
+        return audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any { device ->
+            device.type in HDMI_OUTPUTS &&
+                AudioFormat.ENCODING_IEC61937 in device.encodings &&
+                (device.channelCounts.isEmpty() || device.channelCounts.any { it >= 8 })
+        }
+    }
+
     private fun maxAudioChannels(): Int {
         val audioManager = context.getSystemService(AudioManager::class.java) ?: return 2
         val counts = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).flatMap { it.channelCounts.toList() }
@@ -133,6 +145,10 @@ class MediaCapabilityDetector @Inject constructor(
         const val MIME_AV1 = "video/av01"
         const val MIME_VP9 = "video/x-vnd.on2.vp9"
         const val MIME_DOLBY_VISION = "video/dolby-vision"
+
+        // eARC is a plain number compiled in; older devices never report it.
+        @SuppressLint("InlinedApi")
+        val HDMI_OUTPUTS = setOf(AudioDeviceInfo.TYPE_HDMI, AudioDeviceInfo.TYPE_HDMI_ARC, AudioDeviceInfo.TYPE_HDMI_EARC)
 
         /** Platform decoders Media3 uses, and the Jellyfin codec names they cover. */
         val AUDIO_DECODERS = listOf(

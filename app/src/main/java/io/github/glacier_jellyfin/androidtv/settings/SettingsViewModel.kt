@@ -45,6 +45,9 @@ import io.github.glacier_jellyfin.androidtv.ui.PinGate
 import io.github.glacier_jellyfin.androidtv.ui.PinReason
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.core.player.FfmpegAudio
+import io.github.glacier_jellyfin.androidtv.core.player.PlaybackSetup
+import io.github.glacier_jellyfin.androidtv.player.choosesDolbyVisionProfile7
+import io.github.glacier_jellyfin.androidtv.player.playbackSetup
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateChannel
 import io.github.glacier_jellyfin.androidtv.core.updater.WhatsNew
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateManager
@@ -379,7 +382,13 @@ class SettingsViewModel @Inject constructor(
     }
 
     /** For the playback check, which runs in a process of its own and is told this. */
-    val dolbyVisionBaseLayer: Boolean get() = playback.dolbyVisionBaseLayer
+    val playbackSetup: PlaybackSetup get() = playback.device.playbackSetup(_state.value.profile.playback)
+
+    /** HDMI takes IEC 61937: the choice who hands TrueHD and DTS-HD on matters. */
+    val iec61937Available: Boolean get() = playback.device.iec61937
+
+    /** Dolby Vision profile 7 can play as 8.1 or as HDR10 here. */
+    val choosesDolbyVisionProfile7: Boolean get() = playback.device.choosesDolbyVisionProfile7
 
     fun sendLog() {
         if (_state.value.diagnostics.sending) return

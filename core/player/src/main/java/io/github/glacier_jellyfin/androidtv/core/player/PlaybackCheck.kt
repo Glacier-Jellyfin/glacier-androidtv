@@ -51,7 +51,7 @@ data class CheckResult(
  * to see what this device and its HDMI chain play: a diagnosis for bug
  * reports, never used to change what the server is asked for.
  */
-class PlaybackCheck(private val context: Context, private val dolbyVisionBaseLayer: Boolean) {
+class PlaybackCheck(private val context: Context, private val setup: PlaybackSetup) {
 
     /**
      * Plays [sample] on the main thread and reports what happened. [show]
@@ -66,7 +66,7 @@ class PlaybackCheck(private val context: Context, private val dolbyVisionBaseLay
                 isHls = false,
                 headers = emptyMap(),
                 startPositionMs = 0,
-                dolbyVisionBaseLayer = dolbyVisionBaseLayer,
+                setup = setup,
             ),
         )
         show(playback)

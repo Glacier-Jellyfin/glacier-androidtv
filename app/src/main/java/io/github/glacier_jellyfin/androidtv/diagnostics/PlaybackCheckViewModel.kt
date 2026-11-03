@@ -8,6 +8,7 @@ import io.github.glacier_jellyfin.androidtv.core.player.CheckResult
 import io.github.glacier_jellyfin.androidtv.core.player.CheckSample
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
 import io.github.glacier_jellyfin.androidtv.core.player.PlaybackCheck
+import io.github.glacier_jellyfin.androidtv.core.player.PlaybackSetup
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,9 +32,9 @@ data class PlaybackCheckState(
  * The playback check in [PlaybackCheckActivity]'s own process. With [resume]
  * it goes on after a sample whose decoder took the previous process down.
  */
-class PlaybackCheckViewModel(application: Application, dolbyVisionBaseLayer: Boolean, resume: Boolean) : AndroidViewModel(application) {
+class PlaybackCheckViewModel(application: Application, setup: PlaybackSetup, resume: Boolean) : AndroidViewModel(application) {
 
-    private val check = PlaybackCheck(application, dolbyVisionBaseLayer)
+    private val check = PlaybackCheck(application, setup)
     private val journal = PlaybackCheckJournal(application)
     private val _state = MutableStateFlow(PlaybackCheckState())
     val state: StateFlow<PlaybackCheckState> = _state.asStateFlow()

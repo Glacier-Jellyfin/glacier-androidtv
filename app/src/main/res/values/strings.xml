@@ -786,6 +786,8 @@
     <string name="settings_match_frame_rate">Match frame rate</string>
     <string name="settings_match_frame_rate_sub">The TV switches to the frame rate of the video while it plays. Films run smoothly. The screen may go black for a moment.</string>
     <string name="settings_match_frame_rate_sub_fire_tv">The TV switches to the frame rate of the video while it plays. Films run smoothly. On Fire TV, also turn on “Match Original Frame Rate” under Display &amp; Sounds › Display.</string>
+    <string name="settings_dv_profile7">Dolby Vision with enhancement layer</string>
+    <string name="settings_dv_profile7_sub">UHD Blu-ray titles (profile 7) play as Dolby Vision without the enhancement layer, or as HDR10</string>
     <string name="settings_seek_back">Skip back</string>
     <string name="settings_seek_forward">Skip forward</string>
     <string name="settings_seek_sub">Left/Right, the remote\'s rewind and fast-forward keys and the player buttons · also in the music player</string>
@@ -810,6 +812,10 @@
 
     <string name="settings_audio_channels">Maximum audio channels</string>
     <string name="settings_audio_channels_sub">More channels are downmixed to this number</string>
+    <string name="settings_hd_audio">TrueHD and DTS-HD</string>
+    <string name="settings_hd_audio_sub">Who sends lossless sound to the receiver. Glacier sends the whole stream, also where Android sends only the DTS core</string>
+    <string name="settings_hd_audio_glacier">Glacier</string>
+    <string name="settings_hd_audio_android">Android</string>
     <string name="settings_audio_stereo">Stereo</string>
     <string name="settings_audio_lang">Preferred audio language</string>
     <string name="settings_audio_lang_sub">Picked automatically at start when the title has it</string>

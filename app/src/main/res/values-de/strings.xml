@@ -780,6 +780,8 @@
     <string name="settings_match_frame_rate">Bildwiederholrate anpassen</string>
     <string name="settings_match_frame_rate_sub">Der Fernseher wechselt während der Wiedergabe auf die Bildrate des Videos. Filme laufen so ohne Ruckeln. Der Bildschirm kann dabei kurz schwarz werden.</string>
     <string name="settings_match_frame_rate_sub_fire_tv">Der Fernseher wechselt während der Wiedergabe auf die Bildrate des Videos. Filme laufen so ohne Ruckeln. Schalte auf dem Fire TV zusätzlich „An Originalbildrate anpassen“ unter Töne und Bildschirm › Bildschirm ein.</string>
+    <string name="settings_dv_profile7">Dolby Vision mit Enhancement Layer</string>
+    <string name="settings_dv_profile7_sub">UHD-Blu-ray-Titel (Profil 7) laufen als Dolby Vision ohne den Enhancement Layer oder als HDR10</string>
     <string name="settings_seek_back">Zurückspulen</string>
     <string name="settings_seek_forward">Vorspulen</string>
     <string name="settings_seek_sub">Links/Rechts, Spultasten der Fernbedienung und Schaltflächen im Player · auch im Musik-Player</string>
@@ -804,6 +806,10 @@
 
     <string name="settings_audio_channels">Maximal erlaubte Audiokanäle</string>
     <string name="settings_audio_channels_sub">Mehr Kanäle werden auf diese Anzahl heruntergemischt</string>
+    <string name="settings_hd_audio">TrueHD und DTS-HD</string>
+    <string name="settings_hd_audio_sub">Wer verlustfreien Ton an den Receiver schickt. Glacier schickt den ganzen Stream, auch wo Android nur den DTS-Kern weitergibt</string>
+    <string name="settings_hd_audio_glacier">Glacier</string>
+    <string name="settings_hd_audio_android">Android</string>
     <string name="settings_audio_stereo">Stereo</string>
     <string name="settings_audio_lang">Bevorzugte Audiosprache</string>
     <string name="settings_audio_lang_sub">Wird beim Start automatisch gewählt, sofern vorhanden</string>

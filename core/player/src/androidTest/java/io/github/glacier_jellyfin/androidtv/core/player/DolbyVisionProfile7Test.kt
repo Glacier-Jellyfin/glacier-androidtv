@@ -29,16 +29,16 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Plays files that declare Dolby Vision profile 7 (from
- * scripts/make-playback-samples.py) through the base layer path. Needs a
+ * scripts/make-playback-samples.py) through the base layer and 8.1 paths. Needs a
  * device or emulator: `./gradlew :core:player:connectedDebugAndroidTest`.
  */
 @RunWith(AndroidJUnit4::class)
-class DolbyVisionBaseLayerTest {
+class DolbyVisionProfile7Test {
 
     @Test
     fun profile7BecomesItsMain10BaseLayer() {
         // Only the tracks: the emulator has no Main 10 decoder to play it with.
-        val result = play("dv-profile7.mkv", DolbyVisionBaseLayerExtractors(DefaultExtractorsFactory()), untilTracks = true)
+        val result = play("dv-profile7.mkv", DolbyVisionProfile7Extractors(DefaultExtractorsFactory(), DolbyVisionProfile7.BaseLayer), untilTracks = true)
         assertEquals(MimeTypes.VIDEO_H265, result.video?.sampleMimeType)
         // Main 10 (profile 2) at level 2.1 (L63) from the SPS, so Media3 checks the HEVC decoder for both.
         assertEquals("hvc1.2.4.L63.90", result.video?.codecs)
@@ -46,10 +46,17 @@ class DolbyVisionBaseLayerTest {
 
     @Test
     fun profile7PlaysWithTheHevcDecoder() {
-        val result = play("dv-profile7-8bit.mkv", DolbyVisionBaseLayerExtractors(DefaultExtractorsFactory()))
+        val result = play("dv-profile7-8bit.mkv", DolbyVisionProfile7Extractors(DefaultExtractorsFactory(), DolbyVisionProfile7.BaseLayer))
         assertNull("Playback failed: ${result.error?.errorCodeName}", result.error)
         assertEquals(MimeTypes.VIDEO_H265, result.video?.sampleMimeType)
         assertTrue("Decoded by ${result.decoder}", result.decoder?.contains("hevc", ignoreCase = true) == true)
+    }
+
+    @Test
+    fun profile7BecomesProfile81() {
+        val result = play("dv-profile7.mkv", DolbyVisionProfile7Extractors(DefaultExtractorsFactory(), DolbyVisionProfile7.Profile81), untilTracks = true)
+        assertEquals(MimeTypes.VIDEO_DOLBY_VISION, result.video?.sampleMimeType)
+        assertEquals("dvhe.08.06", result.video?.codecs)
     }
 
     @Test
