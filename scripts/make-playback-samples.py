@@ -41,8 +41,10 @@ def picture(pixels, seconds):
     return ["-f", "lavfi", "-i", f"testsrc2=size={SIZE}:rate=24,format={pixels}", "-t", str(seconds)]
 
 
-def silence(layout, seconds):
-    return ["-f", "lavfi", "-i", f"anullsrc=channel_layout={layout}:sample_rate=48000", "-t", str(seconds)]
+def quiet_noise(layout, seconds):
+    """Pink noise at -66 dBFS: a faint hiss at most."""
+    return ["-f", "lavfi", "-i", f"anoisesrc=color=pink:amplitude=0.0005:sample_rate=48000,aformat=channel_layouts={layout}",
+            "-t", str(seconds)]
 
 
 def hevc(out, pixels, params, seconds=1, dolby_vision=None):
@@ -93,8 +95,9 @@ def add_dolby_vision(mp4, profile, compatibility, enhancement_layer):
 
 
 def audio(out, codec, layout, bitrate, *extra):
-    # Three seconds: a receiver that refuses a bitstream usually drops the output after a second or two.
-    ffmpeg(*silence(layout, 3), "-c:a", codec, "-b:a", bitrate, *extra, out)
+    # Five seconds of barely audible noise rather than silence: lossless formats then reach a real
+    # bitrate, and a receiver that refuses a bitstream drops the output well within the time.
+    ffmpeg(*quiet_noise(layout, 5), "-c:a", codec, "-b:a", bitrate, *extra, out)
 
 
 def iec61937(name, codec, bitrate, *spdif):
