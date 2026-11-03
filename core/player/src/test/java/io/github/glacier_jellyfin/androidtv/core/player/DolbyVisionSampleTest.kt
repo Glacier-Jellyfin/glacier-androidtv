@@ -19,6 +19,14 @@ class DolbyVisionSampleTest {
         assertArrayEquals(expected, result)
     }
 
+    @Test
+    fun `converts a whole profile 7 stream like dovi_tool`() {
+        // A test pattern with an enhancement layer and RPUs, muxed and converted by dovi_tool (README.md).
+        val stream = resource("profile7_fel.hevc")
+        val result = DolbyVisionProfile7Extractors.toProfile81(stream, 0, stream.size)
+        assertArrayEquals(resource("profile7_fel_to_81.hevc"), result)
+    }
+
     private fun resource(name: String): ByteArray =
         checkNotNull(javaClass.classLoader?.getResourceAsStream("dolby-vision/$name")).use { it.readBytes() }
 
