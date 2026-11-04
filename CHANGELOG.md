@@ -28,6 +28,7 @@ language is German.
 - A folder shows its videos and photos as cards, or as a gallery: the focused picture fills the screen behind the title and folders, with a row of small pictures along the bottom to click through. Moving into the row brings the whole picture to the front above the row and slides the navigation bar away, and a video plays in it. Chips at the left show all, only videos or only photos, and menus at the right pick the view and sort by the date taken or by name. Back first goes up to the chips. Sorted by date, each month gets a heading among the cards, and sorted by name an A–Z rail jumps to a letter. The full-screen view browses the videos too. Settings › Appearance shapes the cards 16:9 or 4:3
 - Music videos are a tab of Music instead of their own entry in the navigation bar, as 16:9 cards sorted by date added, title, release year or artist
 - The music videos tab shows all videos or browses their folders. Until a view is picked, it starts with all videos when most of them name their artist
+- The music player has a full screen. A song shows its lyrics large and centered on its blurred cover, with its title and timeline below. Without lyrics the cover drifts slowly
 - Glacier sends TrueHD and DTS-HD to the receiver as the whole lossless bitstream, also on devices where Android passes on only the DTS core or fails on TrueHD. Settings › Audio can leave it to Android, or have the server convert what cannot go out as a bitstream to E-AC-3, which keeps surround where the device sends PCM in stereo only
 
 ### Improved

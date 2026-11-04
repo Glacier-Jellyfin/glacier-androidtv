@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import android.view.KeyEvent
+import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -33,6 +34,11 @@ import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,7 +61,10 @@ import javax.inject.Singleton
 
 enum class RepeatMode { Off, All, One }
 
-/** A song in the queue; [key] is its place in the source, which stays unique when a playlist lists a song twice. */
+/**
+ * A song or music video in the queue; [key] is its place in the source, which stays unique when a
+ * playlist lists a song twice.
+ */
 data class QueueEntry(val key: Int, val track: MusicTrack)
 
 sealed interface LyricsState {
@@ -128,6 +137,8 @@ data class NowPlaying(
     val playing: Boolean,
     /** A radio station: a logo instead of a cover, and no end to show progress towards. */
     val live: Boolean = false,
+    /** A music video: its cover is a 16:9 picture. */
+    val video: Boolean = false,
 )
 
 /**
@@ -173,10 +184,21 @@ class MusicController @Inject constructor(
                 val station = radio.station
                 val program = radio.nowAndNextAt(System.currentTimeMillis()).first
                 NowPlaying(station.name, program?.title, null, station.logoUrl, station.logoUrl, s.playWhenReady, live = true)
-            } ?: s.current?.let { NowPlaying(it.title, it.artist, it.album, it.coverUrl, it.largeCoverUrl ?: it.coverUrl, s.playWhenReady) }
+            } ?: s.current?.let { NowPlaying(it.title, it.artist, it.album, it.coverUrl, it.largeCoverUrl ?: it.coverUrl, s.playWhenReady, video = it.isVideo) }
         }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, null)
+
+    /** The player screen is in front, where a music video shows its picture; see [pictureShown]. */
+    private val pictureOn = MutableStateFlow(false)
+    private var pictures = 0
+    /** Mini players on screen, which show a music video small; they do not keep the saver away. */
+    private var miniPictures = 0
+
+    /** A music video plays with its picture on the player screen: the now-playing saver stays away, as in the video player. */
+    val videoVisible: StateFlow<Boolean> = combine(state, pictureOn) { s, on -> on && s.radio == null && s.current?.isVideo == true }
+        .distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, false)
 
     /** Music is playing or about to: theme songs stay silent and media keys belong to it. */
     val isPlaying: Boolean get() = _player.value != null && _state.value.playWhenReady
@@ -569,10 +591,17 @@ class MusicController @Inject constructor(
                     _state.update { it.copy(loading = false, failed = true, nothingToPlay = true) }
                     return@launch
                 }
-                sourceOrder = tracks.mapIndexed { i, track -> QueueEntry(i, track) }
+                val entries = tracks.mapIndexed { i, track -> QueueEntry(i, track) }
                 nextKey = tracks.size
-                sources = sourceOrder.associate { it.key to playback.audioSource(it.track) }
-                val start = request.startTrackId?.let { id -> tracks.indexOfFirst { it.id.toString() == id }.takeIf { it >= 0 } }
+                sources = resolve(entries)
+                // A video the server would not open stays out; the rest plays.
+                sourceOrder = entries.filter { it.key in sources }
+                if (sourceOrder.isEmpty()) {
+                    _state.update { it.copy(loading = false, failed = true) }
+                    return@launch
+                }
+                val playable = sourceOrder.map { it.track }
+                val start = request.startTrackId?.let { id -> playable.indexOfFirst { it.id.toString() == id }.takeIf { it >= 0 } }
                 val order = MusicQueue.start(sourceOrder, start, shuffleSwitch.on.value)
                 _state.update {
                     it.copy(sourceKind = kind, sourceTitle = title, queue = order.items, index = order.index, shuffle = shuffleSwitch.on.value)
@@ -587,11 +616,35 @@ class MusicController @Inject constructor(
         }
     }
 
+    /**
+     * Where each entry streams from. A song's stream is known without asking; a video's comes from
+     * the server's answer for this device (the file, or a transcode), as in the video player.
+     */
+    private suspend fun resolve(entries: List<QueueEntry>): Map<Int, PlaybackSource> = coroutineScope {
+        val gate = Semaphore(PARALLEL_OPENS)
+        entries.map { entry ->
+            async {
+                if (!entry.track.isVideo) return@async entry.key to playback.audioSource(entry.track)
+                try {
+                    // Music videos always start at the beginning.
+                    entry.key to gate.withPermit { playback.open(entry.track.id, startMs = 0, audioIndex = null, subtitleIndex = null) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Opening music video ${entry.track.id} failed", e)
+                    null
+                }
+            }
+        }.awaitAll().filterNotNull().toMap()
+    }
+
     private fun startPlayer(order: QueueOrder<QueueEntry>) {
         val old = activePlayer
         val headers = sources.values.first().headers
         val p = GlacierPlayer.createAudio(context, headers)
         p.addListener(listener)
+        // A new player starts right: no delay before its first track selection.
+        setVideoTrack(p, off = pictures == 0 && miniPictures == 0)
         p.repeatMode = _state.value.repeat.toPlayer()
         p.setMediaItems(order.items.map(::mediaItem), order.index, 0)
         p.prepare()
@@ -606,7 +659,7 @@ class MusicController @Inject constructor(
 
     private fun mediaItem(entry: QueueEntry) = sources.getValue(entry.key).let {
         val track = entry.track
-        GlacierPlayer.audioItem(entry.key.toString(), it.url, it.isHls, SongMetadata(track.title, track.artist, track.album, track.largeCoverUrl ?: track.coverUrl))
+        GlacierPlayer.audioItem(entry.key.toString(), it.url, it.isHls, SongMetadata(track.title, track.artist, track.album, track.largeCoverUrl ?: track.coverUrl, video = track.isVideo))
     }
 
     /** Takes the queue position from the player, which moves on by itself. */
@@ -620,6 +673,12 @@ class MusicController @Inject constructor(
     }
 
     private fun loadLyrics(track: MusicTrack) {
+        // Jellyfin has lyrics for songs only.
+        if (track.isVideo) {
+            lyricsJob?.cancel()
+            _state.update { it.copy(lyrics = LyricsState.None) }
+            return
+        }
         if (lyricsCache.containsKey(track.id)) {
             _state.update { it.copy(lyrics = lyricsCache[track.id]?.let(LyricsState::Loaded) ?: LyricsState.None) }
             return
@@ -723,7 +782,18 @@ class MusicController @Inject constructor(
     private fun insert(tracks: List<MusicTrack>, next: Boolean) {
         if (tracks.isEmpty()) return
         val entries = tracks.map { QueueEntry(nextKey++, it) }
-        sources = sources + entries.associate { it.key to playback.audioSource(it.track) }
+        if (entries.none { it.track.isVideo }) return insert(entries, entries.associate { it.key to playback.audioSource(it.track) }, next)
+        // Videos need the server's answer first.
+        scope.launch {
+            val resolved = resolve(entries)
+            val playable = entries.filter { it.key in resolved }
+            if (playable.size < entries.size) toast(R.string.music_track_failed)
+            if (playable.isNotEmpty()) insert(playable, resolved, next)
+        }
+    }
+
+    private fun insert(entries: List<QueueEntry>, resolved: Map<Int, PlaybackSource>, next: Boolean) {
+        sources = sources + resolved
         // The radio has no queue to add to: the songs replace it.
         endRadio()
         val p = activePlayer?.takeIf { request != null || sourceOrder.isNotEmpty() }
@@ -944,6 +1014,58 @@ class MusicController @Inject constructor(
         }
     }
 
+    /**
+     * The player screen is in front (started, not covered by another screen): a music video decodes its
+     * picture. Elsewhere, and with the app in the background, only its sound plays.
+     */
+    fun pictureShown() {
+        pictures++
+        pictureOn.value = true
+        activePlayer?.let(::applyPicture)
+    }
+
+    fun pictureGone() {
+        pictures = (pictures - 1).coerceAtLeast(0)
+        pictureOn.value = pictures > 0
+        activePlayer?.let(::applyPicture)
+    }
+
+    /** A mini player came on screen (started): a music video goes on there, small. */
+    fun miniPictureShown() {
+        miniPictures++
+        activePlayer?.let(::applyPicture)
+    }
+
+    fun miniPictureGone() {
+        miniPictures = (miniPictures - 1).coerceAtLeast(0)
+        activePlayer?.let(::applyPicture)
+    }
+
+    private var pictureOff: Job? = null
+
+    /**
+     * Switches the video track of [p] on or off: on while a player screen or mini player shows; songs
+     * have none. Off waits a moment, so handing the picture from the player screen to the mini player
+     * (or back) does not tear the decoder down and build it again.
+     */
+    private fun applyPicture(p: ExoPlayer) {
+        pictureOff?.cancel()
+        if (pictures == 0 && miniPictures == 0) {
+            pictureOff = scope.launch {
+                delay(PICTURE_OFF_DELAY_MS)
+                if (activePlayer === p) setVideoTrack(p, off = true)
+            }
+        } else {
+            setVideoTrack(p, off = false)
+        }
+    }
+
+    private fun setVideoTrack(p: ExoPlayer, off: Boolean) {
+        val params = p.trackSelectionParameters
+        if ((C.TRACK_TYPE_VIDEO in params.disabledTrackTypes) == off) return
+        p.trackSelectionParameters = params.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, off).build()
+    }
+
     /** Music paused for [IDLE_STOP_MS] ends, unless the player screen is open. */
     private fun scheduleIdleStop() {
         idleStop?.cancel()
@@ -982,7 +1104,9 @@ class MusicController @Inject constructor(
     private fun reportCurrentStopped(atMs: Long?, failed: Boolean = false) {
         val source = reported ?: return
         reported = null
-        playback.reportStopped(source, atMs ?: lastPositionMs, failed)
+        // A music video left halfway keeps no place to resume from; one that ran to its end counts as seen.
+        val video = sourceTrack(source)?.isVideo == true
+        playback.reportStopped(source, atMs ?: if (video) 0 else lastPositionMs, failed)
     }
 
     private fun sourceTrack(source: PlaybackSource): MusicTrack? = sourceOrder.firstOrNull { it.track.id == source.itemId }?.track
@@ -1034,6 +1158,10 @@ class MusicController @Inject constructor(
         /** A second radio failure within this time shows the error instead of tuning again. */
         const val AUTO_RETRY_WINDOW_MS = 60_000L
         const val RADIO_GUIDE_HOURS = 6L
+        /** How long the video track stays on after the last picture went, see applyPicture. */
+        const val PICTURE_OFF_DELAY_MS = 600L
+        /** Music videos asked of the server at once when a queue loads. */
+        const val PARALLEL_OPENS = 4
         val MediaKeys = setOf(
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
             KeyEvent.KEYCODE_MEDIA_PLAY,

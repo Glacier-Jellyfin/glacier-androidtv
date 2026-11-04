@@ -72,6 +72,7 @@ import io.github.glacier_jellyfin.androidtv.ui.CardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.LocalLiveTv
+import io.github.glacier_jellyfin.androidtv.ui.LocalMusicController
 import io.github.glacier_jellyfin.androidtv.ui.LocalMusicProgress
 import io.github.glacier_jellyfin.androidtv.ui.LocalProfileImage
 import io.github.glacier_jellyfin.androidtv.ui.LocalNowPlaying
@@ -277,9 +278,12 @@ class MainActivity : ComponentActivity() {
                     LocalNavTargets provides navTargets(navigation, libraryKinds, liveTv),
                     LocalUpdatePending provides update.pending,
                     LocalMusicProgress provides startViewModel.music.progress,
+                    LocalMusicController provides startViewModel.music,
                 ) {
                     // While music plays the screen stays on; idle, the now-playing saver takes over.
                     val musicPlaying = nowPlaying?.playing == true
+                    // A music video on the player screen is watched, like a film: no saver over it.
+                    val videoVisible by startViewModel.music.videoVisible.collectAsStateWithLifecycle()
                     val view = LocalView.current
                     DisposableEffect(view, musicPlaying) {
                         view.keepScreenOn = musicPlaying
@@ -288,8 +292,8 @@ class MainActivity : ComponentActivity() {
                     var lastInput by remember { mutableLongStateOf(SystemClock.uptimeMillis()) }
                     var saverOn by remember { mutableStateOf(false) }
                     var swallowKeyUp by remember { mutableStateOf(false) }
-                    LaunchedEffect(musicPlaying, lastInput) {
-                        if (!musicPlaying) {
+                    LaunchedEffect(musicPlaying, videoVisible, lastInput) {
+                        if (!musicPlaying || videoVisible) {
                             saverOn = false
                             return@LaunchedEffect
                         }

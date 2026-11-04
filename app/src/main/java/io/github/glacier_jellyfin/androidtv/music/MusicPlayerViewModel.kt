@@ -90,6 +90,8 @@ class MusicPlayerViewModel @Inject constructor(
     fun toggleShuffle() = controller.toggleShuffle()
     fun cycleRepeat() = controller.cycleRepeat()
     fun toggleLyrics() = controller.toggleLyrics()
+    fun pictureShown() = controller.pictureShown()
+    fun pictureGone() = controller.pictureGone()
     suspend fun transcodeStatus() = controller.transcodeStatus()
     fun toggleFavorite() = controller.toggleFavorite()
 

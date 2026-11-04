@@ -120,6 +120,7 @@ internal class MediaMapper(private val api: ApiClient) {
 
     fun track(dto: BaseItemDto): MusicTrack {
         val audio = dto.mediaStreams?.firstOrNull { it.type == MediaStreamType.AUDIO }
+        val video = dto.type == BaseItemKind.MUSIC_VIDEO
         return MusicTrack(
             id = dto.id,
             title = dto.name.orEmpty(),
@@ -130,11 +131,13 @@ internal class MediaMapper(private val api: ApiClient) {
             number = dto.indexNumber,
             disc = dto.parentIndexNumber,
             durationMs = (dto.runTimeTicks ?: 0) / TICKS_PER_MS,
-            coverUrl = cover(dto, ImageWidth.COVER_SMALL),
-            largeCoverUrl = cover(dto, ImageWidth.COVER_LARGE),
+            // A video's own 16:9 picture, not the cover of the album it may name.
+            coverUrl = if (video) thumb(dto) ?: poster(dto) else cover(dto, ImageWidth.COVER_SMALL),
+            largeCoverUrl = if (video) thumb(dto) ?: poster(dto) else cover(dto, ImageWidth.COVER_LARGE),
             format = audio?.let { AudioFormat(it.codec, it.sampleRate, it.bitDepth, it.channels, it.bitRate, dto.container) },
             isFavorite = dto.userData?.isFavorite ?: false,
             playlistItemId = dto.playlistItemId,
+            isVideo = video,
         )
     }
 

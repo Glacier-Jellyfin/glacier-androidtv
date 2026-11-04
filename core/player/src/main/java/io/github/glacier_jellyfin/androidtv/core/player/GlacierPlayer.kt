@@ -27,8 +27,8 @@ import io.github.peerless2012.ass.media.parser.AssSubtitleParserFactory
 import io.github.peerless2012.ass.media.type.AssRenderType
 import io.github.peerless2012.ass.media.widget.AssSubtitleView
 
-/** A song as the system shows it. */
-data class SongMetadata(val title: String, val artist: String?, val album: String?, val artworkUrl: String?)
+/** A song (or a music video, [video]) as the system shows it. */
+data class SongMetadata(val title: String, val artist: String?, val album: String?, val artworkUrl: String?, val video: Boolean = false)
 
 /** One stream to play: the URL the server handed out and the headers it needs. */
 data class StreamRequest(
@@ -180,7 +180,10 @@ object GlacierPlayer {
         return GlacierPlayback(player, ass)
     }
 
-    /** The music player: a queue of songs sharing one set of request [headers]; see [audioItem]. */
+    /**
+     * The music player: a queue of songs and music videos sharing one set of request [headers]; see
+     * [audioItem]. A video's picture goes to the surface the player screen attaches.
+     */
     @OptIn(UnstableApi::class)
     fun createAudio(context: Context, headers: Map<String, String>): ExoPlayer {
         val dataSource = DefaultHttpDataSource.Factory()
@@ -219,7 +222,7 @@ object GlacierPlayer {
                             .setArtist(metadata.artist)
                             .setAlbumTitle(metadata.album)
                             .setArtworkUri(metadata.artworkUrl?.let(Uri::parse))
-                            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                            .setMediaType(if (metadata.video) MediaMetadata.MEDIA_TYPE_VIDEO else MediaMetadata.MEDIA_TYPE_MUSIC)
                             .build(),
                     )
                 }

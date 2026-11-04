@@ -1,8 +1,13 @@
 package io.github.glacier_jellyfin.androidtv.music
 
+import android.os.Build
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
+import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode as AnimationRepeat
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -20,6 +25,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -32,21 +38,27 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
@@ -58,6 +70,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -67,17 +80,24 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.compose.ContentFrame
+import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
@@ -90,6 +110,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
+import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
@@ -104,10 +125,18 @@ import io.github.glacier_jellyfin.androidtv.ui.OverlayCard
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import io.github.glacier_jellyfin.androidtv.core.data.media.Lyrics
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** Where the current lyric line sits in the lyrics box (design `lyrFollow`: 40 % from the top). */
 private const val LYRIC_ANCHOR = 0.4f
+
+/** A key in the full-screen video shows title and timeline this long. */
+private const val FULLSCREEN_OVERLAY_MS = 4_000L
+
+/** Back that left the full screen does not close the player as well, however Android delivers it. */
+private const val BACK_AFTER_FULLSCREEN_MS = 1_000L
 
 @Composable
 fun MusicPlayerScreen(
@@ -123,6 +152,25 @@ fun MusicPlayerScreen(
     val sheet by viewModel.musicActions.sheet.collectAsStateWithLifecycle()
     val stationMenu by viewModel.stationMenu.collectAsStateWithLifecycle()
     val player by viewModel.player.collectAsStateWithLifecycle()
+    // A music video decodes its picture only while this screen is in front.
+    LifecycleStartEffect(viewModel) {
+        viewModel.pictureShown()
+        onStopOrDispose { viewModel.pictureGone() }
+    }
+    var fullscreen by remember { mutableStateOf(false) }
+    var leftFullscreenAt by remember { mutableLongStateOf(0L) }
+    fun leaveFullscreen() {
+        fullscreen = false
+        leftFullscreenAt = SystemClock.uptimeMillis()
+    }
+    fun backClosesPlayer() = SystemClock.uptimeMillis() - leftFullscreenAt > BACK_AFTER_FULLSCREEN_MS
+    // Each key in the full screen brings up its title and timeline for a while.
+    var fullscreenPokes by remember { mutableIntStateOf(0) }
+    // Up and Down page through a song's lyrics in the full screen when they do not follow the song.
+    val fullscreenLyrics = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val canFullscreen = state.current != null && state.radio == null && !state.failed
+    LaunchedEffect(canFullscreen) { if (!canFullscreen) fullscreen = false }
     val playFocus = remember { FocusRequester() }
     val infoFocus = remember { FocusRequester() }
     var infoOpen by remember { mutableStateOf(false) }
@@ -135,9 +183,13 @@ fun MusicPlayerScreen(
     // Newer Android hands Back to the dispatcher as well as the key, older only the key. The key's
     // release only counts when its press came here too, not to a panel that closed on it.
     var backDown by remember { mutableStateOf(false) }
-    BackHandler(enabled = !panelBack) {
+    BackHandler(enabled = !panelBack && !fullscreen) {
         backDown = false
-        viewModel.close()
+        if (backClosesPlayer()) viewModel.close()
+    }
+    BackHandler(enabled = fullscreen) {
+        backDown = false
+        leaveFullscreen()
     }
     // Also when the options sheet closes: its focus goes with it.
     // Switching radio stations loads each time: the focus stays where it is then.
@@ -158,11 +210,37 @@ fun MusicPlayerScreen(
                     // Older Android brings an open panel's Back as the key's release. A release whose press
                     // went to a panel that is gone now must not close the player as well.
                     if (panelBack) return@onPreviewKeyEvent false
+                    if (fullscreen) {
+                        // The full screen goes on the press; its release does nothing more.
+                        if (event.type == KeyEventType.KeyDown) leaveFullscreen()
+                        backDown = false
+                        return@onPreviewKeyEvent true
+                    }
                     if (event.type == KeyEventType.KeyDown) {
                         backDown = true
                     } else if (event.type == KeyEventType.KeyUp && backDown) {
                         backDown = false
-                        viewModel.close()
+                        if (backClosesPlayer()) viewModel.close()
+                    }
+                    return@onPreviewKeyEvent true
+                }
+                // The full screen takes the arrows and OK for itself, so nothing behind it reacts.
+                if (fullscreen && event.key in FullscreenKeys) {
+                    if (event.type == KeyEventType.KeyDown) {
+                        fullscreenPokes++
+                        when (event.key) {
+                            Key.DirectionLeft -> viewModel.seekBy(-state.seekBackMs)
+                            Key.DirectionRight -> viewModel.seekBy(state.seekForwardMs)
+                            Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> viewModel.togglePlay()
+                            Key.DirectionUp, Key.DirectionDown -> {
+                                val lyrics = (state.lyrics as? LyricsState.Loaded)?.lyrics
+                                if (state.current?.isVideo == false && lyrics != null && !lyrics.synced) {
+                                    val page = if (event.key == Key.DirectionUp) -LYRICS_PAGE_PX else LYRICS_PAGE_PX
+                                    scope.launch { fullscreenLyrics.animateScrollBy(page) }
+                                }
+                            }
+                            else -> Unit
+                        }
                     }
                     return@onPreviewKeyEvent true
                 }
@@ -181,7 +259,7 @@ fun MusicPlayerScreen(
             }
             // The menu key on anything but a queue row: options for the song that plays.
             .onKeyEvent { event ->
-                if (event.key != Key.Menu || infoOpen) return@onKeyEvent false
+                if (event.key != Key.Menu || infoOpen || fullscreen) return@onKeyEvent false
                 if (event.type == KeyEventType.KeyUp) viewModel.currentOptions()
                 true
             },
@@ -194,11 +272,14 @@ fun MusicPlayerScreen(
         } else if (current != null) {
             TopBar(state, current, Modifier.padding(start = 96.dp, end = 96.dp, top = 60.dp))
             Box(Modifier.padding(start = 96.dp).width(1064.dp)) {
-                AnimatedContent(state.lyricsOn, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "lyrics") { lyricsOn ->
-                    if (lyricsOn) {
-                        LyricsView(state, current, progress.positionMs, onSeek = viewModel::seekTo, left = playFocus)
-                    } else {
-                        NowPlaying(state, current)
+                AnimatedContent(state.lyricsOn && !current.isVideo, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "lyrics") { lyricsOn ->
+                    // The full screen has the picture meanwhile.
+                    val picturePlayer = player.takeUnless { fullscreen }
+                    // Jellyfin has lyrics for songs only: a music video always shows its picture.
+                    when {
+                        current.isVideo -> VideoNowPlaying(state, current, picturePlayer)
+                        lyricsOn -> LyricsView(state, current, progress.positionMs, onSeek = viewModel::seekTo, left = playFocus)
+                        else -> NowPlaying(state, current)
                     }
                 }
             }
@@ -208,6 +289,10 @@ fun MusicPlayerScreen(
                 playFocus = playFocus,
                 infoFocus = infoFocus,
                 onInfo = { infoOpen = true },
+                onFullscreen = {
+                    fullscreenPokes++
+                    fullscreen = true
+                },
                 viewModel = viewModel,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
@@ -220,13 +305,22 @@ fun MusicPlayerScreen(
                 onPick = viewModel::playAt,
                 onOptions = viewModel::queueOptions,
                 // With the lyrics up, Left would land on a lyric line: it goes to the last button instead.
-                left = if (state.lyricsOn) infoFocus else null,
+                left = if (state.lyricsOn && !current.isVideo) infoFocus else null,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(end = 96.dp, top = 170.dp, bottom = 90.dp)
                     .width(600.dp)
                     .fillMaxHeight(),
             )
+            if (fullscreen) {
+                var overlay by remember { mutableStateOf(true) }
+                LaunchedEffect(fullscreenPokes) {
+                    overlay = true
+                    delay(FULLSCREEN_OVERLAY_MS)
+                    overlay = false
+                }
+                FullscreenView(state, current, player, progress, fullscreenLyrics, overlay = overlay || !state.playWhenReady)
+            }
         }
 
         // The radio says so in its status line, without covering the stations.
@@ -337,6 +431,234 @@ private fun NowPlaying(state: MusicUiState, track: MusicTrack) {
         }
     }
 }
+
+/** A music video in place of the cover, as large as the left side allows, its title below. */
+@Composable
+private fun VideoNowPlaying(state: MusicUiState, track: MusicTrack, player: ExoPlayer?) {
+    Column(Modifier.padding(top = 170.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+        VideoPicture(track, player, RoundedCornerShape(GlacierShapes.RadiusLg), Modifier.width(960.dp).height(540.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Equalizer(state.playing)
+            Text(
+                track.title,
+                style = GlacierText.display(34),
+                color = GlacierColors.Ice,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            track.artist?.let { Text("· $it", style = GlacierText.body(24), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        }
+    }
+}
+
+/**
+ * The picture of the music video that plays; its own still until the first frame (and while the
+ * picture is elsewhere, [player] null).
+ */
+@OptIn(UnstableApi::class) // ContentFrame
+@Composable
+private fun VideoPicture(track: MusicTrack, player: ExoPlayer?, shape: Shape, modifier: Modifier) {
+    Box(modifier.clip(shape).background(GlacierColors.Void).border(1.dp, GlacierColors.GlassBorder2, shape)) {
+        if (player == null) {
+            Artwork(track.largeCoverUrl, Modifier.fillMaxSize())
+        } else {
+            ContentFrame(
+                player = player,
+                modifier = Modifier.fillMaxSize(),
+                surfaceType = SURFACE_TYPE_TEXTURE_VIEW,
+                contentScale = ContentScale.Fit,
+                shutter = { Artwork(track.largeCoverUrl, Modifier.fillMaxSize()) },
+            )
+        }
+    }
+}
+
+/**
+ * The full screen: a music video's picture, or a song's lyrics across the screen on its blurred
+ * cover. A key shows the title and timeline for a while, pausing keeps them.
+ */
+@OptIn(UnstableApi::class) // ContentFrame
+@Composable
+private fun FullscreenView(state: MusicUiState, track: MusicTrack, player: ExoPlayer?, progress: MusicProgress, lyricsList: LazyListState, overlay: Boolean) {
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        if (!track.isVideo) {
+            SongFullscreen(state, track, progress.positionMs, lyricsList)
+        } else if (player != null) {
+            ContentFrame(
+                player = player,
+                modifier = Modifier.fillMaxSize(),
+                surfaceType = SURFACE_TYPE_TEXTURE_VIEW,
+                contentScale = ContentScale.Fit,
+                shutter = { Artwork(track.largeCoverUrl, Modifier.fillMaxSize()) },
+            )
+        }
+        // A song keeps its title and timeline on screen; a video shows them only for a while.
+        AnimatedVisibility(overlay || !track.isVideo, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth()) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))))
+                    .padding(start = 96.dp, end = 96.dp, top = 140.dp, bottom = 72.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                // With lyrics the big cover is gone: a small one goes beside the title.
+                val withCover = !track.isVideo && hasLyrics(state)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    if (withCover) {
+                        val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
+                        Box(Modifier.size(FULLSCREEN_COVER.dp).clip(shape).border(1.dp, GlacierColors.GlassBorder2, shape)) {
+                            Artwork(track.coverUrl, Modifier.fillMaxSize())
+                        }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(track.title, style = GlacierText.display(40), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        track.artist?.let { Text(it, style = GlacierText.body(24), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    }
+                }
+                val fraction = if (progress.durationMs > 0) (progress.positionMs.toFloat() / progress.durationMs).coerceIn(0f, 1f) else 0f
+                Box(Modifier.padding(top = 12.dp).fillMaxWidth().height(7.dp).clip(PillShape).background(GlacierColors.GlassFill2)) {
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(LocalAccent.current.main))
+                }
+                Row(Modifier.fillMaxWidth()) {
+                    Text(formatTime(progress.positionMs), style = GlacierText.mono(20), color = GlacierColors.Ice, modifier = Modifier.weight(1f))
+                    Text("\u2212" + formatTime(progress.durationMs - progress.positionMs), style = GlacierText.mono(20), color = GlacierColors.Mist)
+                }
+            }
+        }
+    }
+}
+
+/** How far Up and Down page through lyrics that do not follow the song. */
+private const val LYRICS_PAGE_PX = 360f
+
+/** Lyrics to show in the full screen: loaded, with lines, and not just "instrumental". */
+private fun fullscreenLyrics(state: MusicUiState): Lyrics? =
+    (state.lyrics as? LyricsState.Loaded)?.lyrics?.takeUnless { it.instrumental || it.lines.isEmpty() }
+
+private fun hasLyrics(state: MusicUiState) = fullscreenLyrics(state) != null
+
+/** The small cover beside the title in the full screen's bottom bar. */
+private const val FULLSCREEN_COVER = 112
+
+/** Periods of the cover's slow zoom and pan in the full screen without lyrics, apart so they never line up. */
+private const val DRIFT_ZOOM_MS = 23_000
+private const val DRIFT_PAN_X_MS = 37_000
+private const val DRIFT_PAN_Y_MS = 29_000
+
+/** Room the bottom bar (title, timeline) takes in the full screen; the lyrics end above it. */
+private const val FULLSCREEN_BAR = 300
+
+/**
+ * A song in the full screen: its cover fills the screen, blurred and darkened, under the lyrics in
+ * large centred lines. Without lyrics the cover stands large in the middle; the title is in the bar below.
+ */
+@Composable
+private fun BoxScope.SongFullscreen(state: MusicUiState, track: MusicTrack, positionMs: Long, listState: LazyListState) {
+    // Blur needs Android 12; older devices darken the sharp cover a little more instead.
+    val blurs = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    Artwork(track.largeCoverUrl, Modifier.fillMaxSize().then(if (blurs) Modifier.blur(56.dp) else Modifier))
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (blurs) 0.6f else 0.78f)))
+    val lyrics = fullscreenLyrics(state)
+    Box(Modifier.fillMaxSize().padding(bottom = FULLSCREEN_BAR.dp)) {
+        when {
+            lyrics != null -> FullscreenLyrics(track, lyrics, positionMs, listState)
+            state.lyrics == LyricsState.Loading -> Unit
+            else -> {
+                // The cover drifts and breathes slowly, so the screen never stands still long enough to burn in.
+                val reduceMotion = LocalReduceMotion.current
+                val drift = rememberInfiniteTransition(label = "drift")
+                val (zoom, panX, panY) = listOf(DRIFT_ZOOM_MS, DRIFT_PAN_X_MS, DRIFT_PAN_Y_MS).map { periodMs ->
+                    drift.animateFloat(
+                        initialValue = -1f,
+                        targetValue = 1f,
+                        animationSpec = infiniteRepeatable(tween(periodMs, easing = FastOutSlowInEasing), AnimationRepeat.Reverse),
+                        label = "drift",
+                    )
+                }
+                val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
+                Box(
+                    Modifier
+                        .align(Alignment.Center)
+                        .padding(top = 60.dp)
+                        .graphicsLayer {
+                            if (!reduceMotion) {
+                                val scale = 1f + 0.06f * (zoom.value + 1f) / 2f
+                                scaleX = scale
+                                scaleY = scale
+                                translationX = panX.value * 48.dp.toPx()
+                                translationY = panY.value * 22.dp.toPx()
+                            }
+                        }
+                        .size(520.dp)
+                        .clip(shape)
+                        .border(1.dp, GlacierColors.GlassBorder2, shape),
+                ) {
+                    Artwork(track.largeCoverUrl, Modifier.fillMaxSize())
+                }
+            }
+        }
+    }
+}
+
+/** Lyrics across the full screen; synced ones keep the current line at the same height. Nothing here takes focus. */
+@Composable
+private fun FullscreenLyrics(track: MusicTrack, lyrics: Lyrics, positionMs: Long, listState: LazyListState) {
+    val current = if (lyrics.synced) lyrics.lines.indexOfLast { (it.startMs ?: Long.MAX_VALUE) <= positionMs } else -1
+    val density = LocalDensity.current
+    LaunchedEffect(track.id) { listState.scrollToItem(0) }
+    BoxWithConstraints(
+        Modifier
+            .fillMaxSize()
+            // Lines fade out at the top and bottom edge, as in the lyrics view.
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                drawRect(
+                    Brush.verticalGradient(0f to Color.Transparent, 0.14f to Color.Black, 0.8f to Color.Black, 1f to Color.Transparent),
+                    blendMode = BlendMode.DstIn,
+                )
+            },
+    ) {
+        val anchor = with(density) { (maxHeight * LYRIC_ANCHOR).roundToPx() }
+        val top = with(density) { FULLSCREEN_LYRICS_TOP.dp.roundToPx() }
+        LaunchedEffect(track.id, current) {
+            if (lyrics.synced && current >= 0) listState.animateScrollToItem(current, top - anchor)
+        }
+        LazyColumn(
+            state = listState,
+            userScrollEnabled = false,
+            contentPadding = PaddingValues(start = 160.dp, end = 160.dp, top = FULLSCREEN_LYRICS_TOP.dp, bottom = 400.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            itemsIndexed(lyrics.lines, key = { i, _ -> "${track.id}-$i" }) { i, line ->
+                val opacity = when {
+                    !lyrics.synced -> 0.92f
+                    i == current -> 1f
+                    i < current -> 0.38f
+                    else -> 0.6f
+                }
+                Text(
+                    line.text.ifBlank { "\u266A" },
+                    style = GlacierText.display(58).copy(lineHeight = 72.sp),
+                    color = if (!lyrics.synced || i == current) GlacierColors.Ice else GlacierColors.Mist,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().alpha(opacity),
+                )
+            }
+        }
+    }
+}
+
+/** Room above the first lyric line in the full screen. */
+private const val FULLSCREEN_LYRICS_TOP = 140
+
+/** What the full screen handles itself. */
+private val FullscreenKeys = setOf(
+    Key.DirectionUp, Key.DirectionDown, Key.DirectionLeft, Key.DirectionRight,
+    Key.DirectionCenter, Key.Enter, Key.NumPadEnter,
+)
 
 /** Three bars bouncing while music plays (design `gEq`); still when paused. */
 @Composable
@@ -516,6 +838,7 @@ private fun Controls(
     playFocus: FocusRequester,
     infoFocus: FocusRequester,
     onInfo: () -> Unit,
+    onFullscreen: () -> Unit,
     viewModel: MusicPlayerViewModel,
     modifier: Modifier,
 ) {
@@ -551,7 +874,11 @@ private fun Controls(
                 viewModel::cycleRepeat,
                 on = state.repeat != RepeatMode.Off,
             )
-            MusicButton(GlacierIcons.Lyrics, stringResource(R.string.lyrics_title), viewModel::toggleLyrics, on = state.lyricsOn, label = stringResource(R.string.lyrics_title))
+            // A music video has no lyrics (Jellyfin reads them for songs only).
+            if (state.current?.isVideo != true) {
+                MusicButton(GlacierIcons.Lyrics, stringResource(R.string.lyrics_title), viewModel::toggleLyrics, on = state.lyricsOn, label = stringResource(R.string.lyrics_title))
+            }
+            MusicButton(GlacierIcons.Maximize, stringResource(R.string.music_fullscreen), onFullscreen)
             val favorite = state.current?.isFavorite == true
             MusicButton(
                 if (favorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
@@ -765,13 +1092,24 @@ private fun QueueRow(
             Artwork(track.coverUrl, Modifier.fillMaxSize())
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(
-                track.title,
-                style = GlacierText.body(19, FontWeight.SemiBold),
-                color = if (current) accent else GlacierColors.Ice,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // A music video is marked as one; the rest of the queue are songs.
+                if (track.isVideo) {
+                    Icon(
+                        GlacierIcons.Film,
+                        contentDescription = stringResource(R.string.music_video),
+                        tint = if (current) accent else GlacierColors.Mist,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                Text(
+                    track.title,
+                    style = GlacierText.body(19, FontWeight.SemiBold),
+                    color = if (current) accent else GlacierColors.Ice,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             Text(
                 listOfNotNull(track.artist, track.album).joinToString(" · "),
                 style = GlacierText.body(16),

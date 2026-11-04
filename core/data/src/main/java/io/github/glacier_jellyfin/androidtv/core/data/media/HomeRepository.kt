@@ -237,6 +237,8 @@ class HomeRepository @Inject constructor(
             userId = session.userId,
             limit = ROW_LIMIT,
             mediaTypes = listOf(MediaType.VIDEO),
+            // Music videos play in the music player, from the start.
+            excludeItemTypes = listOf(BaseItemKind.MUSIC_VIDEO),
             fields = FIELDS,
             enableUserData = true,
         ).content.items

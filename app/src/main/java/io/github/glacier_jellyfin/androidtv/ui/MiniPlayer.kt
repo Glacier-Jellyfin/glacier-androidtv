@@ -42,6 +42,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleStartEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.compose.ContentFrame
+import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import io.github.glacier_jellyfin.androidtv.R
@@ -52,6 +57,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
+import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.music.MusicProgress
 import io.github.glacier_jellyfin.androidtv.music.NowPlaying
 import kotlinx.coroutines.flow.StateFlow
@@ -61,6 +67,9 @@ val LocalNowPlaying = staticCompositionLocalOf<NowPlaying?> { null }
 
 /** Where the song is; read only by the [MiniPlayer], so the ticking redraws nothing else. */
 val LocalMusicProgress = staticCompositionLocalOf<StateFlow<MusicProgress>?> { null }
+
+/** The music, for the picture of a music video in the [MiniPlayer]. */
+val LocalMusicController = staticCompositionLocalOf<MusicController?> { null }
 
 /** Height of the [MiniPlayer]; toasts move below it while it shows. */
 const val MINI_PLAYER_HEIGHT = 84
@@ -116,7 +125,11 @@ fun MiniPlayer(nowPlaying: NowPlaying, onClick: () -> Unit, modifier: Modifier =
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val cover = Modifier.size(56.dp).clip(RoundedCornerShape(GlacierShapes.RadiusSm))
-            if (nowPlaying.live) StationLogo(nowPlaying.coverUrl, nowPlaying.title, cover, textSize = 17) else Artwork(nowPlaying.coverUrl, cover)
+            when {
+                nowPlaying.live -> StationLogo(nowPlaying.coverUrl, nowPlaying.title, cover, textSize = 17)
+                nowPlaying.video -> MiniVideo(nowPlaying.coverUrl, Modifier.width(100.dp).height(56.dp).clip(RoundedCornerShape(GlacierShapes.RadiusSm)))
+                else -> Artwork(nowPlaying.coverUrl, cover)
+            }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     EqualizerBars(accent, moving = nowPlaying.playing)
@@ -148,6 +161,38 @@ fun MiniPlayer(nowPlaying: NowPlaying, onClick: () -> Unit, modifier: Modifier =
                     .fillMaxWidth(fraction.coerceIn(0f, 1f))
                     .height(3.dp)
                     .background(accent),
+            )
+        }
+    }
+}
+
+/** The music video that plays, small and 16:9; its still until the first frame. */
+@androidx.annotation.OptIn(UnstableApi::class) // ContentFrame
+@Composable
+private fun MiniVideo(stillUrl: String?, modifier: Modifier) {
+    val music = LocalMusicController.current
+    if (music == null) {
+        Artwork(stillUrl, modifier)
+        return
+    }
+    // Decoding the picture only while the mini player is on screen and the app in front.
+    LifecycleStartEffect(music) {
+        music.miniPictureShown()
+        onStopOrDispose { music.miniPictureGone() }
+    }
+    val player by music.player.collectAsStateWithLifecycle()
+    Box(modifier.background(GlacierColors.Void)) {
+        // The saver has the picture while it shows; the frame attaches again once it is gone.
+        val p = player.takeUnless { SaverOnScreen.shown }
+        if (p == null) {
+            Artwork(stillUrl, Modifier.fillMaxSize())
+        } else {
+            ContentFrame(
+                player = p,
+                modifier = Modifier.fillMaxSize(),
+                surfaceType = SURFACE_TYPE_TEXTURE_VIEW,
+                contentScale = ContentScale.Crop,
+                shutter = { Artwork(stillUrl, Modifier.fillMaxSize()) },
             )
         }
     }

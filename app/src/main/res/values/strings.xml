@@ -617,12 +617,14 @@
     <string name="audio_mono">Mono</string>
     <string name="audio_stereo">Stereo</string>
     <string name="music_nothing_to_play">There are no songs to play here.</string>
+    <string name="music_video">Music video</string>
+    <string name="music_fullscreen">Full screen</string>
     <string name="music_track_failed">Song could not be played, skipped</string>
     <string name="music_queue_end">End of the queue</string>
     <string name="music_playing_from">Playing from %1$s</string>
     <string name="music_now_playing">Now playing</string>
     <string name="music_paused">Paused</string>
-    <string name="music_track_of">Song %1$d of %2$d</string>
+    <string name="music_track_of">Track %1$d of %2$d</string>
     <string name="music_queue">Queue</string>
     <string name="music_queue_left">%1$s left</string>
     <string name="music_info_song">Song</string>
