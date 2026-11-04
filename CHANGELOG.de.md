@@ -22,6 +22,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Glacier schickt TrueHD und DTS-HD als vollständigen verlustfreien Bitstream an den Receiver, auch auf Geräten, auf denen Android nur den DTS-Kern weitergibt oder bei TrueHD scheitert. Unter Einstellungen › Audio lässt sich das Android überlassen, oder der Server wandelt in E-AC-3 um, was nicht als Bitstream rausgeht. Das erhält Surround, wo das Gerät PCM nur in Stereo ausgibt
 
 ### Verbessert
+- Schlägt die Wiedergabe fehl, nennt die Meldung den Fehler und zeigt einen QR-Code, um das Protokoll für einen Fehlerbericht herunterzuladen
 - Zufällig abspielen auf einem Album, Künstler oder einer Wiedergabeliste spielt es gleich in zufälliger Reihenfolge, wie in Jellyfins Web-Oberfläche, statt die zufällige Reihenfolge einzuschalten
 - Alben bieten nicht mehr an, sie als gehört zu markieren
 - Die Navigationsleiste lässt oben rechts Platz für Hinweise. Brauchen ihre Einträge mehr Platz, scrollen die zwischen Suche und Einstellungen, und Suche, Einstellungen und Profil bleiben immer sichtbar

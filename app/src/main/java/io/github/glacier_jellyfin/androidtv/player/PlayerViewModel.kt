@@ -42,6 +42,9 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.toKey
 import io.github.glacier_jellyfin.androidtv.core.player.SideloadedSubtitle
 import io.github.glacier_jellyfin.androidtv.core.player.TrackControl
 import io.github.glacier_jellyfin.androidtv.detail.TrackKind
+import io.github.glacier_jellyfin.androidtv.diagnostics.Diagnostics
+import io.github.glacier_jellyfin.androidtv.diagnostics.LogServer
+import io.github.glacier_jellyfin.androidtv.diagnostics.LogShare
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
@@ -81,6 +84,12 @@ data class PlayerUiState(
     val failed: Boolean = false,
     /** The device could not decode or output the stream: no point in checking the server. */
     val failedOnDevice: Boolean = false,
+    /** What failed, for the issue: Media3's error name and code, or the exception's class. */
+    val failureCode: String? = null,
+    /** The log offered on the local network while the failure is shown; null without a network. */
+    val logShare: LogShare? = null,
+    /** The log could not be offered: the device has no network. */
+    val logOffline: Boolean = false,
     val method: PlaybackMethod? = null,
     val playing: Boolean = false,
     /** Playing or about to (buffering after a seek); drives the play/pause button. */
@@ -146,6 +155,7 @@ class PlayerViewModel @Inject constructor(
     private val serverPreferences: ServerPreferencesRepository,
     private val musicPlayback: MusicController,
     private val versions: VersionChooser,
+    private val diagnostics: Diagnostics,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<PlayerRoute>()
@@ -266,7 +276,7 @@ class PlayerViewModel @Inject constructor(
             }
             Log.w(TAG, "Playback failed", error)
             source?.let { playback.reportStopped(it, currentPositionMs(), failed = true) }
-            _state.update { it.copy(failed = true, failedOnDevice = error.isDeviceFailure(), loading = false) }
+            fail(error.failureCode(), onDevice = error.isDeviceFailure())
         }
     }
 
@@ -307,7 +317,8 @@ class PlayerViewModel @Inject constructor(
         opening?.cancel()
         opening = viewModelScope.launch {
             releasePlayer()
-            _state.update { it.copy(loading = true, failed = false, failedOnDevice = false, trackPanel = null) }
+            closeLogShare()
+            _state.update { it.copy(loading = true, failed = false, failedOnDevice = false, failureCode = null, trackPanel = null) }
             try {
                 val item = _state.value.details ?: details.details(itemId).let { loaded ->
                     // The file the detail page showed, else the one picked for the title or show.
@@ -361,7 +372,7 @@ class PlayerViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Opening playback failed", e)
-                _state.update { it.copy(failed = true, loading = false) }
+                fail(e.javaClass.simpleName, onDevice = false)
             }
         }
     }
@@ -662,6 +673,47 @@ class PlayerViewModel @Inject constructor(
         // Leaving without Stop (Home button, process going away) still records the resume point.
         source?.let { playback.reportStopped(it, currentPositionMs()) }
         releasePlayer()
+        closeLogShare()
+    }
+
+    private var logServer: LogServer? = null
+    private var sharing: Job? = null
+
+    /**
+     * Shows the failure and offers the log on the local network at once, so a phone can fetch it
+     * for an issue straight from the dialog. The log already holds the failure, written just before.
+     */
+    private fun fail(code: String, onDevice: Boolean) {
+        _state.update { it.copy(failed = true, failedOnDevice = onDevice, failureCode = code, loading = false) }
+        if (logServer != null || sharing?.isActive == true) return
+        sharing = viewModelScope.launch {
+            val server = try {
+                diagnostics.shareOnNetwork()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Offering the log after a playback failure failed", e)
+                null
+            }
+            if (server == null) {
+                _state.update { it.copy(logOffline = it.failed) }
+                return@launch
+            }
+            if (!_state.value.failed) {
+                server.close()
+                return@launch
+            }
+            logServer = server
+            _state.update { it.copy(logShare = LogShare(server.url, server.fileName, server.sizeBytes)) }
+        }
+    }
+
+    private fun closeLogShare() {
+        sharing?.cancel()
+        sharing = null
+        logServer?.close()
+        logServer = null
+        _state.update { it.copy(logShare = null, logOffline = false) }
     }
 
     private companion object {
@@ -683,6 +735,9 @@ class PlayerViewModel @Inject constructor(
             errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED ||
                 errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED ||
                 (this is ExoPlaybackException && type == ExoPlaybackException.TYPE_UNEXPECTED)
+
+        /** E.g. "DECODER_INIT_FAILED (4001)". */
+        fun PlaybackException.failureCode() = "${errorCodeName.removePrefix("ERROR_CODE_")} ($errorCode)"
 
         /** A decoder or the audio output failed (Media3's 4xxx and 5xxx codes), not the network or the server. */
         fun PlaybackException.isDeviceFailure() =

@@ -161,4 +161,4 @@ private fun Fact(label: String, value: String) {
     }
 }
 
-private const val ISSUES_URL = "github.com/Glacier-Jellyfin/glacier-androidtv/issues"
+internal const val ISSUES_URL = "github.com/Glacier-Jellyfin/glacier-androidtv/issues"

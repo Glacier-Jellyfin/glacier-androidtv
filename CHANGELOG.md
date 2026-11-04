@@ -37,6 +37,7 @@ language is German.
 - Glacier sends TrueHD and DTS-HD to the receiver as the whole lossless bitstream, also on devices where Android passes on only the DTS core or fails on TrueHD. Settings › Audio can leave it to Android, or have the server convert what cannot go out as a bitstream to E-AC-3, which keeps surround where the device sends PCM in stereo only
 
 ### Improved
+- When playback fails, the message names the error and shows a QR code to download the log for a bug report
 - Shuffle on an album, artist or playlist plays it in a random order right away, as in Jellyfin's web client, instead of switching shuffle on
 - Albums no longer offer to mark them as played
 - The navigation bar leaves room for notices at the top right. When its entries need more room, the ones between search and settings scroll, and search, settings and the profile always stay in view
