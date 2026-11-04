@@ -362,9 +362,8 @@ fun LibraryScreen(
                         )
                     }
                     if (folder != null) {
-                        // Folders and videos each in rows of their own, headed like groups when the folder has both.
-                        val headed = folder.folders.isNotEmpty() && folder.media.isNotEmpty()
-                        if (headed) {
+                        // Folders and videos each in rows of their own, always under their heading, as in a home video folder.
+                        if (folder.folders.isNotEmpty()) {
                             item(span = { GridItemSpan(maxLineSpan) }, key = "section-folders") { SectionHeading(stringResource(R.string.folder_section_folders)) }
                         }
                         folder.folders.forEachIndexed { index, sub ->
@@ -380,7 +379,7 @@ fun LibraryScreen(
                                 )
                             }
                         }
-                        if (headed) {
+                        if (folder.media.isNotEmpty()) {
                             item(span = { GridItemSpan(maxLineSpan) }, key = "section-videos") { SectionHeading(stringResource(R.string.folder_section_videos)) }
                         }
                         folder.media.filterIsInstance<FolderMedia.Video>().forEachIndexed { index, video ->
