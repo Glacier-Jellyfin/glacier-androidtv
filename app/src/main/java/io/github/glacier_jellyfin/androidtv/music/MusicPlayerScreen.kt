@@ -541,10 +541,8 @@ private fun hasLyrics(state: MusicUiState) = fullscreenLyrics(state) != null
 /** The small cover beside the title in the full screen's bottom bar. */
 private const val FULLSCREEN_COVER = 112
 
-/** Periods of the cover's slow zoom and pan in the full screen without lyrics, apart so they never line up. */
-private const val DRIFT_ZOOM_MS = 23_000
-private const val DRIFT_PAN_X_MS = 37_000
-private const val DRIFT_PAN_Y_MS = 29_000
+/** How long the cover takes to grow or shrink once as it pulses in the full screen without lyrics. */
+private const val PULSE_MS = 4_000
 
 /** Room the bottom bar (title, timeline) takes in the full screen; the lyrics end above it. */
 private const val FULLSCREEN_BAR = 300
@@ -565,17 +563,14 @@ private fun BoxScope.SongFullscreen(state: MusicUiState, track: MusicTrack, posi
             lyrics != null -> FullscreenLyrics(track, lyrics, positionMs, listState)
             state.lyrics == LyricsState.Loading -> Unit
             else -> {
-                // The cover drifts and breathes slowly, so the screen never stands still long enough to burn in.
+                // The cover pulses in place, growing and shrinking, so the screen never stands still long enough to burn in.
                 val reduceMotion = LocalReduceMotion.current
-                val drift = rememberInfiniteTransition(label = "drift")
-                val (zoom, panX, panY) = listOf(DRIFT_ZOOM_MS, DRIFT_PAN_X_MS, DRIFT_PAN_Y_MS).map { periodMs ->
-                    drift.animateFloat(
-                        initialValue = -1f,
-                        targetValue = 1f,
-                        animationSpec = infiniteRepeatable(tween(periodMs, easing = FastOutSlowInEasing), AnimationRepeat.Reverse),
-                        label = "drift",
-                    )
-                }
+                val zoom = rememberInfiniteTransition(label = "pulse").animateFloat(
+                    initialValue = 0f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(tween(PULSE_MS, easing = FastOutSlowInEasing), AnimationRepeat.Reverse),
+                    label = "pulse",
+                )
                 val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
                 Box(
                     Modifier
@@ -583,11 +578,9 @@ private fun BoxScope.SongFullscreen(state: MusicUiState, track: MusicTrack, posi
                         .padding(top = 60.dp)
                         .graphicsLayer {
                             if (!reduceMotion) {
-                                val scale = 1f + 0.06f * (zoom.value + 1f) / 2f
+                                val scale = 1f + 0.06f * zoom.value
                                 scaleX = scale
                                 scaleY = scale
-                                translationX = panX.value * 48.dp.toPx()
-                                translationY = panY.value * 22.dp.toPx()
                             }
                         }
                         .size(520.dp)

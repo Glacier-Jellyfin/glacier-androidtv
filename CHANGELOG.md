@@ -31,7 +31,7 @@ language is German.
 - Music videos play in the music player, also mixed with songs in the queue: from their tab, which can also play or shuffle them all, from an artist's page and from playlists. The picture stands in place of the cover, in the mini player and in full screen too
 - Music videos and their folders have options like an album: hold OK, press the menu key or pick … in the toolbar to play or shuffle them all, play them next or add them to the queue or a playlist
 - Albums and artists have an instant mix button next to Shuffle
-- The music player has a full screen. A song shows its lyrics large and centered on its blurred cover, with its title and timeline below. Without lyrics the cover drifts slowly
+- The music player has a full screen. A song shows its lyrics large and centered on its blurred cover, with its title and timeline below. Without lyrics the cover pulses gently
 - Glacier sends TrueHD and DTS-HD to the receiver as the whole lossless bitstream, also on devices where Android passes on only the DTS core or fails on TrueHD. Settings › Audio can leave it to Android, or have the server convert what cannot go out as a bitstream to E-AC-3, which keeps surround where the device sends PCM in stereo only
 
 ### Improved

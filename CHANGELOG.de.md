@@ -16,7 +16,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Musikvideos laufen im Musik-Player, auch gemischt mit Songs in der Warteschlange: aus ihrem Reiter, der auch alle abspielen oder als Zufallsmix starten kann, von der Künstlerseite und aus Wiedergabelisten. Das Bild steht anstelle des Covers, auch im Mini-Player und im Vollbild
 - Musikvideos und ihre Ordner haben Optionen wie ein Album: OK halten, die Menü-Taste oder … in der Werkzeugleiste spielt alle ab oder zufällig, spielt sie als Nächstes oder legt sie in die Warteschlange oder eine Wiedergabeliste
 - Alben und Künstler haben neben Zufällig abspielen einen Knopf für ähnliche Musik
-- Der Musik-Player hat ein Vollbild. Ein Song zeigt seinen Songtext groß und mittig auf dem unscharfen Cover, darunter Titel und Zeitleiste. Ohne Songtext bewegt sich das Cover langsam
+- Der Musik-Player hat ein Vollbild. Ein Song zeigt seinen Songtext groß und mittig auf dem unscharfen Cover, darunter Titel und Zeitleiste. Ohne Songtext pulsiert das Cover sanft
 - Glacier schickt TrueHD und DTS-HD als vollständigen verlustfreien Bitstream an den Receiver, auch auf Geräten, auf denen Android nur den DTS-Kern weitergibt oder bei TrueHD scheitert. Unter Einstellungen › Audio lässt sich das Android überlassen, oder der Server wandelt in E-AC-3 um, was nicht als Bitstream rausgeht. Das erhält Surround, wo das Gerät PCM nur in Stereo ausgibt
 
 ### Verbessert
