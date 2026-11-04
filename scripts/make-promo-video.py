@@ -74,6 +74,8 @@ class Part:
     start: float
     end: float
     speed: float = 1.0
+    # Seconds to add in another language's take, where offset() cannot find the moment by itself.
+    shift: dict[str, float] = field(default_factory=dict)
 
     @property
     def length(self) -> float:
@@ -131,7 +133,8 @@ SHOTS = [
           (10.9, 1.75, 940, 560), (11.4, 1.35, 960, 600), (14.9, 1.35, 960, 600), (15.6, 1.5, 700, 700),
           (19.0, 1.5, 760, 700)]),
     Shot({"en": "Player", "de": "Player"},
-         [Part("skip", 6.2, 8.4), Part("skip", 9.0, 14.0), Part("trickplay", 20.6, 26.8), Part("upnext", 19.2, 28.0)],
+         [Part("skip", 6.2, 8.4, shift={"de": 3.0}), Part("skip", 8.8, 11.0, shift={"de": 3.0}),
+          Part("skip", 11.0, 13.8, shift={"de": 10.4}), Part("trickplay", 20.6, 26.8), Part("upnext", 19.2, 28.0, shift={"de": -5.5})],
          [caption(0, "Recaps skip themselves", "Rückblicke überspringen sich selbst"),
           caption(2.2, "Intros go with one press", "Intros mit einem Tastendruck weg"),
           caption(7.2, "Preview pictures while you seek", "Vorschaubilder beim Spulen"),
@@ -141,15 +144,17 @@ SHOTS = [
           (5.0, 1.6, 700, 800), (7.0, 1.6, 700, 800), (7.4, 1.8, 1250, 780), (13.2, 1.8, 1440, 780),
           (13.4, 1.0, *C), (14.6, 1.0, *C), (15.8, 2.1, 1484, 830), (22.2, 2.1, 1484, 830)]),
     Shot({"en": "Music", "de": "Musik"},
-         [Part("music", 8.2, 11.8), Part("music", 18.6, 27.6), Part("music", 28.2, 33.6)],
+         [Part("music", 10.4, 13.6), Part("music", 20.8, 31.8), Part("music", 40.4, 43.8), Part("music", 55.0, 61.0)],
          [caption(0, "Music that keeps playing", "Musik, die weiterläuft"),
-          caption(3.6, "Lyrics that follow the song", "Songtexte, die mitlaufen"),
-          caption(12.6, "Keep browsing, the mini player stays", "Weiterstöbern, der Mini-Player bleibt")],
-         [(0, 1.0, *C), (3.4, 1.06, *C), (4.2, 1.8, 533, 590), (12.3, 1.8, 533, 590), (13.0, 1.0, *C),
-          (14.0, 1.0, *C), (14.9, 2.2, 1483, 245), (18.0, 2.2, 1483, 245)]),
+          caption(3.2, "Lyrics, large and in time", "Songtexte, groß und im Takt"),
+          caption(14.2, "Keep browsing, the mini player stays", "Weiterstöbern, der Mini-Player bleibt"),
+          caption(17.6, "Music videos play right in the queue", "Musikvideos laufen in der Warteschlange mit")],
+         [(0, 1.0, *C), (3.0, 1.05, *C), (3.2, 1.0, *C), (13.9, 1.12, 960, 400), (14.2, 1.0, *C),
+          (14.9, 2.2, 1483, 245), (17.3, 2.2, 1483, 245), (17.6, 1.0, *C), (18.6, 1.6, 620, 450),
+          (23.6, 1.65, 620, 450)]),
     Shot({"en": "Photos & videos", "de": "Fotos & Videos"},
-         [Part("photos", 4.6, 7.4), Part("photos", 16.0, 21.6), Part("photos", 21.8, 26.9),
-          Part("photos", 27.0, 33.6, 3.0), Part("photos", 33.6, 35.6)],
+         [Part("photos", 4.4, 7.2), Part("photos", 10.4, 16.0), Part("photos", 19.6, 24.7),
+          Part("photos", 25.0, 31.6, 3.0), Part("photos", 31.6, 33.6)],
          [caption(0, "Photos and home videos, in their folders", "Fotos und Heimvideos, in ihren Ordnern"),
           caption(2.8, "Browse them as a gallery", "Als Galerie durchblättern"),
           caption(8.4, "Full screen, with smooth transitions", "Im Vollbild, mit weichen Übergängen"),
@@ -163,16 +168,16 @@ SHOTS = [
          [(0, 1.0, *C), (1.0, 1.15, 1000, 560), (9.6, 1.18, 1020, 560), (10.0, 1.0, *C), (16.2, 1.08, 960, 520)]),
 ]
 # The website's highlight video: one moment of each shot, without title and end card (shot, from, to).
-HIGHLIGHT = [(0, 2.7, 6.4), (1, 3.5, 10.3), (2, 5.0, 12.8), (3, 6.8, 11.0), (4, 2.2, 7.2), (5, 6.0, 12.6),
+HIGHLIGHT = [(0, 2.7, 6.4), (1, 3.5, 10.3), (2, 5.0, 12.8), (3, 6.8, 11.0), (4, 2.2, 7.2), (5, 3.4, 10.0),
              (6, 2.8, 8.4), (7, 10.0, 16.2)]
 # The website's section pictures: a moment of an English take each, found again in the other languages.
 STILLS = {"home": ("family", 3.8), "library": ("library", 12.2), "detail": ("detail", 10.6),
-          "player": ("skip", 7.8), "music": ("music", 21.5), "photos": ("photos", 19.0), "livetv": ("livetv", 9.0)}
+          "player": ("skip", 7.8), "music": ("music", 24.5), "photos": ("photos", 18.2), "livetv": ("livetv", 9.0)}
 SITE_DIR = ROOT / "website" / "assets"
 STORE_DIR = ROOT / "fastlane" / "metadata" / "android"
 STORE_LOCALES = {"en": "en-US", "de": "de-DE"}
 # The short cut: the strongest moment of a few shots, one caption each (shot, from, to).
-SHORT = [(1, 3.5, 10.3), (2, 5.0, 12.8), (4, 2.2, 7.2), (5, 3.6, 12.6), (7, 0.0, 9.0)]
+SHORT = [(1, 3.5, 10.3), (2, 5.0, 12.8), (4, 2.2, 7.2), (5, 3.2, 9.8), (7, 0.0, 9.0)]
 
 TITLE = {"en": "Jellyfin, made simple.", "de": "Jellyfin, ganz einfach."}
 END = {
@@ -413,7 +418,12 @@ class ShotPlayer:
         self.parts = []
         for part in parts:
             path = takes / f"{part.take}{suffix}.mp4"
-            shift = offset(takes / f"{part.take}.mp4", path, part.start, part.end) if suffix else 0.0
+            if not suffix:
+                shift = 0.0
+            elif lang in part.shift:
+                shift = part.shift[lang]
+            else:
+                shift = offset(takes / f"{part.take}.mp4", path, part.start, part.end)
             self.parts.append((path, part.start + shift, part.end + shift, part.speed, part.length))
         self.starts, t = [], 0.0
         for *_, length in self.parts:

@@ -1,6 +1,6 @@
-Movies, shows and music from your own Jellyfin server
+Movies, shows, music and photos from your own Jellyfin server
 Skip intros, recaps and credits, with previews while seeking
-Frame rate matching and DTS and TrueHD through FFmpeg
+Frame rate matching and lossless TrueHD and DTS-HD bitstream
 Live TV with a programme guide and recordings
 Several servers and profiles, with parental controls and PINs
 Free and open source, no ads and no tracking

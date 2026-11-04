@@ -49,13 +49,17 @@
 - A player made for watching: skip intros, recaps and credits, trickplay
   previews while seeking, chapters and "next episode" with a countdown
 - The TV switches to the frame rate of the video, so films play without judder
-- Extended audio codec support via FFmpeg (DTS, TrueHD and more) for more
-  direct playback, and surround sound that stays surround over HDMI ARC
+- TrueHD and DTS-HD sent to the receiver as the whole lossless bitstream,
+  extended audio codec support via FFmpeg for more direct playback, and
+  surround sound that stays surround over HDMI ARC
 - Live TV: channels with a live preview, a programme guide, recordings of
   programmes and series, pause and rewind, and radio stations that play like
   music
-- Music that keeps playing while you browse, with a mini player, queue,
-  playlists, lyrics, instant mix and music videos
+- Music that keeps playing while you browse, with a mini player, a full
+  screen with lyrics, queue, playlists, instant mix and music videos mixed
+  in with the songs
+- Photos and home videos by folder, as cards or a gallery, full screen with
+  a slideshow
 - Local and YouTube trailers with subtitles, and theme songs on detail pages
 - A Favorites page with everything you marked with the heart, in the rows you
   pick

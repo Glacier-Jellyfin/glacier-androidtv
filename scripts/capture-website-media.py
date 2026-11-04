@@ -55,7 +55,7 @@ PROFILES = ("Alex", "Kids", "Nora")
 SNAPSHOTS = {"en": "signed-in-family", "de": "signed-in-family-de"}
 TIMEZONE = "Europe/Berlin"
 # Positions in the navigation bar, counted from Home.
-NAV = {"Movie": 1, "Show": 2, "Music": 3, "Videos": 4, "Photos": 5, "Live TV": 6}
+NAV = {"Movie": 1, "Show": 2, "Music": 3, "Photos": 4, "Live TV": 5}
 
 
 def tool(name: str, env: str) -> str:
@@ -251,6 +251,8 @@ class Take:
     steps: list[str]
     resume: dict[str, float] = field(default_factory=dict)  # title or Show/S/E -> seconds
     played: tuple[str, ...] = ()
+    # Other steps for a language, where its playback starts much later.
+    steps_by_lang: dict[str, list[str]] = field(default_factory=dict)
 
 
 TAKES: dict[str, Take] = {
@@ -263,17 +265,23 @@ TAKES: dict[str, Take] = {
                                            "BACK:0.7", "DPAD_DOWN:1.4", "DPAD_RIGHT*3:0.5", "sleep0.4", "DPAD_DOWN:1.8"],
                    resume={"Glass Mountain": 4700}),
     # Play, then OK on "Skip intro" while the controls still show, so the timeline jumps visibly.
+    # In German the server converts the E-AC-3 track first, and playback starts 9 to 15 s after OK.
     "skip": Take("open:Harbor Lights/1/2", ["sleep1.2", "DPAD_CENTER:8.6", "DPAD_CENTER:6"],
-                 resume={"Harbor Lights/1/2": 0}, played=("Harbor Lights/1/2",)),
+                 resume={"Harbor Lights/1/2": 0}, played=("Harbor Lights/1/2",),
+                 steps_by_lang={"de": ["sleep1.2", "DPAD_CENTER:19", "DPAD_CENTER:6"]}),
     "upnext": Take("open:Harbor Lights/1/2", ["sleep1.2", "DPAD_CENTER:28"],
                    resume={"Harbor Lights/1/2": 2566}),
     # The emulator cannot decode the German E-AC-3 track, so the server converts it and playback takes a while.
     "trickplay": Take("open:Glass Mountain", ["sleep1", "DPAD_CENTER:18", "DPAD_RIGHT*7:0.5", "sleep3"],
                       resume={"Glass Mountain": 4700}),
-    # The first lyric line comes 12 s into the song: the lyrics stay up until a few have lit up.
-    "music": Take("Music", ["sleep1", "DPAD_DOWN:0.7", "DPAD_RIGHT:0.9", "DPAD_CENTER:2.2", "DPAD_CENTER:4",
-                            "DPAD_RIGHT*3:0.35", "sleep0.4", "DPAD_CENTER:16", "BACK:1.5", "BACK:2.5",
-                            "DPAD_RIGHT:0.8", "DPAD_RIGHT:1.5"]),
+    # An album with the lyrics on, then the full screen: the first lyric line comes 12 s into the song.
+    # The player takes up to 5 s to load; a key before that is lost and shifts every later one.
+    # Back in the library, a music video plays in the music player and stays in the mini player.
+    "music": Take("Music", ["sleep1", "DPAD_DOWN:0.7", "DPAD_RIGHT:0.9", "DPAD_CENTER:2.2", "DPAD_CENTER:6",
+                            "DPAD_RIGHT*3:0.35", "sleep0.4", "DPAD_CENTER:5", "DPAD_RIGHT:0.6", "DPAD_CENTER:14",
+                            "BACK:1.5", "BACK:2.5", "BACK:2", "DPAD_UP:0.6", "DPAD_UP:0.8", "DPAD_RIGHT*3:0.4",
+                            "DPAD_CENTER:2.5", "DPAD_DOWN:1.2", "DPAD_RIGHT:0.8", "DPAD_RIGHT:1", "DPAD_CENTER:10",
+                            "BACK:2", "DPAD_LEFT:1", "DPAD_LEFT:1.5"]),
     "livetv": Take("Live TV", ["sleep2.5", "DPAD_DOWN:2.4", "DPAD_DOWN:2.4", "DPAD_DOWN:2.4", "DPAD_DOWN:2.4",
                                "DPAD_UP*4:0.15", "sleep0.5", "DPAD_UP:0.6", "DPAD_RIGHT:0.5", "DPAD_CENTER:2.5",
                                "DPAD_DOWN:1.2", "DPAD_RIGHT*3:0.9", "DPAD_DOWN*2:0.9", "sleep1.5"]),
@@ -287,7 +295,7 @@ TAKES: dict[str, Take] = {
                           "DPAD_DOWN:1.2", "DPAD_CENTER:3.8", "DPAD_DOWN:2.6"]),
     # A folder of photos and videos: switch it to the gallery, browse the row, then full screen and
     # the slideshow.
-    "photos": Take("Photos", ["sleep1.5", "DPAD_CENTER:3", "DPAD_UP:0.8", "DPAD_RIGHT*3:0.4", "DPAD_CENTER:1",
+    "photos": Take("Photos", ["sleep1.5", "DPAD_CENTER:3", "DPAD_RIGHT*3:0.4", "DPAD_CENTER:1",
                               "DPAD_DOWN:0.6", "DPAD_CENTER:2.5", "DPAD_DOWN:1.6", "DPAD_LEFT*6:0.2", "sleep1",
                               "DPAD_RIGHT:1.4", "DPAD_RIGHT:1.4", "DPAD_RIGHT:1.6", "DPAD_CENTER:2.5",
                               "DPAD_RIGHT:2.2", "DPAD_RIGHT:2.2", "DPAD_CENTER:9"]),
@@ -351,7 +359,7 @@ class Capture:
     def capture(self, name: str, take: Take) -> Path:
         self.prepare(take)
         remote = f"/sdcard/glacier-{name}.mp4"
-        self.d.record(remote, take.steps)
+        self.d.record(remote, take.steps_by_lang.get(self.lang, take.steps))
         out = self.takes / f"{name}{self.suffix}.mp4"
         self.d.run("pull", remote, str(out))
         self.d.shell(f"rm -f {remote}")
