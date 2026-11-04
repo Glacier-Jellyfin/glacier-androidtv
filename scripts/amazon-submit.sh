@@ -164,13 +164,20 @@ for file in "$notes"/whatsnew-*; do
     echo "Replaced the $type for $language"
   done
 
-  # The promo film from the website, the one Google Play shows from YouTube.
+  # The promo film from the website, the one Google Play shows from YouTube. Amazon's
+  # gateway refuses video uploads ("Unable to fetch the request scope"), although its
+  # API reference lists them, so a failed one only warns: add the video in the console.
+  # A video already there stays, so one added by hand is never removed.
   code="${language%%-*}"
   video="$(dirname "$0")/../website/assets/promo/glacier-promo$([ "$code" = en ] || echo "-$code").mp4"
-  if [ -f "$video" ]; then
-    clear_all "$path/videos"
-    upload "$path/videos" "$video"
-    echo "Replaced the video for $language"
+  if [ "$(call GET "$path/videos" | count)" -gt 0 ]; then
+    echo "Kept the video for $language"
+  elif [ -f "$video" ]; then
+    if (upload "$path/videos" "$video") 2> "$body.video"; then
+      echo "Added the video for $language"
+    else
+      echo "::warning::Amazon took no video for $language, add $video in the Developer Console: $(cat "$body.video")"
+    fi
   fi
 done
 

@@ -206,8 +206,11 @@ The Amazon submission fills each listing from the same files, with
 keywords, small icon, Fire TV background) and the website's promo film
 (`website/assets/promo/glacier-promo[-de].mp4`) as video. The Fire TV icon is
 the TV banner, the promo image the feature graphic. Amazon has no checksums
-to compare, so every submission replaces all images and the video. Changes in
-the Amazon Developer Console are overwritten as well.
+to compare, so every submission replaces all images. Changes in the Amazon
+Developer Console are overwritten as well. The video is the exception: Amazon's
+gateway refuses video uploads through the API, so the step only warns. Add the
+promo film once by hand in the Developer Console. A video that is already there
+is kept.
 
 - Screenshots (1920×1080, one set per language in
   `fastlane/metadata/android/{en-US,de-DE}/images/tvScreenshots/`) come from
