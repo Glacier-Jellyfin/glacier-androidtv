@@ -16,6 +16,17 @@ apk="${1:?usage: amazon-submit.sh <apk> <notes-dir>}"
 notes="${2:?usage: amazon-submit.sh <apk> <notes-dir>}"
 : "${AMAZON_CLIENT_ID:?}" "${AMAZON_CLIENT_SECRET:?}" "${AMAZON_APP_ID:?AMAZON_APP_ID is not set, see docs/RELEASING.md}"
 api="https://developer.amazon.com/api/appstore/v1/applications/$AMAZON_APP_ID"
+metadata="$(dirname "$0")/../fastlane/metadata"
+
+# Amazon takes only single words as keywords and refuses the whole listing otherwise,
+# after the APK is already replaced. Check before anything is sent.
+for file in "$metadata"/amazon/*/keywords.txt; do
+  if tr ',' '
+' < "$file" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -q '[[:space:]]'; then
+    echo "::error::$file: Amazon takes only single words as keywords, separated by commas" >&2
+    exit 1
+  fi
+done
 
 headers="$(mktemp)"
 body="$(mktemp)"
@@ -107,7 +118,6 @@ graphic() {
 # The listing of each language, from the same files as the Google Play listing
 # and fastlane/metadata/amazon. Amazon's edit keeps the images of the live
 # version but has no checksums to compare, so all of them are replaced.
-metadata="$(dirname "$0")/../fastlane/metadata"
 for file in "$notes"/whatsnew-*; do
   language="${file##*/whatsnew-}"
   path="/edits/$edit/listings/$language"

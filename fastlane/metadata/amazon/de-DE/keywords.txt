@@ -1,1 +1,1 @@
-jellyfin, medienserver, mediaplayer, heimkino, filme, serien, musik, live tv, open source
+jellyfin, medienserver, mediaplayer, heimkino, filme, serien, musik, fernsehen, liveTV, opensource
