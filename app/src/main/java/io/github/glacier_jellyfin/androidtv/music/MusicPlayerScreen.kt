@@ -269,7 +269,7 @@ fun MusicPlayerScreen(
         GlacierBackground {}
         if (radio != null) {
             RadioPlayer(state, radio, playFocus, viewModel)
-        } else if (current != null) {
+        } else if (current != null && !state.replacing) {
             TopBar(state, current, Modifier.padding(start = 96.dp, end = 96.dp, top = 60.dp))
             Box(Modifier.padding(start = 96.dp).width(1064.dp)) {
                 AnimatedContent(state.lyricsOn && !current.isVideo, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "lyrics") { lyricsOn ->

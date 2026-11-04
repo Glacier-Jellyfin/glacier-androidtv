@@ -72,6 +72,8 @@ sealed interface LyricsState {
 
 data class MusicUiState(
     val loading: Boolean = false,
+    /** A new queue is being loaded ([MusicController.play] and the like): the old one is not shown anymore. */
+    val replacing: Boolean = false,
     val failed: Boolean = false,
     /** The failure was an album, artist or playlist without songs. */
     val nothingToPlay: Boolean = false,
@@ -608,7 +610,7 @@ class MusicController @Inject constructor(
         loadJob?.cancel()
         activePlayer?.pause()
         reportCurrentStopped(null)
-        _state.update { it.copy(loading = true, failed = false, nothingToPlay = false) }
+        _state.update { it.copy(loading = true, replacing = true, failed = false, nothingToPlay = false) }
         loadJob = scope.launch {
             try {
                 val (kind, title, tracks) = request.load()
@@ -630,7 +632,7 @@ class MusicController @Inject constructor(
                     return@launch
                 }
                 _state.update {
-                    it.copy(sourceKind = kind, sourceTitle = title, queue = order.items, index = order.index, shuffle = shuffled)
+                    it.copy(sourceKind = kind, sourceTitle = title, queue = order.items, index = order.index, shuffle = shuffled, replacing = false)
                 }
                 startPlayer(order)
             } catch (e: CancellationException) {
@@ -892,7 +894,7 @@ class MusicController @Inject constructor(
             clearSources()
             sources = songSources(entries)
             sourceOrder = entries
-            _state.update { it.copy(loading = true, failed = false, nothingToPlay = false, sourceKind = null, sourceTitle = "", queue = entries, index = 0) }
+            _state.update { it.copy(loading = true, replacing = false, failed = false, nothingToPlay = false, sourceKind = null, sourceTitle = "", queue = entries, index = 0) }
             loadJob = scope.launch {
                 val order = openStart(QueueOrder(entries, 0))
                 if (order == null) {
