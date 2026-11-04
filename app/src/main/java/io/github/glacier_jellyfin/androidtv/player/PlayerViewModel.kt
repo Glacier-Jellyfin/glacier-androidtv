@@ -335,7 +335,7 @@ class PlayerViewModel @Inject constructor(
                     subtitles = opened.subtitles
                         .filter { it.delivery == SubtitleDelivery.External && it.url != null }
                         .map { SideloadedSubtitle(it.track.index, it.url!!, it.track.codec, it.track.language) },
-                    setup = playback.device.playbackSetup(settings.current().playback),
+                    setup = playback.device.playbackSetup(settings.current().playback, playback.iec61937),
                 )
                 val playback = GlacierPlayer.create(context, request)
                 val player = playback.player

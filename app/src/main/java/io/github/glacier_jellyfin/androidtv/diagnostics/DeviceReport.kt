@@ -49,7 +49,7 @@ internal object DeviceReport {
             .getOrElse { "unknown (${it.javaClass.simpleName})" }
 
     /** What the device profile sent to the server is built from. */
-    fun capabilities(device: DeviceCapabilities): List<String> = buildList {
+    fun capabilities(device: DeviceCapabilities, iec61937: Boolean): List<String> = buildList {
         val video = listOfNotNull(
             device.h264?.let { "H.264 ${it.text()}" },
             device.hevc?.let { "HEVC ${it.text()}" },
@@ -68,7 +68,7 @@ internal object DeviceReport {
         add("  Audio: ${device.audioCodecs.sorted().joinToString()}")
         add("  Passthrough: ${device.passthroughAudio.sorted().joinToString().ifEmpty { "none" }}")
         add("  Audio channels: ${device.maxAudioChannels}")
-        add("  IEC 61937 on HDMI: ${if (device.iec61937) "yes" else "no"}")
+        add("  IEC 61937 on HDMI: ${if (iec61937) "yes" else "no"}")
     }
 
     private fun VideoCodecSupport.text() =

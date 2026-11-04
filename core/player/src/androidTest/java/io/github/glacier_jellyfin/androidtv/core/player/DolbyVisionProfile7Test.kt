@@ -53,10 +53,17 @@ class DolbyVisionProfile7Test {
     }
 
     @Test
-    fun profile7BecomesProfile81() {
-        val result = play("dv-profile7.mkv", DolbyVisionProfile7Extractors(DefaultExtractorsFactory(), DolbyVisionProfile7.Profile81), untilTracks = true)
+    fun profile7WithRpusBecomesProfile81() {
+        // The playback check's sample: an enhancement layer and an RPU in every frame.
+        val result = play("playback-check/dv-p7.mkv", DolbyVisionProfile7Extractors(DefaultExtractorsFactory(), DolbyVisionProfile7.Profile81), untilTracks = true)
         assertEquals(MimeTypes.VIDEO_DOLBY_VISION, result.video?.sampleMimeType)
         assertEquals("dvhe.08.06", result.video?.codecs)
+    }
+
+    @Test
+    fun profile7WithoutRpusPlaysItsBaseLayerInsteadOfProfile81() {
+        val result = play("dv-profile7.mkv", DolbyVisionProfile7Extractors(DefaultExtractorsFactory(), DolbyVisionProfile7.Profile81), untilTracks = true)
+        assertEquals(MimeTypes.VIDEO_H265, result.video?.sampleMimeType)
     }
 
     @Test

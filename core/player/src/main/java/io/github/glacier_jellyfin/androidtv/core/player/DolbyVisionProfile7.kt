@@ -13,6 +13,7 @@ import androidx.media3.extractor.Extractor
 import androidx.media3.extractor.ExtractorOutput
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.TrackOutput
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import java.io.ByteArrayOutputStream
 import java.io.EOFException
 
@@ -40,7 +41,9 @@ enum class DolbyVisionProfile7 {
  * plain HDR10 HEVC, and HEVC decoders skip the enhancement layer.
  * [DolbyVisionProfile7.Profile81] also rewrites every sample: the
  * enhancement layer's NAL units (type 63) go, and each RPU (type 62) becomes
- * profile 8.1 ([DolbyVisionRpu]).
+ * profile 8.1 ([DolbyVisionRpu]). The first sample decides: without an RPU
+ * that converts, or encrypted, the track plays its base layer instead, so
+ * the decoder never gets a profile 8.1 stream without 8.1 metadata.
  */
 @OptIn(UnstableApi::class)
 internal class DolbyVisionProfile7Extractors(
@@ -54,31 +57,64 @@ internal class DolbyVisionProfile7Extractors(
         inner.createExtractors(uri, responseHeaders).map(::Profile7Extractor).toTypedArray()
 
     private inner class Profile7Extractor(private val inner: Extractor) : Extractor by inner {
-        override fun init(output: ExtractorOutput) = inner.init(Profile7Output(output))
+        private var output: Profile7Output? = null
+
+        override fun init(output: ExtractorOutput) = inner.init(Profile7Output(output).also { this.output = it })
         override fun getUnderlyingImplementation(): Extractor = inner.underlyingImplementation
+
+        // After a seek the extractor starts over; a sample begun before it never completes.
+        override fun seek(position: Long, timeUs: Long) {
+            output?.tracks?.forEach { it.dropPending() }
+            inner.seek(position, timeUs)
+        }
+
+        override fun release() {
+            output?.tracks?.forEach { it.logSummary() }
+            inner.release()
+        }
     }
 
     private inner class Profile7Output(private val inner: ExtractorOutput) : ExtractorOutput by inner {
-        override fun track(id: Int, type: Int): TrackOutput = Profile7Track(inner.track(id, type), mode)
+        val tracks = mutableListOf<Profile7Track>()
+
+        override fun track(id: Int, type: Int): TrackOutput = Profile7Track(inner.track(id, type), mode).also { tracks += it }
     }
 
-    /** One track; for a converted profile 7 video track its samples wait in [pending] until complete. */
+    /** RPUs met by a converted track, for the log. */
+    class RpuCounts {
+        var seen = 0
+        var converted = 0
+        /** Unreadable ones; they are dropped, the decoder keeps the metadata before them. */
+        var failed = 0
+
+        override fun toString() = "$seen RPUs, $converted converted, $failed dropped"
+    }
+
+    /**
+     * One track. A profile 7 video track to convert holds its format back
+     * until the first sample shows whether it converts, and its samples wait
+     * in [pending] until complete.
+     */
     private class Profile7Track(private val inner: TrackOutput, private val mode: DolbyVisionProfile7) : TrackOutput by inner {
         private var converting = false
+        /** The profile 7 format, until the first sample decides how it plays. */
+        private var held: Format? = null
         private var pending = ByteArray(0)
         private var pendingSize = 0
+        private val counts = RpuCounts()
 
         override fun format(format: Format) {
             val profile7 = format.sampleMimeType == MimeTypes.VIDEO_DOLBY_VISION && format.codecs.isProfile7()
-            converting = profile7 && mode == DolbyVisionProfile7.Profile81
-            inner.format(
-                when {
-                    !profile7 -> format
-                    mode == DolbyVisionProfile7.BaseLayer -> baseLayer(format)
-                    mode == DolbyVisionProfile7.Profile81 -> format.buildUpon().setCodecs(profile81Codecs(format.codecs!!)).build()
-                    else -> format
-                },
-            )
+            when {
+                !profile7 -> inner.format(format)
+                mode == DolbyVisionProfile7.BaseLayer -> inner.format(baseLayer(format))
+                mode == DolbyVisionProfile7.Profile81 && converting -> inner.format(profile81(format))
+                mode == DolbyVisionProfile7.Profile81 -> {
+                    held = format
+                    converting = true
+                }
+                else -> inner.format(format)
+            }
         }
 
         override fun sampleData(input: DataReader, length: Int, allowEndOfInput: Boolean, sampleDataPart: Int): Int {
@@ -112,15 +148,41 @@ internal class DolbyVisionProfile7Extractors(
             }
             // The sample ends [offset] bytes before what has arrived; those bytes belong to the next one.
             val start = pendingSize - offset - size
-            val sample = if (cryptoData == null && flags and C.BUFFER_FLAG_HAS_SUPPLEMENTAL_DATA == 0) {
-                toProfile81(pending, start, size)
-            } else {
-                pending.copyOfRange(start, start + size)
+            val plain = cryptoData == null && flags and C.BUFFER_FLAG_HAS_SUPPLEMENTAL_DATA == 0
+            val sample = if (plain) toProfile81(pending, start, size, counts) else pending.copyOfRange(start, start + size)
+            held?.let { format ->
+                held = null
+                val reason = when {
+                    !plain -> "the samples are encrypted"
+                    counts.converted == 0 && counts.seen == 0 -> "the stream has no RPU"
+                    counts.converted == 0 -> "its RPU does not read"
+                    else -> null
+                }
+                if (reason != null) {
+                    // The base layer as it is, also for every later sample.
+                    Log.i(TAG, "Dolby Vision profile 7 plays as its HDR10 base layer: $reason")
+                    converting = false
+                    inner.format(baseLayer(format))
+                    inner.sampleData(ParsableByteArray(pending.copyOfRange(start, pendingSize)), pendingSize - start, TrackOutput.SAMPLE_DATA_PART_MAIN)
+                    inner.sampleMetadata(timeUs, flags, size, offset, cryptoData)
+                    pendingSize = 0
+                    return
+                }
+                Log.i(TAG, "Dolby Vision profile 7 plays as profile 8.1, without the enhancement layer")
+                inner.format(profile81(format))
             }
             inner.sampleData(ParsableByteArray(sample), sample.size, TrackOutput.SAMPLE_DATA_PART_MAIN)
             inner.sampleMetadata(timeUs, flags, sample.size, 0, cryptoData)
             pending.copyInto(pending, 0, pendingSize - offset, pendingSize)
             pendingSize = offset
+        }
+
+        fun dropPending() {
+            pendingSize = 0
+        }
+
+        fun logSummary() {
+            if (counts.seen > 0) Log.i(TAG, "Dolby Vision profile 8.1: $counts")
         }
 
         private fun ensureCapacity(capacity: Int) {
@@ -141,14 +203,15 @@ internal class DolbyVisionProfile7Extractors(
         private fun String?.isProfile7() = this?.split('.')?.getOrNull(1)?.toIntOrNull() == 7
 
         /** "dvhe.07.06" → "dvhe.08.06": same level, profile 8. */
-        private fun profile81Codecs(codecs: String): String =
-            codecs.split('.').toMutableList().also { it[1] = "08" }.joinToString(".")
+        private fun profile81(format: Format): Format =
+            format.buildUpon().setCodecs(format.codecs!!.split('.').toMutableList().also { it[1] = "08" }.joinToString(".")).build()
 
         /**
          * One Annex B sample (start codes, as Media3's extractors write H.265)
-         * without the enhancement layer and with profile 8.1 RPUs.
+         * without the enhancement layer and with profile 8.1 RPUs; an RPU that
+         * does not read goes too. [counts] learns what it met.
          */
-        fun toProfile81(data: ByteArray, offset: Int, length: Int): ByteArray {
+        fun toProfile81(data: ByteArray, offset: Int, length: Int, counts: RpuCounts = RpuCounts()): ByteArray {
             val end = offset + length
             val out = ByteArrayOutputStream(length)
             var nal = nextNal(data, offset, end) ?: return data.copyOfRange(offset, end)
@@ -161,9 +224,15 @@ internal class DolbyVisionProfile7Extractors(
                 when ((data[payloadStart].toInt() shr 1) and 0x3f) {
                     NAL_ENHANCEMENT_LAYER -> Unit
                     NAL_RPU -> {
-                        out.write(data, codeStart, payloadStart - codeStart)
+                        counts.seen++
                         val rpu = DolbyVisionRpu.toProfile81(data, payloadStart, payloadEnd - payloadStart)
-                        if (rpu != null) out.write(rpu) else out.write(data, payloadStart, payloadEnd - payloadStart)
+                        if (rpu != null) {
+                            counts.converted++
+                            out.write(data, codeStart, payloadStart - codeStart)
+                            out.write(rpu)
+                        } else {
+                            if (counts.failed++ == 0) Log.w(TAG, "Dropped an RPU that does not read as profile 7")
+                        }
                     }
                     else -> out.write(data, codeStart, payloadEnd - codeStart)
                 }
@@ -185,6 +254,7 @@ internal class DolbyVisionProfile7Extractors(
             return null
         }
 
+        private const val TAG = "DolbyVision"
         private const val NAL_RPU = 62
         private const val NAL_ENHANCEMENT_LAYER = 63
 

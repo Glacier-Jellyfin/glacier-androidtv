@@ -114,7 +114,7 @@ class Diagnostics @Inject constructor(
         DeviceReport.audioOutputs(context).forEach(::appendLine)
         appendLine("Media3 audio: ${DeviceReport.media3Audio(context)}")
         appendLine("Device profile built from:")
-        DeviceReport.capabilities(capabilities.capabilities).forEach(::appendLine)
+        DeviceReport.capabilities(capabilities.capabilities, capabilities.iec61937()).forEach(::appendLine)
         appendLine("FFmpeg: ${FfmpegAudio.version() ?: "not included"}")
         appendLine("Server: Jellyfin ${serverVersion ?: "unknown"}")
         appendLine("Detailed logging: ${if (Log.verbose) "on" else "off"}")

@@ -12,6 +12,9 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Glacier's Log calls android.util.Log, which the JVM tests only have as stubs.
+    testOptions.unitTests.isReturnDefaultValues = true
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

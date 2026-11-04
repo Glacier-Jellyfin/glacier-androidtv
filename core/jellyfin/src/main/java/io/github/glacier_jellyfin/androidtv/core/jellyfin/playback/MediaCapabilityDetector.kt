@@ -3,9 +3,11 @@ package io.github.glacier_jellyfin.androidtv.core.jellyfin.playback
 import android.annotation.SuppressLint
 import android.content.Context
 import android.hardware.display.DisplayManager
+import android.media.AudioAttributes
 import android.media.AudioDeviceInfo
 import android.media.AudioFormat
 import android.media.AudioManager
+import android.media.AudioTrack
 import android.media.MediaCodecInfo
 import android.media.MediaCodecInfo.CodecProfileLevel
 import android.media.MediaCodecList
@@ -69,7 +71,6 @@ class MediaCapabilityDetector @Inject constructor(
             passthroughAudio = passthrough,
             hdr = hdr,
             dolbyVisionProfiles = dolbyVisionProfiles(profiles(decodersFor(MIME_DOLBY_VISION), MIME_DOLBY_VISION)),
-            iec61937 = iec61937(),
         )
     }
 
@@ -122,15 +123,65 @@ class MediaCapabilityDetector @Inject constructor(
         }
     }
 
-    /** An HDMI output that takes IEC 61937 on 8 channels, the high bitrate rate TrueHD and DTS-HD need. */
-    private fun iec61937(): Boolean {
+    /** [iec61937] for the outputs it was found for, so a new route asks again. */
+    private var iec61937Cache: Pair<List<Int>, Boolean>? = null
+
+    /**
+     * Whether HDMI takes IEC 61937 bursts on 8 channels at 192 kHz, the high
+     * bitrate rate TrueHD and DTS-HD need, so the player can pack them itself.
+     * Asked again whenever the audio outputs change, a receiver switched on later included.
+     */
+    @Synchronized
+    fun iec61937(): Boolean {
         val audioManager = context.getSystemService(AudioManager::class.java) ?: return false
-        return audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any { device ->
-            device.type in HDMI_OUTPUTS &&
-                AudioFormat.ENCODING_IEC61937 in device.encodings &&
-                (device.channelCounts.isEmpty() || device.channelCounts.any { it >= 8 })
-        }
+        val outputs = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+        val hdmi = outputs.filter { it.type in HDMI_OUTPUTS }
+        val route = outputs.map { it.id }.sorted()
+        iec61937Cache?.takeIf { it.first == route }?.let { return it.second }
+        val available = hdmi.isNotEmpty() && (
+            iecTrackSupported() ||
+                hdmi.any { AudioFormat.ENCODING_IEC61937 in it.encodings && (it.channelCounts.isEmpty() || it.channelCounts.any { n -> n >= 8 }) } ||
+                // Some devices say no to the 8-channel carrier and play it all the same.
+                iecTrackOpens()
+            )
+        iec61937Cache = route to available
+        return available
     }
+
+    private fun iecFormat(): AudioFormat = AudioFormat.Builder()
+        .setEncoding(AudioFormat.ENCODING_IEC61937)
+        .setSampleRate(IEC_SAMPLE_RATE)
+        .setChannelMask(AudioFormat.CHANNEL_OUT_7POINT1_SURROUND)
+        .build()
+
+    private val movieAttributes: AudioAttributes
+        get() = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MOVIE).build()
+
+    /** The platform's own answer, where it gives one (Android 10 and later). */
+    private fun iecTrackSupported(): Boolean = runCatching {
+        when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ->
+                AudioManager.getDirectPlaybackSupport(iecFormat(), movieAttributes) != AudioManager.DIRECT_PLAYBACK_NOT_SUPPORTED
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> AudioTrack.isDirectPlaybackSupported(iecFormat(), movieAttributes)
+            else -> false
+        }
+    }.getOrDefault(false)
+
+    /** Opens such a track for a moment: initialised means the route takes it. */
+    private fun iecTrackOpens(): Boolean = runCatching {
+        val minimum = AudioTrack.getMinBufferSize(IEC_SAMPLE_RATE, AudioFormat.CHANNEL_OUT_7POINT1_SURROUND, AudioFormat.ENCODING_IEC61937)
+        val track = AudioTrack.Builder()
+            .setAudioAttributes(movieAttributes)
+            .setAudioFormat(iecFormat())
+            .setBufferSizeInBytes(maxOf(minimum, MAT_BURST_BYTES))
+            .setTransferMode(AudioTrack.MODE_STREAM)
+            .build()
+        try {
+            track.state == AudioTrack.STATE_INITIALIZED
+        } finally {
+            track.release()
+        }
+    }.getOrDefault(false)
 
     private fun maxAudioChannels(): Int {
         val audioManager = context.getSystemService(AudioManager::class.java) ?: return 2
@@ -148,6 +199,10 @@ class MediaCapabilityDetector @Inject constructor(
 
         // eARC is a plain number compiled in; older devices never report it.
         @SuppressLint("InlinedApi")
+        const val IEC_SAMPLE_RATE = 192_000
+        /** One TrueHD burst, the largest the 8-channel carrier takes. */
+        const val MAT_BURST_BYTES = 61440
+
         val HDMI_OUTPUTS = setOf(AudioDeviceInfo.TYPE_HDMI, AudioDeviceInfo.TYPE_HDMI_ARC, AudioDeviceInfo.TYPE_HDMI_EARC)
 
         /** Platform decoders Media3 uses, and the Jellyfin codec names they cover. */

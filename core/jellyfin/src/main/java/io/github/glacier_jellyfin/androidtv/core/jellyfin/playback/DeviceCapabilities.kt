@@ -24,11 +24,6 @@ data class DeviceCapabilities(
      * Amlogic decoders take profile 7 and then fail on it.
      */
     val dolbyVisionProfiles: Set<Int>? = null,
-    /**
-     * HDMI takes IEC 61937 bursts on 8 channels: the player can pack TrueHD and
-     * DTS-HD itself and hand them on whole, also where Android would not.
-     */
-    val iec61937: Boolean = false,
 ) {
     /** Profile 7 plays as Dolby Vision; otherwise the player plays its HDR10 base layer with the HEVC decoder. */
     val decodesDolbyVisionProfile7: Boolean

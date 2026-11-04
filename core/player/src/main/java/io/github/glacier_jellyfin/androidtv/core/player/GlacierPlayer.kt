@@ -144,6 +144,7 @@ object GlacierPlayer {
         // HTTP for the server's streams; asset:// for the playback check's samples.
         val sources = DefaultDataSource.Factory(context, dataSource)
         val profile7 = request.setup.dolbyVisionProfile7
+        Log.i("Player", "Setup: Dolby Vision profile 7 $profile7, IEC 61937 ${if (request.setup.iec61937) "on" else "off"}")
         val mediaSources = DefaultMediaSourceFactory(
             sources,
             if (profile7 == DolbyVisionProfile7.AsIs) extractors else DolbyVisionProfile7Extractors(extractors, profile7),

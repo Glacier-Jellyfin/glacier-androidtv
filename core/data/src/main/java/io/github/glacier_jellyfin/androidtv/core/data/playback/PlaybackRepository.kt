@@ -195,6 +195,9 @@ class PlaybackRepository @Inject constructor(
     /** What this device decodes and passes on, for the player's setup. */
     val device: DeviceCapabilities get() = capabilities.capabilities
 
+    /** HDMI takes IEC 61937 bursts right now, so Glacier can hand TrueHD and DTS-HD on itself. */
+    val iec61937: Boolean get() = capabilities.iec61937()
+
     /**
      * Ids of the files of [itemId] this device plays as they are, without the
      * server converting the picture: the server weighs every file against the

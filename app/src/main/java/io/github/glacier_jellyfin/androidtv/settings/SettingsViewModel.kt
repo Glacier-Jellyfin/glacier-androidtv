@@ -382,10 +382,10 @@ class SettingsViewModel @Inject constructor(
     }
 
     /** For the playback check, which runs in a process of its own and is told this. */
-    val playbackSetup: PlaybackSetup get() = playback.device.playbackSetup(_state.value.profile.playback)
+    val playbackSetup: PlaybackSetup get() = playback.device.playbackSetup(_state.value.profile.playback, playback.iec61937)
 
     /** HDMI takes IEC 61937: the choice who hands TrueHD and DTS-HD on matters. */
-    val iec61937Available: Boolean get() = playback.device.iec61937
+    val iec61937Available: Boolean get() = playback.iec61937
 
     /** Dolby Vision profile 7 can play as 8.1 or as HDR10 here. */
     val choosesDolbyVisionProfile7: Boolean get() = playback.device.choosesDolbyVisionProfile7
