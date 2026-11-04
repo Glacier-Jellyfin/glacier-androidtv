@@ -360,7 +360,7 @@ class LibraryViewModel @Inject constructor(
         val state = _state.value
         val videos = state.folder?.takeIf { state.inFolders }?.media?.filterIsInstance<FolderMedia.Video>()?.map { it.item } ?: state.items
         val start = videos.indexOfFirst { it.id == item.id }.takeIf { it >= 0 } ?: return
-        music.playSongs(title, videos.drop(start).take(VIDEO_QUEUE).map { it.id }, startTrackId = item.id.toString())
+        music.playSongs(title, videos.drop(start).map { it.id }, startTrackId = item.id.toString())
         viewModelScope.launch { _events.send(UiEvent.Navigate(MusicRoute())) }
     }
 
@@ -384,7 +384,7 @@ class LibraryViewModel @Inject constructor(
                 _events.send(UiEvent.Toast(R.string.music_videos_none))
                 return@launch
             }
-            music.playSongs(title, (if (shuffled) ids.shuffled() else ids).take(VIDEO_QUEUE))
+            music.playSongs(title, if (shuffled) ids.shuffled() else ids)
             _events.send(UiEvent.Navigate(MusicRoute()))
         }
     }
@@ -521,8 +521,6 @@ class LibraryViewModel @Inject constructor(
         private const val JUMP_ROWS_BEFORE = 3
         /** Songs queued from the songs tab; their ids go into one request. */
         private const val SONG_QUEUE = 100
-        /** Music videos queued from their tab; the server opens each one before the queue starts. */
-        private const val VIDEO_QUEUE = 50
         private const val TAG = "Library"
     }
 }

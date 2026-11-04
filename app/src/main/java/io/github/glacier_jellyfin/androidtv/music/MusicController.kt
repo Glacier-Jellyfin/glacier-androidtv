@@ -34,9 +34,6 @@ import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.delay
@@ -209,7 +206,14 @@ class MusicController @Inject constructor(
     private var loadJob: Job? = null
     /** The source's songs in their own order, to return to when shuffle goes off. */
     private var sourceOrder: List<QueueEntry> = emptyList()
+    /**
+     * Where the entries stream from, by [QueueEntry.key]. A song's is known at once; a video's comes
+     * when it is near ([resolveAhead]), and until then the player holds a stand-in for it.
+     */
     private var sources: Map<Int, PlaybackSource> = emptyMap()
+    /** Videos being asked of the server, by key. */
+    private val opening = mutableMapOf<Int, Job>()
+    private val openGate = Semaphore(PARALLEL_OPENS)
     /** Key for the next song added to the queue ([QueueEntry.key]). */
     private var nextKey = 0
     /** The song reported to the server as playing, and where it last was. */
@@ -323,6 +327,13 @@ class MusicController @Inject constructor(
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            // The stand-in of a video the server has not answered for yet: it plays once the answer is in.
+            val current = _state.value.queue.getOrNull(activePlayer?.currentMediaItemIndex ?: -1)
+            if (current != null && current.key !in sources) {
+                _state.update { it.copy(loading = true) }
+                open(current)
+                return
+            }
             Log.w(TAG, "Music playback failed", error)
             reportCurrentStopped(null, failed = true)
             // One broken file should not end the evening: move on when there is more.
@@ -575,8 +586,15 @@ class MusicController @Inject constructor(
             ticker?.cancel()
         }
         sourceOrder = emptyList()
-        sources = emptyMap()
+        clearSources()
         _progress.value = MusicProgress()
+    }
+
+    /** Forgets the streams, and the videos still being asked for: a new queue reuses the keys. */
+    private fun clearSources() {
+        opening.values.forEach { it.cancel() }
+        opening.clear()
+        sources = emptyMap()
     }
 
     private fun load() {
@@ -596,16 +614,15 @@ class MusicController @Inject constructor(
                 }
                 val entries = tracks.mapIndexed { i, track -> QueueEntry(i, track) }
                 nextKey = tracks.size
-                sources = resolve(entries)
-                // A video the server would not open stays out; the rest plays.
-                sourceOrder = entries.filter { it.key in sources }
-                if (sourceOrder.isEmpty()) {
+                clearSources()
+                sources = songSources(entries)
+                sourceOrder = entries
+                val start = request.startTrackId?.let { id -> tracks.indexOfFirst { it.id.toString() == id }.takeIf { it >= 0 } }
+                val order = openStart(MusicQueue.start(entries, start, shuffleSwitch.on.value))
+                if (order == null) {
                     _state.update { it.copy(loading = false, failed = true) }
                     return@launch
                 }
-                val playable = sourceOrder.map { it.track }
-                val start = request.startTrackId?.let { id -> playable.indexOfFirst { it.id.toString() == id }.takeIf { it >= 0 } }
-                val order = MusicQueue.start(sourceOrder, start, shuffleSwitch.on.value)
                 _state.update {
                     it.copy(sourceKind = kind, sourceTitle = title, queue = order.items, index = order.index, shuffle = shuffleSwitch.on.value)
                 }
@@ -619,26 +636,97 @@ class MusicController @Inject constructor(
         }
     }
 
+    /** The songs' streams, known without asking the server. */
+    private fun songSources(entries: List<QueueEntry>): Map<Int, PlaybackSource> =
+        entries.filterNot { it.track.isVideo }.associate { it.key to playback.audioSource(it.track) }
+
     /**
-     * Where each entry streams from. A song's stream is known without asking; a video's comes from
-     * the server's answer for this device (the file, or a transcode), as in the video player.
+     * [order] with the entry it starts on ready to play: a video there is asked of the server first.
+     * One the server would not open goes, and the next one starts instead; null when none is left.
      */
-    private suspend fun resolve(entries: List<QueueEntry>): Map<Int, PlaybackSource> = coroutineScope {
-        val gate = Semaphore(PARALLEL_OPENS)
-        entries.map { entry ->
-            async {
-                if (!entry.track.isVideo) return@async entry.key to playback.audioSource(entry.track)
-                try {
-                    // Music videos always start at the beginning.
-                    entry.key to gate.withPermit { playback.open(entry.track.id, startMs = 0, audioIndex = null, subtitleIndex = null) }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.w(TAG, "Opening music video ${entry.track.id} failed", e)
-                    null
+    private suspend fun openStart(order: QueueOrder<QueueEntry>): QueueOrder<QueueEntry>? {
+        var items = order.items
+        var index = order.index
+        while (items.isNotEmpty()) {
+            val entry = items[index.coerceAtMost(items.lastIndex)]
+            if (entry.key in sources) return QueueOrder(items, items.indexOf(entry))
+            val source = openVideo(entry)
+            if (source != null) {
+                sources = sources + (entry.key to source)
+                return QueueOrder(items, items.indexOf(entry))
+            }
+            toast(R.string.music_track_failed)
+            index = items.indexOf(entry)
+            items = items - entry
+            sourceOrder = sourceOrder - entry
+        }
+        return null
+    }
+
+    /** The server's answer for a video on this device (the file, or a transcode), as in the video player; null when it fails. */
+    private suspend fun openVideo(entry: QueueEntry): PlaybackSource? = try {
+        // Music videos always start at the beginning.
+        openGate.withPermit { playback.open(entry.track.id, startMs = 0, audioIndex = null, subtitleIndex = null) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w(TAG, "Opening video ${entry.track.id} failed", e)
+        null
+    }
+
+    /** Asks the server for the videos about to play: the current entry and the [LOOKAHEAD] after it. */
+    private fun resolveAhead() {
+        val s = _state.value
+        if (s.radio != null || s.queue.isEmpty()) return
+        (0..LOOKAHEAD)
+            .mapNotNull { step ->
+                val i = s.index + step
+                when {
+                    i < s.queue.size -> i
+                    s.repeat == RepeatMode.All -> i % s.queue.size
+                    else -> null
                 }
             }
-        }.awaitAll().filterNotNull().toMap()
+            .distinct()
+            .forEach { open(s.queue[it]) }
+    }
+
+    /** Fetches the stream of the video [entry] and puts it in place of its stand-in. */
+    private fun open(entry: QueueEntry) {
+        if (entry.key in sources || opening[entry.key]?.isActive == true) return
+        opening[entry.key] = scope.launch {
+            val source = openVideo(entry)
+            opening.remove(entry.key)
+            if (source == null) return@launch dropFailed(entry)
+            sources = sources + (entry.key to source)
+            val p = activePlayer ?: return@launch
+            val index = _state.value.queue.indexOf(entry)
+            if (index < 0) return@launch
+            // In place of the current one, the player moves over to it and reports it as it starts.
+            p.replaceMediaItem(index, mediaItem(entry))
+            if (index == p.currentMediaItemIndex && p.playbackState == Player.STATE_IDLE) p.prepare()
+        }
+    }
+
+    /** A video the server would not open leaves the queue; the rest plays on. */
+    private fun dropFailed(entry: QueueEntry) {
+        toast(R.string.music_track_failed)
+        sourceOrder = sourceOrder - entry
+        val p = activePlayer ?: return
+        val current = _state.value
+        val index = current.queue.indexOf(entry)
+        if (index < 0) return
+        if (current.queue.size == 1) {
+            p.pause()
+            _state.update { it.copy(loading = false, failed = true) }
+            return
+        }
+        // The queue first: the player tells of the move to the next entry while it removes this one.
+        _state.update { it.copy(queue = it.queue - entry) }
+        p.removeMediaItem(index)
+        _state.update { it.copy(index = p.currentMediaItemIndex.coerceAtLeast(0)) }
+        if (p.playbackState == Player.STATE_IDLE) p.prepare()
+        resolveAhead()
     }
 
     private fun startPlayer(order: QueueOrder<QueueEntry>) {
@@ -660,9 +748,12 @@ class MusicController @Inject constructor(
         startTicker()
     }
 
-    private fun mediaItem(entry: QueueEntry) = sources.getValue(entry.key).let {
+    /** The entry for the player; a video the server has not answered for yet gets a stand-in that cannot play. */
+    private fun mediaItem(entry: QueueEntry): androidx.media3.common.MediaItem {
         val track = entry.track
-        GlacierPlayer.audioItem(entry.key.toString(), it.url, it.isHls, SongMetadata(track.title, track.artist, track.album, track.largeCoverUrl ?: track.coverUrl, video = track.isVideo))
+        val metadata = SongMetadata(track.title, track.artist, track.album, track.largeCoverUrl ?: track.coverUrl, video = track.isVideo)
+        val source = sources[entry.key] ?: return GlacierPlayer.audioItem(entry.key.toString(), PENDING_URL, false, metadata)
+        return GlacierPlayer.audioItem(entry.key.toString(), source.url, source.isHls, metadata)
     }
 
     /** Takes the queue position from the player, which moves on by itself. */
@@ -673,6 +764,7 @@ class MusicController @Inject constructor(
         _state.update { it.copy(index = index, method = entry?.let { e -> sources[e.key]?.method }) }
         _progress.value = MusicProgress(0, entry?.track?.durationMs ?: 0)
         entry?.track?.let(::loadLyrics)
+        resolveAhead()
     }
 
     private fun loadLyrics(track: MusicTrack) {
@@ -785,29 +877,28 @@ class MusicController @Inject constructor(
     private fun insert(tracks: List<MusicTrack>, next: Boolean) {
         if (tracks.isEmpty()) return
         val entries = tracks.map { QueueEntry(nextKey++, it) }
-        if (entries.none { it.track.isVideo }) return insert(entries, entries.associate { it.key to playback.audioSource(it.track) }, next)
-        // Videos need the server's answer first.
-        scope.launch {
-            val resolved = resolve(entries)
-            val playable = entries.filter { it.key in resolved }
-            if (playable.size < entries.size) toast(R.string.music_track_failed)
-            if (playable.isNotEmpty()) insert(playable, resolved, next)
-        }
-    }
-
-    private fun insert(entries: List<QueueEntry>, resolved: Map<Int, PlaybackSource>, next: Boolean) {
-        sources = sources + resolved
         // The radio has no queue to add to: the songs replace it.
         endRadio()
         val p = activePlayer?.takeIf { request != null || sourceOrder.isNotEmpty() }
         if (p == null) {
             loadJob?.cancel()
             request = null
+            clearSources()
+            sources = songSources(entries)
             sourceOrder = entries
             _state.update { it.copy(loading = true, failed = false, nothingToPlay = false, sourceKind = null, sourceTitle = "", queue = entries, index = 0) }
-            startPlayer(QueueOrder(entries, 0))
+            loadJob = scope.launch {
+                val order = openStart(QueueOrder(entries, 0))
+                if (order == null) {
+                    _state.update { it.copy(loading = false, failed = true) }
+                    return@launch
+                }
+                _state.update { it.copy(queue = order.items, index = order.index) }
+                startPlayer(order)
+            }
             return
         }
+        sources = sources + songSources(entries)
         val current = _state.value
         val at = if (next) (current.index + 1).coerceAtMost(current.queue.size) else current.queue.size
         p.addMediaItems(at, entries.map(::mediaItem))
@@ -824,6 +915,7 @@ class MusicController @Inject constructor(
             p.seekTo(at, 0)
             p.play()
         }
+        resolveAhead()
     }
 
     /** Takes a song out of the queue; the one playing stays. */
@@ -848,6 +940,7 @@ class MusicController @Inject constructor(
         p.moveMediaItem(index, target)
         val queue = current.queue.toMutableList().apply { add(target, removeAt(index)) }
         _state.update { it.copy(queue = queue, index = p.currentMediaItemIndex) }
+        resolveAhead()
     }
 
     fun toggleShuffle() {
@@ -866,6 +959,7 @@ class MusicController @Inject constructor(
             replaceAround(p, current.index, order.items.take(order.index), order.items.drop(order.index + 1))
             _state.update { it.copy(shuffle = false, queue = order.items, index = order.index) }
         }
+        resolveAhead()
         toast(if (on) R.string.shuffle_on else R.string.shuffle_off)
     }
 
@@ -887,6 +981,7 @@ class MusicController @Inject constructor(
         }
         activePlayer?.repeatMode = repeat.toPlayer()
         _state.update { it.copy(repeat = repeat) }
+        resolveAhead()
         toast(
             when (repeat) {
                 RepeatMode.Off -> R.string.repeat_off
@@ -1091,7 +1186,7 @@ class MusicController @Inject constructor(
         _player.value = null
         old?.let(::release)
         sourceOrder = emptyList()
-        sources = emptyMap()
+        clearSources()
         _progress.value = MusicProgress()
         _state.update { MusicUiState(shuffle = it.shuffle, repeat = it.repeat, lyricsOn = it.lyricsOn, seekBackMs = it.seekBackMs, seekForwardMs = it.seekForwardMs) }
     }
@@ -1163,8 +1258,12 @@ class MusicController @Inject constructor(
         const val RADIO_GUIDE_HOURS = 6L
         /** How long the video track stays on after the last picture went, see applyPicture. */
         const val PICTURE_OFF_DELAY_MS = 600L
-        /** Music videos asked of the server at once when a queue loads. */
-        const val PARALLEL_OPENS = 4
+        /** Videos asked of the server at once. */
+        const val PARALLEL_OPENS = 2
+        /** Videos after the current one asked of the server ahead, so they play without a wait. */
+        const val LOOKAHEAD = 2
+        /** The stand-in for a video whose stream is not known yet; it fails, and [open] replaces it. */
+        const val PENDING_URL = "glacier-pending://video"
         val MediaKeys = setOf(
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
             KeyEvent.KEYCODE_MEDIA_PLAY,

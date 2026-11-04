@@ -87,17 +87,26 @@ class MusicRepository @Inject constructor(
         ).content.items.map(mapper::track)
     }
 
-    /** The songs with [ids], in that order; ids the server does not know are left out. */
+    /**
+     * The songs or videos with [ids], in that order; ids the server does not know are left out.
+     * Asked for in parts, so a long list does not make too long an address.
+     */
     suspend fun tracks(ids: List<UUID>): List<MusicTrack> = withContext(Dispatchers.IO) {
         if (ids.isEmpty()) return@withContext emptyList()
         val session = requireSession()
         val mapper = MediaMapper(session.api)
-        val byId = session.api.libraryApi.getItems(
-            userId = session.userId,
-            ids = ids,
-            fields = TRACK_FIELDS,
-            enableUserData = true,
-        ).content.items.associateBy { it.id }
+        val byId = coroutineScope {
+            ids.distinct().chunked(IDS_PER_REQUEST).map { part ->
+                async {
+                    session.api.libraryApi.getItems(
+                        userId = session.userId,
+                        ids = part,
+                        fields = TRACK_FIELDS,
+                        enableUserData = true,
+                    ).content.items
+                }
+            }.awaitAll().flatten().associateBy { it.id }
+        }
         ids.mapNotNull { byId[it] }.map(mapper::track)
     }
 
@@ -210,6 +219,8 @@ class MusicRepository @Inject constructor(
         const val TICKS_PER_MS = 10_000L
         const val HTTP_NOT_FOUND = 404
         const val MIX_LIMIT = 100
+        /** Ids per request for [tracks]; a hundred make an address of about 3.7 kB. */
+        const val IDS_PER_REQUEST = 100
         val TRACK_FIELDS = listOf(ItemFields.MEDIA_STREAMS)
     }
 }
