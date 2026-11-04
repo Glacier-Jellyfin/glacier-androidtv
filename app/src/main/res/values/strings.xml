@@ -617,6 +617,8 @@
     <string name="music_nothing_to_play">There are no songs to play here.</string>
     <string name="music_shuffle_all">Shuffle all</string>
     <string name="music_shuffle_play">Shuffle</string>
+    <string name="music_previous">Previous track</string>
+    <string name="music_next">Next track</string>
     <string name="music_play_videos">Play videos</string>
     <string name="music_videos_none">There are no music videos to play here.</string>
     <string name="music_videos_failed">The music videos could not be loaded.</string>

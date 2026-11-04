@@ -611,6 +611,8 @@
     <string name="music_nothing_to_play">Hier gibt es keine Titel zum Abspielen.</string>
     <string name="music_shuffle_all">Alle zufällig abspielen</string>
     <string name="music_shuffle_play">Zufällig abspielen</string>
+    <string name="music_previous">Vorheriger Titel</string>
+    <string name="music_next">Nächster Titel</string>
     <string name="music_play_videos">Videos abspielen</string>
     <string name="music_videos_none">Hier gibt es keine Musikvideos zum Abspielen.</string>
     <string name="music_videos_failed">Die Musikvideos konnten nicht geladen werden.</string>

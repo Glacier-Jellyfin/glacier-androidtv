@@ -29,7 +29,7 @@ language is German.
 - Music videos are a tab of Music instead of their own entry in the navigation bar, as 16:9 cards sorted by date added, title, release year or artist
 - The music videos tab shows all videos or browses their folders. Until a view is picked, it starts with all videos when most of them name their artist
 - Music videos play in the music player, also mixed with songs in the queue: from their tab, which can also play or shuffle them all, from an artist's page and from playlists. The picture stands in place of the cover, in the mini player and in full screen too
-- Music videos and their folders have options like an album: hold OK, press the menu key or pick … in the toolbar to play or shuffle them all, play them next or add them to the queue or a playlist
+- Music videos and their folders have options like an album: hold OK, press the menu key or pick … in the toolbar to play or shuffle them all, play them next or add them to the queue or a playlist. A mark beside the title of the focused card says so. On a playlist's page a video can leave the playlist
 - Albums and artists have an instant mix button next to Shuffle
 - The music player has a full screen. A song shows its lyrics large and centered on its blurred cover, with its title and timeline below. Without lyrics the cover pulses gently
 - Glacier sends TrueHD and DTS-HD to the receiver as the whole lossless bitstream, also on devices where Android passes on only the DTS core or fails on TrueHD. Settings › Audio can leave it to Android, or have the server convert what cannot go out as a bitstream to E-AC-3, which keeps surround where the device sends PCM in stereo only
@@ -48,6 +48,8 @@ language is German.
 - The playback check also catches sound formats that drop out after a moment
 
 ### Fixed
+- A new playlist shows in Music right away
+- The music player's buttons for the previous and next song no longer speak of episodes
 - Right from the profile in the navigation bar no longer jumps down to the A–Z rail of a library
 - A server that was set up again at the same address replaces its old entry instead of being listed twice. Profiles it still signs in keep their sign-in, PIN, parental control and settings
 

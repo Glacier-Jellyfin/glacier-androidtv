@@ -459,7 +459,8 @@ fun LibraryScreen(
                                     ItemKind.MusicVideo -> CardShape.Wide
                                     else -> CardShape.Poster
                                 },
-                                watched = item.played && item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode, ItemKind.MusicVideo, ItemKind.Collection),
+                                // Played means nothing for music: music videos carry no check.
+                                watched = item.played && item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode, ItemKind.Collection),
                                 // Collections and shows count what is left to watch; a collection's size is in the caption.
                                 count = item.unwatchedCount.takeIf { item.kind == ItemKind.Collection || item.kind == ItemKind.Series },
                                 locked = item.showsLock(),

@@ -116,6 +116,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
 import io.github.glacier_jellyfin.androidtv.detail.Crumb
+import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.ContinueCard
@@ -828,7 +829,9 @@ internal fun FolderTile(folder: MediaFolder, onClick: () -> Unit, modifier: Modi
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(GlacierIcons.Folder, contentDescription = null, tint = accent.main, modifier = Modifier.size(28.dp))
-            MarqueeText(folder.name, style = GlacierText.body(19, FontWeight.SemiBold), color = if (focused) accent.main else GlacierColors.Ice, active = focused)
+            MarqueeText(folder.name, style = GlacierText.body(19, FontWeight.SemiBold), color = if (focused) accent.main else GlacierColors.Ice, active = focused, modifier = Modifier.weight(1f))
+            // With options (music video folders), the mark says that holding OK opens them.
+            if (onLongClick != null) HoldOkMark(focused, accent.main, size = 24)
         }
     }
 }

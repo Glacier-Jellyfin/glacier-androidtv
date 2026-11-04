@@ -269,8 +269,8 @@ class LibraryRepository @Inject constructor(
      * rail, and on the device ([NameIndexStore]): a big library takes the server half a
      * minute to list. A fresh look (the first page) takes the newest copy and, when that is
      * old, has a new one fetched in the background for next time. Narrowed to favorites or
-     * unwatched it is not saved: a change elsewhere can take a title out, so each fresh look
-     * fetches it again unless that was a moment ago.
+     * unwatched, and the playlists, it is not saved: a change elsewhere can take a title out (or
+     * add a playlist), so each fresh look fetches it again unless that was a moment ago.
      */
     private suspend fun index(session: Session, query: LibraryQuery, fresh: Boolean = false): List<IndexEntry> = indexLock.withLock {
         val key = indexKey(session, query)
@@ -278,7 +278,8 @@ class LibraryRepository @Inject constructor(
         val cached = indexCache?.takeIf { it.key == key }
         when {
             cached != null && !fresh -> cached.value
-            query.favoritesOnly || query.unwatchedOnly ->
+            // Playlists change from here too (a new one, from a song's or video's options) and are few.
+            query.favoritesOnly || query.unwatchedOnly || query.scope == LibraryScope.Playlists ->
                 if (cached != null && now - cached.at < WHOLE_FRESH_MS) cached.value else fetchIndex(session, query).also { indexCache = Cached(key, now, it) }
             else -> {
                 val savedAt = store.savedAt(key)

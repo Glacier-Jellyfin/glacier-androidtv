@@ -434,7 +434,26 @@ class DetailViewModel @Inject constructor(
 
     /** Options for a video of the page (holding OK, or the menu key). */
     fun videoOptions(video: MediaItem) {
-        musicActions.open(MusicTarget(title = video.title, subtitle = video.parentTitle, tracks = { music.tracks(listOf(video.id)) }))
+        val item = _state.value.item ?: return
+        val target = MusicTarget(title = video.title, subtitle = video.parentTitle, tracks = { music.tracks(listOf(video.id)) })
+        if (item.kind != ItemKind.Playlist) return musicActions.open(target)
+        // On a playlist's page it can leave the playlist: its entries there are asked for first.
+        viewModelScope.launch {
+            val entries = runSuspendCatching { music.playlistQueue(item.id) }
+                .onFailure { Log.w(TAG, "Loading the playlist's entries failed", it) }
+                .getOrDefault(emptyList())
+                .filter { it.id == video.id }
+                .mapNotNull { it.playlistItemId }
+            musicActions.open(
+                MusicTarget(
+                    title = target.title,
+                    subtitle = target.subtitle,
+                    tracks = target.tracks,
+                    playlistId = item.id.takeIf { entries.isNotEmpty() },
+                    playlistEntryIds = entries,
+                ),
+            )
+        }
     }
 
     /** An artist's music videos in the music player, from [from] or from the first. */

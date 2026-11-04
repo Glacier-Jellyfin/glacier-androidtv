@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -186,7 +187,11 @@ fun ContinueCard(
             }
         }
         Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            MarqueeText(title, style = GlacierText.body(19, FontWeight.SemiBold), color = if (focused) accent else GlacierColors.Ice, active = focused)
+            // With options, the mark after the title says that holding OK opens them, as on a song.
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MarqueeText(title, style = GlacierText.body(19, FontWeight.SemiBold), color = if (focused) accent else GlacierColors.Ice, active = focused, modifier = Modifier.weight(1f))
+                if (onLongClick != null) HoldOkMark(focused, accent, size = 24)
+            }
             Text(subtitle, style = GlacierText.body(16), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -389,7 +394,11 @@ fun GridCard(
             }
         }
         Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            MarqueeText(title, style = GlacierText.display(20), color = if (focused) accent else GlacierColors.Ice, active = focused)
+            // With options, the mark after the title says that holding OK opens them, as on a song.
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MarqueeText(title, style = GlacierText.display(20), color = if (focused) accent else GlacierColors.Ice, active = focused, modifier = Modifier.weight(1f))
+                if (onLongClick != null) HoldOkMark(focused, accent, size = 24)
+            }
             if (caption != null) Text(caption, style = GlacierText.body(16), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }

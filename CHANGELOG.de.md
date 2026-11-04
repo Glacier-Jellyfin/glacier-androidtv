@@ -14,7 +14,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Musikvideos sind ein Reiter in Musik statt eines eigenen Eintrags in der Navigationsleiste, als 16:9-Karten sortiert nach Hinzugefügt, Titel, Erscheinungsjahr oder Künstler
 - Der Reiter Musikvideos zeigt alle Videos oder blättert durch ihre Ordner. Solange keine Ansicht gewählt ist, beginnt er mit allen Videos, wenn die meisten ihren Künstler nennen
 - Musikvideos laufen im Musik-Player, auch gemischt mit Songs in der Warteschlange: aus ihrem Reiter, der auch alle abspielen oder als Zufallsmix starten kann, von der Künstlerseite und aus Wiedergabelisten. Das Bild steht anstelle des Covers, auch im Mini-Player und im Vollbild
-- Musikvideos und ihre Ordner haben Optionen wie ein Album: OK halten, die Menü-Taste oder … in der Werkzeugleiste spielt alle ab oder zufällig, spielt sie als Nächstes oder legt sie in die Warteschlange oder eine Wiedergabeliste
+- Musikvideos und ihre Ordner haben Optionen wie ein Album: OK halten, die Menü-Taste oder … in der Werkzeugleiste spielt alle ab oder zufällig, spielt sie als Nächstes oder legt sie in die Warteschlange oder eine Wiedergabeliste. Ein Zeichen neben dem Titel der gewählten Karte weist darauf hin. Auf der Seite einer Wiedergabeliste lässt sich ein Video aus ihr entfernen
 - Alben und Künstler haben neben Zufällig abspielen einen Knopf für ähnliche Musik
 - Der Musik-Player hat ein Vollbild. Ein Song zeigt seinen Songtext groß und mittig auf dem unscharfen Cover, darunter Titel und Zeitleiste. Ohne Songtext pulsiert das Cover sanft
 - Glacier schickt TrueHD und DTS-HD als vollständigen verlustfreien Bitstream an den Receiver, auch auf Geräten, auf denen Android nur den DTS-Kern weitergibt oder bei TrueHD scheitert. Unter Einstellungen › Audio lässt sich das Android überlassen, oder der Server wandelt in E-AC-3 um, was nicht als Bitstream rausgeht. Das erhält Surround, wo das Gerät PCM nur in Stereo ausgibt
@@ -33,6 +33,8 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Die Wiedergabeprüfung erkennt auch Tonformate, die erst nach einem Moment aussetzen
 
 ### Behoben
+- Eine neue Wiedergabeliste erscheint sofort in Musik
+- Die Knöpfe für den vorherigen und nächsten Titel im Musik-Player sprechen nicht mehr von Folgen
 - Rechts vom Profil in der Navigationsleiste springt der Fokus nicht mehr hinunter zur A–Z-Leiste einer Bibliothek
 - Ein unter derselben Adresse neu eingerichteter Server ersetzt seinen alten Eintrag, statt doppelt in der Liste zu stehen. Profile, deren Anmeldung er noch akzeptiert, behalten Anmeldung, PIN, Jugendschutz und Einstellungen
 

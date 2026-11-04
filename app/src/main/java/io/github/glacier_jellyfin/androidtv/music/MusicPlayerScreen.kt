@@ -852,7 +852,7 @@ private fun Controls(
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             MusicButton(GlacierIcons.Shuffle, stringResource(if (state.shuffle) R.string.action_shuffle_off else R.string.action_shuffle), viewModel::toggleShuffle, on = state.shuffle)
-            MusicButton(GlacierIcons.SkipBack, stringResource(R.string.player_previous), viewModel::previous)
+            MusicButton(GlacierIcons.SkipBack, stringResource(R.string.music_previous), viewModel::previous)
             MusicButton(
                 if (state.playWhenReady) GlacierIcons.Pause else GlacierIcons.Play,
                 stringResource(if (state.playWhenReady) R.string.player_pause else R.string.player_play),
@@ -860,7 +860,7 @@ private fun Controls(
                 big = true,
                 modifier = Modifier.focusRequester(playFocus),
             )
-            MusicButton(GlacierIcons.SkipForward, stringResource(R.string.player_next), viewModel::next)
+            MusicButton(GlacierIcons.SkipForward, stringResource(R.string.music_next), viewModel::next)
             MusicButton(
                 if (state.repeat == RepeatMode.One) GlacierIcons.RepeatOne else GlacierIcons.Repeat,
                 stringResource(R.string.action_repeat),
