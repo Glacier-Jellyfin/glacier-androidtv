@@ -202,7 +202,7 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                     contentDescription = stringResource(R.string.music_shuffle_play),
                                 )
                             }
-                            if (item.kind == ItemKind.Album || item.kind == ItemKind.Artist) {
+                            if (!videosOnly) {
                                 ActionButton(
                                     onClick = viewModel::playInstantMix,
                                     icon = GlacierIcons.Compass,

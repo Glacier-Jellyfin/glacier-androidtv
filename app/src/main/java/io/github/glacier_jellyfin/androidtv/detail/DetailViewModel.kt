@@ -498,8 +498,7 @@ class DetailViewModel @Inject constructor(
             MusicTarget(
                 title = item.title,
                 subtitle = item.parentTitle,
-                // Albums and artists have their instant mix beside Shuffle.
-                mixFrom = item.id.takeUnless { item.kind == ItemKind.Album || item.kind == ItemKind.Artist },
+                // Albums, artists and playlists have their instant mix beside Shuffle, not in their options.
                 tracks = {
                     val state = _state.value
                     when (item.kind) {
@@ -534,7 +533,7 @@ class DetailViewModel @Inject constructor(
         navigate(MusicRoute(item.id.toString(), shuffle = true))
     }
 
-    /** Songs like the album or artist, picked by the server, in the music player. */
+    /** Songs like the album, artist or playlist, picked by the server, in the music player. */
     fun playInstantMix() {
         val item = _state.value.item ?: return
         viewModelScope.launch {
