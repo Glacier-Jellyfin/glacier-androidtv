@@ -807,9 +807,11 @@
     <string name="settings_audio_channels">Maximal erlaubte Audiokanäle</string>
     <string name="settings_audio_channels_sub">Mehr Kanäle werden auf diese Anzahl heruntergemischt</string>
     <string name="settings_hd_audio">TrueHD und DTS-HD</string>
-    <string name="settings_hd_audio_sub">Wer verlustfreien Ton an den Receiver schickt. Glacier schickt den ganzen Stream, auch wo Android nur den DTS-Kern weitergibt</string>
+    <string name="settings_hd_audio_sub">Wie verlustfreier Ton zum Receiver kommt. Glacier schickt den ganzen Stream, auch wo Android nur den DTS-Kern weitergibt. Bei E-AC-3 wandelt der Server zusätzlich um, was nicht als Bitstream rausgeht: ohne Atmos, aber mit Surround, wo das Gerät PCM nur in Stereo ausgibt</string>
     <string name="settings_hd_audio_glacier">Glacier</string>
     <string name="settings_hd_audio_android">Android</string>
+    <string name="settings_hd_audio_server">E-AC-3</string>
+    <string name="settings_hd_audio_sub_no_iec">Wie verlustfreier Ton zum Receiver kommt. Bei E-AC-3 wandelt der Server um, was nicht als Bitstream rausgeht: ohne Atmos, aber mit Surround, wo das Gerät PCM nur in Stereo ausgibt</string>
     <string name="settings_audio_stereo">Stereo</string>
     <string name="settings_audio_lang">Bevorzugte Audiosprache</string>
     <string name="settings_audio_lang_sub">Wird beim Start automatisch gewählt, sofern vorhanden</string>

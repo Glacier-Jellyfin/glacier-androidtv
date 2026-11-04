@@ -387,13 +387,22 @@ enum class DolbyVisionProfile7Choice {
     Hdr10,
 }
 
-/** Who hands TrueHD and DTS-HD to HDMI, where it takes IEC 61937 bursts. */
+/** How TrueHD and DTS-HD reach the receiver. */
 @Serializable
 enum class HdAudioOutput {
-    /** Glacier packs the bursts itself: the whole stream, also where Android sends only the DTS core. */
+    /**
+     * Glacier packs IEC 61937 bursts itself, where HDMI takes them: the whole
+     * stream, also where Android sends only the DTS core. Elsewhere as [Android].
+     */
     Glacier,
-    /** Android passes the bitstream on. */
+    /** Android passes the bitstream on, or the device decodes it. */
     Android,
+    /**
+     * As [Glacier], and the server converts to E-AC-3 (or what the receiver
+     * takes) each of the two that neither Android nor Glacier can send as a
+     * bitstream: no Atmos, but surround where the device sends PCM in stereo only.
+     */
+    ServerEac3,
 }
 
 /** Look of text subtitles (not ASS, which brings its own styles). */

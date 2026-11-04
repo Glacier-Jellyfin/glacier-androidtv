@@ -1019,6 +1019,28 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
     )
 }
 
+/** Glacier packing the bursts is a choice only where HDMI takes IEC 61937; there it stands for Android. */
+@Composable
+private fun hdAudioRow(current: HdAudioOutput, viewModel: SettingsViewModel): SettingRow {
+    val choices = HdAudioOutput.entries.filter { it != HdAudioOutput.Glacier || viewModel.iec61937Available }
+    val shown = if (current in choices) current else HdAudioOutput.Android
+    return SettingRow.Choice(
+        stringResource(R.string.settings_hd_audio),
+        stringResource(if (viewModel.iec61937Available) R.string.settings_hd_audio_sub else R.string.settings_hd_audio_sub_no_iec),
+        choices.map {
+            stringResource(
+                when (it) {
+                    HdAudioOutput.Glacier -> R.string.settings_hd_audio_glacier
+                    HdAudioOutput.Android -> R.string.settings_hd_audio_android
+                    HdAudioOutput.ServerEac3 -> R.string.settings_hd_audio_server
+                },
+            )
+        },
+        choices.indexOf(shown),
+        onSelect = { i -> viewModel.updatePlayback { it.copy(hdAudio = choices[i]) } },
+    )
+}
+
 @Composable
 private fun audioRows(state: SettingsUiState, viewModel: SettingsViewModel, languageFocus: FocusRequester): List<SettingGroup> {
     val playback = state.profile.playback
@@ -1035,15 +1057,7 @@ private fun audioRows(state: SettingsUiState, viewModel: SettingsViewModel, lang
                     playback.audioChannels.ordinal,
                     onSelect = { i -> viewModel.updatePlayback { it.copy(audioChannels = AudioChannels.entries[i]) } },
                 ),
-            ) + listOfNotNull(
-                // Only where HDMI takes IEC 61937; elsewhere Android hands the bitstreams on anyway.
-                SettingRow.Choice(
-                    stringResource(R.string.settings_hd_audio),
-                    stringResource(R.string.settings_hd_audio_sub),
-                    listOf(stringResource(R.string.settings_hd_audio_glacier), stringResource(R.string.settings_hd_audio_android)),
-                    playback.hdAudio.ordinal,
-                    onSelect = { i -> viewModel.updatePlayback { it.copy(hdAudio = HdAudioOutput.entries[i]) } },
-                ).takeIf { viewModel.iec61937Available },
+                hdAudioRow(playback.hdAudio, viewModel),
             ),
         ),
         SettingGroup(

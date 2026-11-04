@@ -813,9 +813,11 @@
     <string name="settings_audio_channels">Maximum audio channels</string>
     <string name="settings_audio_channels_sub">More channels are downmixed to this number</string>
     <string name="settings_hd_audio">TrueHD and DTS-HD</string>
-    <string name="settings_hd_audio_sub">Who sends lossless sound to the receiver. Glacier sends the whole stream, also where Android sends only the DTS core</string>
+    <string name="settings_hd_audio_sub">How lossless sound reaches the receiver. Glacier sends the whole stream, also where Android sends only the DTS core. E-AC-3 also has the server convert what cannot go out as a bitstream: no Atmos, but surround where the device sends PCM in stereo only</string>
     <string name="settings_hd_audio_glacier">Glacier</string>
     <string name="settings_hd_audio_android">Android</string>
+    <string name="settings_hd_audio_server">E-AC-3</string>
+    <string name="settings_hd_audio_sub_no_iec">How lossless sound reaches the receiver. E-AC-3 has the server convert what cannot go out as a bitstream: no Atmos, but surround where the device sends PCM in stereo only</string>
     <string name="settings_audio_stereo">Stereo</string>
     <string name="settings_audio_lang">Preferred audio language</string>
     <string name="settings_audio_lang_sub">Picked automatically at start when the title has it</string>

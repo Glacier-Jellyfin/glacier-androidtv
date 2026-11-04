@@ -17,7 +17,7 @@ fun DeviceCapabilities.playbackSetup(playback: PlaybackSettings, iec61937: Boole
         decodesDolbyVisionProfile8 && playback.dolbyVisionProfile7 == DolbyVisionProfile7Choice.DolbyVision -> DolbyVisionProfile7.Profile81
         else -> DolbyVisionProfile7.BaseLayer
     },
-    iec61937 = iec61937 && playback.hdAudio == HdAudioOutput.Glacier,
+    iec61937 = iec61937 && playback.hdAudio != HdAudioOutput.Android,
 )
 
 /** Profile 7 can play either as Dolby Vision 8.1 or as HDR10 here, so the choice matters. */

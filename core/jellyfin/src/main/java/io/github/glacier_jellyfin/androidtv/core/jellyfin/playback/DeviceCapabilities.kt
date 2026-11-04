@@ -17,6 +17,8 @@ data class DeviceCapabilities(
     val maxAudioChannels: Int,
     /** Of [audioCodecs], those the receiver or TV takes as a bitstream. */
     val passthroughAudio: Set<String> = emptySet(),
+    /** DTS goes out as DTS-HD, with its lossless extension; "dts" in [passthroughAudio] may be the core only. */
+    val dtsHdPassthrough: Boolean = false,
     /** HDR formats both a decoder and the display can show. */
     val hdr: Set<HdrType>,
     /**
@@ -24,6 +26,10 @@ data class DeviceCapabilities(
      * Amlogic decoders take profile 7 and then fail on it.
      */
     val dolbyVisionProfiles: Set<Int>? = null,
+    /** The server converts TrueHD, which the device would only decode, as where it sends PCM in stereo only. */
+    val convertTrueHd: Boolean = false,
+    /** The server converts DTS-HD (its lossless profiles), likewise. */
+    val convertDtsHd: Boolean = false,
 ) {
     /** Profile 7 plays as Dolby Vision; otherwise the player plays its HDR10 base layer with the HEVC decoder. */
     val decodesDolbyVisionProfile7: Boolean

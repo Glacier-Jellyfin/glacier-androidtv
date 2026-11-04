@@ -31,6 +31,35 @@ class DeviceProfilesTest {
     }
 
     @Test
+    fun `lossless audio the device cannot carry goes to the server`() {
+        val tv = fullHdTv.copy(audioCodecs = setOf("aac", "ac3", "eac3", "dts", "truehd"), passthroughAudio = setOf("eac3"), convertTrueHd = true, convertDtsHd = true)
+        val profile = DeviceProfiles.build(tv, MAX)
+        val video = profile.directPlayProfiles.single { it.type == DlnaProfileType.VIDEO }
+        assertEquals(setOf("aac", "ac3", "eac3", "dts"), video.audioCodec!!.split(",").toSet())
+        val dts = profile.codecProfiles.single { it.codec == "dts" }
+        assertTrue(dts.conditions.any { it.property == ProfileConditionValue.AUDIO_PROFILE && it.value == "DTS-HD MA" })
+        // The server converts to the bitstream the receiver takes.
+        assertEquals("eac3", profile.transcodingProfiles.single { it.type == DlnaProfileType.VIDEO }.audioCodec!!.split(",").first())
+    }
+
+    @Test
+    fun `only the format that cannot go out is converted`() {
+        // TrueHD converts, DTS-HD goes out as a bitstream: as on TVs that offer apps DTS-HD but not TrueHD.
+        val tv = fullHdTv.copy(audioCodecs = setOf("aac", "eac3", "dts", "truehd"), convertTrueHd = true)
+        val profile = DeviceProfiles.build(tv, MAX)
+        assertFalse("truehd" in profile.directPlayProfiles.single { it.type == DlnaProfileType.VIDEO }.audioCodec!!.split(","))
+        assertTrue(profile.codecProfiles.none { it.codec == "dts" })
+    }
+
+    @Test
+    fun `lossless audio plays on the device by default`() {
+        val tv = fullHdTv.copy(audioCodecs = setOf("aac", "dts", "truehd"))
+        val profile = DeviceProfiles.build(tv, MAX)
+        assertTrue("truehd" in profile.directPlayProfiles.single { it.type == DlnaProfileType.VIDEO }.audioCodec!!.split(","))
+        assertTrue(profile.codecProfiles.none { it.codec == "dts" })
+    }
+
+    @Test
     fun `transcoding prefers hevc and keeps the device's surround codecs`() {
         val video = DeviceProfiles.build(fullHdTv, MAX).transcodingProfiles.single { it.type == DlnaProfileType.VIDEO }
         assertEquals("hevc,h264", video.videoCodec)

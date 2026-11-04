@@ -51,7 +51,7 @@ object DeviceProfiles {
             type = DlnaProfileType.VIDEO
             container(*Containers.toTypedArray())
             videoCodec(*videoCodecs.toTypedArray())
-            audioCodec(*audioCodecs.toTypedArray())
+            audioCodec(*audioCodecs.filter { !capabilities.convertTrueHd || it != "truehd" }.toTypedArray())
         }
         directPlayProfile {
             type = DlnaProfileType.AUDIO
@@ -102,6 +102,15 @@ object DeviceProfiles {
             conditions { ProfileConditionValue.AUDIO_CHANNELS lowerThanOrEquals capabilities.maxAudioChannels }
         }
 
+        // DTS with its core plays on; the lossless profiles go to the server, like TrueHD above.
+        if (capabilities.convertDtsHd) {
+            codecProfile {
+                type = CodecType.VIDEO_AUDIO
+                codec = "dts"
+                conditions { DtsLosslessProfiles.forEach { ProfileConditionValue.AUDIO_PROFILE notEquals it } }
+            }
+        }
+
         // Auto: text subtitles stay separate files, anything else is burned in only when
         // the device cannot show it. The other modes burn in more, as the user chose.
         TextSubtitles.forEach {
@@ -117,6 +126,9 @@ object DeviceProfiles {
             subtitleProfile(it, SubtitleDeliveryMethod.ENCODE)
         }
     }
+
+    /** DTS profiles as the server names them that carry a lossless or high resolution extension. */
+    private val DtsLosslessProfiles = listOf("DTS-HD MA", "DTS-HD MA + DTS:X", "DTS-HD MA + DTS:X IMAX", "DTS-HD HRA", "DTS:X")
 
     /** E-AC-3, then AC-3 first when the receiver takes them as a bitstream; AAC otherwise. */
     internal fun hlsAudioOrder(passthrough: Set<String>): List<String> {

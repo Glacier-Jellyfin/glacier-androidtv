@@ -8,6 +8,8 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.Track
 import io.github.glacier_jellyfin.androidtv.core.data.media.fullInsteadOfForced
 import io.github.glacier_jellyfin.androidtv.core.data.media.mainInsteadOfExtra
 import io.github.glacier_jellyfin.androidtv.core.data.media.toTrack
+import io.github.glacier_jellyfin.androidtv.core.data.settings.HdAudioOutput
+import io.github.glacier_jellyfin.androidtv.core.data.settings.PlaybackSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleMode
@@ -192,6 +194,23 @@ class PlaybackRepository @Inject constructor(
      */
     val stopped: SharedFlow<UUID> = _stopped.asSharedFlow()
 
+    /**
+     * What the server may send this device, after the [playback] settings
+     * narrowed what it detected. With E-AC-3 from the server, TrueHD and
+     * DTS-HD each convert only when no bitstream leaves for it: Android takes
+     * TrueHD only with its own encoding, DTS-HD likewise, and Glacier packs
+     * both where HDMI takes IEC 61937.
+     */
+    private fun DeviceCapabilities.forSettings(playback: PlaybackSettings): DeviceCapabilities {
+        val convert = playback.hdAudio == HdAudioOutput.ServerEac3
+        val glacierPacks = convert && capabilities.iec61937()
+        return copy(
+            maxAudioChannels = playback.audioChannels.max?.let { minOf(maxAudioChannels, it) } ?: maxAudioChannels,
+            convertTrueHd = convert && !glacierPacks && "truehd" !in passthroughAudio,
+            convertDtsHd = convert && !glacierPacks && !dtsHdPassthrough,
+        )
+    }
+
     /** What this device decodes and passes on, for the player's setup. */
     val device: DeviceCapabilities get() = capabilities.capabilities
 
@@ -205,8 +224,8 @@ class PlaybackRepository @Inject constructor(
      */
     suspend fun directVersions(itemId: UUID): Set<String> = withContext(Dispatchers.IO) {
         val session = requireSession()
-        val device = capabilities.capabilities
         val playback = settings.current().playback
+        val device = capabilities.capabilities.forSettings(playback)
         val info = session.api.mediaInfoApi.getPostedPlaybackInfo(
             itemId = itemId,
             data = PlaybackInfoDto(
@@ -297,9 +316,7 @@ class PlaybackRepository @Inject constructor(
         val session = requireSession()
         val api = session.api
         val playback = settings.current().playback
-        val device = capabilities.capabilities.let { detected ->
-            playback.audioChannels.max?.let { detected.copy(maxAudioChannels = minOf(detected.maxAudioChannels, it)) } ?: detected
-        }
+        val device = capabilities.capabilities.forSettings(playback)
         // The server only takes the streams asked for when the source is named too
         // (MediaInfoHelper.SetDeviceSpecificData); otherwise a transcode carries its own default
         // audio. A title's main source has the item's id.

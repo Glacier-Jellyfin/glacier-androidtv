@@ -69,6 +69,7 @@ class MediaCapabilityDetector @Inject constructor(
             audioCodecs = audio,
             maxAudioChannels = maxAudioChannels(),
             passthroughAudio = passthrough,
+            dtsHdPassthrough = hasEncoding(AudioFormat.ENCODING_DTS_HD),
             hdr = hdr,
             dolbyVisionProfiles = dolbyVisionProfiles(profiles(decodersFor(MIME_DOLBY_VISION), MIME_DOLBY_VISION)),
         )
@@ -110,6 +111,10 @@ class MediaCapabilityDetector @Inject constructor(
         }
         return types?.toSet().orEmpty()
     }
+
+    private fun hasEncoding(encoding: Int): Boolean =
+        context.getSystemService(AudioManager::class.java)?.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            ?.any { encoding in it.encodings } == true
 
     /** Formats the connected receiver or TV accepts as a bitstream. */
     private fun passthroughCodecs(): List<String> {
