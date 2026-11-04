@@ -1,0 +1,114 @@
+name: Stores
+
+# Uploads a stable release to Google Play and the Amazon Appstore once approved in
+# the environment "stores". The Release workflow calls it after each stable tag,
+# with the store builds of its own run. Started by hand (Actions › Stores › Run
+# workflow), it takes the store builds of an earlier Release run and the texts,
+# graphics and keywords of the branch it runs on, so a store step that failed can
+# be repeated with fixed metadata and without a new release. See docs/RELEASING.md.
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+      run_id:
+        description: Release run whose artifact "store-builds" to upload; empty for the calling run
+        type: string
+        default: ''
+      play_bundle:
+        type: boolean
+        default: true
+      play_listing:
+        type: boolean
+        default: true
+      amazon:
+        type: boolean
+        default: true
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version of the release, such as 0.8.0
+        type: string
+        required: true
+      run_id:
+        description: ID of the Release run whose store builds to upload (the number in its URL)
+        type: string
+        required: true
+      play_bundle:
+        description: Upload the app bundle to Google Play (off when this version is already there)
+        type: boolean
+        default: false
+      play_listing:
+        description: Update the Google Play listing
+        type: boolean
+        default: true
+      amazon:
+        description: Submit to the Amazon Appstore
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  stores:
+    runs-on: ubuntu-latest
+    environment: stores
+    permissions:
+      contents: read
+      # The artifact of another run.
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: store-builds
+          path: stores
+          run-id: ${{ inputs.run_id || github.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Collect store notes
+        id: notes
+        env:
+          VERSION: ${{ inputs.version }}
+        run: scripts/store-notes.sh "$VERSION" whatsnew
+
+      # Closed testing (alpha) until the app is out of testing, then the variable
+      # PLAY_TRACK says production. A Play app never published takes only drafts.
+      - name: Upload to Google Play
+        if: inputs.play_bundle
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: io.github.glacier_jellyfin.androidtv
+          releaseFiles: stores/glacier-${{ inputs.version }}-play.aab
+          releaseName: ${{ inputs.version }}
+          track: ${{ vars.PLAY_TRACK || 'alpha' }}
+          status: ${{ vars.PLAY_STATUS || 'completed' }}
+          whatsNewDirectory: whatsnew
+          mappingFile: stores/play-mapping.txt
+
+      # Texts, graphics, screenshots and video of the listings, from fastlane/metadata/android.
+      - name: Update the Google Play listing
+        if: inputs.play_listing
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          TRACK: ${{ vars.PLAY_TRACK || 'alpha' }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          sudo gem install fastlane -v 2.241.1 --no-document
+          scripts/play-listing.sh "$VERSION" "$TRACK"
+
+      # Also when Google Play failed: the two stores do not depend on each other.
+      - name: Submit to the Amazon Appstore
+        if: ${{ !cancelled() && inputs.amazon && steps.notes.conclusion == 'success' }}
+        env:
+          AMAZON_CLIENT_ID: ${{ secrets.AMAZON_CLIENT_ID }}
+          AMAZON_CLIENT_SECRET: ${{ secrets.AMAZON_CLIENT_SECRET }}
+          AMAZON_APP_ID: ${{ vars.AMAZON_APP_ID }}
+          VERSION: ${{ inputs.version }}
+        run: scripts/amazon-submit.sh "stores/glacier-$VERSION-amazon.apk" whatsnew

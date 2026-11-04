@@ -4,7 +4,7 @@ name: Release
 # it as a GitHub release. Beta tags become pre-releases, which only the app's
 # Beta update channel picks up. Stable tags also build the store versions
 # (Amazon APK, Google Play bundle) as the workflow artifact "store-builds",
-# which the job "stores" uploads once approved in the environment "stores".
+# which the workflow "stores.yml" uploads once approved in the environment "stores".
 # See docs/RELEASING.md.
 on:
   push:
@@ -146,56 +146,10 @@ jobs:
   stores:
     needs: release
     if: needs.release.outputs.prerelease == 'false'
-    runs-on: ubuntu-latest
-    environment: stores
+    uses: ./.github/workflows/stores.yml
+    with:
+      version: ${{ needs.release.outputs.version }}
+    secrets: inherit
     permissions:
       contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: store-builds
-          path: stores
-
-      - name: Collect store notes
-        env:
-          VERSION: ${{ needs.release.outputs.version }}
-        run: scripts/store-notes.sh "$VERSION" whatsnew
-
-      # Closed testing (alpha) until the app is out of testing, then the variable
-      # PLAY_TRACK says production. A Play app never published takes only drafts.
-      - name: Upload to Google Play
-        id: play
-        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
-        with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: io.github.glacier_jellyfin.androidtv
-          releaseFiles: stores/glacier-${{ needs.release.outputs.version }}-play.aab
-          releaseName: ${{ needs.release.outputs.version }}
-          track: ${{ vars.PLAY_TRACK || 'alpha' }}
-          status: ${{ vars.PLAY_STATUS || 'completed' }}
-          whatsNewDirectory: whatsnew
-          mappingFile: stores/play-mapping.txt
-
-      # Texts, graphics, screenshots and video of the listings, from fastlane/metadata/android.
-      - name: Update the Google Play listing
-        env:
-          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
-          TRACK: ${{ vars.PLAY_TRACK || 'alpha' }}
-          VERSION: ${{ needs.release.outputs.version }}
-        run: |
-          sudo gem install fastlane -v 2.241.1 --no-document
-          scripts/play-listing.sh "$VERSION" "$TRACK"
-
-      # Also when Google Play failed: the two stores do not depend on each other.
-      - name: Submit to the Amazon Appstore
-        if: ${{ !cancelled() && steps.play.conclusion != 'skipped' }}
-        env:
-          AMAZON_CLIENT_ID: ${{ secrets.AMAZON_CLIENT_ID }}
-          AMAZON_CLIENT_SECRET: ${{ secrets.AMAZON_CLIENT_SECRET }}
-          AMAZON_APP_ID: ${{ vars.AMAZON_APP_ID }}
-          VERSION: ${{ needs.release.outputs.version }}
-        run: scripts/amazon-submit.sh "stores/glacier-$VERSION-amazon.apk" whatsnew
+      actions: read

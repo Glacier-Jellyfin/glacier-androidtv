@@ -151,20 +151,28 @@ assets: a store build installed by hand would never update.
 
 ### Uploading to the stores
 
-After the GitHub release the job `stores` waits for approval in the GitHub
-environment `stores` (Actions › the run › Review deployments). Then it
+After the GitHub release the workflow `stores.yml` waits for approval in the
+GitHub environment `stores` (Actions › the run › Review deployments). Then it
 uploads the bundle to Google Play and submits the APK to the Amazon Appstore
 for review. The store notes come from
 `fastlane/metadata/android/<language>/changelogs/<versionCode>.txt`
 (`scripts/store-notes.sh`). The workflow checks them before it builds
 anything, so a missing or too long one stops the release early. If one store
-fails, the other is still tried. Rerun the failed job once the cause is fixed.
+fails, the other is still tried.
+
+Rerunning the failed job takes the files of the tag again. When the cause was
+in the metadata (a listing text, a keyword), fix it on `main` and start
+Actions › Stores › Run workflow on `main` instead: it takes the store builds
+of the Release run given by its ID (the number in the run's URL) and the
+metadata of `main`. Leave "Upload the app bundle" off when Google Play already
+has the bundle of that version, since it takes each version code only once.
+Amazon reuses the edit that is still open.
 
 The environment holds the secrets and variables:
 
 | Name | Kind | Value |
 |---|---|---|
-| `PLAY_SERVICE_ACCOUNT_JSON` | Secret | JSON key of a Google Cloud service account that may release Glacier in the Play Console |
+| `PLAY_SERVICE_ACCOUNT_JSON` | Secret | JSON key of a Google Cloud service account that may release Glacier and edit its store presence in the Play Console |
 | `AMAZON_CLIENT_ID`, `AMAZON_CLIENT_SECRET` | Secret | Security profile linked to the App Submission API |
 | `AMAZON_APP_ID` | Variable | App ID from the Amazon Developer Console (`amzn1.devportal.mobileapp.…`) |
 | `PLAY_TRACK` | Variable | Google Play track, `alpha` (closed testing) if unset, later `production` |
@@ -173,8 +181,9 @@ The environment holds the secrets and variables:
 - Google Play: the upload uses the Play Developer API
   (`r0adkll/upload-google-play`) and sends the R8 mapping along for readable
   crash reports.
-- Amazon: `scripts/amazon-submit.sh` opens an edit (or takes the one already
-  open), replaces the APK, updates each listing (see below) and commits the
+- Amazon: `scripts/amazon-submit.sh` first checks that every keyword is a
+  single word, which Amazon requires. Then it opens an edit (or takes the one
+  already open), replaces the APK, updates each listing (see below) and commits the
   edit, which starts Amazon's review. While a version is still in review,
   Amazon opens no new edit and the step fails with Amazon's message.
 
@@ -185,7 +194,7 @@ update each other.
 ### Store listings
 
 Texts and graphics of the listings live in `fastlane/metadata/`. After the
-bundle, the job `stores` updates the Google Play listing of each language
+bundle, the workflow `stores.yml` updates the Google Play listing of each language
 from `fastlane/metadata/android` (`scripts/play-listing.sh`, fastlane
 supply): title, descriptions, video, feature graphic, icon, TV banner and TV
 screenshots. Only images Google Play does not have yet are uploaded, and
