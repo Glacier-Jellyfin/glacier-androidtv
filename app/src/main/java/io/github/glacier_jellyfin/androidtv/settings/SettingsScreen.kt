@@ -99,6 +99,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyleMode
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleWeight
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UpNextChoice
+import io.github.glacier_jellyfin.androidtv.core.data.settings.UpNextCollapse
 import io.github.glacier_jellyfin.androidtv.core.designsystem.Accent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
@@ -940,6 +941,13 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
                     upNextLabels,
                     playback.upNext.ordinal,
                     onSelect = { i -> viewModel.updatePlayback { it.copy(upNext = UpNextChoice.entries[i]) } },
+                ),
+                SettingRow.Choice(
+                    stringResource(R.string.settings_up_next_collapse),
+                    stringResource(R.string.settings_up_next_collapse_sub),
+                    UpNextCollapse.entries.map { if (it == UpNextCollapse.Off) stringResource(R.string.settings_off) else seconds(it.ms) },
+                    playback.upNextCollapse.ordinal,
+                    onSelect = { i -> viewModel.updatePlayback { it.copy(upNextCollapse = UpNextCollapse.entries[i]) } },
                 ),
                 SettingRow.Toggle(
                     stringResource(R.string.settings_trailer_auto),

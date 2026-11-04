@@ -786,6 +786,8 @@
     <string name="settings_theme_songs_sub">Spielt auf der Detailseite von Filmen und Serien leise den Titelsong im Hintergrund</string>
     <string name="settings_up_next">„Nächste Folge“ einblenden</string>
     <string name="settings_up_next_sub">Zeitpunkt vor Ende der Folge, unten rechts</string>
+    <string name="settings_up_next_collapse">„Nächste Folge“ verkleinern</string>
+    <string name="settings_up_next_collapse_sub">Schrumpft nach dieser Zeit ohne Steuerung auf den Countdown · Nach oben holt es zurück</string>
     <string name="settings_up_next_credits">Mit Abspann</string>
     <string name="settings_trailer_auto">Trailer nacheinander abspielen</string>
     <string name="settings_trailer_auto_sub">Nach dem Ende eines Trailers startet der nächste nach 8 Sekunden</string>

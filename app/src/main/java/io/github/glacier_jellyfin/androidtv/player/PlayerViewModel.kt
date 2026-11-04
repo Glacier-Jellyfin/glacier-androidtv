@@ -126,6 +126,8 @@ data class PlayerUiState(
     val matchFrameRate: Boolean = true,
     /** The skip button fades away after this long with the OSD hidden, 0 for never (Settings › Playback). */
     val skipHideMs: Long = 10_000,
+    /** The "Up next" card shrinks to its countdown after this long with the OSD hidden, 0 for never (Settings › Playback). */
+    val upNextCollapseMs: Long = 0,
 ) {
     val chapters: List<Chapter> get() = details?.chapters.orEmpty()
     val isEpisode: Boolean get() = details?.item?.kind == ItemKind.Episode
@@ -293,6 +295,7 @@ class PlayerViewModel @Inject constructor(
                         subtitleStyle = profile.subtitleStyle,
                         matchFrameRate = profile.playback.matchFrameRate,
                         skipHideMs = profile.playback.skipButtonHide.ms,
+                        upNextCollapseMs = profile.playback.upNextCollapse.ms,
                     )
                 }
             }

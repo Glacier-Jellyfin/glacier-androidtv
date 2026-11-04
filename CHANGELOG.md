@@ -35,6 +35,7 @@ language is German.
 - Albums, artists and playlists have an instant mix button next to Shuffle
 - The music player has a full screen. A song shows its lyrics large and centered on its blurred cover, with its title and timeline below. Without lyrics the cover pulses gently
 - Glacier sends TrueHD and DTS-HD to the receiver as the whole lossless bitstream, also on devices where Android passes on only the DTS core or fails on TrueHD. Settings › Audio can leave it to Android, or have the server convert what cannot go out as a bitstream to E-AC-3, which keeps surround where the device sends PCM in stereo only
+- Settings › Playback can shrink the "Up next" card to its countdown after a while without the controls. Up brings it back
 
 ### Improved
 - When playback fails, the message names the error and shows a QR code to download the log for a bug report

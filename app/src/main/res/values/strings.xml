@@ -792,6 +792,8 @@
     <string name="settings_theme_songs_sub">Plays the theme song quietly in the background on the detail page of movies and shows</string>
     <string name="settings_up_next">Show \"Up next\"</string>
     <string name="settings_up_next_sub">How long before the end of the episode, bottom right</string>
+    <string name="settings_up_next_collapse">Shrink \"Up next\"</string>
+    <string name="settings_up_next_collapse_sub">Shrinks to its countdown after this long without the controls · Up brings it back</string>
     <string name="settings_up_next_credits">With credits</string>
     <string name="settings_trailer_auto">Play trailers one after another</string>
     <string name="settings_trailer_auto_sub">When a trailer ends, the next one starts after 8 seconds</string>

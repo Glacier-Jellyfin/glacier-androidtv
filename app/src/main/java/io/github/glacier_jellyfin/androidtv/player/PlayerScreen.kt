@@ -2,13 +2,16 @@ package io.github.glacier_jellyfin.androidtv.player
 
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
@@ -111,10 +114,14 @@ fun PlayerScreen(
     /** Faded away over the bare picture; Up or the OSD brings it back. */
     var skipHidden by remember { mutableStateOf(false) }
     val skip = progress.skip?.takeUnless { skipHidden }
-    /** Skip button or "Up next" card on screen; with the OSD hidden, it holds the focus. */
+    /** Shrunk to its countdown over the bare picture; Up or the OSD brings the card back. */
+    var upNextCollapsed by remember { mutableStateOf(false) }
+    var upNextWake by remember { mutableIntStateOf(0) }
+    val promptsAllowed = !overlayOpen && !state.loading && !state.failed
+    /** Skip button or "Up next" card on screen; with the OSD hidden, it holds the focus. The shrunk card does not. */
     val prompt = when {
-        overlayOpen || state.loading || state.failed -> null
-        upNext != null -> upNextFocus
+        !promptsAllowed -> null
+        upNext != null -> upNextFocus.takeUnless { upNextCollapsed }
         skip != null -> skipFocus
         else -> null
     }
@@ -172,6 +179,13 @@ fun PlayerScreen(
         delay(state.skipHideMs)
         skipAlpha.animateTo(0f, tween(SKIP_FADE_MS, easing = LinearEasing))
         skipHidden = true
+    }
+    // Likewise the "Up next" card shrinks to its countdown after its own time; the countdown keeps running.
+    LaunchedEffect(upNext != null, osdVisible, upNextWake, state.upNextCollapseMs) {
+        upNextCollapsed = false
+        if (upNext == null || osdVisible || state.upNextCollapseMs <= 0) return@LaunchedEffect
+        delay(state.upNextCollapseMs)
+        upNextCollapsed = true
     }
     // Closing an overlay returns focus to the button that opened it.
     var lastOverlay by remember { mutableStateOf<OsdButton?>(null) }
@@ -256,9 +270,14 @@ fun PlayerScreen(
                     } else {
                         false
                     }
-                    // Up first brings back a skip button that faded away; the OSD comes with the next press.
+                    // Up first brings back a shrunk "Up next" card or a skip button that faded away; the OSD comes with the next press.
                     Key.DirectionUp, Key.DirectionDown -> if (!osdVisible) {
-                        if (event.key == Key.DirectionUp && skipHidden && progress.skip != null && prompt == null) skipWake++ else showOsd(playFocus)
+                        val up = event.key == Key.DirectionUp
+                        when {
+                            up && upNextCollapsed && upNext != null -> upNextWake++
+                            up && skipHidden && progress.skip != null && prompt == null -> skipWake++
+                            else -> showOsd(playFocus)
+                        }
                         true
                     } else {
                         false
@@ -321,7 +340,7 @@ fun PlayerScreen(
 
         // Above the OSD while it shows; lower down over the bare picture.
         val promptBottom by animateDpAsState(if (osdVisible) 300.dp else 96.dp, label = "promptBottom")
-        if (prompt != null) {
+        if (prompt != null || (promptsAllowed && upNext != null)) {
             Box(
                 Modifier
                     .align(Alignment.BottomEnd)
@@ -330,14 +349,25 @@ fun PlayerScreen(
                     .onFocusChanged { if (currentPrompt != null || it.hasFocus) promptFocused = it.hasFocus },
             ) {
                 if (upNext != null) {
-                    UpNextCard(
-                        next = upNext.first,
-                        countdown = upNext.second,
-                        playing = state.playing,
-                        playFocus = upNextFocus,
-                        onPlay = viewModel::playNext,
-                        onDismiss = viewModel::dismissUpNext,
-                    )
+                    AnimatedContent(
+                        targetState = upNextCollapsed,
+                        contentAlignment = Alignment.BottomEnd,
+                        transitionSpec = { (fadeIn(tween(300)) togetherWith fadeOut(tween(300))).using(SizeTransform(clip = false)) },
+                        label = "upNext",
+                    ) { collapsed ->
+                        if (collapsed) {
+                            UpNextRing(upNext.second, playing = state.playing)
+                        } else {
+                            UpNextCard(
+                                next = upNext.first,
+                                countdown = upNext.second,
+                                playing = state.playing,
+                                playFocus = upNextFocus,
+                                onPlay = viewModel::playNext,
+                                onDismiss = viewModel::dismissUpNext,
+                            )
+                        }
+                    }
                 } else if (skip != null) {
                     // The button fades as one picture: with the alpha on each draw, the border over the
                     // glass fill added up and stayed last. The offscreen layer gets room around the button

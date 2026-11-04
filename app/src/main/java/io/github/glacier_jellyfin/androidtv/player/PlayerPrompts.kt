@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -206,6 +207,52 @@ fun UpNextCard(
             CardButton(stringResource(R.string.up_next_play), onClick = onPlay, primary = true, modifier = Modifier.focusRequester(playFocus))
             CardButton(stringResource(R.string.up_next_credits), onClick = onDismiss)
         }
+    }
+}
+
+/**
+ * The "Up next" card shrunk to its countdown over the bare picture (76 across): the ring
+ * empties like the card's bar, inside it the seconds until the next episode starts.
+ */
+@Composable
+fun UpNextRing(countdown: UpNextCountdown, playing: Boolean, modifier: Modifier = Modifier) {
+    val accent = LocalAccent.current.main
+    val elapsed = rememberSinceSample(countdown, playing)
+    val remainingMs by remember(countdown) {
+        derivedStateOf { (countdown.remainingMs - elapsed.longValue).coerceAtLeast(0) / 1000 * 1000 }
+    }
+    Box(
+        modifier
+            .size(76.dp)
+            .clip(CircleShape)
+            .background(GlacierColors.Deep.copy(alpha = 0.72f))
+            .background(GlacierColors.GlassFill2)
+            .border(1.dp, GlacierColors.GlassBorder2, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.size(64.dp)) {
+            val left = (countdown.remainingMs - elapsed.longValue).coerceAtLeast(0)
+            val fraction = if (countdown.remainingMs > 0) countdown.fraction * left / countdown.remainingMs else countdown.fraction
+            val stroke = 4.dp.toPx()
+            val arcSize = Size(size.width - stroke, size.height - stroke)
+            val topLeft = Offset(stroke / 2, stroke / 2)
+            drawArc(accent.copy(alpha = 0.22f), 0f, 360f, useCenter = false, topLeft = topLeft, size = arcSize, style = Stroke(stroke))
+            drawArc(
+                accent,
+                startAngle = -90f,
+                sweepAngle = 360f * fraction.coerceIn(0f, 1f),
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(stroke, cap = StrokeCap.Round),
+            )
+        }
+        val long = remainingMs >= 60_000
+        Text(
+            if (long) formatTime(remainingMs) else (remainingMs / 1000).toString(),
+            style = GlacierText.body(if (long) 16 else 21, FontWeight.Bold),
+            color = GlacierColors.Ice,
+        )
     }
 }
 

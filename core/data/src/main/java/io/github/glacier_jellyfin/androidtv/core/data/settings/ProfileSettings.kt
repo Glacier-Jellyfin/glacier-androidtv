@@ -318,6 +318,7 @@ data class PlaybackSettings(
     val maxBitrate: MaxBitrate = MaxBitrate.Auto,
     val segments: Map<SegmentKind, SegmentAction> = SegmentPolicy.DefaultActions,
     val skipButtonHide: SkipButtonHide = SkipButtonHide.S10,
+    val upNextCollapse: UpNextCollapse = UpNextCollapse.Off,
     val audioChannels: AudioChannels = AudioChannels.Auto,
     val hdAudio: HdAudioOutput = HdAudioOutput.Glacier,
     val dolbyVisionProfile7: DolbyVisionProfile7Choice = DolbyVisionProfile7Choice.DolbyVision,
@@ -343,6 +344,10 @@ enum class UpNextChoice(val mode: UpNextMode) {
 /** Time the skip button stays over the bare picture before it fades away; [Off] keeps it. */
 @Serializable
 enum class SkipButtonHide(val ms: Long) { Off(0), S5(5_000), S10(10_000), S15(15_000), S30(30_000) }
+
+/** Time the "Up next" card stays over the bare picture before it shrinks to its countdown; [Off] keeps it. */
+@Serializable
+enum class UpNextCollapse(val ms: Long) { Off(0), S5(5_000), S10(10_000), S15(15_000), S30(30_000) }
 
 /** Remote Left/Right, the OSD skip buttons and the music player's seek. */
 @Serializable
