@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.library
 
+import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.log.Log
@@ -351,6 +352,43 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch { _events.send(UiEvent.Navigate(MusicRoute())) }
     }
 
+    /**
+     * A music video of the music videos tab plays in the music player with the videos after it
+     * (in the grid, or in the folder shown) as the queue; [title] names the queue.
+     */
+    fun playVideo(item: MediaItem, title: String) {
+        val state = _state.value
+        val videos = state.folder?.takeIf { state.inFolders }?.media?.filterIsInstance<FolderMedia.Video>()?.map { it.item } ?: state.items
+        val start = videos.indexOfFirst { it.id == item.id }.takeIf { it >= 0 } ?: return
+        music.playSongs(title, videos.drop(start).take(VIDEO_QUEUE).map { it.id }, startTrackId = item.id.toString())
+        viewModelScope.launch { _events.send(UiEvent.Navigate(MusicRoute())) }
+    }
+
+    /**
+     * Play and shuffle of the music videos tab: every video in the tab's order, or in the folder
+     * view those of the folder shown and the folders below it. [title] names the queue.
+     */
+    fun playVideos(title: String, shuffled: Boolean) {
+        val state = _state.value
+        val query = state.query
+        viewModelScope.launch {
+            val ids = runSuspendCatching {
+                if (state.inFolders) folders.musicVideosBelow(state.folderPath.lastOrNull()?.id).videosFor(query).map { it.item.id }
+                else repository.ids(query)
+            }.getOrElse {
+                Log.w(TAG, "Loading the music videos to play failed", it)
+                _events.send(UiEvent.Toast(R.string.music_videos_failed))
+                return@launch
+            }
+            if (ids.isEmpty()) {
+                _events.send(UiEvent.Toast(R.string.music_videos_none))
+                return@launch
+            }
+            music.playSongs(title, (if (shuffled) ids.shuffled() else ids).take(VIDEO_QUEUE))
+            _events.send(UiEvent.Navigate(MusicRoute()))
+        }
+    }
+
     /** Options for a song of the songs tab (its "…", holding OK, or the menu key). */
     fun songOptions(item: MediaItem) {
         musicActions.open(
@@ -483,6 +521,8 @@ class LibraryViewModel @Inject constructor(
         private const val JUMP_ROWS_BEFORE = 3
         /** Songs queued from the songs tab; their ids go into one request. */
         private const val SONG_QUEUE = 100
+        /** Music videos queued from their tab; the server opens each one before the queue starts. */
+        private const val VIDEO_QUEUE = 50
         private const val TAG = "Library"
     }
 }

@@ -100,8 +100,9 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
     // What had focus, to land there again when the user comes back (from the player, say).
     var focusKey by rememberSaveable(item.id) { mutableStateOf<String?>(null) }
     val tracks = state.musicTracks
-    /** A playlist with videos and no songs: Play starts the videos. */
-    val videosOnly = item.kind == ItemKind.Playlist && tracks.isEmpty() && state.playlistVideos.isNotEmpty()
+    /** A playlist with videos and neither songs nor music videos: Play starts the videos in the video player. */
+    val videosOnly = item.kind == ItemKind.Playlist && tracks.isEmpty() && state.playlistVideos.isNotEmpty() &&
+        state.playlistVideos.none { it.kind == ItemKind.MusicVideo }
     val playlist = item.kind == ItemKind.Playlist
     // Albums and playlists show a cover left of the songs. It stays put while the songs scroll past.
     // A playlist's follows the focused song, with its album below; before that it shows the playlist.
@@ -178,7 +179,7 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                         item.overview?.takeIf { it.isNotBlank() }?.let { Overview(it, maxWidth = 900) }
                         Row(Modifier.padding(top = 10.dp).upTo(LocalMiniPlayerFocus.current), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             ActionButton(
-                                // A playlist of videos only plays them in the video player.
+                                // A playlist of other videos only plays them in the video player.
                                 onClick = { if (videosOnly) viewModel.playVideo(state.playlistVideos.first()) else viewModel.playMusic() },
                                 label = stringResource(
                                     when (item.kind) {
@@ -193,6 +194,14 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                     .focusRequester(playFocus)
                                     .onFocusChanged { if (it.isFocused) focusKey = null },
                             )
+                            // An artist's music videos play on their own in the music player.
+                            if (item.kind == ItemKind.Artist && state.artistVideos.isNotEmpty()) {
+                                ActionButton(
+                                    onClick = { viewModel.playArtistVideos() },
+                                    label = stringResource(R.string.music_play_videos),
+                                    icon = GlacierIcons.Film,
+                                )
+                            }
                             ActionButton(
                                 onClick = viewModel::toggleFavorite,
                                 icon = if (item.isFavorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,

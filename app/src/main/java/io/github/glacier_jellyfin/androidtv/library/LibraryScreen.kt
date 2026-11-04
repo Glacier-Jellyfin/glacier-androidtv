@@ -111,6 +111,7 @@ import io.github.glacier_jellyfin.androidtv.ui.SongRow
 import io.github.glacier_jellyfin.androidtv.ui.SortButton
 import io.github.glacier_jellyfin.androidtv.ui.SortMenu
 import io.github.glacier_jellyfin.androidtv.ui.ToggleChip
+import io.github.glacier_jellyfin.androidtv.ui.ToolbarButton
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.ratingText
@@ -199,6 +200,8 @@ fun LibraryScreen(
         }
     }
     val songsTitle = stringResource(R.string.scope_songs)
+    // A music video queue is named after the folder it comes from, else after the tab.
+    val videosTitle = state.folderPath.lastOrNull()?.name?.takeIf { state.inFolders } ?: stringResource(R.string.scope_music_videos)
     // Songs are a one-column list: title, artist and album need the width.
     val songList = state.query.scope == LibraryScope.Songs
     // Music videos are 16:9 cards, fewer to a row.
@@ -355,6 +358,7 @@ fun LibraryScreen(
                             onViewMenu = viewModel::toggleViewMenu,
                             onViewAnchor = { viewAnchor = it },
                             viewButtonFocus = viewButtonFocus,
+                            onPlayVideos = { viewModel.playVideos(videosTitle, shuffled = it) },
                         )
                     }
                     if (folder != null) {
@@ -386,7 +390,7 @@ fun LibraryScreen(
                                     imageUrl = media.thumbUrl ?: media.posterUrl,
                                     title = media.title,
                                     caption = media.parentTitle,
-                                    onClick = { viewModel.open(media) },
+                                    onClick = { viewModel.playVideo(media, videosTitle) },
                                     shape = CardShape.Wide,
                                     locked = media.showsLock(),
                                     modifier = entryFocus(media.id.toString(), first = folder.folders.isEmpty() && index == 0),
@@ -437,7 +441,8 @@ fun LibraryScreen(
                                 imageUrl = if (item.kind == ItemKind.MusicVideo) item.thumbUrl ?: item.posterUrl else item.posterUrl,
                                 title = item.title,
                                 caption = captionFor(item, sort = state.query.sort.takeUnless { state.query.listedByName }),
-                                onClick = { viewModel.open(item) },
+                                // Music videos play in the music player, like songs.
+                                onClick = { if (item.kind == ItemKind.MusicVideo) viewModel.playVideo(item, videosTitle) else viewModel.open(item) },
                                 shape = when (item.kind) {
                                     ItemKind.Album, ItemKind.Playlist -> CardShape.Square
                                     ItemKind.Artist -> CardShape.Round
@@ -699,6 +704,8 @@ private fun Toolbar(
     onViewMenu: (Boolean) -> Unit,
     onViewAnchor: (Rect) -> Unit,
     viewButtonFocus: FocusRequester,
+    /** Play (false) or shuffle (true) the music videos. */
+    onPlayVideos: (Boolean) -> Unit,
 ) {
     Row(
         modifier
@@ -722,6 +729,8 @@ private fun Toolbar(
         // The filters narrow every tab, so they sit apart from the tabs, by the sort. Music videos choose their view there instead.
         val view = state.musicVideoView
         if (state.query.scope == LibraryScope.MusicVideos) {
+            ToolbarButton(stringResource(R.string.hero_play), GlacierIcons.Play, onClick = { onPlayVideos(false) })
+            ToolbarButton(stringResource(R.string.music_shuffle_mix), GlacierIcons.Shuffle, onClick = { onPlayVideos(true) })
             if (view != null) {
                 SortButton(
                     label = stringResource(view.label),

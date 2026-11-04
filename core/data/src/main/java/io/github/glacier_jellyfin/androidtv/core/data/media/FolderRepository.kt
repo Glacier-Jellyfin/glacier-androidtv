@@ -108,6 +108,31 @@ class FolderRepository @Inject constructor(
     suspend fun videos(folderId: UUID): List<MediaItem> =
         media(folderId).filterIsInstance<FolderMedia.Video>().map { it.item }
 
+    /**
+     * The music videos in [folderId] and every folder below it; without one, in every music video
+     * library. By name: the page sorts them for the profile.
+     */
+    suspend fun musicVideosBelow(folderId: UUID?): List<FolderMedia.Video> = withContext(Dispatchers.IO) {
+        val session = checkNotNull(sessions.session.value) { "No profile is signed in" }
+        val parents = folderId?.let(::listOf) ?: libraries(session, CollectionType.MUSICVIDEOS).map { it.id }
+        val items = coroutineScope {
+            parents.map { parent ->
+                async {
+                    session.api.libraryApi.getItems(
+                        userId = session.userId,
+                        parentId = parent,
+                        recursive = true,
+                        includeItemTypes = listOf(BaseItemKind.MUSIC_VIDEO),
+                        sortBy = listOf(ItemSortBy.SORT_NAME),
+                        fields = listOf(ItemFields.DATE_CREATED),
+                        enableUserData = true,
+                    ).content.items
+                }
+            }.flatMap { it.await() }
+        }
+        media(session, items).filterIsInstance<FolderMedia.Video>()
+    }
+
     private suspend fun media(session: Session, items: List<BaseItemDto>): List<FolderMedia> {
         val mapper = MediaMapper(session.api)
         val videos = items.filter { it.isVideo }

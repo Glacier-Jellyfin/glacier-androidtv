@@ -115,6 +115,20 @@ class MusicRepository @Inject constructor(
             .map(mapper::track)
     }
 
+    /** What the music player plays of a playlist: its songs and music videos in its order. */
+    suspend fun playlistQueue(playlistId: UUID): List<MusicTrack> = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        val mapper = MediaMapper(session.api)
+        session.api.playlistApi.getPlaylistItems(
+            playlistId = playlistId,
+            userId = session.userId,
+            fields = TRACK_FIELDS,
+            enableUserData = true,
+        ).content.items
+            .filter { it.type == BaseItemKind.AUDIO || it.type == BaseItemKind.MUSIC_VIDEO }
+            .map(mapper::track)
+    }
+
     /** Songs like [itemId] (a song, album, artist or playlist), picked by the server. */
     suspend fun instantMix(itemId: UUID): List<MusicTrack> = withContext(Dispatchers.IO) {
         val session = requireSession()

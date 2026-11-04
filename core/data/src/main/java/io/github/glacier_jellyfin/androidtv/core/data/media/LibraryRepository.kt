@@ -192,6 +192,11 @@ class LibraryRepository @Inject constructor(
         listing(requireSession(), query).list.entries.indexOfFirst { it.id == id }.takeIf { it >= 0 }
     }
 
+    /** Every title of [query] in the grid's order, for playing them one after another. */
+    suspend fun ids(query: LibraryQuery): List<UUID> = withContext(Dispatchers.IO) {
+        listing(requireSession(), query).list.entries.map { it.id }
+    }
+
     /** Where the row that holds [index] starts in a grid of [columns] (see [ArrangedList.rowStart]). */
     suspend fun rowStart(query: LibraryQuery, index: Int, columns: Int): Int = withContext(Dispatchers.IO) {
         listing(requireSession(), query).list.rowStart(index, columns)

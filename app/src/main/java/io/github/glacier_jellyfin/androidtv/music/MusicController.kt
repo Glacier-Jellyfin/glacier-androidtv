@@ -352,13 +352,13 @@ class MusicController @Inject constructor(
         }
     }
 
-    /** Plays the songs of an album, artist or playlist, from [startTrackId] if given. */
+    /** Plays the songs of an album, artist or playlist (with its music videos), from [startTrackId] if given. */
     fun play(sourceId: UUID, startTrackId: String?) {
         request = QueueRequest(startTrackId) {
             val source = details.details(sourceId).item
             val tracks = when (source.kind) {
                 ItemKind.Artist -> music.artistTracks(sourceId)
-                ItemKind.Playlist -> music.playlistTracks(sourceId)
+                ItemKind.Playlist -> music.playlistQueue(sourceId)
                 else -> music.albumTracks(sourceId)
             }
             LoadedQueue(source.kind, source.title, tracks)
@@ -375,7 +375,10 @@ class MusicController @Inject constructor(
         load()
     }
 
-    /** The songs with [ids] as a plain queue named [title], fetched here: the songs tab of the music library. */
+    /**
+     * The songs or music videos with [ids] as a plain queue named [title], fetched here: the songs
+     * and music videos tabs of the music library, an artist's music videos.
+     */
     fun playSongs(title: String, ids: List<UUID>, startTrackId: String? = null) {
         request = QueueRequest(startTrackId) { LoadedQueue(null, title, music.tracks(ids)) }
         load()

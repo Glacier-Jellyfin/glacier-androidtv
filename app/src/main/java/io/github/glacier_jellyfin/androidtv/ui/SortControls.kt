@@ -90,6 +90,30 @@ fun SortButton(
     }
 }
 
+/** A toolbar button drawn like the [SortButton], that acts at once: Play, say. */
+@Composable
+fun ToolbarButton(label: String, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val accent = LocalAccent.current.main
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val foreground = if (focused) GlacierColors.Void else GlacierColors.Ice
+    Row(
+        modifier
+            .focusScale(focused)
+            .height(52.dp)
+            .clip(PillShape)
+            .background(if (focused) accent else GlacierColors.GlassFill2)
+            .border(2.dp, if (focused) accent else GlacierColors.GlassBorder2, PillShape)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .padding(horizontal = 24.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Icon(icon, contentDescription = null, tint = foreground, modifier = Modifier.size(20.dp))
+        Text(label, style = GlacierText.body(19, FontWeight.SemiBold), color = foreground)
+    }
+}
+
 /**
  * The design's sort dropdown, 14px below the sort button and right-aligned
  * with it ([anchor]: the button's bounds in the root). Drawn in the screen itself

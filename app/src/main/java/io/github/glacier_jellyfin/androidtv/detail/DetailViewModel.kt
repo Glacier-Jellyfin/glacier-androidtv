@@ -426,9 +426,22 @@ class DetailViewModel @Inject constructor(
     /** A video of the page (an artist's music video, a playlist's video), the rest of them following it. */
     fun playVideo(video: MediaItem) {
         val item = _state.value.item ?: return
+        // Music videos play in the music player: an artist's with the artist's other videos, a playlist's with its songs.
+        if (video.kind == ItemKind.MusicVideo) {
+            if (item.kind == ItemKind.Artist) return playArtistVideos(from = video)
+            if (item.kind == ItemKind.Playlist) return navigate(MusicRoute(item.id.toString(), video.id.toString()))
+        }
         pin.openTitle(ageFilter, video.id, video.title, video.officialRating) {
             navigate(PlayerRoute(video.id.toString(), queueOf = item.id.toString()))
         }
+    }
+
+    /** An artist's music videos in the music player, from [from] or from the first. */
+    fun playArtistVideos(from: MediaItem? = null) {
+        val item = _state.value.item ?: return
+        val videos = _state.value.artistVideos.takeIf { it.isNotEmpty() } ?: return
+        musicPlayback.playSongs(item.title, videos.map { it.id }, startTrackId = from?.id?.toString())
+        navigate(MusicRoute())
     }
 
     /** Album, artist or playlist in the music player, from [track] or from the start. */
@@ -465,7 +478,7 @@ class DetailViewModel @Inject constructor(
                     val state = _state.value
                     when (item.kind) {
                         ItemKind.Artist -> music.artistTracks(item.id, state.artistAlbums.ifEmpty { null })
-                        ItemKind.Playlist -> state.musicTracks.ifEmpty { music.playlistTracks(item.id) }
+                        ItemKind.Playlist -> music.playlistQueue(item.id)
                         else -> state.musicTracks.ifEmpty { music.albumTracks(item.id) }
                     }
                 },
