@@ -362,7 +362,6 @@ fun LibraryScreen(
                             onViewMenu = viewModel::toggleViewMenu,
                             onViewAnchor = { viewAnchor = it },
                             viewButtonFocus = viewButtonFocus,
-                            onPlayVideos = { viewModel.playVideos(videosTitle, shuffled = it) },
                             onVideoOptions = {
                                 sheetFromToolbar = true
                                 viewModel.videosOptions(videosTitle)
@@ -715,8 +714,6 @@ private fun Toolbar(
     onViewMenu: (Boolean) -> Unit,
     onViewAnchor: (Rect) -> Unit,
     viewButtonFocus: FocusRequester,
-    /** Play (false) or shuffle (true) the music videos. */
-    onPlayVideos: (Boolean) -> Unit,
     /** The options for the music videos Play would play. */
     onVideoOptions: () -> Unit,
     optionsButtonFocus: FocusRequester,
@@ -743,8 +740,6 @@ private fun Toolbar(
         // The filters narrow every tab, so they sit apart from the tabs, by the sort. Music videos choose their view there instead.
         val view = state.musicVideoView
         if (state.query.scope == LibraryScope.MusicVideos) {
-            ToolbarButton(stringResource(R.string.hero_play), GlacierIcons.Play, onClick = { onPlayVideos(false) })
-            ToolbarButton(stringResource(R.string.music_shuffle_mix), GlacierIcons.Shuffle, onClick = { onPlayVideos(true) })
             ToolbarButton(
                 null,
                 GlacierIcons.More,

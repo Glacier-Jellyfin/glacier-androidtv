@@ -35,6 +35,9 @@ class MusicTarget(
     val playlistEntryIds: List<String> = emptyList(),
     /** An artist's music videos, which the menu offers to add to the queue apart from the songs. */
     val videos: (suspend () -> List<MusicTrack>)? = null,
+    /** Play all and shuffle all at the top of the menu (music videos of the tab or a folder). */
+    val play: (() -> Unit)? = null,
+    val shuffle: (() -> Unit)? = null,
 )
 
 /** The option sheet's steps. */
@@ -94,6 +97,17 @@ class MusicActions(
             is MusicSheet.Playlists -> if (straightToPlaylists) null else MusicSheet.Menu(sheet.target)
             is MusicSheet.NewPlaylist -> MusicSheet.Playlists(sheet.target).also { loadPlaylists(it.target) }
         }
+    }
+
+    /** The target's own play or shuffle ([MusicTarget.play], [MusicTarget.shuffle]). */
+    fun playAll() = runAndClose { it.play }
+
+    fun shuffleAll() = runAndClose { it.shuffle }
+
+    private fun runAndClose(pick: (MusicTarget) -> (() -> Unit)?) {
+        val action = _sheet.value?.target?.let(pick) ?: return
+        dismiss()
+        action()
     }
 
     fun playNext() = withTracks(R.string.music_plays_next) { controller.playNext(it) }

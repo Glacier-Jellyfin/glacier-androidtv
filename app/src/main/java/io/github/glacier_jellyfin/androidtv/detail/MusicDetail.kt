@@ -100,9 +100,9 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
     // What had focus, to land there again when the user comes back (from the player, say).
     var focusKey by rememberSaveable(item.id) { mutableStateOf<String?>(null) }
     val tracks = state.musicTracks
-    /** A playlist of films or episodes only: Play starts them in the video player. */
+    /** A playlist with videos and neither songs nor music videos: Play starts the videos in the video player. */
     val videosOnly = item.kind == ItemKind.Playlist && tracks.isEmpty() && state.playlistVideos.isNotEmpty() &&
-        state.playlistVideos.none { it.inMusicPlayer }
+        state.playlistVideos.none { it.kind == ItemKind.MusicVideo }
     val playlist = item.kind == ItemKind.Playlist
     // Albums and playlists show a cover left of the songs. It stays put while the songs scroll past.
     // A playlist's follows the focused song, with its album below; before that it shows the playlist.
@@ -194,6 +194,21 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                     .focusRequester(playFocus)
                                     .onFocusChanged { if (it.isFocused) focusKey = null },
                             )
+                            // Shuffle and an instant mix next to Play, as in Jellyfin's web client.
+                            if (!videosOnly) {
+                                ActionButton(
+                                    onClick = viewModel::shuffleMusic,
+                                    icon = GlacierIcons.Shuffle,
+                                    contentDescription = stringResource(R.string.music_shuffle_play),
+                                )
+                            }
+                            if (item.kind == ItemKind.Album || item.kind == ItemKind.Artist) {
+                                ActionButton(
+                                    onClick = viewModel::playInstantMix,
+                                    icon = GlacierIcons.Compass,
+                                    contentDescription = stringResource(R.string.music_options_mix),
+                                )
+                            }
                             // An artist's music videos play on their own in the music player.
                             if (item.kind == ItemKind.Artist && state.artistVideos.isNotEmpty()) {
                                 ActionButton(
@@ -208,23 +223,8 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                 on = item.isFavorite,
                                 contentDescription = stringResource(if (item.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
                             )
-                            if (item.kind == ItemKind.Album) {
-                                ActionButton(
-                                    onClick = viewModel::togglePlayed,
-                                    icon = if (item.played) GlacierIcons.SeenFilled else GlacierIcons.Seen,
-                                    iconMark = if (item.played) GlacierIcons.SeenMark else null,
-                                    on = item.played,
-                                    contentDescription = stringResource(if (item.played) R.string.action_mark_unheard else R.string.action_mark_heard),
-                                )
-                            }
-                            // Shuffle and the song options are about songs.
+                            // The song options are about songs.
                             if (!videosOnly) {
-                                ActionButton(
-                                    onClick = viewModel::toggleShuffle,
-                                    icon = GlacierIcons.Shuffle,
-                                    on = state.shuffle,
-                                    contentDescription = stringResource(if (state.shuffle) R.string.action_shuffle_off else R.string.action_shuffle),
-                                )
                                 ActionButton(
                                     onClick = viewModel::sourceOptions,
                                     icon = GlacierIcons.More,

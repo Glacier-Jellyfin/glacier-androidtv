@@ -116,8 +116,8 @@ data class RadioState(
 /** Position data, kept apart from [MusicUiState] so ticking only redraws what moves. */
 data class MusicProgress(val positionMs: Long = 0, val durationMs: Long = 0)
 
-/** How to load a queue again ([MusicController.retry]): its songs, and the one to start with. */
-private class QueueRequest(val startTrackId: String?, val load: suspend () -> LoadedQueue)
+/** How to load a queue again ([MusicController.retry]): its songs, the one to start with, and whether it starts shuffled. */
+private class QueueRequest(val startTrackId: String?, val shuffle: Boolean = false, val load: suspend () -> LoadedQueue)
 
 /** A loaded queue: what it was made from ([ItemKind.Other] for an instant mix, null for loose songs), its title and songs. */
 private data class LoadedQueue(val kind: ItemKind?, val title: String, val tracks: List<MusicTrack>)
@@ -363,9 +363,12 @@ class MusicController @Inject constructor(
         }
     }
 
-    /** Plays the songs of an album, artist or playlist (with its music videos), from [startTrackId] if given. */
-    fun play(sourceId: UUID, startTrackId: String?) {
-        request = QueueRequest(startTrackId) {
+    /**
+     * Plays the songs of an album, artist or playlist (with its music videos), from [startTrackId] if given.
+     * [shuffle] starts them in a random order, whatever the shuffle switch says (Shuffle on their page).
+     */
+    fun play(sourceId: UUID, startTrackId: String?, shuffle: Boolean = false) {
+        request = QueueRequest(startTrackId, shuffle) {
             val source = details.details(sourceId).item
             val tracks = when (source.kind) {
                 ItemKind.Artist -> music.artistTracks(sourceId)
@@ -618,13 +621,14 @@ class MusicController @Inject constructor(
                 sources = songSources(entries)
                 sourceOrder = entries
                 val start = request.startTrackId?.let { id -> tracks.indexOfFirst { it.id.toString() == id }.takeIf { it >= 0 } }
-                val order = openStart(MusicQueue.start(entries, start, shuffleSwitch.on.value))
+                val shuffled = request.shuffle || shuffleSwitch.on.value
+                val order = openStart(MusicQueue.start(entries, start, shuffled))
                 if (order == null) {
                     _state.update { it.copy(loading = false, failed = true) }
                     return@launch
                 }
                 _state.update {
-                    it.copy(sourceKind = kind, sourceTitle = title, queue = order.items, index = order.index, shuffle = shuffleSwitch.on.value)
+                    it.copy(sourceKind = kind, sourceTitle = title, queue = order.items, index = order.index, shuffle = shuffled)
                 }
                 startPlayer(order)
             } catch (e: CancellationException) {
@@ -1196,18 +1200,15 @@ class MusicController @Inject constructor(
         val source = sources[entry.key] ?: return
         reported = source
         lastPositionMs = 0
-        playback.reportStart(source, position(), keepResume = entry.track.keepsResume)
+        playback.reportStart(source, position())
     }
 
     private fun reportCurrentStopped(atMs: Long?, failed: Boolean = false) {
         val source = reported ?: return
         reported = null
         // A music video left halfway keeps no place to resume from; one that ran to its end counts as seen.
-        // A home video gets its own resume point back (keepResume at the start), unless it ran to its end.
-        val track = sourceTrack(source)
-        val noResume = track?.isVideo == true && !track.keepsResume
-        // [atMs] is only given for a title that ran to its end.
-        playback.reportStopped(source, atMs ?: if (noResume) 0 else lastPositionMs, failed, ranToEnd = atMs != null)
+        val video = sourceTrack(source)?.isVideo == true
+        playback.reportStopped(source, atMs ?: if (video) 0 else lastPositionMs, failed)
     }
 
     private fun sourceTrack(source: PlaybackSource): MusicTrack? = sourceOrder.firstOrNull { it.track.id == source.itemId }?.track

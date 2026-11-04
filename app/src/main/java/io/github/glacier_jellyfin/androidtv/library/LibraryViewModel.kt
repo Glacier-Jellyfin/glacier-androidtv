@@ -368,9 +368,12 @@ class LibraryViewModel @Inject constructor(
      * Play and shuffle of the music videos tab: every video in the tab's order, or in the folder
      * view those of the folder shown and the folders below it. [title] names the queue.
      */
-    fun playVideos(title: String, shuffled: Boolean) {
+    fun playVideos(title: String, shuffled: Boolean) = playVideos(title, shuffled) { shownVideoIds() }
+
+    /** The videos [load] brings, in its order or [shuffled], in the music player; [title] names the queue. */
+    private fun playVideos(title: String, shuffled: Boolean, load: suspend () -> List<UUID>) {
         viewModelScope.launch {
-            val ids = runSuspendCatching { shownVideoIds() }.getOrElse {
+            val ids = runSuspendCatching { load() }.getOrElse {
                 Log.w(TAG, "Loading the music videos to play failed", it)
                 _events.send(UiEvent.Toast(R.string.music_videos_failed))
                 return@launch
@@ -399,14 +402,28 @@ class LibraryViewModel @Inject constructor(
         musicActions.open(MusicTarget(title = item.title, subtitle = item.parentTitle, tracks = { songs.tracks(listOf(item.id)) }))
     }
 
-    /** Options for a folder of the folder view: its videos and those of the folders below it. */
+    /** Options for a folder of the folder view, as for an album: its videos and those of the folders below it. */
     fun folderOptions(folder: MediaFolder) {
-        musicActions.open(MusicTarget(title = folder.name, tracks = { songs.tracks(videoIdsBelow(folder.id)) }))
+        musicActions.open(
+            MusicTarget(
+                title = folder.name,
+                tracks = { songs.tracks(videoIdsBelow(folder.id)) },
+                play = { playVideos(folder.name, shuffled = false) { videoIdsBelow(folder.id) } },
+                shuffle = { playVideos(folder.name, shuffled = true) { videoIdsBelow(folder.id) } },
+            ),
+        )
     }
 
-    /** The toolbar's options, for the videos Play would play; [title] names them. */
+    /** The toolbar's options, as for an album: play or shuffle all, the queue, a playlist; [title] names them. */
     fun videosOptions(title: String) {
-        musicActions.open(MusicTarget(title = title, tracks = { songs.tracks(shownVideoIds()) }))
+        musicActions.open(
+            MusicTarget(
+                title = title,
+                tracks = { songs.tracks(shownVideoIds()) },
+                play = { playVideos(title, shuffled = false) },
+                shuffle = { playVideos(title, shuffled = true) },
+            ),
+        )
     }
 
     /** Options for a song of the songs tab (its "…", holding OK, or the menu key). */

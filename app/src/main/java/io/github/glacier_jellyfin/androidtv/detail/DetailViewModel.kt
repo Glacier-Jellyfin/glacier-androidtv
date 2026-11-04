@@ -15,7 +15,6 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicRepository
-import io.github.glacier_jellyfin.androidtv.core.data.media.MusicShuffle
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.data.media.Season
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelection
@@ -84,7 +83,6 @@ data class DetailState(
     val artistVideos: List<MediaItem> = emptyList(),
     /** Videos of a playlist (its songs are in [musicTracks]). */
     val playlistVideos: List<MediaItem> = emptyList(),
-    val shuffle: Boolean = false,
     /** The title stays locked (PIN dialog dismissed, or hidden for this profile): leave the page. */
     val leave: Boolean = false,
 ) {
@@ -97,7 +95,6 @@ class DetailViewModel @Inject constructor(
     private val repository: DetailRepository,
     private val trackSelections: TrackSelections,
     private val music: MusicRepository,
-    private val shuffle: MusicShuffle,
     private val playback: PlaybackRepository,
     private val settings: SettingsRepository,
     private val serverPreferences: ServerPreferencesRepository,
@@ -137,7 +134,6 @@ class DetailViewModel @Inject constructor(
 
     init {
         load()
-        viewModelScope.launch { shuffle.on.collect { on -> _state.update { it.copy(shuffle = on) } } }
         viewModelScope.launch { playback.stopped.collect(::refresh) }
         // Something else marked watched or not (a movie of this collection, an episode of this show):
         // the page follows. This page's own item it already shows as changed.
@@ -427,9 +423,10 @@ class DetailViewModel @Inject constructor(
     fun playVideo(video: MediaItem) {
         val item = _state.value.item ?: return
         // Music videos play in the music player: an artist's with the artist's other videos, a playlist's with its songs.
-        // A playlist's home videos too; its films and episodes go to the video player.
-        if (video.kind == ItemKind.MusicVideo && item.kind == ItemKind.Artist) return playArtistVideos(from = video)
-        if (video.inMusicPlayer && item.kind == ItemKind.Playlist) return navigate(MusicRoute(item.id.toString(), video.id.toString()))
+        if (video.kind == ItemKind.MusicVideo) {
+            if (item.kind == ItemKind.Artist) return playArtistVideos(from = video)
+            if (item.kind == ItemKind.Playlist) return navigate(MusicRoute(item.id.toString(), video.id.toString()))
+        }
         pin.openTitle(ageFilter, video.id, video.title, video.officialRating) {
             navigate(PlayerRoute(video.id.toString(), queueOf = item.id.toString()))
         }
@@ -504,10 +501,23 @@ class DetailViewModel @Inject constructor(
         }
     }
 
-    fun toggleShuffle() {
-        val on = !shuffle.on.value
-        shuffle.set(on)
-        toast(if (on) R.string.shuffle_on else R.string.shuffle_off)
+    /** Album, artist or playlist in the music player in a random order, as Shuffle in Jellyfin's web client. */
+    fun shuffleMusic() {
+        val item = _state.value.item ?: return
+        navigate(MusicRoute(item.id.toString(), shuffle = true))
+    }
+
+    /** Songs like the album or artist, picked by the server, in the music player. */
+    fun playInstantMix() {
+        val item = _state.value.item ?: return
+        viewModelScope.launch {
+            val tracks = runSuspendCatching { music.instantMix(item.id) }
+                .onFailure { Log.w(TAG, "Loading the instant mix failed", it) }
+                .getOrDefault(emptyList())
+            if (tracks.isEmpty()) return@launch toast(R.string.music_mix_failed)
+            musicPlayback.playTracks(ItemKind.Other, item.title, tracks)
+            navigate(MusicRoute())
+        }
     }
 
     fun playTrailer() {
@@ -668,6 +678,3 @@ class DetailViewModel @Inject constructor(
         val PLAYABLE_IN_COLLECTION = setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode, ItemKind.MusicVideo)
     }
 }
-
-/** A video the music player plays from a playlist: a music video or a home video, not a film or episode. */
-internal val MediaItem.inMusicPlayer: Boolean get() = kind == ItemKind.MusicVideo || kind == ItemKind.Other

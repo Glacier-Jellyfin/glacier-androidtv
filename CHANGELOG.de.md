@@ -14,11 +14,14 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Musikvideos sind ein Reiter in Musik statt eines eigenen Eintrags in der Navigationsleiste, als 16:9-Karten sortiert nach Hinzugefügt, Titel, Erscheinungsjahr oder Künstler
 - Der Reiter Musikvideos zeigt alle Videos oder blättert durch ihre Ordner. Solange keine Ansicht gewählt ist, beginnt er mit allen Videos, wenn die meisten ihren Künstler nennen
 - Musikvideos laufen im Musik-Player, auch gemischt mit Songs in der Warteschlange: aus ihrem Reiter, der auch alle abspielen oder als Zufallsmix starten kann, von der Künstlerseite und aus Wiedergabelisten. Das Bild steht anstelle des Covers, auch im Mini-Player und im Vollbild
-- Musikvideos, Heimvideos und ihre Ordner haben Optionen wie Songs: OK halten, die Menü-Taste oder … in der Werkzeugleiste spielt sie als Nächstes oder legt sie in die Warteschlange oder eine Wiedergabeliste. Heimvideos laufen dann im Musik-Player von vorn und behalten ihren Fortsetzungspunkt
+- Musikvideos und ihre Ordner haben Optionen wie ein Album: OK halten, die Menü-Taste oder … in der Werkzeugleiste spielt alle ab oder zufällig, spielt sie als Nächstes oder legt sie in die Warteschlange oder eine Wiedergabeliste
+- Alben und Künstler haben neben Zufällig abspielen einen Knopf für ähnliche Musik
 - Der Musik-Player hat ein Vollbild. Ein Song zeigt seinen Songtext groß und mittig auf dem unscharfen Cover, darunter Titel und Zeitleiste. Ohne Songtext bewegt sich das Cover langsam
 - Glacier schickt TrueHD und DTS-HD als vollständigen verlustfreien Bitstream an den Receiver, auch auf Geräten, auf denen Android nur den DTS-Kern weitergibt oder bei TrueHD scheitert. Unter Einstellungen › Audio lässt sich das Android überlassen, oder der Server wandelt in E-AC-3 um, was nicht als Bitstream rausgeht. Das erhält Surround, wo das Gerät PCM nur in Stereo ausgibt
 
 ### Verbessert
+- Zufällig abspielen auf einem Album, Künstler oder einer Wiedergabeliste spielt es gleich in zufälliger Reihenfolge, wie in Jellyfins Web-Oberfläche, statt die zufällige Reihenfolge einzuschalten
+- Alben bieten nicht mehr an, sie als gehört zu markieren
 - Die Navigationsleiste lässt oben rechts Platz für Hinweise. Brauchen ihre Einträge mehr Platz, scrollen die zwischen Suche und Einstellungen, und Suche, Einstellungen und Profil bleiben immer sichtbar
 - Der Player nennt Musikvideos und Aufnahmen nicht mehr „Filme“
 - Antwortet der Server nicht, öffnet Glacier die Serverauswahl, markiert den Server als nicht erreichbar und entfernt die Markierung, sobald er wieder antwortet

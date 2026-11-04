@@ -79,7 +79,7 @@ data class TrailerRoute(val itemId: String? = null, val seerrType: String? = nul
  * one with shuffle on). Without [sourceId] it shows what plays (mini player).
  */
 @Serializable
-data class MusicRoute(val sourceId: String? = null, val startTrackId: String? = null)
+data class MusicRoute(val sourceId: String? = null, val startTrackId: String? = null, val shuffle: Boolean = false)
 
 /**
  * A cast member; [fromTitle] and [role] feed the breadcrumb ("Dracula · Count Dracula").

@@ -92,6 +92,11 @@ object GlacierIcons {
         "M2 6h1.972a4 4 0 0 1 3.126 1.5l.302.5",
         "M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45",
     )
+    /** An instant mix (Lucide compass), as in Jellyfin's web client. */
+    val Compass = icon(
+        "M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20z",
+        "m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z",
+    )
     private val REPEAT = arrayOf("m17 2 4 4-4 4", "M3 11v-1a4 4 0 0 1 4-4h14", "m7 22-4-4 4-4", "M21 13v1a4 4 0 0 1-4 4H3")
     val Repeat = icon(*REPEAT)
     val RepeatOne = icon(*REPEAT, "M11 10h1v4")

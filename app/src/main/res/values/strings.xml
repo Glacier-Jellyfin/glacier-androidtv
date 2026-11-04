@@ -597,8 +597,6 @@
     <string name="music_playlist">Playlist</string>
     <string name="music_play_discography">Play discography</string>
     <string name="music_play_all">Play all</string>
-    <string name="action_mark_heard">Mark played</string>
-    <string name="action_mark_unheard">Mark unplayed</string>
     <string name="marked_heard">Marked played</string>
     <string name="marked_unheard">Marked unplayed</string>
     <string name="action_shuffle">Shuffle</string>
@@ -617,7 +615,8 @@
     <string name="audio_mono">Mono</string>
     <string name="audio_stereo">Stereo</string>
     <string name="music_nothing_to_play">There are no songs to play here.</string>
-    <string name="music_shuffle_mix">Shuffle</string>
+    <string name="music_shuffle_all">Shuffle all</string>
+    <string name="music_shuffle_play">Shuffle</string>
     <string name="music_play_videos">Play videos</string>
     <string name="music_videos_none">There are no music videos to play here.</string>
     <string name="music_videos_failed">The music videos could not be loaded.</string>

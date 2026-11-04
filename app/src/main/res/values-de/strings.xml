@@ -591,8 +591,6 @@
     <string name="music_playlist">Wiedergabeliste</string>
     <string name="music_play_discography">Diskografie abspielen</string>
     <string name="music_play_all">Alle abspielen</string>
-    <string name="action_mark_heard">Als gehört</string>
-    <string name="action_mark_unheard">Als ungehört</string>
     <string name="marked_heard">Als gehört markiert</string>
     <string name="marked_unheard">Als ungehört markiert</string>
     <string name="action_shuffle">Zufällige Reihenfolge</string>
@@ -611,7 +609,8 @@
     <string name="audio_mono">Mono</string>
     <string name="audio_stereo">Stereo</string>
     <string name="music_nothing_to_play">Hier gibt es keine Titel zum Abspielen.</string>
-    <string name="music_shuffle_mix">Zufallsmix</string>
+    <string name="music_shuffle_all">Alle zufällig abspielen</string>
+    <string name="music_shuffle_play">Zufällig abspielen</string>
     <string name="music_play_videos">Videos abspielen</string>
     <string name="music_videos_none">Hier gibt es keine Musikvideos zum Abspielen.</string>
     <string name="music_videos_failed">Die Musikvideos konnten nicht geladen werden.</string>

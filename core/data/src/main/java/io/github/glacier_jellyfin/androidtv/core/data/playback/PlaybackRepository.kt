@@ -52,8 +52,6 @@ import org.jellyfin.sdk.model.api.PlaybackOrder
 import org.jellyfin.sdk.model.api.PlaybackProgressInfo
 import org.jellyfin.sdk.model.api.PlaybackStartInfo
 import org.jellyfin.sdk.model.api.PlaybackStopInfo
-import org.jellyfin.sdk.model.api.UpdateUserItemDataDto
-import org.jellyfin.sdk.model.api.UserItemDataDto
 import org.jellyfin.sdk.model.api.RepeatMode
 import java.net.SocketTimeoutException
 import java.util.UUID
@@ -575,19 +573,7 @@ class PlaybackRepository @Inject constructor(
             .let(::mergeOverlapping)
     }
 
-    /**
-     * [keepResume]: the title's resume point and watched state are noted first, so [reportStopped]
-     * can put them back (a home video in the music player).
-     */
-    fun reportStart(source: PlaybackSource, position: PlaybackPosition, keepResume: Boolean = false) {
-        val before = if (keepResume) noteUserData(source.itemId) else null
-        report("start") {
-            before?.await()
-            startReport(source, position)
-        }
-    }
-
-    private suspend fun ApiClient.startReport(source: PlaybackSource, position: PlaybackPosition) {
+    fun reportStart(source: PlaybackSource, position: PlaybackPosition) = report("start") {
         sessionApi.reportPlaybackStart(
             PlaybackStartInfo(
                 canSeek = !source.live,
@@ -630,11 +616,8 @@ class PlaybackRepository @Inject constructor(
     /**
      * The server stores the resume point from this, and marks the title watched near its end.
      * [watched] marks it watched in any case, after the stop so the stop cannot undo it.
-     * After a start with keepResume, the resume point and watched state noted then come back,
-     * unless the title [ranToEnd]: then it counts as watched, as the server decides.
      */
-    fun reportStopped(source: PlaybackSource, positionMs: Long, failed: Boolean = false, watched: Boolean = false, ranToEnd: Boolean = false) {
-        val before = keptUserData.remove(source.itemId)
+    fun reportStopped(source: PlaybackSource, positionMs: Long, failed: Boolean = false, watched: Boolean = false) =
         report("stopped", onDone = { if (!source.live) _stopped.tryEmit(source.itemId) }) {
             sessionApi.reportPlaybackStopped(
                 PlaybackStopInfo(
@@ -647,30 +630,7 @@ class PlaybackRepository @Inject constructor(
                 ),
             )
             if (watched) userDataApi.markPlayedItem(itemId = source.itemId)
-            // The server marks a short video watched as it starts: what it says now does not tell.
-            if (!ranToEnd) before?.await()?.let { kept -> putBack(source.itemId, kept) }
         }
-    }
-
-    /** Resume points and watched states noted at a start with keepResume, by title. */
-    private val keptUserData = java.util.concurrent.ConcurrentHashMap<UUID, Deferred<UserItemDataDto?>>()
-
-    private fun noteUserData(itemId: UUID): Deferred<UserItemDataDto?> {
-        val api = sessions.session.value?.api
-        return reportScope.async {
-            api ?: return@async null
-            runSuspendCatching { api.userDataApi.getItemUserData(itemId = itemId).content }
-                .onFailure { Log.w(TAG, "Noting the resume point of $itemId failed", it) }
-                .getOrNull()
-        }.also { keptUserData[itemId] = it }
-    }
-
-    private suspend fun ApiClient.putBack(itemId: UUID, kept: UserItemDataDto) {
-        userDataApi.updateItemUserData(
-            itemId = itemId,
-            data = UpdateUserItemDataDto(playbackPositionTicks = kept.playbackPositionTicks, played = kept.played),
-        )
-    }
 
     private fun report(what: String, onDone: () -> Unit = {}, call: suspend ApiClient.() -> Unit) {
         val api = sessions.session.value?.api ?: return

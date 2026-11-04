@@ -92,7 +92,15 @@ private fun Header(sheet: MusicSheet) {
 private fun Menu(sheet: MusicSheet.Menu, actions: MusicActions) {
     val first = remember { FocusRequester() }
     val target = sheet.target
+    // Play all and shuffle all first, when the target has them; the focus starts on the first entry.
+    val playFirst = target.play != null
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (target.play != null) {
+            PillButton(stringResource(R.string.music_play_all), onClick = actions::playAll, icon = GlacierIcons.Play, fillWidth = true, modifier = Modifier.focusRequester(first))
+        }
+        if (target.shuffle != null) {
+            PillButton(stringResource(R.string.music_shuffle_all), onClick = actions::shuffleAll, icon = GlacierIcons.Shuffle, fillWidth = true)
+        }
         when {
             target.playing -> Unit
             target.queueIndex != null -> {
@@ -100,7 +108,7 @@ private fun Menu(sheet: MusicSheet.Menu, actions: MusicActions) {
                 PillButton(stringResource(R.string.music_options_remove_queue), onClick = actions::removeFromQueue, icon = GlacierIcons.Close, fillWidth = true)
             }
             else -> {
-                PillButton(stringResource(R.string.music_options_play_next), onClick = actions::playNext, icon = GlacierIcons.Play, fillWidth = true, modifier = Modifier.focusRequester(first))
+                PillButton(stringResource(R.string.music_options_play_next), onClick = actions::playNext, icon = GlacierIcons.Play, fillWidth = true, modifier = if (playFirst) Modifier else Modifier.focusRequester(first))
                 PillButton(stringResource(R.string.music_options_add_queue), onClick = actions::addToQueue, icon = GlacierIcons.Chapters, fillWidth = true)
                 if (target.videos != null) {
                     PillButton(stringResource(R.string.music_options_add_videos_queue), onClick = actions::addVideosToQueue, icon = GlacierIcons.Film, fillWidth = true)
@@ -115,7 +123,7 @@ private fun Menu(sheet: MusicSheet.Menu, actions: MusicActions) {
             modifier = if (target.playing) Modifier.focusRequester(first) else Modifier,
         )
         if (target.mixFrom != null) {
-            PillButton(stringResource(R.string.music_options_mix), onClick = actions::playMix, icon = GlacierIcons.Shuffle, fillWidth = true)
+            PillButton(stringResource(R.string.music_options_mix), onClick = actions::playMix, icon = GlacierIcons.Compass, fillWidth = true)
         }
         if (target.playlistId != null) {
             PillButton(stringResource(R.string.music_options_remove_playlist), onClick = actions::removeFromPlaylist, icon = GlacierIcons.Close, fillWidth = true)

@@ -52,7 +52,7 @@ class MusicPlayerViewModel @Inject constructor(
             // Once per route: coming back to this screen (or recreating it) keeps the queue that plays.
             route.sourceId != null && savedStateHandle.get<Boolean>(KEY_STARTED) != true -> {
                 savedStateHandle[KEY_STARTED] = true
-                controller.play(UUID.fromString(route.sourceId), route.startTrackId)
+                controller.play(UUID.fromString(route.sourceId), route.startTrackId, shuffle = route.shuffle)
             }
             // Opened from the mini player after the music ended.
             controller.player.value == null && !controller.state.value.loading -> close()

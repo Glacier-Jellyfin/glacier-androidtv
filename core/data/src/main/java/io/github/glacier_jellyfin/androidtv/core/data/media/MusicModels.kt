@@ -39,10 +39,8 @@ data class MusicTrack(
     val isFavorite: Boolean,
     /** This song's entry in the playlist it was loaded from; removing it from the playlist takes this id. */
     val playlistItemId: String? = null,
-    /** A music video or home video: it plays in the music player with its picture where a song shows its cover. */
+    /** A music video: it plays in the music player with its picture where a song shows its cover. */
     val isVideo: Boolean = false,
-    /** A home video: the music player plays it from the start and leaves its resume point as it was. */
-    val keepsResume: Boolean = false,
 )
 
 /**
