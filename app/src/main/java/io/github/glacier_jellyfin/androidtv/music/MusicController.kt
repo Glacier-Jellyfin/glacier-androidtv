@@ -1196,15 +1196,18 @@ class MusicController @Inject constructor(
         val source = sources[entry.key] ?: return
         reported = source
         lastPositionMs = 0
-        playback.reportStart(source, position())
+        playback.reportStart(source, position(), keepResume = entry.track.keepsResume)
     }
 
     private fun reportCurrentStopped(atMs: Long?, failed: Boolean = false) {
         val source = reported ?: return
         reported = null
         // A music video left halfway keeps no place to resume from; one that ran to its end counts as seen.
-        val video = sourceTrack(source)?.isVideo == true
-        playback.reportStopped(source, atMs ?: if (video) 0 else lastPositionMs, failed)
+        // A home video gets its own resume point back (keepResume at the start), unless it ran to its end.
+        val track = sourceTrack(source)
+        val noResume = track?.isVideo == true && !track.keepsResume
+        // [atMs] is only given for a title that ran to its end.
+        playback.reportStopped(source, atMs ?: if (noResume) 0 else lastPositionMs, failed, ranToEnd = atMs != null)
     }
 
     private fun sourceTrack(source: PlaybackSource): MusicTrack? = sourceOrder.firstOrNull { it.track.id == source.itemId }?.track

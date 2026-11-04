@@ -190,13 +190,17 @@ fun LibraryScreen(
     // A song's options sheet takes the focus with it when it closes; it goes back to the song.
     val sheet by viewModel.musicActions.sheet.collectAsStateWithLifecycle()
     var sheetWasOpen by remember { mutableStateOf(false) }
+    // Opened from the toolbar's options button, it goes back there.
+    val optionsButtonFocus = remember { FocusRequester() }
+    var sheetFromToolbar by remember { mutableStateOf(false) }
     LaunchedEffect(sheet == null) {
         if (sheet != null) {
             sheetWasOpen = true
         } else if (sheetWasOpen) {
             sheetWasOpen = false
             withFrameNanos { }
-            runCatching { restoreFocus.requestFocus() }
+            runCatching { (if (sheetFromToolbar) optionsButtonFocus else restoreFocus).requestFocus() }
+            sheetFromToolbar = false
         }
     }
     val songsTitle = stringResource(R.string.scope_songs)
@@ -359,6 +363,11 @@ fun LibraryScreen(
                             onViewAnchor = { viewAnchor = it },
                             viewButtonFocus = viewButtonFocus,
                             onPlayVideos = { viewModel.playVideos(videosTitle, shuffled = it) },
+                            onVideoOptions = {
+                                sheetFromToolbar = true
+                                viewModel.videosOptions(videosTitle)
+                            },
+                            optionsButtonFocus = optionsButtonFocus,
                         )
                     }
                     if (folder != null) {
@@ -374,6 +383,7 @@ fun LibraryScreen(
                                         enteredFolder = true
                                         viewModel.openFolder(sub)
                                     },
+                                    onLongClick = { viewModel.folderOptions(sub) },
                                     modifier = entryFocus(sub.id.toString(), first = index == 0)
                                         .then(if (index == folder.folders.lastIndex) Modifier.focusProperties { right = FocusRequester.Cancel } else Modifier),
                                 )
@@ -390,6 +400,7 @@ fun LibraryScreen(
                                     title = media.title,
                                     caption = media.parentTitle,
                                     onClick = { viewModel.playVideo(media, videosTitle) },
+                                    onLongClick = { viewModel.videoOptions(media) },
                                     shape = CardShape.Wide,
                                     locked = media.showsLock(),
                                     modifier = entryFocus(media.id.toString(), first = folder.folders.isEmpty() && index == 0),
@@ -442,6 +453,7 @@ fun LibraryScreen(
                                 caption = captionFor(item, sort = state.query.sort.takeUnless { state.query.listedByName }),
                                 // Music videos play in the music player, like songs.
                                 onClick = { if (item.kind == ItemKind.MusicVideo) viewModel.playVideo(item, videosTitle) else viewModel.open(item) },
+                                onLongClick = if (item.kind == ItemKind.MusicVideo) ({ viewModel.videoOptions(item) }) else null,
                                 shape = when (item.kind) {
                                     ItemKind.Album, ItemKind.Playlist -> CardShape.Square
                                     ItemKind.Artist -> CardShape.Round
@@ -705,6 +717,9 @@ private fun Toolbar(
     viewButtonFocus: FocusRequester,
     /** Play (false) or shuffle (true) the music videos. */
     onPlayVideos: (Boolean) -> Unit,
+    /** The options for the music videos Play would play. */
+    onVideoOptions: () -> Unit,
+    optionsButtonFocus: FocusRequester,
 ) {
     Row(
         modifier
@@ -730,6 +745,13 @@ private fun Toolbar(
         if (state.query.scope == LibraryScope.MusicVideos) {
             ToolbarButton(stringResource(R.string.hero_play), GlacierIcons.Play, onClick = { onPlayVideos(false) })
             ToolbarButton(stringResource(R.string.music_shuffle_mix), GlacierIcons.Shuffle, onClick = { onPlayVideos(true) })
+            ToolbarButton(
+                null,
+                GlacierIcons.More,
+                onClick = onVideoOptions,
+                contentDescription = stringResource(R.string.music_options),
+                modifier = Modifier.focusRequester(optionsButtonFocus),
+            )
             if (view != null) {
                 SortButton(
                     label = stringResource(view.label),

@@ -124,7 +124,7 @@ class MusicRepository @Inject constructor(
             .map(mapper::track)
     }
 
-    /** What the music player plays of a playlist: its songs and music videos in its order. */
+    /** What the music player plays of a playlist: its songs, music videos and home videos in its order. */
     suspend fun playlistQueue(playlistId: UUID): List<MusicTrack> = withContext(Dispatchers.IO) {
         val session = requireSession()
         val mapper = MediaMapper(session.api)
@@ -134,7 +134,7 @@ class MusicRepository @Inject constructor(
             fields = TRACK_FIELDS,
             enableUserData = true,
         ).content.items
-            .filter { it.type == BaseItemKind.AUDIO || it.type == BaseItemKind.MUSIC_VIDEO }
+            .filter { it.type == BaseItemKind.AUDIO || it.type == BaseItemKind.MUSIC_VIDEO || it.type == BaseItemKind.VIDEO }
             .map(mapper::track)
     }
 

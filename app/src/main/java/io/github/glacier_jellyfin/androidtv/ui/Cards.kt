@@ -140,11 +140,12 @@ fun ContinueCard(
     modifier: Modifier = Modifier,
     locked: Boolean = false,
     imageHeight: Int? = null,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     val sizes = LocalCardSizes.current
-    GlacierCard(onClick = onClick, modifier = modifier.width(sizes.continueWidth.dp)) { focused ->
+    GlacierCard(onClick = onClick, modifier = modifier.width(sizes.continueWidth.dp), onLongClick = onLongClick) { focused ->
         Box(
             Modifier
                 .size(sizes.continueWidth.dp, (imageHeight ?: sizes.continueHeight).dp)
@@ -331,6 +332,8 @@ fun GridCard(
     watched: Boolean = false,
     count: Int? = null,
     locked: Boolean = false,
+    /** Holding OK or the menu key: the card's options. */
+    onLongClick: (() -> Unit)? = null,
 ) {
     val accent = LocalAccent.current.main
     val outline: Shape = when (shape) {
@@ -345,7 +348,7 @@ fun GridCard(
         CardShape.Wide -> sizes.wideWidth * 9 / 16
         else -> sizes.posterWidth
     }
-    GlacierCard(onClick = onClick, modifier = modifier.width(width.dp)) { focused ->
+    GlacierCard(onClick = onClick, modifier = modifier.width(width.dp), onLongClick = onLongClick) { focused ->
         Box(
             Modifier
                 .size(width.dp, height.dp)

@@ -100,9 +100,9 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
     // What had focus, to land there again when the user comes back (from the player, say).
     var focusKey by rememberSaveable(item.id) { mutableStateOf<String?>(null) }
     val tracks = state.musicTracks
-    /** A playlist with videos and neither songs nor music videos: Play starts the videos in the video player. */
+    /** A playlist of films or episodes only: Play starts them in the video player. */
     val videosOnly = item.kind == ItemKind.Playlist && tracks.isEmpty() && state.playlistVideos.isNotEmpty() &&
-        state.playlistVideos.none { it.kind == ItemKind.MusicVideo }
+        state.playlistVideos.none { it.inMusicPlayer }
     val playlist = item.kind == ItemKind.Playlist
     // Albums and playlists show a cover left of the songs. It stays put while the songs scroll past.
     // A playlist's follows the focused song, with its album below; before that it shows the playlist.
@@ -339,7 +339,12 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                     imageUrl = video.thumbUrl ?: video.posterUrl,
                                     progress = video.progress,
                                     onClick = { viewModel.playVideo(video) },
+                                    onLongClick = { viewModel.videoOptions(video) },
                                     locked = video.showsLock(),
+                                    // Back from its options, the focus lands on it again.
+                                    modifier = Modifier
+                                        .focusRequester(remember(video.id) { FocusRequester() }.also { trackFocus[video.id] = it })
+                                        .onFocusChanged { if (it.isFocused) focusKey = video.id.toString() },
                                 )
                             }
                         }

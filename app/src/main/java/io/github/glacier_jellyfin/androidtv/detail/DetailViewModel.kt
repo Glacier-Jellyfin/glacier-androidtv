@@ -427,13 +427,17 @@ class DetailViewModel @Inject constructor(
     fun playVideo(video: MediaItem) {
         val item = _state.value.item ?: return
         // Music videos play in the music player: an artist's with the artist's other videos, a playlist's with its songs.
-        if (video.kind == ItemKind.MusicVideo) {
-            if (item.kind == ItemKind.Artist) return playArtistVideos(from = video)
-            if (item.kind == ItemKind.Playlist) return navigate(MusicRoute(item.id.toString(), video.id.toString()))
-        }
+        // A playlist's home videos too; its films and episodes go to the video player.
+        if (video.kind == ItemKind.MusicVideo && item.kind == ItemKind.Artist) return playArtistVideos(from = video)
+        if (video.inMusicPlayer && item.kind == ItemKind.Playlist) return navigate(MusicRoute(item.id.toString(), video.id.toString()))
         pin.openTitle(ageFilter, video.id, video.title, video.officialRating) {
             navigate(PlayerRoute(video.id.toString(), queueOf = item.id.toString()))
         }
+    }
+
+    /** Options for a video of the page (holding OK, or the menu key). */
+    fun videoOptions(video: MediaItem) {
+        musicActions.open(MusicTarget(title = video.title, subtitle = video.parentTitle, tracks = { music.tracks(listOf(video.id)) }))
     }
 
     /** An artist's music videos in the music player, from [from] or from the first. */
@@ -481,6 +485,12 @@ class DetailViewModel @Inject constructor(
                         ItemKind.Playlist -> music.playlistQueue(item.id)
                         else -> state.musicTracks.ifEmpty { music.albumTracks(item.id) }
                     }
+                },
+                // An artist's music videos are offered apart from the songs.
+                videos = if (item.kind == ItemKind.Artist && _state.value.artistVideos.isNotEmpty()) {
+                    { music.tracks(_state.value.artistVideos.map { it.id }) }
+                } else {
+                    null
                 },
             ),
         )
@@ -658,3 +668,6 @@ class DetailViewModel @Inject constructor(
         val PLAYABLE_IN_COLLECTION = setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode, ItemKind.MusicVideo)
     }
 }
+
+/** A video the music player plays from a playlist: a music video or a home video, not a film or episode. */
+internal val MediaItem.inMusicPlayer: Boolean get() = kind == ItemKind.MusicVideo || kind == ItemKind.Other

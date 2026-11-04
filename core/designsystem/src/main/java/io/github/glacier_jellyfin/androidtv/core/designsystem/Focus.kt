@@ -94,6 +94,8 @@ fun GlacierClickable(
 fun GlacierCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Holding OK or the menu key: the card's options. */
+    onLongClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.(focused: Boolean) -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -101,7 +103,15 @@ fun GlacierCard(
     Column(
         modifier = modifier
             .focusScale(focused)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
+            .then(
+                if (onLongClick == null) {
+                    Modifier.clickable(interactionSource = interaction, indication = null, onClick = onClick)
+                } else {
+                    Modifier
+                        .onMenuKey(onLongClick)
+                        .combinedClickable(interactionSource = interaction, indication = null, onLongClick = onLongClick, onClick = onClick)
+                },
+            ),
     ) {
         content(focused)
     }

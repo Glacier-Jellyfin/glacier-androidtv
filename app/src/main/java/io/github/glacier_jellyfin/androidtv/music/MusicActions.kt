@@ -17,8 +17,8 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 /**
- * What the options are for: one song, or all songs of an album, artist or
- * playlist ([tracks] may have to be loaded first).
+ * What the options are for: one song or video, or all songs of an album, artist or
+ * playlist, or the videos of a folder ([tracks] may have to be loaded first).
  */
 class MusicTarget(
     val title: String,
@@ -33,6 +33,8 @@ class MusicTarget(
     /** The playlist page it is on: offers taking it out of the playlist. */
     val playlistId: UUID? = null,
     val playlistEntryIds: List<String> = emptyList(),
+    /** An artist's music videos, which the menu offers to add to the queue apart from the songs. */
+    val videos: (suspend () -> List<MusicTrack>)? = null,
 )
 
 /** The option sheet's steps. */
@@ -97,6 +99,9 @@ class MusicActions(
     fun playNext() = withTracks(R.string.music_plays_next) { controller.playNext(it) }
 
     fun addToQueue() = withTracks(R.string.music_added_to_queue) { controller.addToQueue(it) }
+
+    /** The artist's music videos at the end of the queue. */
+    fun addVideosToQueue() = withTracks(R.string.music_added_to_queue, load = { it.videos?.invoke().orEmpty() }) { controller.addToQueue(it) }
 
     /** Songs like the target, from the server, in place of the queue. */
     fun playMix() {
@@ -203,12 +208,12 @@ class MusicActions(
         }
     }
 
-    private fun withTracks(message: Int, action: (List<MusicTrack>) -> Unit) {
+    private fun withTracks(message: Int, load: suspend (MusicTarget) -> List<MusicTrack> = { it.tracks() }, action: (List<MusicTrack>) -> Unit) {
         val target = _sheet.value?.target ?: return
         dismiss()
         scope.launch {
             val tracks = try {
-                target.tracks()
+                load(target)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

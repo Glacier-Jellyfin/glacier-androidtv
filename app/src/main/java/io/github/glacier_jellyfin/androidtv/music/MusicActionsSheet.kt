@@ -102,6 +102,9 @@ private fun Menu(sheet: MusicSheet.Menu, actions: MusicActions) {
             else -> {
                 PillButton(stringResource(R.string.music_options_play_next), onClick = actions::playNext, icon = GlacierIcons.Play, fillWidth = true, modifier = Modifier.focusRequester(first))
                 PillButton(stringResource(R.string.music_options_add_queue), onClick = actions::addToQueue, icon = GlacierIcons.Chapters, fillWidth = true)
+                if (target.videos != null) {
+                    PillButton(stringResource(R.string.music_options_add_videos_queue), onClick = actions::addVideosToQueue, icon = GlacierIcons.Film, fillWidth = true)
+                }
             }
         }
         PillButton(

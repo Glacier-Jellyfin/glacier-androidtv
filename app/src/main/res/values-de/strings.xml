@@ -634,6 +634,7 @@
     <string name="music_options">Optionen</string>
     <string name="music_options_play_next">Als Nächstes spielen</string>
     <string name="music_options_add_queue">Zur Warteschlange hinzufügen</string>
+    <string name="music_options_add_videos_queue">Musikvideos zur Warteschlange hinzufügen</string>
     <string name="music_options_add_playlist">Zur Wiedergabeliste hinzufügen</string>
     <string name="music_options_remove_queue">Aus der Warteschlange entfernen</string>
     <string name="music_options_remove_playlist">Aus dieser Wiedergabeliste entfernen</string>

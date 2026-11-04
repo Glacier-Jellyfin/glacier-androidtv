@@ -90,9 +90,9 @@ fun SortButton(
     }
 }
 
-/** A toolbar button drawn like the [SortButton], that acts at once: Play, say. */
+/** A toolbar button drawn like the [SortButton], that acts at once: Play, say. Without [label] only its icon, named by [contentDescription]. */
 @Composable
-fun ToolbarButton(label: String, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun ToolbarButton(label: String?, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier, contentDescription: String? = null) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -105,12 +105,12 @@ fun ToolbarButton(label: String, icon: ImageVector, onClick: () -> Unit, modifie
             .background(if (focused) accent else GlacierColors.GlassFill2)
             .border(2.dp, if (focused) accent else GlacierColors.GlassBorder2, PillShape)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = if (label == null) 16.dp else 24.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Icon(icon, contentDescription = null, tint = foreground, modifier = Modifier.size(20.dp))
-        Text(label, style = GlacierText.body(19, FontWeight.SemiBold), color = foreground)
+        Icon(icon, contentDescription = if (label == null) contentDescription else null, tint = foreground, modifier = Modifier.size(20.dp))
+        if (label != null) Text(label, style = GlacierText.body(19, FontWeight.SemiBold), color = foreground)
     }
 }
 

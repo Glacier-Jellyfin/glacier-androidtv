@@ -7,6 +7,7 @@ import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.CollectionType
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.MediaStream
+import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.MediaStreamType
 import org.jellyfin.sdk.model.api.VideoRangeType
 import java.util.UUID
@@ -120,7 +121,8 @@ internal class MediaMapper(private val api: ApiClient) {
 
     fun track(dto: BaseItemDto): MusicTrack {
         val audio = dto.mediaStreams?.firstOrNull { it.type == MediaStreamType.AUDIO }
-        val video = dto.type == BaseItemKind.MUSIC_VIDEO
+        // A music video, or a home video put in the queue or a playlist.
+        val video = dto.type == BaseItemKind.MUSIC_VIDEO || dto.mediaType == MediaType.VIDEO
         return MusicTrack(
             id = dto.id,
             title = dto.name.orEmpty(),
@@ -138,6 +140,7 @@ internal class MediaMapper(private val api: ApiClient) {
             isFavorite = dto.userData?.isFavorite ?: false,
             playlistItemId = dto.playlistItemId,
             isVideo = video,
+            keepsResume = video && dto.type != BaseItemKind.MUSIC_VIDEO,
         )
     }
 

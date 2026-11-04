@@ -109,12 +109,12 @@ class FolderRepository @Inject constructor(
         media(folderId).filterIsInstance<FolderMedia.Video>().map { it.item }
 
     /**
-     * The music videos in [folderId] and every folder below it; without one, in every music video
-     * library. By name: the page sorts them for the profile.
+     * The videos in [folderId] and every folder below it; without one, in every library of [type].
+     * By name: the page sorts them for the profile.
      */
-    suspend fun musicVideosBelow(folderId: UUID?): List<FolderMedia.Video> = withContext(Dispatchers.IO) {
+    suspend fun videosBelow(folderId: UUID?, type: CollectionType = CollectionType.HOMEVIDEOS): List<FolderMedia.Video> = withContext(Dispatchers.IO) {
         val session = checkNotNull(sessions.session.value) { "No profile is signed in" }
-        val parents = folderId?.let(::listOf) ?: libraries(session, CollectionType.MUSICVIDEOS).map { it.id }
+        val parents = folderId?.let(::listOf) ?: libraries(session, type).map { it.id }
         val items = coroutineScope {
             parents.map { parent ->
                 async {
@@ -122,7 +122,7 @@ class FolderRepository @Inject constructor(
                         userId = session.userId,
                         parentId = parent,
                         recursive = true,
-                        includeItemTypes = listOf(BaseItemKind.MUSIC_VIDEO),
+                        mediaTypes = listOf(MediaType.VIDEO),
                         sortBy = listOf(ItemSortBy.SORT_NAME),
                         fields = listOf(ItemFields.DATE_CREATED),
                         enableUserData = true,

@@ -116,6 +116,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
 import io.github.glacier_jellyfin.androidtv.detail.Crumb
+import io.github.glacier_jellyfin.androidtv.music.MusicActionsSheet
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.ContinueCard
@@ -127,6 +128,7 @@ import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.RowPivot
 import io.github.glacier_jellyfin.androidtv.ui.SortButton
+import io.github.glacier_jellyfin.androidtv.ui.ToolbarButton
 import io.github.glacier_jellyfin.androidtv.ui.SortMenu
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
@@ -186,6 +188,22 @@ fun FolderScreen(
         if (state.menu == null && closed != null) {
             withFrameNanos { }
             runCatching { menuButtons.getValue(closed).requestFocus() }
+        }
+    }
+    // A video's or folder's options take the focus with them when they close; it goes back where it was.
+    val sheet by viewModel.musicActions.sheet.collectAsStateWithLifecycle()
+    val optionsButton = remember { FocusRequester() }
+    var sheetFromToolbar by remember { mutableStateOf(false) }
+    var sheetWasOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(sheet == null) {
+        if (sheet != null) {
+            sheetWasOpen = true
+        } else if (sheetWasOpen) {
+            sheetWasOpen = false
+            withFrameNanos { }
+            val back = if (sheetFromToolbar) optionsButton else lastFocus?.let { requesters[it] }
+            sheetFromToolbar = false
+            back?.let { runCatching { it.requestFocus() } }
         }
     }
     // Subfolders in the profile's order like the media below them.
@@ -256,6 +274,11 @@ fun FolderScreen(
                             onAnchor = { menu, rect -> anchors[menu] = rect },
                             menuButtons = menuButtons,
                             active = activeView,
+                            onOptions = {
+                                sheetFromToolbar = true
+                                viewModel.shownOptions(title)
+                            },
+                            optionsButton = optionsButton,
                         )
                     }
                 }
@@ -297,6 +320,8 @@ fun FolderScreen(
             }
             null -> Unit
         }
+
+        MusicActionsSheet(viewModel.musicActions)
 
         // The gallery's stage takes the whole screen: the bar slides up out of its way, and back with the folders.
         AnimatedVisibility(
@@ -384,6 +409,7 @@ private fun GridLayout(
                         FolderTile(
                             folder,
                             onClick = { viewModel.open(folder) },
+                            onLongClick = { viewModel.folderOptions(folder) },
                             modifier = remembered(folder.id.toString())
                                 .padding(bottom = sizes.gridGap.dp)
                                 .then(if (folder == content.folders.last()) Modifier.focusProperties { right = FocusRequester.Cancel } else Modifier),
@@ -401,6 +427,7 @@ private fun GridLayout(
                         section,
                         settings,
                         onOpen = viewModel::open,
+                        onOptions = viewModel::videoOptions,
                         onFocus = { if (showRail) currentLetter = railLetter(it.name) },
                         remembered = remembered,
                         // By name, the last card's Right goes to the rail like every row's end.
@@ -444,6 +471,7 @@ private fun LazyGridScope.mediaCards(
     section: MediaSection,
     settings: FolderSettings,
     onOpen: (FolderMedia) -> Unit,
+    onOptions: (FolderMedia.Video) -> Unit,
     onFocus: (FolderMedia) -> Unit,
     remembered: (String) -> Modifier,
     lastRight: FocusRequester,
@@ -467,6 +495,7 @@ private fun LazyGridScope.mediaCards(
                         imageUrl = item.item.thumbUrl,
                         progress = item.item.progress,
                         onClick = { onOpen(item) },
+                        onLongClick = { onOptions(item) },
                         modifier = modifier,
                         locked = item.item.showsLock(),
                         imageHeight = cardHeight(),
@@ -538,7 +567,12 @@ private fun GalleryLayout(
                     SectionHeading(stringResource(R.string.folder_section_folders))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(sizes.gridGap.dp), verticalArrangement = Arrangement.spacedBy(sizes.gridGap.dp)) {
                         content.folders.forEach { folder ->
-                            FolderTile(folder, onClick = { viewModel.open(folder) }, modifier = remembered(folder.id.toString()).width(sizes.continueWidth.dp))
+                            FolderTile(
+                                folder,
+                                onClick = { viewModel.open(folder) },
+                                onLongClick = { viewModel.folderOptions(folder) },
+                                modifier = remembered(folder.id.toString()).width(sizes.continueWidth.dp),
+                            )
                         }
                     }
                 }
@@ -569,6 +603,7 @@ private fun GalleryLayout(
                             section = section,
                             labelled = sections.size > 1,
                             onOpen = viewModel::open,
+                            onOptions = viewModel::videoOptions,
                             onFocus = {
                                 preview = it
                                 viewModel.showPreview(it)
@@ -600,6 +635,7 @@ private fun Strip(
     section: MediaSection,
     labelled: Boolean,
     onOpen: (FolderMedia) -> Unit,
+    onOptions: (FolderMedia.Video) -> Unit,
     onFocus: (FolderMedia) -> Unit,
     remembered: (String) -> Modifier,
 ) {
@@ -616,6 +652,8 @@ private fun Strip(
                     GalleryTile(
                         item,
                         onClick = { onOpen(item) },
+                        // Photos have no options: the queue and playlists take videos.
+                        onLongClick = (item as? FolderMedia.Video)?.let { video -> { onOptions(video) } },
                         modifier = remembered(item.id.toString()).onFocusChanged { if (it.isFocused) onFocus(item) },
                     )
                 }
@@ -706,6 +744,9 @@ private fun Toolbar(
     onAnchor: (FolderMenu, Rect) -> Unit,
     menuButtons: Map<FolderMenu, FocusRequester>,
     active: FocusRequester,
+    /** The options for the videos of this folder and those below it. */
+    onOptions: () -> Unit,
+    optionsButton: FocusRequester,
 ) {
     Row(
         Modifier
@@ -728,6 +769,13 @@ private fun Toolbar(
             }
         }
         Spacer(Modifier.weight(1f))
+        ToolbarButton(
+            null,
+            GlacierIcons.More,
+            onClick = onOptions,
+            contentDescription = stringResource(R.string.music_options),
+            modifier = Modifier.focusRequester(optionsButton),
+        )
         SortButton(
             label = stringResource(settings.view.label),
             open = menu == FolderMenu.View,
@@ -812,10 +860,10 @@ internal fun takenText(date: LocalDateTime?): String? {
 
 /** A subfolder: a low tile with the folder sign and its name, as wide as its cell. */
 @Composable
-internal fun FolderTile(folder: MediaFolder, onClick: () -> Unit, modifier: Modifier) {
+internal fun FolderTile(folder: MediaFolder, onClick: () -> Unit, modifier: Modifier, onLongClick: (() -> Unit)? = null) {
     val accent = LocalAccent.current
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
-    GlacierCard(onClick = onClick, modifier = modifier.fillMaxWidth()) { focused ->
+    GlacierCard(onClick = onClick, modifier = modifier.fillMaxWidth(), onLongClick = onLongClick) { focused ->
         Row(
             Modifier
                 .fillMaxWidth()
@@ -869,13 +917,13 @@ private fun PhotoCard(photo: FolderMedia.Photo, onClick: () -> Unit, modifier: M
 
 /** A small picture of the gallery's row, in the card shape; a video carries the play sign and its length. */
 @Composable
-private fun GalleryTile(media: FolderMedia, onClick: () -> Unit, modifier: Modifier) {
+private fun GalleryTile(media: FolderMedia, onClick: () -> Unit, modifier: Modifier, onLongClick: (() -> Unit)? = null) {
     val shape = RoundedCornerShape(GlacierShapes.RadiusSm)
     val url = when (media) {
         is FolderMedia.Video -> media.item.thumbUrl
         is FolderMedia.Photo -> media.photo.thumbUrl
     }
-    GlacierCard(onClick = onClick, modifier = modifier.width(STRIP_WIDTH.dp)) { focused ->
+    GlacierCard(onClick = onClick, modifier = modifier.width(STRIP_WIDTH.dp), onLongClick = onLongClick) { focused ->
         Box(
             Modifier
                 .size(STRIP_WIDTH.dp, (STRIP_WIDTH * LocalFolderAspect.current.height / LocalFolderAspect.current.width).dp)

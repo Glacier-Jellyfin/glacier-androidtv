@@ -13,6 +13,8 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.FolderMedia
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaFolder
+import io.github.glacier_jellyfin.androidtv.core.data.media.MusicRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.data.media.sortedFor
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSettings
@@ -22,6 +24,9 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderView
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.core.log.Log
+import io.github.glacier_jellyfin.androidtv.music.MusicActions
+import io.github.glacier_jellyfin.androidtv.music.MusicController
+import io.github.glacier_jellyfin.androidtv.music.MusicTarget
 import io.github.glacier_jellyfin.androidtv.navigation.FolderRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PhotoRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
@@ -88,6 +93,8 @@ class FolderViewModel @Inject constructor(
     private val sessions: SessionManager,
     private val settings: SettingsRepository,
     playback: PlaybackRepository,
+    music: MusicController,
+    private val songs: MusicRepository,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<FolderRoute>()
     private val folderId = route.folderId?.let(UUID::fromString)
@@ -108,6 +115,14 @@ class FolderViewModel @Inject constructor(
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
+
+    /** The options of a video or folder: the queue, a playlist. */
+    val musicActions = MusicActions(
+        scope = viewModelScope,
+        controller = music,
+        music = songs,
+        toast = { _events.send(it) },
+    )
 
     /** The gallery's preview: the focused video plays in it. */
     private val preview = InlineVideo(context, playback, viewModelScope)
@@ -160,6 +175,25 @@ class FolderViewModel @Inject constructor(
             }
         }
     }
+
+    /** Options for a video (holding OK, or the menu key). */
+    fun videoOptions(video: FolderMedia.Video) {
+        musicActions.open(MusicTarget(title = video.name, tracks = { songs.tracks(listOf(video.id)) }))
+    }
+
+    /** Options for a subfolder: its videos and those of the folders below it. */
+    fun folderOptions(folder: MediaFolder) {
+        musicActions.open(MusicTarget(title = folder.name, tracks = { videosBelow(folder.id) }))
+    }
+
+    /** The toolbar's options, for the videos of this folder and those below it; [title] names them. */
+    fun shownOptions(title: String) {
+        musicActions.open(MusicTarget(title = title, tracks = { videosBelow(_state.value.content?.id) }))
+    }
+
+    /** The videos in [folderId] and the folders below it (every library without one), in the profile's order. */
+    private suspend fun videosBelow(folderId: UUID?): List<MusicTrack> =
+        songs.tracks(repository.videosBelow(folderId).sortedFor(settings.settings.value.folders).map { it.id })
 
     /** The gallery's preview shows [media]: a video starts after a moment on it, anything else stops it. */
     fun showPreview(media: FolderMedia?) {

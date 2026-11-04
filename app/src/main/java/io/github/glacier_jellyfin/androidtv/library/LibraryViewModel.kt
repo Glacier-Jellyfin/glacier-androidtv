@@ -369,13 +369,8 @@ class LibraryViewModel @Inject constructor(
      * view those of the folder shown and the folders below it. [title] names the queue.
      */
     fun playVideos(title: String, shuffled: Boolean) {
-        val state = _state.value
-        val query = state.query
         viewModelScope.launch {
-            val ids = runSuspendCatching {
-                if (state.inFolders) folders.musicVideosBelow(state.folderPath.lastOrNull()?.id).videosFor(query).map { it.item.id }
-                else repository.ids(query)
-            }.getOrElse {
+            val ids = runSuspendCatching { shownVideoIds() }.getOrElse {
                 Log.w(TAG, "Loading the music videos to play failed", it)
                 _events.send(UiEvent.Toast(R.string.music_videos_failed))
                 return@launch
@@ -387,6 +382,31 @@ class LibraryViewModel @Inject constructor(
             music.playSongs(title, if (shuffled) ids.shuffled() else ids)
             _events.send(UiEvent.Navigate(MusicRoute()))
         }
+    }
+
+    /** The videos Play would play: every one in the tab's order, or in the folder view those of the folder shown and below it. */
+    private suspend fun shownVideoIds(): List<UUID> {
+        val state = _state.value
+        return if (state.inFolders) videoIdsBelow(state.folderPath.lastOrNull()?.id) else repository.ids(state.query)
+    }
+
+    /** The music videos in [folderId] and the folders below it (all of them without one), in the tab's order. */
+    private suspend fun videoIdsBelow(folderId: UUID?): List<UUID> =
+        folders.videosBelow(folderId, CollectionType.MUSICVIDEOS).videosFor(_state.value.query).map { it.item.id }
+
+    /** Options for a music video of the tab (holding OK, or the menu key). */
+    fun videoOptions(item: MediaItem) {
+        musicActions.open(MusicTarget(title = item.title, subtitle = item.parentTitle, tracks = { songs.tracks(listOf(item.id)) }))
+    }
+
+    /** Options for a folder of the folder view: its videos and those of the folders below it. */
+    fun folderOptions(folder: MediaFolder) {
+        musicActions.open(MusicTarget(title = folder.name, tracks = { songs.tracks(videoIdsBelow(folder.id)) }))
+    }
+
+    /** The toolbar's options, for the videos Play would play; [title] names them. */
+    fun videosOptions(title: String) {
+        musicActions.open(MusicTarget(title = title, tracks = { songs.tracks(shownVideoIds()) }))
     }
 
     /** Options for a song of the songs tab (its "…", holding OK, or the menu key). */

@@ -640,6 +640,7 @@
     <string name="music_options">Options</string>
     <string name="music_options_play_next">Play next</string>
     <string name="music_options_add_queue">Add to queue</string>
+    <string name="music_options_add_videos_queue">Add music videos to queue</string>
     <string name="music_options_add_playlist">Add to playlist</string>
     <string name="music_options_remove_queue">Remove from queue</string>
     <string name="music_options_remove_playlist">Remove from this playlist</string>
