@@ -1,0 +1,1 @@
+New: Photos & videos, with folders, a gallery, full screen and a slideshow. Music videos play in the music player, mixed with songs, and the music player has a full screen with large lyrics. TrueHD and DTS-HD reach the receiver as the lossless bitstream, and Dolby Vision plays on more devices. When playback fails, Glacier names the error and offers the log as a QR code.

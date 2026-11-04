@@ -7,40 +7,39 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-04
+
 ### Neu
-- Bibliotheken mit Heimvideos und Fotos bekommen einen eigenen Eintrag in der Navigationsleiste, Fotos & Videos. Du blätterst sie nach Ordnern durch, die Ordner getrennt von Videos und Fotos und der Pfad über dem Titel. Die übrigen Videos eines Ordners laufen danach eins nach dem anderen
-- Fotos und Videos öffnen sich im Vollbild, ein Video läuft gleich dort. Links und rechts blättern mit animiertem Übergang durch den Ordner, OK auf einem Foto startet oder stoppt eine Diashow, OK auf einem Video öffnet den Player an der aktuellen Stelle. Eine Linie am unteren Rand zeigt, wie weit ein Video gelaufen ist oder wie lange die Diashow ein Foto noch zeigt. Unter Einstellungen › Wiedergabe stellst du ein, wie lange sie jedes Foto zeigt
-- Ein Ordner zeigt seine Videos und Fotos als Karten oder als Galerie: Das gewählte Bild füllt den Bildschirm hinter Titel und Ordnern, unten liegt eine Zeile kleiner Bilder zum Durchklicken. Gehst du in die Zeile, kommt das ganze Bild über der Zeile nach vorn, die Navigationsleiste fährt weg, und ein Video spielt darin. Chips links zeigen alle, nur Videos oder nur Fotos, Menüs rechts wählen die Ansicht und sortieren nach Aufnahmedatum oder Name. Zurück springt zuerst zu den Chips. Nach Datum sortiert bekommt jeder Monat unter den Karten eine Überschrift, nach Name sortiert springt eine A–Z-Leiste zu einem Buchstaben. Die Vollbildansicht blättert auch durch die Videos. Unter Einstellungen › Darstellung haben die Karten 16:9 oder 4:3
-- Musikvideos sind ein Reiter in Musik statt eines eigenen Eintrags in der Navigationsleiste, als 16:9-Karten sortiert nach Hinzugefügt, Titel, Erscheinungsjahr oder Künstler
-- Der Reiter Musikvideos zeigt alle Videos oder blättert durch ihre Ordner. Solange keine Ansicht gewählt ist, beginnt er mit allen Videos, wenn die meisten ihren Künstler nennen
-- Musikvideos laufen im Musik-Player, auch gemischt mit Songs in der Warteschlange: aus ihrem Reiter, der auch alle abspielen oder als Zufallsmix starten kann, von der Künstlerseite und aus Wiedergabelisten. Das Bild steht anstelle des Covers, auch im Mini-Player und im Vollbild
-- Musikvideos und ihre Ordner haben Optionen wie ein Album: OK halten, die Menü-Taste oder … in der Werkzeugleiste spielt alle ab oder zufällig, spielt sie als Nächstes oder legt sie in die Warteschlange oder eine Wiedergabeliste. Ein Zeichen im Bild der gewählten Karte weist darauf hin. Auf der Seite einer Wiedergabeliste lässt sich ein Video aus ihr entfernen
-- Eine Wiedergabeliste führt ihre Musikvideos zwischen ihren Songs in ihrer Reihenfolge auf und spielt sie zusammen ab
-- Musikvideos haben keine eigene Seite mehr: Wo sie erscheinen, spielen sie im Musik-Player
-- Alben, Künstler und Wiedergabelisten haben neben Zufällig abspielen einen Knopf für ähnliche Musik
-- Der Musik-Player hat ein Vollbild. Ein Song zeigt seinen Songtext groß und mittig auf dem unscharfen Cover, darunter Titel und Zeitleiste. Ohne Songtext pulsiert das Cover sanft
-- Glacier schickt TrueHD und DTS-HD als vollständigen verlustfreien Bitstream an den Receiver, auch auf Geräten, auf denen Android nur den DTS-Kern weitergibt oder bei TrueHD scheitert. Unter Einstellungen › Audio lässt sich das Android überlassen, oder der Server wandelt in E-AC-3 um, was nicht als Bitstream rausgeht. Das erhält Surround, wo das Gerät PCM nur in Stereo ausgibt
-- Unter Einstellungen › Wiedergabe schrumpft die Karte „Nächste Folge“ auf Wunsch nach einer Weile ohne Steuerung auf ihren Countdown. Nach oben holt sie zurück
+- Fotos & Videos: Bibliotheken mit Heimvideos und Fotos bekommen einen eigenen Eintrag in der Navigationsleiste und lassen sich nach Ordnern durchblättern
+- Fotos und Videos öffnen sich im Vollbild, mit Diashow auf OK
+- Ordner zeigen ihre Bilder als Karten oder als Galerie, gefiltert und nach Datum oder Name sortiert
+- Musikvideos sind ein Reiter in Musik, alle auf einmal oder nach Ordnern
+- Musikvideos laufen im Musik-Player, auch gemischt mit Songs in der Warteschlange und in Wiedergabelisten
+- Musikvideos und ihre Ordner haben die Optionen eines Albums
+- Alben, Künstler und Wiedergabelisten haben einen Knopf für ähnliche Musik
+- Der Musik-Player hat ein Vollbild mit großem Songtext auf dem unscharfen Cover
+- TrueHD und DTS-HD gehen als vollständiger verlustfreier Bitstream an den Receiver
+- Unter Einstellungen › Wiedergabe schrumpft die Karte „Nächste Folge“ auf Wunsch auf ihren Countdown
 
 ### Verbessert
-- Schlägt die Wiedergabe fehl, nennt die Meldung den Fehler und zeigt einen QR-Code, um das Protokoll für einen Fehlerbericht herunterzuladen
-- Zufällig abspielen auf einem Album, Künstler oder einer Wiedergabeliste spielt es gleich in zufälliger Reihenfolge, wie in Jellyfins Web-Oberfläche, statt die zufällige Reihenfolge einzuschalten
-- Alben bieten nicht mehr an, sie als gehört zu markieren
-- Die Navigationsleiste lässt oben rechts Platz für Hinweise. Brauchen ihre Einträge mehr Platz, scrollen die zwischen Suche und Einstellungen, und Suche, Einstellungen und Profil bleiben immer sichtbar
-- Der Player nennt Musikvideos und Aufnahmen nicht mehr „Filme“
-- Antwortet der Server nicht, öffnet Glacier die Serverauswahl, markiert den Server als nicht erreichbar und entfernt die Markierung, sobald er wieder antwortet
-- Die Servereinrichtung zeigt keine Schrittzahl mehr
-- Die Frage, ob die Einstellungen eines anderen Geräts übernommen werden sollen, öffnet sich im Vollbild, mit den Geräten und dem Tag, an dem jedes seine Einstellungen gespeichert hat
-- Die Serverauswahl zählt die Profile eines Servers so, wie „Wer schaut?“ sie zeigt, auch die nur auf diesem Gerät eingerichteten
-- Detailseiten lassen über und unter ihren Kartenzeilen überall gleich viel Platz
-- Dolby-Vision-Titel mit Enhancement Layer laufen auf Geräten, deren Decoder ihr Profil nicht kennt, in Dolby Vision, ohne den Enhancement Layer. Unter Einstellungen › Wiedergabe laufen sie stattdessen in HDR10
+- Schlägt die Wiedergabe fehl, nennt die Meldung den Fehler und bietet das Protokoll als QR-Code an
+- Dolby-Vision-Titel mit Enhancement Layer laufen auf mehr Geräten in Dolby Vision. Unter Einstellungen › Wiedergabe laufen sie stattdessen in HDR10
 - Die Wiedergabeprüfung erkennt auch Tonformate, die erst nach einem Moment aussetzen
+- Zufällig abspielen spielt ein Album, einen Künstler oder eine Wiedergabeliste gleich in zufälliger Reihenfolge
+- Ein Server, der nicht antwortet, wird in der Serverauswahl markiert
+- Die Navigationsleiste scrollt ihre mittleren Einträge, wenn der Platz knapp wird
+- Beim Übernehmen der Einstellungen eines anderen Geräts siehst du die Geräte und wann jedes sie gespeichert hat
+- Die Serverauswahl zählt die Profile so, wie „Wer schaut?“ sie zeigt
+- Alben bieten nicht mehr an, sie als gehört zu markieren
+- Der Player nennt Musikvideos und Aufnahmen nicht mehr „Filme“
+- Die Servereinrichtung zeigt keine Schrittzahl mehr
+- Detailseiten lassen um ihre Kartenzeilen überall gleich viel Platz
 
 ### Behoben
 - Eine neue Wiedergabeliste erscheint sofort in Musik
 - Die Knöpfe für den vorherigen und nächsten Titel im Musik-Player sprechen nicht mehr von Folgen
-- Rechts vom Profil in der Navigationsleiste springt der Fokus nicht mehr hinunter zur A–Z-Leiste einer Bibliothek
-- Ein unter derselben Adresse neu eingerichteter Server ersetzt seinen alten Eintrag, statt doppelt in der Liste zu stehen. Profile, deren Anmeldung er noch akzeptiert, behalten Anmeldung, PIN, Jugendschutz und Einstellungen
+- Rechts vom Profil in der Navigationsleiste springt der Fokus nicht mehr zur A–Z-Leiste einer Bibliothek
+- Ein unter derselben Adresse neu eingerichteter Server ersetzt seinen alten Eintrag, und seine Profile bleiben angemeldet
 
 ## [0.7.1] - 2026-10-31
 

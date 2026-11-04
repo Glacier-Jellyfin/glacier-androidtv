@@ -22,40 +22,39 @@ language is German.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-04
+
 ### New
-- Home video and photo libraries get their own entry, Photos & videos, in the navigation bar. Browse them by folder, with the folders apart from the videos and photos and the path above the title. The other videos of a folder follow one after another
-- Photos and videos open full screen, a video playing right there. Left and right browse the folder with an animated transition, OK on a photo starts or stops a slideshow, and OK on a video opens the player where it is. A line along the bottom shows how far a video has played or a photo's time in the slideshow. Settings › Playback sets how long the slideshow shows each photo
-- A folder shows its videos and photos as cards, or as a gallery: the focused picture fills the screen behind the title and folders, with a row of small pictures along the bottom to click through. Moving into the row brings the whole picture to the front above the row and slides the navigation bar away, and a video plays in it. Chips at the left show all, only videos or only photos, and menus at the right pick the view and sort by the date taken or by name. Back first goes up to the chips. Sorted by date, each month gets a heading among the cards, and sorted by name an A–Z rail jumps to a letter. The full-screen view browses the videos too. Settings › Appearance shapes the cards 16:9 or 4:3
-- Music videos are a tab of Music instead of their own entry in the navigation bar, as 16:9 cards sorted by date added, title, release year or artist
-- The music videos tab shows all videos or browses their folders. Until a view is picked, it starts with all videos when most of them name their artist
-- Music videos play in the music player, also mixed with songs in the queue: from their tab, which can also play or shuffle them all, from an artist's page and from playlists. The picture stands in place of the cover, in the mini player and in full screen too
-- Music videos and their folders have options like an album: hold OK, press the menu key or pick … in the toolbar to play or shuffle them all, play them next or add them to the queue or a playlist. A mark in the picture of the focused card says so. On a playlist's page a video can leave the playlist
-- A playlist lists its music videos among its songs, in its order, and plays them together
-- Music videos no longer have a page of their own: wherever they show, they play in the music player
-- Albums, artists and playlists have an instant mix button next to Shuffle
-- The music player has a full screen. A song shows its lyrics large and centered on its blurred cover, with its title and timeline below. Without lyrics the cover pulses gently
-- Glacier sends TrueHD and DTS-HD to the receiver as the whole lossless bitstream, also on devices where Android passes on only the DTS core or fails on TrueHD. Settings › Audio can leave it to Android, or have the server convert what cannot go out as a bitstream to E-AC-3, which keeps surround where the device sends PCM in stereo only
-- Settings › Playback can shrink the "Up next" card to its countdown after a while without the controls. Up brings it back
+- Photos & videos: home video and photo libraries get their own entry in the navigation bar, browsed by folder
+- Photos and videos open full screen, with a slideshow on OK
+- Folders show their pictures as cards or as a gallery, filtered and sorted by date or name
+- Music videos are a tab of Music, all at once or by folder
+- Music videos play in the music player, also mixed with songs in the queue and in playlists
+- Music videos and their folders have the options of an album
+- Albums, artists and playlists have an instant mix button
+- The music player has a full screen with large lyrics on the blurred cover
+- TrueHD and DTS-HD reach the receiver as the whole lossless bitstream
+- Settings › Playback can shrink the "Up next" card to its countdown
 
 ### Improved
-- When playback fails, the message names the error and shows a QR code to download the log for a bug report
-- Shuffle on an album, artist or playlist plays it in a random order right away, as in Jellyfin's web client, instead of switching shuffle on
-- Albums no longer offer to mark them as played
-- The navigation bar leaves room for notices at the top right. When its entries need more room, the ones between search and settings scroll, and search, settings and the profile always stay in view
-- The player no longer calls music videos and recordings "Movies"
-- When the server does not answer, Glacier opens the server list, marks the server as not reachable and removes the mark as soon as it answers again
-- The server setup no longer shows a step count
-- The question whether to take over the settings of another device opens full screen, with the devices and the day each saved its settings
-- The server list counts the profiles of a server as "Who's watching?" shows them, including those set up only on this device
-- Detail pages leave the same room above and below their rows of cards
-- Dolby Vision titles with an enhancement layer play in Dolby Vision on devices whose decoder lacks their profile, without the enhancement layer. Settings › Playback can play them in HDR10 instead
+- When playback fails, the message names the error and offers the log as a QR code
+- Dolby Vision titles with an enhancement layer play in Dolby Vision on more devices. Settings › Playback can play them in HDR10 instead
 - The playback check also catches sound formats that drop out after a moment
+- Shuffle plays an album, artist or playlist in a random order right away
+- A server that does not answer is marked in the server list
+- The navigation bar scrolls its middle entries when space runs short
+- Taking over another device's settings shows the devices and when each saved them
+- The server list counts profiles as "Who's watching?" shows them
+- Albums no longer offer to mark them as played
+- The player no longer calls music videos and recordings "Movies"
+- The server setup no longer shows a step count
+- Detail pages leave the same room around their rows of cards
 
 ### Fixed
 - A new playlist shows in Music right away
-- The music player's buttons for the previous and next song no longer speak of episodes
-- Right from the profile in the navigation bar no longer jumps down to the A–Z rail of a library
-- A server that was set up again at the same address replaces its old entry instead of being listed twice. Profiles it still signs in keep their sign-in, PIN, parental control and settings
+- The music player's previous and next buttons no longer speak of episodes
+- Right from the profile in the navigation bar no longer jumps to a library's A–Z rail
+- A server set up again at the same address replaces its old entry, and its profiles stay signed in
 
 ## [0.7.1] - 2026-10-31
 
