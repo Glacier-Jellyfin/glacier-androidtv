@@ -370,6 +370,8 @@ class MusicController @Inject constructor(
     fun play(sourceId: UUID, startTrackId: String?, shuffle: Boolean = false) {
         request = QueueRequest(startTrackId, shuffle) {
             val source = details.details(sourceId).item
+            // A music video on its own: it has no page, so it comes here to play.
+            if (source.kind == ItemKind.MusicVideo) return@QueueRequest LoadedQueue(null, source.title, music.tracks(listOf(sourceId)))
             val tracks = when (source.kind) {
                 ItemKind.Artist -> music.artistTracks(sourceId)
                 ItemKind.Playlist -> music.playlistQueue(sourceId)

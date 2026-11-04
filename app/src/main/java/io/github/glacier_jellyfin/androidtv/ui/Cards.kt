@@ -162,6 +162,8 @@ fun ContinueCard(
                     .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xD905090F)))),
             )
             if (locked) LockBadge(Modifier.align(Alignment.TopStart))
+            // With options, the mark in the corner says that holding OK opens them.
+            if (onLongClick != null) HoldOkMark(focused, accent, Modifier.align(Alignment.TopEnd).padding(14.dp), size = 34, onPicture = true)
             if (progress != null) {
                 ProgressBar(
                     progress = progress,
@@ -187,11 +189,7 @@ fun ContinueCard(
             }
         }
         Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            // With options, the mark after the title says that holding OK opens them, as on a song.
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                MarqueeText(title, style = GlacierText.body(19, FontWeight.SemiBold), color = if (focused) accent else GlacierColors.Ice, active = focused, modifier = Modifier.weight(1f))
-                if (onLongClick != null) HoldOkMark(focused, accent, size = 24)
-            }
+            MarqueeText(title, style = GlacierText.body(19, FontWeight.SemiBold), color = if (focused) accent else GlacierColors.Ice, active = focused)
             Text(subtitle, style = GlacierText.body(16), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -379,6 +377,8 @@ fun GridCard(
             )
             if (locked) LockBadge(Modifier.align(Alignment.TopStart))
             when {
+                // With options, the mark in the corner says that holding OK opens them.
+                onLongClick != null -> HoldOkMark(focused, accent, Modifier.align(Alignment.TopEnd).padding(14.dp), size = 34, onPicture = true)
                 count != null -> Badge(count.toString(), accent, Modifier.align(Alignment.TopEnd))
                 watched -> Box(
                     Modifier
@@ -394,11 +394,7 @@ fun GridCard(
             }
         }
         Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            // With options, the mark after the title says that holding OK opens them, as on a song.
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                MarqueeText(title, style = GlacierText.display(20), color = if (focused) accent else GlacierColors.Ice, active = focused, modifier = Modifier.weight(1f))
-                if (onLongClick != null) HoldOkMark(focused, accent, size = 24)
-            }
+            MarqueeText(title, style = GlacierText.display(20), color = if (focused) accent else GlacierColors.Ice, active = focused)
             if (caption != null) Text(caption, style = GlacierText.body(16), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }

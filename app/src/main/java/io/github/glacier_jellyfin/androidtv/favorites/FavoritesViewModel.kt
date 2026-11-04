@@ -20,7 +20,6 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepositor
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.music.MusicController
-import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
@@ -33,6 +32,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import io.github.glacier_jellyfin.androidtv.navigation.routeFor
 
 data class FavoritesState(
     val loading: Boolean = true,
@@ -93,7 +93,7 @@ class FavoritesViewModel @Inject constructor(
         }
     }
 
-    fun open(item: MediaItem) = navigate(DetailRoute(item.id.toString()))
+    fun open(item: MediaItem) = navigate(routeFor(item))
 
     /** All favorite songs play, from this one, and the player opens; [title] names the queue. */
     fun play(track: MusicTrack, title: String) {

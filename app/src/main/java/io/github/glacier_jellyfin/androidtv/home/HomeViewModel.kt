@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
+import io.github.glacier_jellyfin.androidtv.navigation.routeFor
 
 data class HomeState(
     val loading: Boolean = true,
@@ -224,7 +225,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun openDetails(item: MediaItem) = navigate(DetailRoute(item.id.toString()))
+    fun openDetails(item: MediaItem) = navigate(routeFor(item))
 
     /** A favorite song: all of them play, from this one, and the player opens; [title] names the queue. */
     fun playFavorite(track: MusicTrack, title: String) {

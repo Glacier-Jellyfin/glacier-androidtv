@@ -52,6 +52,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
+import io.github.glacier_jellyfin.androidtv.navigation.routeFor
 
 enum class TrackKind { Audio, Subtitles, Version }
 
@@ -151,6 +152,10 @@ class DetailViewModel @Inject constructor(
                 }
                 val similarAsync = async { runSuspendCatching { repository.similar(itemId) }.getOrDefault(emptyList()) }
                 val (details, selection) = withVersion(loaded)
+                if (details.item.kind == ItemKind.MusicVideo) {
+                    _events.send(UiEvent.Navigate(MusicRoute(itemId.toString()), replace = true))
+                    return@launch
+                }
                 _state.update { it.copy(details = details, selection = selection) }
                 when (details.item.kind) {
                     ItemKind.Series -> loadSeries(details)
@@ -159,7 +164,7 @@ class DetailViewModel @Inject constructor(
                     ItemKind.Album -> _state.update { it.copy(musicTracks = music.albumTracks(itemId)) }
                     ItemKind.Playlist -> {
                         val videos = runSuspendCatching { repository.playlistVideos(itemId) }.getOrDefault(emptyList())
-                        _state.update { it.copy(musicTracks = music.playlistTracks(itemId), playlistVideos = videos) }
+                        _state.update { it.copy(musicTracks = music.playlistQueue(itemId), playlistVideos = videos.filterNot { v -> v.kind == ItemKind.MusicVideo }) }
                     }
                     ItemKind.Artist -> {
                         val videos = runSuspendCatching { repository.artistVideos(itemId) }.getOrDefault(emptyList())
@@ -479,7 +484,7 @@ class DetailViewModel @Inject constructor(
                 title = track.title,
                 subtitle = listOfNotNull(track.artist, track.album).joinToString(" · ").ifEmpty { null },
                 tracks = { listOf(track) },
-                mixFrom = track.id,
+                mixFrom = track.id.takeUnless { track.isVideo },
                 playlistId = item.id.takeIf { entry != null },
                 playlistEntryIds = listOfNotNull(entry),
             ),
@@ -493,7 +498,8 @@ class DetailViewModel @Inject constructor(
             MusicTarget(
                 title = item.title,
                 subtitle = item.parentTitle,
-                mixFrom = item.id,
+                // Albums and artists have their instant mix beside Shuffle.
+                mixFrom = item.id.takeUnless { item.kind == ItemKind.Album || item.kind == ItemKind.Artist },
                 tracks = {
                     val state = _state.value
                     when (item.kind) {
@@ -515,8 +521,10 @@ class DetailViewModel @Inject constructor(
     /** After songs went in or out: the songs and the item's counts. */
     private fun reloadPlaylist() {
         viewModelScope.launch {
-            runSuspendCatching { Triple(repository.details(itemId), music.playlistTracks(itemId), repository.playlistVideos(itemId)) }
-                .onSuccess { (details, tracks, videos) -> _state.update { it.copy(details = details, musicTracks = tracks, playlistVideos = videos) } }
+            runSuspendCatching { Triple(repository.details(itemId), music.playlistQueue(itemId), repository.playlistVideos(itemId)) }
+                .onSuccess { (details, tracks, videos) ->
+                    _state.update { it.copy(details = details, musicTracks = tracks, playlistVideos = videos.filterNot { v -> v.kind == ItemKind.MusicVideo }) }
+                }
         }
     }
 
@@ -660,13 +668,13 @@ class DetailViewModel @Inject constructor(
 
     fun openEpisode(episode: MediaItem) = navigate(DetailRoute(episode.id.toString(), themeArea = episode.seriesId?.toString()))
 
-    fun openItem(item: MediaItem) = navigate(DetailRoute(item.id.toString()))
+    fun openItem(item: MediaItem) = navigate(routeFor(item))
 
     /**
      * A title of "More like this" leaves the titles and cast pages opened so far:
      * Back returns to where the first of them was opened from (a library, search).
      */
-    fun openSimilar(item: MediaItem) = navigate(DetailRoute(item.id.toString()), leaveTitles = true)
+    fun openSimilar(item: MediaItem) = navigate(routeFor(item), leaveTitles = true)
 
     /** An album's artist page. */
     fun openArtist() {

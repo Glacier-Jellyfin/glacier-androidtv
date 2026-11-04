@@ -13,7 +13,6 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.SearchRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrStatus
-import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SeerrRoute
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
@@ -32,6 +31,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import io.github.glacier_jellyfin.androidtv.navigation.routeFor
 
 data class SearchState(
     val query: String = "",
@@ -128,7 +128,7 @@ class SearchViewModel @Inject constructor(
         emptyList()
     }
 
-    fun open(item: MediaItem) = navigate(DetailRoute(item.id.toString()))
+    fun open(item: MediaItem) = navigate(routeFor(item))
 
     fun open(item: SeerrItem) = navigate(SeerrRoute(item.type.name, item.tmdbId))
 

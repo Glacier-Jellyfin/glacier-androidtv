@@ -285,6 +285,7 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                 showAlbum = playlist && coverUrl == null,
                                 onClick = { viewModel.playMusic(track) },
                                 onOptions = { viewModel.trackOptions(track) },
+                                video = track.isVideo,
                                 modifier = Modifier
                                     .padding(start = PageEdge.dp + songIndent, end = PageEdge.dp, bottom = SONG_ROW_GAP.dp)
                                     .focusRequester(focus)
@@ -327,6 +328,7 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                 if (videos.isNotEmpty()) {
                     item(key = "videos") {
                         MediaRow(
+                            // A playlist lists its music videos with its songs; this row holds its other videos.
                             title = stringResource(if (item.kind == ItemKind.Artist) R.string.library_music_videos else R.string.music_videos),
                             bottomPadding = LAST_ROW_BOTTOM.takeIf { state.similar.isEmpty() },
                             modifier = Modifier.padding(top = if (tracks.isEmpty() && state.artistAlbums.isEmpty()) FIRST_ROW_TOP.dp else 0.dp),

@@ -62,6 +62,10 @@ data class PhotoRoute(val folderId: String, val photoId: String)
 @Serializable
 data class DetailRoute(val itemId: String, val themeArea: String? = null, val seasonId: String? = null)
 
+/** Where a title opens: a music video plays in the music player (it has no page of its own), anything else opens its page. */
+fun routeFor(item: io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem): Any =
+    if (item.kind == io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind.MusicVideo) MusicRoute(item.id.toString()) else DetailRoute(item.id.toString())
+
 /**
  * The video player; with [queueOf] (a playlist, or an artist for its music videos) the next video follows.
  * [startMs] starts there instead of the resume point, such as where a slideshow's video had come to.

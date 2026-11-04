@@ -33,7 +33,6 @@ import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.music.MusicActions
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.music.MusicTarget
-import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
@@ -51,6 +50,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
+import io.github.glacier_jellyfin.androidtv.navigation.routeFor
 
 data class LibraryState(
     val query: LibraryQuery,
@@ -335,7 +335,7 @@ class LibraryViewModel @Inject constructor(
         val query = _state.value.query
         val route = when (item.kind) {
             ItemKind.Genre -> LibraryRoute(query.kind.name, query.libraryId?.toString(), title = item.title, genreId = item.id.toString())
-            else -> DetailRoute(item.id.toString())
+            else -> routeFor(item)
         }
         viewModelScope.launch { _events.send(UiEvent.Navigate(route)) }
     }

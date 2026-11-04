@@ -69,7 +69,6 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
-import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PersonRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SeerrRoute
@@ -98,6 +97,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
+import io.github.glacier_jellyfin.androidtv.navigation.routeFor
 
 data class PersonState(
     val loading: Boolean = true,
@@ -199,7 +199,7 @@ class PersonViewModel @Inject constructor(
     }
 
     fun open(credit: Credit) {
-        viewModelScope.launch { _events.send(UiEvent.Navigate(DetailRoute(credit.item.id.toString()))) }
+        viewModelScope.launch { _events.send(UiEvent.Navigate(routeFor(credit.item))) }
     }
 
     fun open(credit: SeerrCredit) {

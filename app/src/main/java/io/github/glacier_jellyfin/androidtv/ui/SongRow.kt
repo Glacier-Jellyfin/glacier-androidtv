@@ -27,6 +27,10 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.player.formatTime
+import io.github.glacier_jellyfin.androidtv.R
+import androidx.compose.ui.res.stringResource
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
+import androidx.tv.material3.Icon
 
 /** Height of a [SongRow]; lists space them [SONG_ROW_GAP] apart. */
 const val SONG_ROW_HEIGHT = 64
@@ -54,6 +58,8 @@ fun SongRow(
     album: String? = null,
     showArtist: Boolean = artist != null,
     showAlbum: Boolean = album != null,
+    /** A music video in a playlist, marked as one like in the player's queue. */
+    video: Boolean = false,
 ) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
@@ -82,14 +88,18 @@ fun SongRow(
                     modifier = Modifier.width(30.dp),
                 )
             }
-            Text(
-                title,
-                style = GlacierText.body(19, FontWeight.SemiBold),
-                color = if (focused) accent else GlacierColors.Ice,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1.4f),
-            )
+            Row(Modifier.weight(1.4f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (video) {
+                    Icon(GlacierIcons.Film, contentDescription = stringResource(R.string.music_video), tint = if (focused) accent else GlacierColors.Mist, modifier = Modifier.size(18.dp))
+                }
+                Text(
+                    title,
+                    style = GlacierText.body(19, FontWeight.SemiBold),
+                    color = if (focused) accent else GlacierColors.Ice,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             if (showArtist) SideText(artist, Modifier.weight(1f))
             if (showAlbum) SideText(album, Modifier.weight(1f))
             Text(
