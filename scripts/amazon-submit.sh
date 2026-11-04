@@ -148,14 +148,12 @@ for file in "$notes"/whatsnew-*; do
   upload "$path/promo-images" "$(graphic featureGraphic.png)"
   echo "Replaced the icons, background and promo image for $language"
 
-  # Fire TV screenshots sit in whichever list the Developer Console put them into.
+  # Amazon's check requires the Fire TV list in every language. The general list, which
+  # the Developer Console filled for some languages, is kept up to date where it has any.
   shots="$metadata/android/$language/images/tvScreenshots"
   [ -d "$shots" ] || shots="$metadata/android/en-US/images/tvScreenshots"
-  types=()
-  for type in screenshots firetv-screenshots; do
-    if [ "$(call GET "$path/$type" | count)" -gt 0 ]; then types+=("$type"); fi
-  done
-  [ "${#types[@]}" -gt 0 ] || types=(screenshots)
+  types=(firetv-screenshots)
+  if [ "$(call GET "$path/screenshots" | count)" -gt 0 ]; then types+=(screenshots); fi
   for type in "${types[@]}"; do
     clear_all "$path/$type"
     for shot in "$shots"/*.jpg; do
