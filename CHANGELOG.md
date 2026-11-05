@@ -22,6 +22,9 @@ language is German.
 
 ## [Unreleased]
 
+### Fixed
+- TrueHD and DTS-HD no longer stop playback with an error after a moment
+
 ## [0.8.0] - 2026-11-04
 
 ### New

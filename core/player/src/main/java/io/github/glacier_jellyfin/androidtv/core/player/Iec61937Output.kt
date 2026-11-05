@@ -134,7 +134,7 @@ internal class Iec61937OutputProvider private constructor(
  * [sampleRate]. Packed bursts wait in [pending] until the track takes them.
  */
 @OptIn(UnstableApi::class)
-private class Iec61937Output(
+internal class Iec61937Output(
     private val inner: AudioOutput,
     private val packer: Iec61937Packer,
     private val sampleRate: Int,
@@ -147,8 +147,11 @@ private class Iec61937Output(
     override fun write(buffer: ByteBuffer, encodedAccessUnitCount: Int, presentationTimeUs: Long): Boolean {
         // Bursts from earlier input first; new input waits until they are gone.
         if (!drain(presentationTimeUs)) return false
+        // The packer takes the whole buffer, so it counts as written even if bursts still wait:
+        // the sink moves on from an empty buffer and fails if a later write reports it done.
         packer.pack(buffer, pending)
-        return drain(presentationTimeUs)
+        drain(presentationTimeUs)
+        return true
     }
 
     /** Writes what the track takes; true once nothing waits. */
