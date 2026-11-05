@@ -82,12 +82,14 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -126,6 +128,8 @@ import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import io.github.glacier_jellyfin.androidtv.core.data.media.Lyrics
+import io.github.glacier_jellyfin.androidtv.core.designsystem.LeftToRight
+import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -517,12 +521,14 @@ private fun FullscreenView(state: MusicUiState, track: MusicTrack, player: ExoPl
                     }
                 }
                 val fraction = if (progress.durationMs > 0) (progress.positionMs.toFloat() / progress.durationMs).coerceIn(0f, 1f) else 0f
-                Box(Modifier.padding(top = 12.dp).fillMaxWidth().height(7.dp).clip(PillShape).background(GlacierColors.GlassFill2)) {
-                    Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(LocalAccent.current.main))
-                }
-                Row(Modifier.fillMaxWidth()) {
-                    Text(formatTime(progress.positionMs), style = GlacierText.mono(20), color = GlacierColors.Ice, modifier = Modifier.weight(1f))
-                    Text("\u2212" + formatTime(progress.durationMs - progress.positionMs), style = GlacierText.mono(20), color = GlacierColors.Mist)
+                LeftToRight {
+                    Box(Modifier.padding(top = 12.dp).fillMaxWidth().height(7.dp).clip(PillShape).background(GlacierColors.GlassFill2)) {
+                        Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(LocalAccent.current.main))
+                    }
+                    Row(Modifier.fillMaxWidth()) {
+                        Text(formatTime(progress.positionMs), style = GlacierText.mono(20), color = GlacierColors.Ice, modifier = Modifier.weight(1f))
+                        Text("\u2212" + formatTime(progress.durationMs - progress.positionMs), style = GlacierText.mono(20), color = GlacierColors.Mist)
+                    }
                 }
             }
         }
@@ -748,7 +754,7 @@ private fun LyricLines(track: MusicTrack, lines: List<LyricLine>, synced: Boolea
             .offset(x = (-24).dp)
             .onFocusChanged { focusedInside = it.hasFocus }
             // Left from a line goes to Play/Pause.
-            .leftTo(left)
+            .startTo(left, LocalLayoutDirection.current)
             // Lines fade out at the top and bottom edge (design mask 16 % / 78 %).
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithContent {
@@ -836,37 +842,44 @@ private fun Controls(
     modifier: Modifier,
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(28.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            SeekBar(progress, state.seekBackMs, state.seekForwardMs, down = playFocus, onSeekBy = viewModel::seekBy, onClick = viewModel::togglePlay)
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(formatTime(progress.positionMs), style = GlacierText.mono(20), color = GlacierColors.Ice)
-                Text(
-                    stringResource(R.string.music_track_of, state.index + 1, state.queue.size),
-                    style = GlacierText.body(18),
-                    color = GlacierColors.Mist,
-                    modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                )
-                Text("−" + formatTime(progress.durationMs - progress.positionMs), style = GlacierText.mono(20), color = GlacierColors.Mist)
+        LeftToRight {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SeekBar(progress, state.seekBackMs, state.seekForwardMs, down = playFocus, onSeekBy = viewModel::seekBy, onClick = viewModel::togglePlay)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(formatTime(progress.positionMs), style = GlacierText.mono(20), color = GlacierColors.Ice)
+                    Text(
+                        stringResource(R.string.music_track_of, state.index + 1, state.queue.size),
+                        style = GlacierText.body(18),
+                        color = GlacierColors.Mist,
+                        modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    )
+                    Text("−" + formatTime(progress.durationMs - progress.positionMs), style = GlacierText.mono(20), color = GlacierColors.Mist)
+                }
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            MusicButton(GlacierIcons.Shuffle, stringResource(if (state.shuffle) R.string.action_shuffle_off else R.string.action_shuffle), viewModel::toggleShuffle, on = state.shuffle)
-            MusicButton(GlacierIcons.SkipBack, stringResource(R.string.music_previous), viewModel::previous)
-            MusicButton(
-                if (state.playWhenReady) GlacierIcons.Pause else GlacierIcons.Play,
-                stringResource(if (state.playWhenReady) R.string.player_pause else R.string.player_play),
-                viewModel::togglePlay,
-                big = true,
-                modifier = Modifier.focusRequester(playFocus),
-            )
-            MusicButton(GlacierIcons.SkipForward, stringResource(R.string.music_next), viewModel::next)
-            MusicButton(
-                if (state.repeat == RepeatMode.One) GlacierIcons.RepeatOne else GlacierIcons.Repeat,
-                stringResource(R.string.action_repeat),
-                viewModel::cycleRepeat,
-                on = state.repeat != RepeatMode.Off,
-            )
+            // Playback keeps its direction in every language; the buttons after it follow the layout.
+            LeftToRight {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    MusicButton(GlacierIcons.Shuffle, stringResource(if (state.shuffle) R.string.action_shuffle_off else R.string.action_shuffle), viewModel::toggleShuffle, on = state.shuffle)
+                    MusicButton(GlacierIcons.SkipBack, stringResource(R.string.music_previous), viewModel::previous)
+                    MusicButton(
+                        if (state.playWhenReady) GlacierIcons.Pause else GlacierIcons.Play,
+                        stringResource(if (state.playWhenReady) R.string.player_pause else R.string.player_play),
+                        viewModel::togglePlay,
+                        big = true,
+                        modifier = Modifier.focusRequester(playFocus),
+                    )
+                    MusicButton(GlacierIcons.SkipForward, stringResource(R.string.music_next), viewModel::next)
+                    MusicButton(
+                        if (state.repeat == RepeatMode.One) GlacierIcons.RepeatOne else GlacierIcons.Repeat,
+                        stringResource(R.string.action_repeat),
+                        viewModel::cycleRepeat,
+                        on = state.repeat != RepeatMode.Off,
+                    )
+                }
+            }
             // A music video has no lyrics (Jellyfin reads them for songs only).
             if (state.current?.isVideo != true) {
                 MusicButton(GlacierIcons.Lyrics, stringResource(R.string.lyrics_title), viewModel::toggleLyrics, on = state.lyricsOn, label = stringResource(R.string.lyrics_title))
@@ -976,9 +989,9 @@ internal fun MusicButton(
     }
 }
 
-/** Left from anything inside goes to [target] instead of the nearest thing on the left. */
-private fun Modifier.leftTo(target: FocusRequester): Modifier = onPreviewKeyEvent { event ->
-    if (event.key != Key.DirectionLeft) return@onPreviewKeyEvent false
+/** The key towards the start (Left, or Right in a right-to-left layout) goes from anything inside to [target]. */
+private fun Modifier.startTo(target: FocusRequester, direction: LayoutDirection): Modifier = onPreviewKeyEvent { event ->
+    if (event.key != direction.startKey) return@onPreviewKeyEvent false
     if (event.type == KeyEventType.KeyDown) runCatching { target.requestFocus() }
     true
 }
@@ -1020,7 +1033,7 @@ private fun QueuePanel(state: MusicUiState, progress: MusicProgress, onPick: (In
             modifier = Modifier
                 .fillMaxSize()
                 .onFocusChanged { focusedInside = it.hasFocus }
-                .then(if (left != null) Modifier.leftTo(left) else Modifier)
+                .then(if (left != null) Modifier.startTo(left, LocalLayoutDirection.current) else Modifier)
                 // Coming in from the controls lands on the song that plays.
                 .focusProperties { onEnter = { currentFocus.requestFocus() } },
         ) {

@@ -66,6 +66,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -97,6 +98,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
+import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
 import io.github.glacier_jellyfin.androidtv.music.MusicActionsSheet
 import io.github.glacier_jellyfin.androidtv.player.formatTime
 import io.github.glacier_jellyfin.androidtv.ui.CardShape
@@ -121,6 +123,7 @@ import io.github.glacier_jellyfin.androidtv.ui.title
 import io.github.glacier_jellyfin.androidtv.ui.yearText
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
@@ -384,7 +387,7 @@ fun LibraryScreen(
                                     },
                                     onLongClick = { viewModel.folderOptions(sub) },
                                     modifier = entryFocus(sub.id.toString(), first = index == 0)
-                                        .then(if (index == folder.folders.lastIndex) Modifier.focusProperties { right = FocusRequester.Cancel } else Modifier),
+                                        .then(if (index == folder.folders.lastIndex) Modifier.focusProperties { end = FocusRequester.Cancel } else Modifier),
                                 )
                             }
                         }
@@ -422,7 +425,7 @@ fun LibraryScreen(
                                 else -> Modifier
                             }.then(if (id == lastFocusId) Modifier.focusRequester(restoreFocus) else Modifier)
                                 // A group's last row is often short: Right goes to the rail, not up to the row above.
-                                .then(if (showRail && group != null && (index == state.items.lastIndex || startsGroup(state.items, index + 1))) Modifier.focusProperties { right = railFocus } else Modifier)
+                                .then(if (showRail && group != null && (index == state.items.lastIndex || startsGroup(state.items, index + 1))) Modifier.focusProperties { end = railFocus } else Modifier)
                             val onFocus = Modifier.onFocusChanged {
                                 if (it.isFocused) {
                                     inContent = true
@@ -678,7 +681,7 @@ private fun groupLabel(group: ListGroup, sort: LibrarySort): String = when (grou
 }
 
 /** 90 minutes as "1:30". */
-private fun hoursText(minutes: Int): String = "%d:%02d".format(minutes / 60, minutes % 60)
+private fun hoursText(minutes: Int): String = "%d:%02d".format(Locale.ROOT, minutes / 60, minutes % 60)
 
 @Composable
 private fun Header(state: LibraryState) {
@@ -804,6 +807,7 @@ internal fun AlphabetRail(
      */
     onLeft: (() -> Boolean)? = null,
 ) {
+    val direction = LocalLayoutDirection.current
     val order = if (descending) AlphabetLetters.reversed() else AlphabetLetters
     val focused = current?.takeIf { it in letters } ?: order.firstOrNull { it in letters }
     Column(
@@ -813,7 +817,7 @@ internal fun AlphabetRail(
             .focusProperties { onEnter = { runCatching { focus.requestFocus() } } }
             .focusGroup()
             .onPreviewKeyEvent { event ->
-                event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft && onLeft?.invoke() == true
+                event.type == KeyEventType.KeyDown && event.key == direction.startKey && onLeft?.invoke() == true
             }
             .then(modifier)
             .width(48.dp)

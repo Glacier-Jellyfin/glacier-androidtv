@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
+import io.github.glacier_jellyfin.androidtv.core.designsystem.startGradient
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -78,7 +79,7 @@ fun DetailBackdrop(url: String?, height: Int, modifier: Modifier = Modifier) {
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Brush.horizontalGradient(0f to Color(0xF70A1420), 0.44f to Color(0xCC0A1420), 0.62f to Color(0x990A1420), 0.9f to Color(0x290A1420))),
+                .startGradient(0f to Color(0xF70A1420), 0.44f to Color(0xCC0A1420), 0.62f to Color(0x990A1420), 0.9f to Color(0x290A1420)),
         )
         Box(
             Modifier

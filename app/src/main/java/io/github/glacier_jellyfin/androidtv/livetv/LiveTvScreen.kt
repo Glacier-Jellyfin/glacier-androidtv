@@ -529,7 +529,7 @@ private fun ChannelRow(
             if (channel.favorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
             stringResource(if (channel.favorite) R.string.livetv_favorite_remove else R.string.livetv_favorite_add),
             onFavorite,
-            modifier = upFocus.focusProperties { right = FocusRequester.Cancel },
+            modifier = upFocus.focusProperties { end = FocusRequester.Cancel },
             on = channel.favorite,
         )
     }

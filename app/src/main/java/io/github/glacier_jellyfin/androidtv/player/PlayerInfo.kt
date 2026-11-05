@@ -45,6 +45,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -72,6 +73,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierTabs
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
+import io.github.glacier_jellyfin.androidtv.core.designsystem.horizontalStep
 import io.github.glacier_jellyfin.androidtv.detail.trackLabel
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.FactBadge
@@ -139,6 +141,7 @@ fun InfoPanel(
  */
 @Composable
 internal fun InfoPanelFrame(tabs: List<String>, onDismiss: () -> Unit, content: @Composable (tab: Int) -> Unit) {
+    val direction = LocalLayoutDirection.current
     BackHandler(onBack = onDismiss)
     val focus = remember { FocusRequester() }
     var tab by remember { mutableIntStateOf(0) }
@@ -169,7 +172,7 @@ internal fun InfoPanelFrame(tabs: List<String>, onDismiss: () -> Unit, content: 
                         }
                         Key.DirectionLeft, Key.DirectionRight -> {
                             if (event.type == KeyEventType.KeyDown) {
-                                tab = (tab + if (event.key == Key.DirectionRight) 1 else -1).coerceIn(0, tabs.lastIndex)
+                                tab = (tab + (direction.horizontalStep(event.key) ?: 0)).coerceIn(0, tabs.lastIndex)
                             }
                             true
                         }

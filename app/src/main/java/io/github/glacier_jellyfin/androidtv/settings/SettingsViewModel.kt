@@ -121,6 +121,8 @@ data class SettingsUiState(
     val deleteAsked: DeviceSettings? = null,
     /** "Remove from this TV?" is open. */
     val removeAsked: Boolean = false,
+    /** The update dialog with the full release notes, opened from the update card. */
+    val updateDialog: Boolean = false,
 ) {
     val hasOwnCopy: Boolean get() = copies.any { it.deviceId == thisDeviceId }
 }
@@ -361,6 +363,10 @@ class SettingsViewModel @Inject constructor(
     fun askRemove() = _state.update { it.copy(removeAsked = true) }
 
     fun dismissRemove() = _state.update { it.copy(removeAsked = false) }
+
+    fun showUpdate() = _state.update { it.copy(updateDialog = true) }
+
+    fun closeUpdate() = _state.update { it.copy(updateDialog = false) }
 
     /** Forgets the profile on this device, see [SessionManager.removeFromDevice]; the Jellyfin account stays. */
     fun removeProfile(choice: RemoveProfile) {

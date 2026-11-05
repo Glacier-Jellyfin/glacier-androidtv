@@ -12,15 +12,18 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.absoluteOffset
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,8 +35,10 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
@@ -115,8 +120,8 @@ fun ToolbarButton(label: String?, icon: ImageVector, onClick: () -> Unit, modifi
 }
 
 /**
- * The design's sort dropdown, 14px below the sort button and right-aligned
- * with it ([anchor]: the button's bounds in the root). Drawn in the screen itself
+ * The design's sort dropdown, 14px below the sort button and aligned with its
+ * end edge ([anchor]: the button's bounds in the root, so placed without mirroring). Drawn in the screen itself
  * rather than a popup window, which would not share the theme's 1920-wide density.
  * Focus starts on the current sort and stays inside while it is open.
  */
@@ -135,11 +140,16 @@ fun <T> SortMenu(
     val menuWidth = 430.dp
     val firstFocus = remember { FocusRequester() }
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
-    val x = with(density) { anchor.right.toDp() } - menuWidth
+    // The end edge: the right one, or the left one in a right-to-left layout, where the menu opens rightwards.
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val x = with(density) { if (rtl) anchor.left.toDp() else anchor.right.toDp() - menuWidth }
     val y = with(density) { anchor.bottom.toDp() } + 14.dp
     Column(
         Modifier
-            .offset(x = x, y = y)
+            // From the screen's top left corner, as the anchor is measured, in either layout direction.
+            .fillMaxSize()
+            .wrapContentSize(AbsoluteAlignment.TopLeft, unbounded = true)
+            .absoluteOffset(x = x, y = y)
             .width(menuWidth)
             .clip(shape)
             .background(GlacierColors.Deep)

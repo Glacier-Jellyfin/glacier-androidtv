@@ -387,7 +387,7 @@ private fun GridLayout(
                             onClick = { viewModel.open(folder) },
                             modifier = remembered(folder.id.toString())
                                 .padding(bottom = sizes.gridGap.dp)
-                                .then(if (folder == content.folders.last()) Modifier.focusProperties { right = FocusRequester.Cancel } else Modifier),
+                                .then(if (folder == content.folders.last()) Modifier.focusProperties { end = FocusRequester.Cancel } else Modifier),
                         )
                     }
                 }
@@ -460,7 +460,7 @@ private fun LazyGridScope.mediaCards(
                     .padding(bottom = CARD_BOTTOM.dp)
                     .onFocusChanged { if (it.isFocused) onFocus(item) }
                     // A month's last row is often short: Right at its end stays, not down to another month.
-                    .then(if (item == media.last()) Modifier.focusProperties { right = lastRight } else Modifier)
+                    .then(if (item == media.last()) Modifier.focusProperties { end = lastRight } else Modifier)
                 when (item) {
                     is FolderMedia.Video -> ContinueCard(
                         title = item.name,

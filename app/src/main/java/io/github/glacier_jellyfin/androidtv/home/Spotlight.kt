@@ -41,9 +41,11 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -57,6 +59,9 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
+import io.github.glacier_jellyfin.androidtv.core.designsystem.endKey
+import io.github.glacier_jellyfin.androidtv.core.designsystem.startGradient
+import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
 import io.github.glacier_jellyfin.androidtv.ui.FactsRow
 import io.github.glacier_jellyfin.androidtv.ui.KenBurns
@@ -88,8 +93,9 @@ fun Spotlight(
     buttonModifier: (String) -> Modifier = { Modifier },
 ) {
     val item = items.getOrNull(index) ?: return
+    val direction = LocalLayoutDirection.current
     fun step(by: Int) = Modifier.onPreviewKeyEvent { event ->
-        val key = if (by < 0) Key.DirectionLeft else Key.DirectionRight
+        val key = if (by < 0) direction.startKey else direction.endKey
         if (items.size < 2 || event.key != key) return@onPreviewKeyEvent false
         if (event.type == KeyEventType.KeyDown) onSelect((index + by).mod(items.size))
         true
@@ -109,7 +115,7 @@ fun Spotlight(
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Brush.horizontalGradient(0f to Color(0xF50A1420), 0.38f to Color(0xC20A1420), 0.72f to Color(0x1A0A1420))),
+                .startGradient(0f to Color(0xF50A1420), 0.38f to Color(0xC20A1420), 0.72f to Color(0x1A0A1420)),
         )
         Box(
             Modifier
@@ -263,7 +269,10 @@ private fun Dot(active: Boolean, progress: () -> Float?) {
                 if (filled != null && filled > 0f) {
                     // A plain bar cut to the pill: a narrow round rect of its own would bulge out.
                     val pill = Path().apply { addRoundRect(RoundRect(Rect(top, bar), radius)) }
-                    clipPath(pill) { drawRect(accent, top, Size(bar.width * filled.coerceIn(0f, 1f), bar.height)) }
+                    // From the start edge: the right one in a right-to-left layout.
+                    val fill = bar.width * filled.coerceIn(0f, 1f)
+                    val from = if (layoutDirection == LayoutDirection.Rtl) bar.width - fill else 0f
+                    clipPath(pill) { drawRect(accent, Offset(from, top.y), Size(fill, bar.height)) }
                 }
             },
     )

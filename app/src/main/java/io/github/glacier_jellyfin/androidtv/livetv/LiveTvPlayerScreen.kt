@@ -51,7 +51,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
@@ -60,11 +59,13 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -81,11 +82,15 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
+import io.github.glacier_jellyfin.androidtv.core.designsystem.LeftToRight
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
+import io.github.glacier_jellyfin.androidtv.core.designsystem.endKey
 import io.github.glacier_jellyfin.androidtv.core.designsystem.ignoreHeldOk
+import io.github.glacier_jellyfin.androidtv.core.designsystem.startGradient
+import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
 import io.github.glacier_jellyfin.androidtv.player.OsdGlass
 import io.github.glacier_jellyfin.androidtv.player.OsdSecondary
 import io.github.glacier_jellyfin.androidtv.player.formatTime
@@ -141,6 +146,7 @@ fun LiveTvPlayerScreen(
     }
 
     val rootFocus = remember { FocusRequester() }
+    val direction = LocalLayoutDirection.current
     var bannerVisible by remember { mutableStateOf(true) }
     var listOpen by remember { mutableStateOf(false) }
     var programsOpen by remember { mutableStateOf(false) }
@@ -217,8 +223,16 @@ fun LiveTvPlayerScreen(
         TimeControl.Info,
     )
 
+    // Left and Right move as the buttons show: playback keeps its direction, and in a right-to-left
+    // layout the buttons after it sit to its left, the last one leftmost.
+    fun buttonsOnScreen(): List<TimeControl> {
+        val all = buttons()
+        val (playback, rest) = all.partition { it == TimeControl.Back || it == TimeControl.Play || it == TimeControl.Forward }
+        return if (direction == LayoutDirection.Rtl) rest.reversed() + playback else all
+    }
+
     fun moveControl(by: Int) {
-        val buttons = buttons()
+        val buttons = buttonsOnScreen()
         val index = buttons.indexOf(control).takeIf { it >= 0 } ?: buttons.indexOf(TimeControl.Play)
         control = buttons[(index + by).coerceIn(0, buttons.lastIndex)]
     }
@@ -296,7 +310,7 @@ fun LiveTvPlayerScreen(
                 }
                 if (programsOpen) {
                     // Left (towards the picture) closes the programmes.
-                    if (event.key == Key.DirectionLeft) {
+                    if (event.key == direction.startKey) {
                         if (event.type == KeyEventType.KeyUp) programsOpen = false
                         return@onPreviewKeyEvent true
                     }
@@ -304,7 +318,7 @@ fun LiveTvPlayerScreen(
                 }
                 if (listOpen) {
                     // Right (towards the picture) closes it, as Left closes the programmes.
-                    if (event.key == Key.DirectionRight) {
+                    if (event.key == direction.endKey) {
                         if (event.type == KeyEventType.KeyUp) listOpen = false
                         return@onPreviewKeyEvent true
                     }
@@ -370,11 +384,11 @@ fun LiveTvPlayerScreen(
                         if (typed.isNotEmpty()) commitNumber() else openSeeking(at = TimeControl.Play)
                         true
                     }
-                    Key.DirectionLeft -> {
+                    direction.startKey -> {
                         listOpen = true
                         true
                     }
-                    Key.DirectionRight, Key.Guide -> {
+                    direction.endKey, Key.Guide -> {
                         programsOpen = true
                         true
                     }
@@ -546,7 +560,7 @@ private fun ProgramList(
         Modifier
             .fillMaxHeight()
             .width(720.dp)
-            .background(Brush.horizontalGradient(listOf(GlacierColors.Void.copy(alpha = 0.95f), GlacierColors.Void))),
+            .startGradient(listOf(GlacierColors.Void.copy(alpha = 0.95f), GlacierColors.Void)),
     ) {
         Column(Modifier.fillMaxSize().padding(top = 56.dp)) {
             Text(
@@ -684,16 +698,18 @@ private fun ChannelBanner(state: LiveTvPlayerState, seeking: Boolean, scrubMs: L
                     )
                 }
                 if (now != null || shift != null) {
-                    ProgramTimeline(
-                        program = now,
-                        shift = shift,
-                        scrubMs = scrubMs,
-                        // The knob only shows once the picture can move away from now.
-                        knob = shift != null && (seeking || behind != null || state.paused || scrubMs != null),
-                        focused = seeking && control == TimeControl.Bar,
-                        nowMs = state.nowMs,
-                        modifier = Modifier.padding(top = 6.dp),
-                    )
+                    LeftToRight {
+                        ProgramTimeline(
+                            program = now,
+                            shift = shift,
+                            scrubMs = scrubMs,
+                            // The knob only shows once the picture can move away from now.
+                            knob = shift != null && (seeking || behind != null || state.paused || scrubMs != null),
+                            focused = seeking && control == TimeControl.Bar,
+                            nowMs = state.nowMs,
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
+                    }
                 }
                 if (seeking) {
                     Row(
@@ -701,14 +717,19 @@ private fun ChannelBanner(state: LiveTvPlayerState, seeking: Boolean, scrubMs: L
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        if (shift != null) TimeButton(GlacierIcons.Replay, stringResource(R.string.player_rewind), selected = control == TimeControl.Back)
-                        TimeButton(
-                            icon = if (state.paused) GlacierIcons.Play else GlacierIcons.Pause,
-                            description = stringResource(if (state.paused) R.string.player_play else R.string.player_pause),
-                            selected = control == TimeControl.Play,
-                            big = true,
-                        )
-                        if (shift != null) TimeButton(GlacierIcons.Forward, stringResource(R.string.player_forward), selected = control == TimeControl.Forward)
+                        // Playback keeps its direction in every language; the buttons after it follow the layout.
+                        LeftToRight {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                if (shift != null) TimeButton(GlacierIcons.Replay, stringResource(R.string.player_rewind), selected = control == TimeControl.Back)
+                                TimeButton(
+                                    icon = if (state.paused) GlacierIcons.Play else GlacierIcons.Pause,
+                                    description = stringResource(if (state.paused) R.string.player_play else R.string.player_pause),
+                                    selected = control == TimeControl.Play,
+                                    big = true,
+                                )
+                                if (shift != null) TimeButton(GlacierIcons.Forward, stringResource(R.string.player_forward), selected = control == TimeControl.Forward)
+                            }
+                        }
                         if (shift?.live == false) {
                             TimeLabelButton(GlacierIcons.SkipForward, stringResource(R.string.livetv_go_live), selected = control == TimeControl.Live)
                         }
@@ -926,7 +947,7 @@ private fun ChannelList(
         Modifier
             .fillMaxHeight()
             .width(680.dp)
-            .background(Brush.horizontalGradient(listOf(GlacierColors.Void, GlacierColors.Void.copy(alpha = 0.95f)))),
+            .startGradient(listOf(GlacierColors.Void, GlacierColors.Void.copy(alpha = 0.95f))),
     ) {
         Column(Modifier.fillMaxSize().padding(top = 56.dp)) {
             Text(

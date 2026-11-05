@@ -47,6 +47,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -74,6 +75,8 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
+import io.github.glacier_jellyfin.androidtv.core.designsystem.endKey
+import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
@@ -103,6 +106,7 @@ fun PhotoScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onStop() }
     val reduceMotion = LocalReduceMotion.current
     val focus = remember { FocusRequester() }
+    val direction = LocalLayoutDirection.current
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     // A slideshow or a video runs on its own: the TV must not dim or start its screensaver meanwhile.
     val view = LocalView.current
@@ -136,8 +140,8 @@ fun PhotoScreen(
                 // Without photos the keys belong to the retry button.
                 if (event.type != KeyEventType.KeyDown || state.media.isEmpty()) return@onPreviewKeyEvent false
                 when (event.key) {
-                    Key.DirectionLeft -> viewModel.previous()
-                    Key.DirectionRight -> viewModel.next()
+                    direction.startKey -> viewModel.previous()
+                    direction.endKey -> viewModel.next()
                     Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> viewModel.select()
                     Key.MediaPlayPause -> viewModel.playPause()
                     // Up and down only bring the name back.

@@ -26,6 +26,7 @@ language is German.
 - Dolby Vision profile 7 from dual layer MKV files plays in Dolby Vision
 - Sound sent to the receiver starts again by itself when the TV stops playing it
 - Short HDMI drops no longer switch the sound from the receiver to the device
+- Settings › System opens the update dialog, where long release notes can be scrolled to the end
 
 ### Fixed
 - Some Dolby Vision MKV files no longer stop with a read error

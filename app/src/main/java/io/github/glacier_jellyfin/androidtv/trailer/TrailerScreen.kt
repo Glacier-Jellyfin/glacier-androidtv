@@ -93,11 +93,13 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
+import io.github.glacier_jellyfin.androidtv.core.designsystem.LeftToRight
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
+import io.github.glacier_jellyfin.androidtv.core.designsystem.startGradient
 import io.github.glacier_jellyfin.androidtv.detail.TrackPanel
 import io.github.glacier_jellyfin.androidtv.detail.TrackRow
 import io.github.glacier_jellyfin.androidtv.player.ControlButton
@@ -255,7 +257,7 @@ fun TrailerScreen(
 
         // Hidden OSD: a hairline of progress at the bottom edge (not over a YouTube player).
         if (!osdShown && !stopped && youTube == null && !state.loading) {
-            ProgressLine(progress, Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(4.dp))
+            LeftToRight { ProgressLine(progress, Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(4.dp)) }
         }
 
         AnimatedVisibility(visible = osdShown, enter = fadeIn(), exit = fadeOut()) {
@@ -430,27 +432,34 @@ private fun TrailerOsd(
                 .padding(start = 80.dp, end = 80.dp, bottom = 60.dp),
             verticalArrangement = Arrangement.spacedBy(34.dp),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                ProgressBar(progress, onSeekBy = onSeekBy, downFocus = playFocus)
-                Row(Modifier.fillMaxWidth()) {
-                    Text(formatTime(progress.positionMs), style = GlacierText.mono(19), color = GlacierColors.Ice)
-                    Spacer(Modifier.weight(1f))
-                    if (progress.durationMs > 0) {
-                        Text("−" + formatTime(progress.durationMs - progress.positionMs), style = GlacierText.mono(19), color = GlacierColors.Mist)
+            LeftToRight {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ProgressBar(progress, onSeekBy = onSeekBy, downFocus = playFocus)
+                    Row(Modifier.fillMaxWidth()) {
+                        Text(formatTime(progress.positionMs), style = GlacierText.mono(19), color = GlacierColors.Ice)
+                        Spacer(Modifier.weight(1f))
+                        if (progress.durationMs > 0) {
+                            Text("−" + formatTime(progress.durationMs - progress.positionMs), style = GlacierText.mono(19), color = GlacierColors.Mist)
+                        }
                     }
                 }
             }
 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                ControlButton(GlacierIcons.Replay, stringResource(R.string.player_rewind), onClick = { onSeekBy(-SEEK_BACK_MS) })
-                ControlButton(
-                    if (state.playWhenReady) GlacierIcons.Pause else GlacierIcons.Play,
-                    stringResource(if (state.playWhenReady) R.string.player_pause else R.string.player_play),
-                    onClick = onTogglePlay,
-                    big = true,
-                    modifier = Modifier.focusRequester(playFocus),
-                )
-                ControlButton(GlacierIcons.Forward, stringResource(R.string.trailer_forward), onClick = { onSeekBy(SEEK_FORWARD_MS) })
+                // Playback keeps its direction in every language; the buttons after it follow the layout.
+                LeftToRight {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        ControlButton(GlacierIcons.Replay, stringResource(R.string.player_rewind), onClick = { onSeekBy(-SEEK_BACK_MS) })
+                        ControlButton(
+                            if (state.playWhenReady) GlacierIcons.Pause else GlacierIcons.Play,
+                            stringResource(if (state.playWhenReady) R.string.player_pause else R.string.player_play),
+                            onClick = onTogglePlay,
+                            big = true,
+                            modifier = Modifier.focusRequester(playFocus),
+                        )
+                        ControlButton(GlacierIcons.Forward, stringResource(R.string.trailer_forward), onClick = { onSeekBy(SEEK_FORWARD_MS) })
+                    }
+                }
                 state.titleAction?.let { action ->
                     LabelButton(
                         GlacierIcons.Play,
@@ -704,13 +713,11 @@ private fun EndScreen(
         Box(
             Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.horizontalGradient(
-                        0f to Color(0xF505090F),
-                        0.4f to Color(0xE005090F),
-                        0.78f to Color(0x5905090F),
-                        1f to Color(0x3305090F),
-                    ),
+                .startGradient(
+                    0f to Color(0xF505090F),
+                    0.4f to Color(0xE005090F),
+                    0.78f to Color(0x5905090F),
+                    1f to Color(0x3305090F),
                 ),
         )
         Box(

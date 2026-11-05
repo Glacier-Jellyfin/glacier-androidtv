@@ -212,7 +212,7 @@ fun RecordingsView(
                     val rowModifier = Modifier
                         .focusRequester(requester)
                         .focusProperties {
-                            right = FocusRequester.Cancel
+                            end = FocusRequester.Cancel
                             if (entry.key == firstKey) this.up = up
                         }
                         .onFocusChanged { if (it.isFocused) focusKey = entry.key }

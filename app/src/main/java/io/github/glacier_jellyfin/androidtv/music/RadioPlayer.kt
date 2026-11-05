@@ -328,7 +328,7 @@ private fun StationRow(
             if (station.favorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
             stringResource(if (station.favorite) R.string.livetv_favorite_remove else R.string.livetv_favorite_add),
             onFavorite,
-            modifier = Modifier.focusProperties { right = FocusRequester.Cancel },
+            modifier = Modifier.focusProperties { end = FocusRequester.Cancel },
             on = station.favorite,
             size = 44,
         )

@@ -62,12 +62,14 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
+import io.github.glacier_jellyfin.androidtv.core.designsystem.LeftToRight
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.ui.seasonLabel
 import kotlinx.coroutines.delay
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun PlayerOsd(
@@ -106,36 +108,43 @@ fun PlayerOsd(
                 .padding(start = 80.dp, end = 80.dp, bottom = 72.dp),
             verticalArrangement = Arrangement.spacedBy(30.dp),
         ) {
-            Timeline(
-                progress = progress,
-                scrubMs = scrubMs,
-                chapters = state.chapters,
-                segments = state.segments,
-                trickplay = state.details?.trickplay,
-                imageHeaders = state.imageHeaders,
-                focusRequester = seekFocus,
-                downFocus = playFocus,
-                seekBackMs = state.seekBackMs,
-                seekForwardMs = state.seekForwardMs,
-                onScrub = onScrub,
-                onCommit = { if (scrubMs != null) onCommitScrub() else onTogglePlay() },
-            )
+            LeftToRight {
+                Timeline(
+                    progress = progress,
+                    scrubMs = scrubMs,
+                    chapters = state.chapters,
+                    segments = state.segments,
+                    trickplay = state.details?.trickplay,
+                    imageHeaders = state.imageHeaders,
+                    focusRequester = seekFocus,
+                    downFocus = playFocus,
+                    seekBackMs = state.seekBackMs,
+                    seekForwardMs = state.seekForwardMs,
+                    onScrub = onScrub,
+                    onCommit = { if (scrubMs != null) onCommitScrub() else onTogglePlay() },
+                )
+            }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    if (state.previous != null) {
-                        ControlButton(GlacierIcons.SkipBack, stringResource(R.string.player_previous), onClick = onPrevious)
-                    }
-                    ControlButton(GlacierIcons.Replay, stringResource(R.string.player_rewind), onClick = { onSeekBy(-state.seekBackMs) })
-                    ControlButton(
-                        if (state.playWhenReady) GlacierIcons.Pause else GlacierIcons.Play,
-                        stringResource(if (state.playWhenReady) R.string.player_pause else R.string.player_play),
-                        onClick = onTogglePlay,
-                        big = true,
-                        modifier = Modifier.focusRequester(playFocus).onFocusChanged { onPlayFocused(it.isFocused) },
-                    )
-                    ControlButton(GlacierIcons.Forward, stringResource(R.string.player_forward), onClick = { onSeekBy(state.seekForwardMs) })
-                    if (state.next != null) {
-                        ControlButton(GlacierIcons.SkipForward, stringResource(R.string.player_next), onClick = onNext)
+                    // Playback keeps its direction in every language; the buttons after it follow the layout.
+                    LeftToRight {
+                        Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            if (state.previous != null) {
+                                ControlButton(GlacierIcons.SkipBack, stringResource(R.string.player_previous), onClick = onPrevious)
+                            }
+                            ControlButton(GlacierIcons.Replay, stringResource(R.string.player_rewind), onClick = { onSeekBy(-state.seekBackMs) })
+                            ControlButton(
+                                if (state.playWhenReady) GlacierIcons.Pause else GlacierIcons.Play,
+                                stringResource(if (state.playWhenReady) R.string.player_pause else R.string.player_play),
+                                onClick = onTogglePlay,
+                                big = true,
+                                modifier = Modifier.focusRequester(playFocus).onFocusChanged { onPlayFocused(it.isFocused) },
+                            )
+                            ControlButton(GlacierIcons.Forward, stringResource(R.string.player_forward), onClick = { onSeekBy(state.seekForwardMs) })
+                            if (state.next != null) {
+                                ControlButton(GlacierIcons.SkipForward, stringResource(R.string.player_next), onClick = onNext)
+                            }
+                        }
                     }
                     LabelButton(GlacierIcons.Speaker, stringResource(R.string.player_audio), { onOpen(OsdButton.Audio) }, Modifier.focusRequester(buttonFocus.getValue(OsdButton.Audio)))
                     if (state.subtitles.isNotEmpty()) {
@@ -450,6 +459,6 @@ internal fun formatTime(ms: Long): String {
     val h = total / 3600
     val m = total % 3600 / 60
     val s = total % 60
-    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+    return if (h > 0) "%d:%02d:%02d".format(Locale.ROOT, h, m, s) else "%d:%02d".format(Locale.ROOT, m, s)
 }
 

@@ -52,15 +52,18 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
@@ -146,6 +149,7 @@ fun TopNav(
     val scroll = rememberScrollState()
     var activeBounds by remember { mutableStateOf<IntRange?>(null) }
     val inset = with(LocalDensity.current) { NAV_SCROLL_INSET.dp.roundToPx() }
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     // Show the page's entry on arrival, even when it sits beyond the scrolled part.
     LaunchedEffect(activeBounds, scroll.viewportSize) {
         val bounds = activeBounds ?: return@LaunchedEffect
@@ -163,7 +167,7 @@ fun TopNav(
         onClick = { onSelect(target) },
         down = down,
         // Right from the avatar goes to the mini player, or nowhere: not down to the page (the A–Z rail).
-        right = if (target == NavTarget.Profile) (if (nowPlaying != null) miniFocus else FocusRequester.Cancel) else null,
+        end = if (target == NavTarget.Profile) (if (nowPlaying != null) miniFocus else FocusRequester.Cancel) else null,
         modifier = modifier.then(
             when (target) {
                 focusTarget -> Modifier.focusRequester(activeFocus)
@@ -173,8 +177,8 @@ fun TopNav(
         ),
     )
 
-    // The pill sits in the middle while there is room. With many entries it moves left, away from the
-    // toast corner and the mini player, but not past the page edge; beyond that its middle scrolls.
+    // The pill sits in the middle while there is room. With many entries it moves towards the start, away
+    // from the toast corner and the mini player, but not past the page edge; beyond that its middle scrolls.
     Layout(
         modifier = modifier.fillMaxWidth().onFocusChanged { focused = it.hasFocus },
         content = {
@@ -209,8 +213,13 @@ fun TopNav(
                             Entry(
                                 target,
                                 if (target == active) {
-                                    // Relative to the row's padded content; add the padding for scroll offsets.
-                                    Modifier.onPlaced { activeBounds = (it.positionInParent().x.toInt() + inset).let { x -> x..x + it.size.width } }
+                                    // Relative to the row's padded content; add the padding for scroll offsets. The scroll
+                                    // counts from the start edge, the right one in a right-to-left layout.
+                                    Modifier.onPlaced {
+                                        val left = it.positionInParent().x.toInt()
+                                        val start = if (rtl) (it.parentLayoutCoordinates?.size?.width ?: 0) - left - it.size.width else left
+                                        activeBounds = (start + inset).let { x -> x..x + it.size.width }
+                                    }
                                 } else {
                                     Modifier
                                 },
@@ -229,7 +238,7 @@ fun TopNav(
                     modifier = Modifier
                         .focusRequester(miniFocus)
                         .focusProperties {
-                            left = profileFocus
+                            start = profileFocus
                             if (down != null) this.down = down
                         },
                 )
@@ -249,8 +258,9 @@ fun TopNav(
         val corner = maxOf(toast, mini?.width ?: 0)
         val pillX = minOf(centred, miniEnd - corner - gap - pill.width).coerceAtLeast(edge)
         layout(width, maxOf(pill.height, mini?.height ?: 0)) {
-            pill.place(pillX, 0)
-            mini?.place(miniEnd - mini.width, 0)
+            // Relative, so in a right-to-left layout the toast corner and the mini player are on the left.
+            pill.placeRelative(pillX, 0)
+            mini?.placeRelative(miniEnd - mini.width, 0)
         }
     }
 }
@@ -264,28 +274,34 @@ private const val NAV_SCROLL_INSET = 6
 /** How far the scrolling entries fade out at an edge with more behind it; a focused entry stays clear of it. */
 private const val NAV_FADE = 40
 
-/** Fades the content out at the left and right edge while [scroll] has more to show there. */
+/** Fades the content out at the start and end edge while [scroll] has more to show there. */
 private fun Modifier.edgeFade(scroll: ScrollState, width: Dp): Modifier = this
     .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
     .drawWithContent {
         drawContent()
         val fade = width.toPx().coerceAtMost(size.width / 2)
-        if (scroll.value > 0) {
-            drawRect(
-                Brush.horizontalGradient(0f to Color.Transparent, 1f to Color.Black, startX = 0f, endX = fade),
-                size = Size(fade, size.height),
-                blendMode = BlendMode.DstIn,
-            )
-        }
-        if (scroll.value < scroll.maxValue) {
-            drawRect(
-                Brush.horizontalGradient(0f to Color.Black, 1f to Color.Transparent, startX = size.width - fade, endX = size.width),
-                topLeft = Offset(size.width - fade, 0f),
-                size = Size(fade, size.height),
-                blendMode = BlendMode.DstIn,
-            )
-        }
+        // The scroll counts from the start edge, which is the right one in a right-to-left layout.
+        val ltr = layoutDirection == LayoutDirection.Ltr
+        if (scroll.value > 0) fadeEdge(fade, left = ltr)
+        if (scroll.value < scroll.maxValue) fadeEdge(fade, left = !ltr)
     }
+
+private fun DrawScope.fadeEdge(fade: Float, left: Boolean) {
+    if (left) {
+        drawRect(
+            Brush.horizontalGradient(0f to Color.Transparent, 1f to Color.Black, startX = 0f, endX = fade),
+            size = Size(fade, size.height),
+            blendMode = BlendMode.DstIn,
+        )
+    } else {
+        drawRect(
+            Brush.horizontalGradient(0f to Color.Black, 1f to Color.Transparent, startX = size.width - fade, endX = size.width),
+            topLeft = Offset(size.width - fade, 0f),
+            size = Size(fade, size.height),
+            blendMode = BlendMode.DstIn,
+        )
+    }
+}
 
 /** The mini player's distance from the right edge of the screen: the same as from the top. */
 const val MINI_PLAYER_END = MINI_PLAYER_TOP
@@ -297,7 +313,7 @@ private fun NavItem(
     userName: String,
     onClick: () -> Unit,
     down: FocusRequester?,
-    right: FocusRequester?,
+    end: FocusRequester?,
     modifier: Modifier,
 ) {
     val accent = LocalAccent.current
@@ -330,7 +346,7 @@ private fun NavItem(
             .border(2.dp, border, PillShape)
             .focusProperties {
                 if (down != null) this.down = down
-                if (right != null) this.right = right
+                if (end != null) this.end = end
             }
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .padding(horizontal = if (iconOnly) 15.dp else 26.dp),

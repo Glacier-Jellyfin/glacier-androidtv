@@ -25,7 +25,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -34,7 +33,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
@@ -121,19 +119,20 @@ import android.hardware.display.DisplayManager
 import android.os.Build
 import android.provider.Settings
 import android.view.Display
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import io.github.glacier_jellyfin.androidtv.BuildConfig
-import io.github.glacier_jellyfin.androidtv.core.updater.AppVersion
-import io.github.glacier_jellyfin.androidtv.core.updater.UpdateCandidate
+import io.github.glacier_jellyfin.androidtv.core.designsystem.endKey
+import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateChannel
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
 import io.github.glacier_jellyfin.androidtv.core.updater.pending
+import io.github.glacier_jellyfin.androidtv.update.UpdateDialog
 import io.github.glacier_jellyfin.androidtv.update.megabytes
 import io.github.glacier_jellyfin.androidtv.update.message
-import io.github.glacier_jellyfin.androidtv.update.notesLanguage
 import io.github.glacier_jellyfin.androidtv.update.openStorePage
 import io.github.glacier_jellyfin.androidtv.update.publishedDate
-import io.github.glacier_jellyfin.androidtv.update.VersionNotes
-import io.github.glacier_jellyfin.androidtv.update.releaseNotes
 import java.text.DateFormat
 import kotlin.math.roundToInt
 import java.util.Date
@@ -252,9 +251,8 @@ private sealed interface SettingRow {
         val progress: Float? = null,
         val progressStart: String = "",
         val progressEnd: String = "",
-        val notesTitle: String = "",
-        val notes: List<VersionNotes> = emptyList(),
         override val enabled: Boolean = true,
+        val focus: FocusRequester? = null,
     ) : SettingRow {
         override val key: String get() = "update"
     }
@@ -338,6 +336,7 @@ fun SettingsScreen(
     // Right out of the categories always lands on the first card, not the nearest one.
     val firstCard = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
+    val direction = LocalLayoutDirection.current
     // The home row lifted with its grip in Settings › Home: Up and Down move it until OK or Back.
     var movingRow by remember { mutableStateOf<String?>(null) }
     // A list in a dialog ("My media" cards, favorites rows), opened with the pill on its row;
@@ -369,7 +368,7 @@ fun SettingsScreen(
                     .width(420.dp)
                     .onFocusChanged { inCategories = it.hasFocus }
                     .onKeyEvent { event ->
-                        if (event.type != KeyEventType.KeyDown || event.key != Key.DirectionRight) return@onKeyEvent false
+                        if (event.type != KeyEventType.KeyDown || event.key != direction.endKey) return@onKeyEvent false
                         scope.launch {
                             if (listState.firstVisibleItemIndex != 0 || listState.firstVisibleItemScrollOffset != 0) {
                                 listState.scrollToItem(0)
@@ -403,8 +402,9 @@ fun SettingsScreen(
                     // Left out of the cards always lands on the open category, not the nearest one. Focus
                     // properties cannot redirect it reliably here, so the move is made by hand and corrected.
                     .onKeyEvent { event ->
-                        if (event.type != KeyEventType.KeyDown || event.key != Key.DirectionLeft) return@onKeyEvent false
-                        if (focusManager.moveFocus(FocusDirection.Left) && !cardsFocus.value) {
+                        if (event.type != KeyEventType.KeyDown || event.key != direction.startKey) return@onKeyEvent false
+                        val start = if (direction == LayoutDirection.Rtl) FocusDirection.Right else FocusDirection.Left
+                        if (focusManager.moveFocus(start) && !cardsFocus.value) {
                             runCatching { categoryFocus.getValue(state.category).requestFocus() }
                         }
                         true
@@ -567,6 +567,19 @@ fun SettingsScreen(
         }
         if (state.removeAsked) {
             RemoveProfileDialog(state.userName, hasCopy = state.hasOwnCopy, onRemove = viewModel::removeProfile, onDismiss = viewModel::dismissRemove)
+        }
+        val updateCandidate = (state.update as? UpdateState.Available)?.candidate
+        val installedVersion = viewModel.updates.installed
+        if (state.updateDialog && updateCandidate != null && installedVersion != null) {
+            UpdateDialog(
+                updateCandidate,
+                installedVersion,
+                onNow = {
+                    viewModel.closeUpdate()
+                    viewModel.updates.download(install = true)
+                },
+                onLater = viewModel::closeUpdate,
+            )
         }
         pinPrompt?.let { PinDialog(it, onKey = viewModel.pin::key, onDismiss = viewModel.pin::dismiss) }
         state.diagnostics.share?.let { LogShareScreen(it, onClose = viewModel::closeShare) }
@@ -1668,6 +1681,18 @@ private fun updateRow(state: SettingsUiState, viewModel: SettingsViewModel): Set
     val installed = updates.installed
     val resources = LocalResources.current
     val channel = state.updateChannel.name
+    // Back on "Show update" when its dialog closes; otherwise focus would fall to the top bar.
+    val showFocus = remember { FocusRequester() }
+    var dialogOpened by remember { mutableStateOf(false) }
+    LaunchedEffect(state.updateDialog) {
+        if (state.updateDialog) {
+            dialogOpened = true
+        } else if (dialogOpened) {
+            dialogOpened = false
+            withFrameNanos { }
+            runCatching { showFocus.requestFocus() }
+        }
+    }
     // Busy states keep a button that does nothing: disabling it would drop the focus.
     val none = {}
     if (installed == null) {
@@ -1717,11 +1742,11 @@ private fun updateRow(state: SettingsUiState, viewModel: SettingsViewModel): Set
                     megabytes(resources, candidate.apk.sizeBytes),
                     publishedDate(candidate).orEmpty(),
                 ),
-                stringResource(R.string.update_download),
+                // The dialog from the home screen, where the full release notes can be read.
+                stringResource(R.string.update_show),
                 primary = true,
-                onClick = { updates.download() },
-                notesTitle = notesTitle(candidate, installed),
-                notes = notes(candidate),
+                onClick = viewModel::showUpdate,
+                focus = showFocus,
             )
         }
         is UpdateState.Downloading -> {
@@ -1744,8 +1769,6 @@ private fun updateRow(state: SettingsUiState, viewModel: SettingsViewModel): Set
             stringResource(R.string.update_install_now),
             primary = true,
             onClick = updates::install,
-            notesTitle = notesTitle(update.candidate, installed),
-            notes = notes(update.candidate),
         )
         is UpdateState.Installing -> SettingRow.Update(
             stringResource(R.string.update_installing),
@@ -1764,33 +1787,22 @@ private fun updateRow(state: SettingsUiState, viewModel: SettingsViewModel): Set
     }
 }
 
-/** "New in 1.4.0", or "New since 1.2.0" when the update spans several releases. */
-@Composable
-private fun notesTitle(candidate: UpdateCandidate, installed: AppVersion): String =
-    if (candidate.changes.size > 1) {
-        stringResource(R.string.update_new_since, installed.toString())
-    } else {
-        stringResource(R.string.update_new_in, candidate.version.toString())
-    }
-
-/** The release notes by release and section (New, Improved, Fixed …), newest release first. */
-@Composable
-private fun notes(candidate: UpdateCandidate): List<VersionNotes> {
-    val fallback = stringResource(R.string.update_notes_fallback)
-    val language = notesLanguage()
-    return remember(candidate, fallback, language) { releaseNotes(candidate, fallback, language) }
-}
-
 @Composable
 private fun UpdateCard(row: SettingRow.Update) {
     OptionCard(
         row.label,
         row.sub,
         row.enabled,
-        trailing = { ActionButton(onClick = row.onClick, label = row.value, primary = row.primary, enabled = row.enabled) },
-        below = if (row.progress == null && row.notes.isEmpty()) null else {
-            { UpdateDetails(row.progress, row.progressStart, row.progressEnd, row.notesTitle, row.notes) }
+        trailing = {
+            ActionButton(
+                onClick = row.onClick,
+                label = row.value,
+                primary = row.primary,
+                enabled = row.enabled,
+                modifier = row.focus?.let { Modifier.focusRequester(it) } ?: Modifier,
+            )
         },
+        below = row.progress?.let { progress -> { UpdateProgress(progress, row.progressStart, row.progressEnd) } },
     )
 }
 

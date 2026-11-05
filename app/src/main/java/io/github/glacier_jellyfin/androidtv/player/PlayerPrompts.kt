@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.tv.material3.Icon
@@ -177,7 +178,8 @@ fun UpNextCard(
                         val left = (countdown.remainingMs - elapsed.longValue).coerceAtLeast(0)
                         val fraction = if (countdown.remainingMs > 0) countdown.fraction * left / countdown.remainingMs else countdown.fraction
                         val width = size.width * fraction.coerceIn(0f, 1f)
-                        drawRoundRect(accent, size = size.copy(width = width), cornerRadius = CornerRadius(size.height / 2))
+                        val from = if (layoutDirection == LayoutDirection.Rtl) size.width - width else 0f
+                        drawRoundRect(accent, topLeft = Offset(from, 0f), size = size.copy(width = width), cornerRadius = CornerRadius(size.height / 2))
                     },
             )
         }

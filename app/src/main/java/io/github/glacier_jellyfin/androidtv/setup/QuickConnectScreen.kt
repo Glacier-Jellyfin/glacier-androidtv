@@ -44,6 +44,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import java.util.Locale
 
 @Composable
 fun QuickConnectScreen(
@@ -171,7 +172,7 @@ private fun Validity(secondsLeft: Int) {
             PulseDot()
             Text(stringResource(R.string.quick_connect_waiting), style = GlacierText.body(18), color = GlacierColors.Mist, modifier = Modifier.weight(1f))
             Text(
-                stringResource(R.string.quick_connect_valid, "%d:%02d".format(secondsLeft / 60, secondsLeft % 60)),
+                stringResource(R.string.quick_connect_valid, "%d:%02d".format(Locale.ROOT, secondsLeft / 60, secondsLeft % 60)),
                 style = GlacierText.mono(18),
                 color = GlacierColors.Mist,
             )

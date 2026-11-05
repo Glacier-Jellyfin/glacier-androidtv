@@ -50,6 +50,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
+import io.github.glacier_jellyfin.androidtv.core.designsystem.startGradient
 
 /** Card sizes of the design's two row densities (Settings › Appearance). */
 @Immutable
@@ -285,7 +286,7 @@ fun LibraryCard(name: String, count: String?, imageUrl: String?, onClick: () -> 
                 .clip(shape),
         ) {
             Artwork(imageUrl, Modifier.fillMaxSize())
-            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xD105090F), Color(0x2E05090F)))))
+            Box(Modifier.fillMaxSize().startGradient(listOf(Color(0xD105090F), Color(0x2E05090F))))
             Column(
                 Modifier
                     .align(Alignment.BottomStart)

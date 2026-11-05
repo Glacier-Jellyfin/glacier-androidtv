@@ -411,7 +411,7 @@ private fun StickyCover(listState: LazyListState, firstIndex: Int, endIndex: Int
                     val y = maxOf(RowPivot.dp.roundToPx(), top)
                         .coerceAtMost(maxOf(top, bottom - placeable.height))
                         .coerceIn(-placeable.height, viewport)
-                    placeable.place(0, y)
+                    placeable.placeRelative(0, y)
                 }
             },
         verticalArrangement = Arrangement.spacedBy(16.dp),

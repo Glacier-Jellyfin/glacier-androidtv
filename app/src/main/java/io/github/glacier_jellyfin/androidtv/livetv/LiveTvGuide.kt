@@ -44,6 +44,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,6 +66,8 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
+import io.github.glacier_jellyfin.androidtv.core.designsystem.endKey
+import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
 import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -114,6 +117,7 @@ fun GuideGrid(
     var heldOk by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val direction = LocalLayoutDirection.current
 
     var landed by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(landOn) {
@@ -211,14 +215,14 @@ fun GuideGrid(
                             }
                             if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                             when (event.key) {
-                                Key.DirectionRight -> {
+                                direction.endKey -> {
                                     cells.getOrNull(cellIndex + 1)?.let { next ->
                                         focusMs = next.startMs
                                         follow(next)
                                     }
                                     true
                                 }
-                                Key.DirectionLeft -> {
+                                direction.startKey -> {
                                     cells.getOrNull(cellIndex - 1)?.let { previous ->
                                         focusMs = maxOf(previous.startMs, fromMs)
                                         follow(previous)

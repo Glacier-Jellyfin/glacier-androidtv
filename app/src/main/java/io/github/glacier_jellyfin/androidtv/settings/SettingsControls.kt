@@ -33,7 +33,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +49,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.key
@@ -93,9 +91,10 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
 import io.github.glacier_jellyfin.androidtv.player.subtitleTypeface
 import io.github.glacier_jellyfin.androidtv.player.usesNative
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
-import io.github.glacier_jellyfin.androidtv.update.VersionNotes
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.layout
 
 /** A category on the left (design `pill()`): accent when focused, tinted when it is the open one. */
@@ -583,51 +582,17 @@ internal fun InfoCard(label: String, sub: String, value: String) {
     }
 }
 
-/** Below the update card: the download progress, or the notes of the version on offer by section (New, Improved, Fixed …). */
+/** Below the update card while it downloads: the progress, the version and the size so far. */
 @Composable
-internal fun UpdateDetails(progress: Float?, progressStart: String, progressEnd: String, notesTitle: String, notes: List<VersionNotes>) {
+internal fun UpdateProgress(progress: Float, progressStart: String, progressEnd: String) {
     val accent = LocalAccent.current.main
-    if (progress != null) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.fillMaxWidth().height(8.dp).clip(PillShape).background(GlacierColors.GlassFill2)) {
-                Box(Modifier.fillMaxWidth(progress).fillMaxHeight().clip(PillShape).background(accent))
-            }
-            Row(Modifier.fillMaxWidth()) {
-                Text(progressStart, style = GlacierText.mono(16), color = GlacierColors.Mist, modifier = Modifier.weight(1f))
-                Text(progressEnd, style = GlacierText.mono(16), color = GlacierColors.Mist)
-            }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.fillMaxWidth().height(8.dp).clip(PillShape).background(GlacierColors.GlassFill2)) {
+            Box(Modifier.fillMaxWidth(progress).fillMaxHeight().clip(PillShape).background(accent))
         }
-    }
-    if (notes.isNotEmpty()) {
-        Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(Modifier.fillMaxWidth().height(1.dp).background(GlacierColors.GlassBorder))
-                Text(notesTitle.uppercase(), style = GlacierText.label(15, 0.04), color = GlacierColors.Mist, modifier = Modifier.padding(top = 8.dp))
-            }
-            notes.forEach { release ->
-                // Only an update across several releases needs a heading per version.
-                if (notes.size > 1) {
-                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Text(stringResource(R.string.update_title, release.version), style = GlacierText.display(22), color = GlacierColors.Ice)
-                        release.date?.let { Text(it, style = GlacierText.body(16), color = GlacierColors.Mist, modifier = Modifier.padding(bottom = 2.dp)) }
-                    }
-                }
-                release.sections.forEach { section ->
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Text(section.heading.uppercase(), style = GlacierText.label(15, 0.06), color = accent)
-                            Box(Modifier.weight(1f).height(1.dp).background(GlacierColors.GlassBorder))
-                        }
-                        section.items.forEach { item ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                                Box(Modifier.padding(top = 11.dp).size(6.dp).clip(CircleShape).background(GlacierColors.Ice))
-                                Text(item.text, style = GlacierText.body(18), color = GlacierColors.Ice, modifier = Modifier.weight(1f))
-                                item.ref?.let { Text(it, style = GlacierText.mono(15), color = GlacierColors.Mist, modifier = Modifier.padding(top = 3.dp)) }
-                            }
-                        }
-                    }
-                }
-            }
+        Row(Modifier.fillMaxWidth()) {
+            Text(progressStart, style = GlacierText.mono(16), color = GlacierColors.Mist, modifier = Modifier.weight(1f))
+            Text(progressEnd, style = GlacierText.mono(16), color = GlacierColors.Mist)
         }
     }
 }

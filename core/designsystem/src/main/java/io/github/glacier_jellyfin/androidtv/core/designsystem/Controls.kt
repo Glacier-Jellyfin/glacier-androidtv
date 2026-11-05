@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,6 +23,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -298,9 +300,9 @@ fun PinWheel(
             )
             Slot(digits[0], Modifier.align(Alignment.Center))
             Slot(digits[1], Modifier.align(Alignment.TopCenter).padding(top = 8.dp))
-            Slot(digits[2], Modifier.align(Alignment.CenterEnd).padding(end = 8.dp))
+            Slot(digits[2], Modifier.align(AbsoluteAlignment.CenterRight).absolutePadding(right = 8.dp))
             Slot(digits[3], Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp))
-            Slot(digits[4], Modifier.align(Alignment.CenterStart).padding(start = 8.dp))
+            Slot(digits[4], Modifier.align(AbsoluteAlignment.CenterLeft).absolutePadding(left = 8.dp))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(48.dp), verticalAlignment = Alignment.CenterVertically) {
             @Composable

@@ -17,6 +17,7 @@ object GlacierIcons {
         "M10 5a2 2 0 0 0-1.344.519l-6.328 5.74a1 1 0 0 0 0 1.481l6.328 5.741A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z",
         "m12 9 6 6",
         "m18 9-6 6",
+        mirrored = true,
     )
     val Keyboard = icon(
         "M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z",
@@ -59,7 +60,7 @@ object GlacierIcons {
         strokeWidth = 1.9f,
     )
     val Bolt = icon("M13 2 4 14h7l-1 8 9-12h-7z", strokeWidth = 2.2f)
-    val ChevronRight = icon("m9 18 6-6-6-6")
+    val ChevronRight = icon("m9 18 6-6-6-6", mirrored = true)
     val Lock = icon(
         "M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z",
         "M7 11V7a5 5 0 0 1 10 0v4",
@@ -123,7 +124,7 @@ object GlacierIcons {
     /** "What's new": a four-pointed sparkle. */
     val Sparkle = filled("M12 3 14.2 9.8 21 12 14.2 14.2 12 21 9.8 14.2 3 12 9.8 9.8z", strokeWidth = 1.6f)
     val ChevronDown = icon("m6 9 6 6 6-6", strokeWidth = 2.4f)
-    val ChevronLeft = icon("m15 18-6-6 6-6", strokeWidth = 2.4f)
+    val ChevronLeft = icon("m15 18-6-6 6-6", strokeWidth = 2.4f, mirrored = true)
     val Speaker = icon(
         "M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5z",
         "M16 9a5 5 0 0 1 0 6",
@@ -177,15 +178,16 @@ object GlacierIcons {
     val Trash = icon("M3 6h18", "M8 6V4h8v2", "M19 6l-1 14H6L5 6", "M10 11v5", "M14 11v5")
     val Star = filled("M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z")
 
-    private fun icon(vararg paths: String, strokeWidth: Float = 2f): ImageVector =
-        build(paths.toList(), fill = false, strokeWidth = strokeWidth)
+    private fun icon(vararg paths: String, strokeWidth: Float = 2f, mirrored: Boolean = false): ImageVector =
+        build(paths.toList(), fill = false, strokeWidth = strokeWidth, mirrored = mirrored)
 
     /** Solid shape; tinted the same way as line icons. */
     private fun filled(vararg paths: String, strokeWidth: Float = 0f): ImageVector =
-        build(paths.toList(), fill = true, strokeWidth = strokeWidth)
+        build(paths.toList(), fill = true, strokeWidth = strokeWidth, mirrored = false)
 
-    private fun build(paths: List<String>, fill: Boolean, strokeWidth: Float): ImageVector =
-        ImageVector.Builder(defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f)
+    /** [mirrored] icons point the way to go and turn round in a right-to-left layout. */
+    private fun build(paths: List<String>, fill: Boolean, strokeWidth: Float, mirrored: Boolean): ImageVector =
+        ImageVector.Builder(defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f, autoMirror = mirrored)
             .apply {
                 paths.forEach { data ->
                     addPath(
