@@ -22,6 +22,10 @@ language is German.
 
 ## [Unreleased]
 
+### Improved
+- Sound sent to the receiver starts again by itself when the TV stops playing it
+- Short HDMI drops no longer switch the sound from the receiver to the device
+
 ## [0.8.1] - 2026-11-05
 
 ### Fixed

@@ -2,6 +2,7 @@ package io.github.glacier_jellyfin.androidtv.core.player
 
 import android.content.Context
 import android.net.Uri
+import android.os.Handler
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -151,7 +152,11 @@ object GlacierPlayer {
         )
             // Side-loaded .ass files go through the same parser.
             .setSubtitleParserFactory(assParsers)
-        val renderers = (if (request.setup.iec61937) Iec61937RenderersFactory(context) else DefaultRenderersFactory(context))
+        // A silent bitstream track: a seek to where the player stands flushes the sink, which opens a new one.
+        var built: ExoPlayer? = null
+        val renderers = GuardedRenderersFactory(context, request.setup.iec61937) {
+            built?.let { player -> Handler(player.applicationLooper).post { player.seekTo(player.currentPosition) } }
+        }
             // Platform decoders first; a software fallback only when a hardware decoder fails.
             .setEnableDecoderFallback(true)
             // FFmpeg (core/ffmpeg) for audio formats no platform decoder or passthrough handles, e.g. DTS.
@@ -166,6 +171,7 @@ object GlacierPlayer {
                 /* handleAudioFocus = */ true,
             )
             .build()
+        built = player
         Media3Logs.attach(player)
         val item = MediaItem.Builder()
             .setUri(request.url)
@@ -229,15 +235,25 @@ object GlacierPlayer {
             }
             .build()
 
-    /** Media3's renderers with an audio sink that packs TrueHD and DTS-HD itself ([Iec61937OutputProvider]). */
+    /**
+     * Media3's renderers with an audio sink that watches bitstreams ([GuardedAudioSink]) and, with
+     * [iec61937], packs TrueHD and DTS-HD itself ([Iec61937OutputProvider]).
+     */
     @OptIn(UnstableApi::class)
-    private class Iec61937RenderersFactory(context: Context) : DefaultRenderersFactory(context) {
+    private class GuardedRenderersFactory(
+        context: Context,
+        private val iec61937: Boolean,
+        private val onStall: () -> Unit,
+    ) : DefaultRenderersFactory(context) {
         override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioOutputPlaybackParams: Boolean): AudioSink =
-            DefaultAudioSink.Builder(context)
-                .setEnableFloatOutput(enableFloatOutput)
-                .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
-                .setAudioOutputProvider(Iec61937OutputProvider.create(context))
-                .build()
+            GuardedAudioSink(
+                DefaultAudioSink.Builder(context)
+                    .setEnableFloatOutput(enableFloatOutput)
+                    .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
+                    .apply { if (iec61937) setAudioOutputProvider(Iec61937OutputProvider.create(context)) }
+                    .build(),
+                onStall,
+            )
     }
 
     private fun SideloadedSubtitle.toConfiguration() =

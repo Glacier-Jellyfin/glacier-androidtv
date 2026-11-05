@@ -7,6 +7,10 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ## [Unreleased]
 
+### Verbessert
+- Ton für den Receiver startet von selbst neu, wenn der Fernseher ihn nicht mehr abspielt
+- Kurze HDMI-Aussetzer schalten den Ton nicht mehr vom Receiver auf das Gerät um
+
 ## [0.8.1] - 2026-11-05
 
 ### Behoben
