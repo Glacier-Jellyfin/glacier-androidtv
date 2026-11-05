@@ -78,15 +78,16 @@ adb shell "run-as $pkg mkdir -p files/updtest && run-as $pkg cp /data/local/tmp/
 
 ## Publishing a release (maintainer only)
 
-1. Move the `[Unreleased]` entries in `CHANGELOG.md` and `CHANGELOG.de.md`
-   into a new section `## [0.1.1] - 2026-10-03` in both. The English section
-   becomes the release notes and the text of the in-app update dialog
-   (`scripts/release-notes.sh` extracts it). The German one follows in a
-   collapsed `<details lang="de">` block, which the app shows when its
-   language is German. App versions before 0.6.3 ignore that block.
+1. Move the `[Unreleased]` entries in `CHANGELOG.md`, `CHANGELOG.de.md` and
+   `CHANGELOG.es.md` into a new section `## [0.1.1] - 2026-10-03` in all
+   three. The English section becomes the release notes and the text of the
+   in-app update dialog (`scripts/release-notes.sh` extracts it). The German
+   and Spanish ones follow in collapsed `<details lang="de">` and
+   `<details lang="es">` blocks, which the app shows when its language is
+   German or Spanish. App versions before 0.6.3 ignore those blocks.
    For a stable version, also write the short store notes (at most 500
    characters each) to
-   `fastlane/metadata/android/{en-US,de-DE}/changelogs/<versionCode>.txt`,
+   `fastlane/metadata/android/{en-US,de-DE,es-ES}/changelogs/<versionCode>.txt`,
    for example `60399.txt` for 0.6.3.
 2. Commit, then tag and push: `git tag v0.1.1 && git push origin main v0.1.1`.
 3. The `Release` workflow builds the signed APK `glacier-androidtv.apk` and
@@ -109,9 +110,9 @@ these places and say in both changelogs that servers have to be updated:
 
 - `MinimumServerVersion` in `core/jellyfin` `ServerInfo.kt`, and
   `ServerInfoTest.kt`
-- `setup_unsupported_body` in `app/src/main/res/values{,-de}/strings.xml`
+- `setup_unsupported_body` in `app/src/main/res/values{,-de,-es}/strings.xml`
 - `README.md` (requirements table) and `docs/ARCHITECTURE.md`
-- `fastlane/metadata/android/{en-US,de-DE}/full_description.txt`
+- `fastlane/metadata/android/{en-US,de-DE,es-ES}/full_description.txt`
 
 ### Signing key
 
@@ -217,7 +218,8 @@ is kept.
   `fastlane/metadata/android/{en-US,de-DE}/images/tvScreenshots/`) come from
   the takes of the promo video: `scripts/make-promo-video.py --takes DIR
   --only store`. They show the same moments as the website's section
-  pictures.
+  pictures. A language without its own images, such as `es-ES` for now,
+  shows the English ones in both stores.
 - Promo video: Google Play only takes a YouTube link. Upload
   `build/promo/glacier-promo[-de].mp4` to YouTube (public or unlisted, ads
   off, with the music credit from the end card in the description) and put

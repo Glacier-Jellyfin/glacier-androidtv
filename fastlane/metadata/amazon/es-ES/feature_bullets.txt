@@ -1,0 +1,7 @@
+Tu servidor Jellyfin en la tele, hecho para el mando
+TrueHD y DTS-HD llegan a tu receptor tal como están en el disco
+Dolby Vision, ajuste de la frecuencia de imagen y una comprobación de reproducción para tu tele
+OK salta la intro, los resúmenes se saltan solos, miniaturas al avanzar
+Un perfil para cada persona, con perfil infantil y PIN
+Música con letras, fotos como presentación y TV en directo con grabaciones
+Gratuito y de código abierto, sin anuncios y sin cuenta

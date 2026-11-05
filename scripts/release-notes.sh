@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Prints the CHANGELOG.md section for one version, without its heading, and
-# below it the CHANGELOG.de.md section as a collapsed HTML block. The in-app
-# update dialog renders exactly this text, so a release must not be published
-# without a matching English section. The German block is HTML so that app
-# versions before 0.6.3, which only read the Markdown, leave it out.
+# below it the section of each translation (CHANGELOG.de.md, CHANGELOG.es.md)
+# as a collapsed HTML block. The in-app update dialog renders exactly this
+# text, so a release must not be published without a matching English
+# section. The translations are HTML so that app versions before 0.6.3, which
+# only read the Markdown, leave them out.
 #
 # Usage: scripts/release-notes.sh 1.4.0-beta.2
 set -euo pipefail
@@ -27,11 +28,14 @@ if [ -z "$(echo "$notes" | tr -d '[:space:]')" ]; then
 fi
 printf '%s\n' "$notes" | sed -e '/./,$!d'
 
-german="$(section "$root/CHANGELOG.de.md")"
-if [ -n "$(echo "$german" | tr -d '[:space:]')" ]; then
-  printf '\n<details lang="de">\n<summary>Deutsch</summary>\n\n'
+# Each translation with the name its summary shows.
+for translation in "de:Deutsch" "es:Español"; do
+  language="${translation%%:*}"
+  translated="$(section "$root/CHANGELOG.$language.md")"
+  [ -n "$(echo "$translated" | tr -d '[:space:]')" ] || continue
+  printf '\n<details lang="%s">\n<summary>%s</summary>\n\n' "$language" "${translation#*:}"
   # "### Heading" becomes <h3>, "- item" and its indented continuation lines one <li>.
-  printf '%s\n' "$german" | awk '
+  printf '%s\n' "$translated" | awk '
     function esc(s) { gsub(/&/, "\\&amp;", s); gsub(/</, "\\&lt;", s); gsub(/>/, "\\&gt;", s); return s }
     function flush() { if (item != "") { print "<li>" esc(item) "</li>"; item = "" } }
     function close_list() { flush(); if (open) { print "</ul>"; open = 0 } }
@@ -42,4 +46,4 @@ if [ -n "$(echo "$german" | tr -d '[:space:]')" ]; then
     END               { close_list() }
   '
   printf '</details>\n'
-fi
+done

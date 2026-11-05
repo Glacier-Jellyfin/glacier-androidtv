@@ -3,7 +3,7 @@
 
 Drives a debug build on an Android TV emulator over adb, against the Glacier demo
 server (github.com/Glacier-Jellyfin/glacier-demo), and keeps each take as a
-1080p recording in the --takes folder, <take>[-de].mp4 per language.
+1080p recording in the --takes folder, <take>[-de|-es].mp4 per language.
 scripts/make-promo-video.py turns them into the promo film and the website's
 media.
 
@@ -13,11 +13,12 @@ server.
 
 Before running:
   - the demo server runs on this machine (glacier-demo: demo.py server start)
-  - an emulator with a 1920x1080 Google TV image runs with two snapshots,
-    "signed-in-family" and "signed-in-family-de": the debug build installed, the
-    profiles Nora, Alex and Kids signed in to the demo server (http://10.0.2.2:8098),
-    in the second one with Settings › Account › Interface language set to Deutsch
-    for each, the app stopped. Every take starts from a snapshot, so remembered
+  - an emulator with a 1920x1080 Google TV image runs with one snapshot per
+    language, "signed-in-family", "signed-in-family-de" and "signed-in-family-es":
+    the debug build installed, the profiles Nora, Alex and Kids signed in to the
+    demo server (http://10.0.2.2:8098), in the other languages with Settings ›
+    Account › Interface language set to Deutsch or Español for each, the app
+    stopped. Every take starts from a snapshot, so remembered
     tracks and the like from an earlier take never show up in the next.
 
 Needs Python 3.9+, adb and ffmpeg on PATH (or ADB / FFMPEG set). The script sets
@@ -52,7 +53,7 @@ USER = "Nora"
 PROFILES = ("Alex", "Kids", "Nora")
 # One emulator snapshot per language: the profiles signed in, their interface language set in
 # Settings › Account. Android's per-app language confuses the app's own one (keys stop moving).
-SNAPSHOTS = {"en": "signed-in-family", "de": "signed-in-family-de"}
+SNAPSHOTS = {"en": "signed-in-family", "de": "signed-in-family-de", "es": "signed-in-family-es"}
 TIMEZONE = "Europe/Berlin"
 # Positions in the navigation bar, counted from Home.
 NAV = {"Movie": 1, "Show": 2, "Music": 3, "Photos": 4, "Live TV": 5}

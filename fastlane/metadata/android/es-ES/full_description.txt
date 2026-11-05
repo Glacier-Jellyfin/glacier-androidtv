@@ -1,0 +1,35 @@
+La tele vuelve a ser tuya.
+
+Glacier lleva tu servidor Jellyfin al salón. Está hecho para el mando desde el primer día, así que el camino hasta tu próxima película es corto.
+
+Glacier necesita tu propio servidor Jellyfin, versión 12.0 o posterior. No incluye películas, series ni música.
+
+PARA EL EQUIPO DE SONIDO
+TrueHD y DTS-HD llegan a tu receptor tal como están en el disco, también donde Android solo envía el núcleo DTS o no puede con TrueHD. Si nada pasa, el servidor convierte a E-AC-3 y el sonido envolvente se mantiene.
+
+PARA EL TELEVISOR
+Dolby Vision se reproduce incluso desde UHD Blu-ray con perfil 7, convertido en el propio dispositivo. El televisor cambia a la frecuencia de imagen de la película. Antes, Glacier comprueba con archivos de prueba reales qué puede reproducir tu televisor.
+
+PARA TODOS EN EL SOFÁ
+Cada persona tiene un perfil con su propia imagen, su color y su progreso. El perfil infantil solo muestra lo que va con su edad, y el PIN se introduce con las flechas del mando. Cuando llega un televisor nuevo, los ajustes se vienen con él.
+
+LO QUE HACE EL MANDO
+• OK salta la intro. Los resúmenes se saltan solos.
+• Al avanzar se ven miniaturas, así llegas a la escena correcta.
+• El siguiente episodio está listo antes de que acaben los créditos.
+• La barra de la A a la Z salta directamente a la letra, incluso en bibliotecas grandes.
+
+LO DEMÁS
+• Música con letras grandes a pantalla completa, videoclips en la cola y un minirreproductor que se queda mientras navegas
+• Fotos y videos caseros por carpetas, como galería o como presentación
+• TV en directo con vista previa, guía de programación, grabaciones, pausa y retroceso
+
+LA LETRA PEQUEÑA
+• La búsqueda también encuentra títulos que aún no están en tu servidor. Solicítalos a través de Seerr con el plugin Jellyfin Enhanced.
+• Varias versiones de un título, como 4K y 1080p o un montaje del director, con la adecuada elegida para tu televisor
+• Seguir viendo y canales en la pantalla de inicio de Android TV (no en Fire TV)
+• Español, inglés y alemán, nueve colores de acento y un diseño compacto
+
+Glacier es gratuito y de código abierto bajo la GPL-3.0. No muestra anuncios y no necesita ninguna cuenta.
+
+Glacier no está afiliado al proyecto Jellyfin.

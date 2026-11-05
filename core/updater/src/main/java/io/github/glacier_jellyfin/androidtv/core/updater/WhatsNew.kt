@@ -25,7 +25,7 @@ data class WhatsNewPrompt(
  * "What's new" for a build a store updates ([UpdaterConfig.selfUpdate] off):
  * after the store installed a newer version, the home screen shows the
  * changelog the build carries (assets/CHANGELOG.md, translations as
- * CHANGELOG.de.md) once. A fresh
+ * CHANGELOG.de.md and CHANGELOG.es.md) once. A fresh
  * installation shows nothing. Applies to the whole device, like the updater.
  */
 @Singleton
@@ -94,7 +94,7 @@ class WhatsNew @Inject constructor(
         const val TAG = "WhatsNew"
         const val ASSET = "CHANGELOG.md"
         /** Languages with a CHANGELOG.<language>.md besides the English one. */
-        val TRANSLATIONS = listOf("de")
+        val TRANSLATIONS = listOf("de", "es")
         const val KEY_LAST = "last_version"
         const val KEY_ENABLED = "enabled"
     }

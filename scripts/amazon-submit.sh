@@ -121,7 +121,14 @@ graphic() {
 for file in "$notes"/whatsnew-*; do
   language="${file##*/whatsnew-}"
   path="/edits/$edit/listings/$language"
-  listing="$(call GET "$path")"
+  if listing="$(call GET "$path" 2> /dev/null)"; then
+    match=(-H "If-Match: $(etag)")
+  else
+    # A language the app has no listing in yet, such as a new translation: it is created.
+    echo "No listing for $language yet, creating it"
+    listing="$(jq -n --arg language "$language" '{language: $language}')"
+    match=()
+  fi
   jq --rawfile notes "$file" \
     --rawfile title "$metadata/android/$language/title.txt" \
     --rawfile short "$metadata/android/$language/short_description.txt" \
@@ -136,7 +143,7 @@ for file in "$notes"/whatsnew-*; do
     | .keywords = ($keywords | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0)))' \
     <<< "$listing" |
     call PUT "$path" \
-      -H "If-Match: $(etag)" \
+      "${match[@]}" \
       -H 'Content-Type: application/json' \
       --data-binary @- > /dev/null
   echo "Set the texts and recent changes for $language"

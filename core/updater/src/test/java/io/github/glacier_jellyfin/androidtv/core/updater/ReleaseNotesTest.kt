@@ -28,6 +28,24 @@ class ReleaseNotesTest {
     }
 
     @Test
+    fun `picks the second translation for its language`() {
+        val trilingual = bilingual + "\n\n" + """
+            <details lang="es">
+            <summary>Español</summary>
+
+            <h3>Mejoras</h3>
+            <ul>
+            <li>Bibliotecas más rápidas (#12)</li>
+            </ul>
+            </details>
+        """.trimIndent()
+        assertEquals(
+            listOf(NotesSection("Mejoras", listOf(NotesItem("Bibliotecas más rápidas", "#12")))),
+            ReleaseNotes.parse(ReleaseNotes.localized(trilingual, "es"), fallbackHeading = "Changes"),
+        )
+    }
+
+    @Test
     fun `other languages get the English notes without the translation`() {
         assertEquals(
             listOf(NotesSection("Improved", listOf(NotesItem("Faster libraries", "#12")))),

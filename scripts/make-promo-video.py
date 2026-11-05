@@ -97,74 +97,75 @@ class Shot:
     camera: list[tuple[float, float, float, float]] = field(default_factory=list)
 
 
-def caption(at: float, en: str, de: str) -> Caption:
-    return Caption(at, {"en": en, "de": de})
+def caption(at: float, en: str, de: str, es: str) -> Caption:
+    return Caption(at, {"en": en, "de": de, "es": es})
 
 
 C = (960, 540)
 SHOTS = [
-    Shot({"en": "Home", "de": "Startseite"},
+    Shot({"en": "Home", "de": "Startseite", "es": "Inicio"},
          [Part("hero", 1.2, 7.6)],
-         [caption(0, "A home screen made for the TV", "Ein Startbildschirm, gemacht für den Fernseher"),
-          caption(2.7, "Carry on where you left off", "Weiterschauen, wo du aufgehört hast")],
+         [caption(0, "A home screen made for the TV", "Ein Startbildschirm, gemacht für den Fernseher", "Una pantalla de inicio hecha para la tele"),
+          caption(2.7, "Carry on where you left off", "Weiterschauen, wo du aufgehört hast", "Sigue donde lo dejaste")],
          [(0, 1.0, *C), (2.4, 1.06, 960, 520), (3.4, 1.6, 640, 470), (6.4, 1.66, 700, 470)]),
-    Shot({"en": "Profiles", "de": "Profile"},
+    Shot({"en": "Profiles", "de": "Profile", "es": "Perfiles"},
          [Part("family", 1.2, 4.7), Part("family", 5.8, 12.6), Part("family", 18.8, 21.4), Part("family", 22.9, 26.4)],
-         [caption(0, "Everyone gets their own profile", "Jeder bekommt sein eigenes Profil"),
-          caption(3.5, "Kids see only what suits their age", "Kinder sehen nur, was zu ihrem Alter passt"),
-          caption(10.3, "Switch profiles in a moment", "Profil wechseln im Handumdrehen")],
+         [caption(0, "Everyone gets their own profile", "Jeder bekommt sein eigenes Profil", "Cada uno tiene su propio perfil"),
+          caption(3.5, "Kids see only what suits their age", "Kinder sehen nur, was zu ihrem Alter passt", "Los niños solo ven lo que va con su edad"),
+          caption(10.3, "Switch profiles in a moment", "Profil wechseln im Handumdrehen", "Cambia de perfil en un momento")],
          [(0, 1.15, 960, 560), (3.3, 1.7, 960, 600), (3.5, 1.0, *C), (9.8, 1.12, 900, 520), (10.3, 1.7, 960, 600),
           (12.7, 1.7, 960, 600), (12.9, 1.0, *C), (16.4, 1.06, *C)]),
-    Shot({"en": "Library", "de": "Bibliothek"},
+    Shot({"en": "Library", "de": "Bibliothek", "es": "Biblioteca"},
          [Part("library", 0.8, 13.6)],
-         [caption(0, "Your whole library, beautifully arranged", "Deine ganze Bibliothek, schön geordnet"),
-          caption(5.0, "The A–Z rail jumps straight to a letter", "Die A–Z-Leiste springt direkt zum Buchstaben")],
+         [caption(0, "Your whole library, beautifully arranged", "Deine ganze Bibliothek, schön geordnet", "Toda tu biblioteca, bien ordenada"),
+          caption(5.0, "The A–Z rail jumps straight to a letter", "Die A–Z-Leiste springt direkt zum Buchstaben", "La barra A–Z salta directo a una letra")],
          [(0, 1.04, *C), (4.9, 1.12, 900, 500), (6.0, 2.0, 1440, 620), (9.6, 2.0, 1440, 620), (10.7, 1.0, *C),
           (12.8, 1.06, *C)]),
-    Shot({"en": "Details", "de": "Details"},
+    Shot({"en": "Details", "de": "Details", "es": "Detalles"},
          [Part("detail", 0.6, 4.3), Part("detail", 4.6, 7.7), Part("detail", 8.6, 12.8), Part("detail", 13.8, 17.8),
           Part("detail", 18.6, 22.6)],
-         [caption(0, "Every title, fully explored", "Jeder Titel, vollständig erschlossen"),
-          caption(3.7, "Pick the version: 2160p HDR or 1080p", "Die Fassung wählen: 2160p HDR oder 1080p"),
-          caption(6.8, "Every audio track, clearly labelled", "Jede Tonspur, klar beschriftet"),
-          caption(11.0, "Subtitles marked forced, SDH and more", "Untertitel gekennzeichnet: erzwungen, SDH und mehr"),
-          caption(15.0, "With the cast and titles like it", "Mit Besetzung und ähnlichen Titeln")],
+         [caption(0, "Every title, fully explored", "Jeder Titel, vollständig erschlossen", "Cada título, con todo detalle"),
+          caption(3.7, "Pick the version: 2160p HDR or 1080p", "Die Fassung wählen: 2160p HDR oder 1080p", "Elige la versión: 2160p HDR o 1080p"),
+          caption(6.8, "Every audio track, clearly labelled", "Jede Tonspur, klar beschriftet", "Cada pista de audio, con un nombre claro"),
+          caption(11.0, "Subtitles marked forced, SDH and more", "Untertitel gekennzeichnet: erzwungen, SDH und mehr", "Subtítulos marcados: forzados, SDH y más"),
+          caption(15.0, "With the cast and titles like it", "Mit Besetzung und ähnlichen Titeln", "Con el reparto y títulos similares")],
          [(0, 1.0, *C), (3.5, 1.06, *C), (4.0, 1.9, 1000, 600), (6.7, 1.9, 1000, 600), (7.2, 1.75, 940, 560),
           (10.9, 1.75, 940, 560), (11.4, 1.35, 960, 600), (14.9, 1.35, 960, 600), (15.6, 1.5, 700, 700),
           (19.0, 1.5, 760, 700)]),
-    Shot({"en": "Player", "de": "Player"},
+    Shot({"en": "Player", "de": "Player", "es": "Reproductor"},
          [Part("skip", 6.2, 8.4, shift={"de": 3.0}), Part("skip", 8.8, 11.0, shift={"de": 3.0}),
           Part("skip", 11.0, 13.8, shift={"de": 10.4}), Part("trickplay", 20.6, 26.8), Part("upnext", 19.2, 28.0, shift={"de": -5.5})],
-         [caption(0, "Recaps skip themselves", "Rückblicke überspringen sich selbst"),
-          caption(2.2, "Intros go with one press", "Intros mit einem Tastendruck weg"),
-          caption(7.2, "Preview pictures while you seek", "Vorschaubilder beim Spulen"),
+         [caption(0, "Recaps skip themselves", "Rückblicke überspringen sich selbst", "Los resúmenes se saltan solos"),
+          caption(2.2, "Intros go with one press", "Intros mit einem Tastendruck weg", "La intro se va con una tecla"),
+          caption(7.2, "Preview pictures while you seek", "Vorschaubilder beim Spulen", "Miniaturas mientras avanzas"),
           caption(13.4, "The next episode, ready before the credits end",
-                  "Die nächste Folge, bereit noch vor dem Abspann")],
+                  "Die nächste Folge, bereit noch vor dem Abspann",
+                  "El siguiente episodio, listo antes de los créditos")],
          [(0, 1.9, 1415, 284), (2.0, 1.9, 1415, 284), (2.6, 2.0, 1440, 740), (4.3, 2.0, 1440, 740),
           (5.0, 1.6, 700, 800), (7.0, 1.6, 700, 800), (7.4, 1.8, 1250, 780), (13.2, 1.8, 1440, 780),
           (13.4, 1.0, *C), (14.6, 1.0, *C), (15.8, 2.1, 1484, 830), (22.2, 2.1, 1484, 830)]),
-    Shot({"en": "Music", "de": "Musik"},
+    Shot({"en": "Music", "de": "Musik", "es": "Música"},
          [Part("music", 10.4, 13.6), Part("music", 20.8, 31.8), Part("music", 40.4, 43.8), Part("music", 55.0, 61.0)],
-         [caption(0, "Music that keeps playing", "Musik, die weiterläuft"),
-          caption(3.2, "Lyrics, large and in time", "Songtexte, groß und im Takt"),
-          caption(14.2, "Keep browsing, the mini player stays", "Weiterstöbern, der Mini-Player bleibt"),
-          caption(17.6, "Music videos play right in the queue", "Musikvideos laufen in der Warteschlange mit")],
+         [caption(0, "Music that keeps playing", "Musik, die weiterläuft", "Música que sigue sonando"),
+          caption(3.2, "Lyrics, large and in time", "Songtexte, groß und im Takt", "Letras grandes y al ritmo"),
+          caption(14.2, "Keep browsing, the mini player stays", "Weiterstöbern, der Mini-Player bleibt", "Sigue navegando, el minirreproductor se queda"),
+          caption(17.6, "Music videos play right in the queue", "Musikvideos laufen in der Warteschlange mit", "Los videoclips suenan en la cola")],
          [(0, 1.0, *C), (3.0, 1.05, *C), (3.2, 1.0, *C), (13.9, 1.12, 960, 400), (14.2, 1.0, *C),
           (14.9, 2.2, 1483, 245), (17.3, 2.2, 1483, 245), (17.6, 1.0, *C), (18.6, 1.6, 620, 450),
           (23.6, 1.65, 620, 450)]),
-    Shot({"en": "Photos & videos", "de": "Fotos & Videos"},
+    Shot({"en": "Photos & videos", "de": "Fotos & Videos", "es": "Fotos y videos"},
          [Part("photos", 4.4, 7.2), Part("photos", 10.4, 16.0), Part("photos", 19.6, 24.7),
           Part("photos", 25.0, 31.6, 3.0), Part("photos", 31.6, 33.6)],
-         [caption(0, "Photos and home videos, in their folders", "Fotos und Heimvideos, in ihren Ordnern"),
-          caption(2.8, "Browse them as a gallery", "Als Galerie durchblättern"),
-          caption(8.4, "Full screen, with smooth transitions", "Im Vollbild, mit weichen Übergängen"),
-          caption(13.5, "A slideshow at the press of a button", "Eine Diashow auf Tastendruck")],
+         [caption(0, "Photos and home videos, in their folders", "Fotos und Heimvideos, in ihren Ordnern", "Fotos y videos caseros, en sus carpetas"),
+          caption(2.8, "Browse them as a gallery", "Als Galerie durchblättern", "Recórrelas como galería"),
+          caption(8.4, "Full screen, with smooth transitions", "Im Vollbild, mit weichen Übergängen", "A pantalla completa, con transiciones suaves"),
+          caption(13.5, "A slideshow at the press of a button", "Eine Diashow auf Tastendruck", "Una presentación con una sola tecla")],
          [(0, 1.08, 900, 520), (2.6, 1.0, *C), (8.2, 1.06, *C), (8.6, 1.0, *C), (13.3, 1.05, *C), (13.5, 1.0, *C),
           (17.4, 1.08, *C)]),
-    Shot({"en": "Live TV", "de": "Live-TV"},
+    Shot({"en": "Live TV", "de": "Live-TV", "es": "TV en directo"},
          [Part("livetv", 1.2, 11.2), Part("livetv", 20.4, 26.6)],
-         [caption(0, "Pick a channel, the preview is already on", "Sender wählen, die Vorschau läuft schon"),
-          caption(10.0, "And a guide for every channel", "Und ein Programmführer für jeden Sender")],
+         [caption(0, "Pick a channel, the preview is already on", "Sender wählen, die Vorschau läuft schon", "Elige un canal, la vista previa ya está en marcha"),
+          caption(10.0, "And a guide for every channel", "Und ein Programmführer für jeden Sender", "Y una guía para cada canal")],
          [(0, 1.0, *C), (1.0, 1.15, 1000, 560), (9.6, 1.18, 1020, 560), (10.0, 1.0, *C), (16.2, 1.08, 960, 520)]),
 ]
 # The website's highlight video: one moment of each shot, without title and end card (shot, from, to).
@@ -177,14 +178,16 @@ STILLS = {"home": ("family", 3.8), "library": ("library", 12.2), "detail": ("det
 SITE_STILLS = {"picker": ("family", 2.5), "kids": ("family", 9.5), "trickplay": ("trickplay", 24.0)}
 SITE_DIR = ROOT / "website" / "assets"
 STORE_DIR = ROOT / "fastlane" / "metadata" / "android"
-STORE_LOCALES = {"en": "en-US", "de": "de-DE"}
+STORE_LOCALES = {"en": "en-US", "de": "de-DE", "es": "es-ES"}
 # The short cut: the strongest moment of a few shots, one caption each (shot, from, to).
 SHORT = [(1, 3.5, 10.3), (2, 5.0, 12.8), (4, 2.2, 7.2), (5, 3.2, 9.8), (7, 0.0, 9.0)]
 
-TITLE = {"en": "Jellyfin, made simple.", "de": "Jellyfin, ganz einfach."}
+TITLE = {"en": "Jellyfin, made simple.", "de": "Jellyfin, ganz einfach.", "es": "Jellyfin, así de fácil."}
 END = {
     "en": ("Free. No ads. No tracking.", "Android TV · Google TV · Fire TV", "Amazon Appstore · Google Play · GitHub"),
     "de": ("Kostenlos. Ohne Werbung. Ohne Tracking.", "Android TV · Google TV · Fire TV",
+           "Amazon Appstore · Google Play · GitHub"),
+    "es": ("Gratis. Sin anuncios. Sin seguimiento.", "Android TV · Google TV · Fire TV",
            "Amazon Appstore · Google Play · GitHub"),
 }
 CREDIT = "Music: “Inspired” by Kevin MacLeod (incompetech.com), CC BY 4.0"

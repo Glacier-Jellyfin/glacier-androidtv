@@ -41,7 +41,7 @@ abstract class ChangelogAsset : DefaultTask() {
 }
 
 val changelogAsset = tasks.register<ChangelogAsset>("changelogAsset") {
-    changelogs.from(rootProject.layout.projectDirectory.files("CHANGELOG.md", "CHANGELOG.de.md"))
+    changelogs.from(rootProject.layout.projectDirectory.files("CHANGELOG.md", "CHANGELOG.de.md", "CHANGELOG.es.md"))
 }
 
 /** The store builds; each delivers its own updates. Debug can play one with -Pglacier.store=amazon|play. */
