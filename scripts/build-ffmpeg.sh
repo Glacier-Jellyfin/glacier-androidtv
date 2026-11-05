@@ -22,6 +22,9 @@ set -euo pipefail
 # branch receives security fixes the longest.
 FFMPEG_VERSION=8.1.3
 FFMPEG_SHA256=7138d28c96d9d3e3af4ee3d8cad72741f8ffb40da90c1112235dea3ecd3178a3
+# The same sources from FFmpeg's GitHub mirror, for when ffmpeg.org refuses the
+# download (it sometimes resets GitHub's runners). Only VERSION is missing.
+FFMPEG_MIRROR_SHA256=09f990289327d3ebfedf4fc15cae3f884a65dab7a5aac7bbb5b01ff83900efd9
 # minSdk of the app.
 API_LEVEL=28
 # FFmpeg decoder names for everything FfmpegLibrary maps that TV platforms
@@ -50,14 +53,26 @@ jobs="$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
+verify() {
+    if command -v sha256sum >/dev/null; then
+        echo "$1  $2" | sha256sum -c -
+    else
+        echo "$1  $2" | shasum -a 256 -c -
+    fi
+}
+
 echo "Downloading FFmpeg $FFMPEG_VERSION"
-curl -fsSL -o "$work/ffmpeg.tar.xz" "https://ffmpeg.org/releases/ffmpeg-$FFMPEG_VERSION.tar.xz"
-if command -v sha256sum >/dev/null; then
-    echo "$FFMPEG_SHA256  $work/ffmpeg.tar.xz" | sha256sum -c -
+if curl -fsSL --retry 3 --retry-all-errors -o "$work/ffmpeg.tar.xz" "https://ffmpeg.org/releases/ffmpeg-$FFMPEG_VERSION.tar.xz"; then
+    verify "$FFMPEG_SHA256" "$work/ffmpeg.tar.xz"
+    tar -xJf "$work/ffmpeg.tar.xz" -C "$work"
 else
-    echo "$FFMPEG_SHA256  $work/ffmpeg.tar.xz" | shasum -a 256 -c -
+    echo "ffmpeg.org failed, downloading from FFmpeg's GitHub mirror"
+    curl -fsSL --retry 3 --retry-all-errors -o "$work/ffmpeg.tar.gz" "https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n$FFMPEG_VERSION.tar.gz"
+    verify "$FFMPEG_MIRROR_SHA256" "$work/ffmpeg.tar.gz"
+    tar -xzf "$work/ffmpeg.tar.gz" -C "$work"
+    mv "$work/FFmpeg-n$FFMPEG_VERSION" "$work/ffmpeg-$FFMPEG_VERSION"
+    echo "$FFMPEG_VERSION" > "$work/ffmpeg-$FFMPEG_VERSION/VERSION"
 fi
-tar -xJf "$work/ffmpeg.tar.xz" -C "$work"
 cd "$work/ffmpeg-$FFMPEG_VERSION"
 
 options=(
