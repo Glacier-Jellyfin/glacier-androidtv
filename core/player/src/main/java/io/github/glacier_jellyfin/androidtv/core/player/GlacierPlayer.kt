@@ -23,7 +23,6 @@ import androidx.media3.ui.SubtitleView
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.peerless2012.ass.media.AssHandler
 import io.github.peerless2012.ass.media.factory.AssRenderersFactory
-import io.github.peerless2012.ass.media.kt.withAssMkvSupport
 import io.github.peerless2012.ass.media.parser.AssSubtitleParserFactory
 import io.github.peerless2012.ass.media.type.AssRenderType
 import io.github.peerless2012.ass.media.widget.AssSubtitleView
@@ -141,7 +140,8 @@ object GlacierPlayer {
         // Rendered on its own GL thread above the video, with animation and embedded fonts.
         val ass = AssHandler(AssRenderType.OVERLAY_OPEN_GL)
         val assParsers = AssSubtitleParserFactory(ass)
-        val extractors = DefaultExtractorsFactory().withAssMkvSupport(assParsers, ass)
+        // libass's Matroska extractor, which also hands on Dolby Vision block additions.
+        val extractors = DefaultExtractorsFactory().withDolbyVisionMkvSupport(assParsers, ass)
         // HTTP for the server's streams; asset:// for the playback check's samples.
         val sources = DefaultDataSource.Factory(context, dataSource)
         val profile7 = request.setup.dolbyVisionProfile7

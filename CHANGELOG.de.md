@@ -8,8 +8,12 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 ## [Unreleased]
 
 ### Verbessert
+- Dolby Vision Profil 7 aus Dual-Layer-MKV-Dateien läuft in Dolby Vision
 - Ton für den Receiver startet von selbst neu, wenn der Fernseher ihn nicht mehr abspielt
 - Kurze HDMI-Aussetzer schalten den Ton nicht mehr vom Receiver auf das Gerät um
+
+### Behoben
+- Einige Dolby-Vision-MKV-Dateien brechen nicht mehr mit einem Lesefehler ab
 
 ## [0.8.1] - 2026-11-05
 

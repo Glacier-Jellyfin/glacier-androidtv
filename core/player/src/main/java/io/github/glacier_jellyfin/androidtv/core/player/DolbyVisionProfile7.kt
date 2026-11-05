@@ -59,25 +59,31 @@ internal class DolbyVisionProfile7Extractors(
     private inner class Profile7Extractor(private val inner: Extractor) : Extractor by inner {
         private var output: Profile7Output? = null
 
-        override fun init(output: ExtractorOutput) = inner.init(Profile7Output(output).also { this.output = it })
+        override fun init(output: ExtractorOutput) {
+            val tracks = Profile7Output(output).also { this.output = it }
+            // A dual layer MKV can keep its RPUs in block additions.
+            (inner.underlyingImplementation as? BlockAdditionSource)?.blockAdditions ={ tracks.byId[it.trackNumber]?.onBlockAddition(it) }
+            inner.init(tracks)
+        }
+
         override fun getUnderlyingImplementation(): Extractor = inner.underlyingImplementation
 
         // After a seek the extractor starts over; a sample begun before it never completes.
         override fun seek(position: Long, timeUs: Long) {
-            output?.tracks?.forEach { it.dropPending() }
+            output?.byId?.values?.forEach { it.dropPending() }
             inner.seek(position, timeUs)
         }
 
         override fun release() {
-            output?.tracks?.forEach { it.logSummary() }
+            output?.byId?.values?.forEach { it.logSummary() }
             inner.release()
         }
     }
 
     private inner class Profile7Output(private val inner: ExtractorOutput) : ExtractorOutput by inner {
-        val tracks = mutableListOf<Profile7Track>()
+        val byId = mutableMapOf<Int, Profile7Track>()
 
-        override fun track(id: Int, type: Int): TrackOutput = Profile7Track(inner.track(id, type), mode).also { tracks += it }
+        override fun track(id: Int, type: Int): TrackOutput = Profile7Track(inner.track(id, type), mode).also { byId[id] = it }
     }
 
     /** RPUs met by a converted track, for the log. */
@@ -93,7 +99,7 @@ internal class DolbyVisionProfile7Extractors(
     /**
      * One track. A profile 7 video track to convert holds its format back
      * until the first sample shows whether it converts, and its samples wait
-     * in [pending] until complete.
+     * in [pending] until complete, with every part Media3 writes.
      */
     private class Profile7Track(private val inner: TrackOutput, private val mode: DolbyVisionProfile7) : TrackOutput by inner {
         private var converting = false
@@ -102,6 +108,9 @@ internal class DolbyVisionProfile7Extractors(
         private var pending = ByteArray(0)
         private var pendingSize = 0
         private val counts = RpuCounts()
+        /** The RPU from the block addition of the coming sample, a NAL unit with its header. */
+        private var additionRpu = ByteArray(0)
+        private var additionRpuSize = 0
 
         override fun format(format: Format) {
             val profile7 = format.sampleMimeType == MimeTypes.VIDEO_DOLBY_VISION && format.codecs.isProfile7()
@@ -118,9 +127,7 @@ internal class DolbyVisionProfile7Extractors(
         }
 
         override fun sampleData(input: DataReader, length: Int, allowEndOfInput: Boolean, sampleDataPart: Int): Int {
-            if (!converting || sampleDataPart != TrackOutput.SAMPLE_DATA_PART_MAIN) {
-                return inner.sampleData(input, length, allowEndOfInput, sampleDataPart)
-            }
+            if (!converting) return inner.sampleData(input, length, allowEndOfInput, sampleDataPart)
             ensureCapacity(pendingSize + length)
             val read = input.read(pending, pendingSize, length)
             if (read == C.RESULT_END_OF_INPUT) {
@@ -132,12 +139,13 @@ internal class DolbyVisionProfile7Extractors(
         }
 
         override fun sampleData(data: ParsableByteArray, length: Int, sampleDataPart: Int) {
-            if (!converting || sampleDataPart != TrackOutput.SAMPLE_DATA_PART_MAIN) {
+            if (!converting) {
                 inner.sampleData(data, length, sampleDataPart)
                 return
             }
             ensureCapacity(pendingSize + length)
-            data.readBytes(pending, pendingSize, length)
+            data.data.copyInto(pending, pendingSize, data.position, data.position + length)
+            data.skipBytes(length)
             pendingSize += length
         }
 
@@ -147,13 +155,14 @@ internal class DolbyVisionProfile7Extractors(
                 return
             }
             // The sample ends [offset] bytes before what has arrived; those bytes belong to the next one.
-            val start = pendingSize - offset - size
-            val plain = cryptoData == null && flags and C.BUFFER_FLAG_HAS_SUPPLEMENTAL_DATA == 0
-            val sample = if (plain) toProfile81(pending, start, size, counts) else pending.copyOfRange(start, start + size)
+            val end = pendingSize - offset
+            val start = end - size
+            val sample = if (cryptoData == null) convert(start, end, flags) else null
+            additionRpuSize = 0
             held?.let { format ->
                 held = null
                 val reason = when {
-                    !plain -> "the samples are encrypted"
+                    sample == null -> "the samples are encrypted"
                     counts.converted == 0 && counts.seen == 0 -> "the stream has no RPU"
                     counts.converted == 0 -> "its RPU does not read"
                     else -> null
@@ -171,14 +180,53 @@ internal class DolbyVisionProfile7Extractors(
                 Log.i(TAG, "Dolby Vision profile 7 plays as profile 8.1, without the enhancement layer")
                 inner.format(profile81(format))
             }
-            inner.sampleData(ParsableByteArray(sample), sample.size, TrackOutput.SAMPLE_DATA_PART_MAIN)
-            inner.sampleMetadata(timeUs, flags, sample.size, 0, cryptoData)
-            pending.copyInto(pending, 0, pendingSize - offset, pendingSize)
+            val out = sample ?: pending.copyOfRange(start, end)
+            inner.sampleData(ParsableByteArray(out), out.size, TrackOutput.SAMPLE_DATA_PART_MAIN)
+            inner.sampleMetadata(timeUs, flags, out.size, 0, cryptoData)
+            pending.copyInto(pending, 0, end, pendingSize)
             pendingSize = offset
+        }
+
+        /**
+         * The sample in [pending] from [start] to [end] as profile 8.1. A
+         * sample with block additions ([C.BUFFER_FLAG_HAS_SUPPLEMENTAL_DATA])
+         * starts with the length of its video data, and their data follows.
+         */
+        private fun convert(start: Int, end: Int, flags: Int): ByteArray {
+            val wrapped = flags and C.BUFFER_FLAG_HAS_SUPPLEMENTAL_DATA != 0
+            val dataStart = if (wrapped) start + 4 else start
+            val dataEnd = if (wrapped) dataStart + readLength(pending, start) else end
+            check(dataEnd in dataStart..end) { "A sample's video data runs past the sample" }
+            val seen = counts.seen
+            var sample = toProfile81(pending, dataStart, dataEnd - dataStart, counts)
+            // Without an RPU of its own, the one from the block addition ends the access unit.
+            if (counts.seen == seen && additionRpuSize > 0) sample += convertAdditionRpu()
+            return if (wrapped) lengthOf(sample.size) + sample + pending.copyOfRange(dataEnd, end) else sample
+        }
+
+        private fun convertAdditionRpu(): ByteArray {
+            counts.seen++
+            val rpu = DolbyVisionRpu.toProfile81(additionRpu, 0, additionRpuSize)
+            if (rpu == null) {
+                if (counts.failed++ == 0) Log.w(TAG, "Dropped an RPU that does not read as profile 7")
+                return ByteArray(0)
+            }
+            counts.converted++
+            return START_CODE + rpu
+        }
+
+        /** Keeps the RPU of a block addition (dual layer MKV) for the sample it belongs to; the enhancement layer goes. */
+        fun onBlockAddition(addition: BlockAddition) {
+            if (!converting) return
+            val rpu = findRpu(addition.data, addition.size, addition.lengthSize) ?: return
+            if (additionRpu.size < rpu.count()) additionRpu = ByteArray(rpu.count())
+            addition.data.copyInto(additionRpu, 0, rpu.first, rpu.last + 1)
+            additionRpuSize = rpu.count()
         }
 
         fun dropPending() {
             pendingSize = 0
+            additionRpuSize = 0
         }
 
         fun logSummary() {
@@ -254,6 +302,33 @@ internal class DolbyVisionProfile7Extractors(
             return null
         }
 
+        /**
+         * The RPU (type 62, with its header) among [size] bytes of NAL units
+         * that each follow a length of [lengthSize] bytes, as a block addition
+         * holds them; null without one or when the lengths do not add up.
+         */
+        fun findRpu(data: ByteArray, size: Int, lengthSize: Int): IntRange? {
+            if (lengthSize !in 1..4) return null
+            var position = 0
+            while (position + lengthSize <= size) {
+                var length = 0
+                for (i in 0 until lengthSize) length = (length shl 8) or (data[position + i].toInt() and 0xff)
+                val start = position + lengthSize
+                if (length <= 0 || start + length > size) return null
+                if ((data[start].toInt() shr 1) and 0x3f == NAL_RPU) return start until start + length
+                position = start + length
+            }
+            return null
+        }
+
+        /** The 4-byte length Media3 puts before a sample with block additions. */
+        private fun readLength(data: ByteArray, offset: Int): Int =
+            (data[offset].toInt() and 0xff shl 24) or (data[offset + 1].toInt() and 0xff shl 16) or
+                (data[offset + 2].toInt() and 0xff shl 8) or (data[offset + 3].toInt() and 0xff)
+
+        private fun lengthOf(length: Int) = byteArrayOf((length ushr 24).toByte(), (length ushr 16).toByte(), (length ushr 8).toByte(), length.toByte())
+
+        private val START_CODE = byteArrayOf(0, 0, 0, 1)
         private const val TAG = "DolbyVision"
         private const val NAL_RPU = 62
         private const val NAL_ENHANCEMENT_LAYER = 63
