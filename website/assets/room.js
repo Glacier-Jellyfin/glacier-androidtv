@@ -61,15 +61,36 @@
     key.addEventListener("click", function () { press(key); });
   });
 
-  // While a key has focus, the keyboard works like the remote.
-  var map = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", Backspace: "back", Escape: "back", Home: "home" };
-  room.addEventListener("keydown", function (e) {
+  // While the room is in view, the keyboard works like the remote, unless another control has focus.
+  var map = {
+    ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
+    Enter: "ok", " ": "play", MediaPlayPause: "play",
+    Backspace: "back", Escape: "back", BrowserBack: "back", Home: "home"
+  };
+  var steered = null;
+  document.addEventListener("focusin", function (e) { if (e.target !== steered) steered = null; });
+  var inView = true;
+  if (window.IntersectionObserver) {
+    inView = false;
+    new IntersectionObserver(function (entries) {
+      var entry = entries[entries.length - 1];
+      inView = entry.intersectionRatio >= 0.5 || entry.intersectionRect.height >= window.innerHeight * 0.5;
+    }, { threshold: [0, 0.25, 0.5, 0.75, 1] }).observe(room);
+  }
+  document.addEventListener("keydown", function (e) {
     var name = map[e.key];
-    if (!name || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (!name || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+    var target = e.target;
+    var inRoom = room.contains(target);
+    var idle = target === document.body || target === root;
+    if (!inRoom && !(idle && inView)) return;
+    // A button reached with Tab answers Enter and Space by itself; one the keyboard steered to does not.
+    if ((e.key === "Enter" || e.key === " ") && target.tagName === "BUTTON" && target !== steered) return;
     var key = room.querySelector('.key[data-key="' + name + '"]');
     if (!key) return;
     e.preventDefault();
-    key.focus();
+    steered = key;
+    key.focus({ preventScroll: true });
     press(key);
   });
 
