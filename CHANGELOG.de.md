@@ -7,6 +7,8 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-05
+
 ### Neu
 - Spanische Oberfläche
 

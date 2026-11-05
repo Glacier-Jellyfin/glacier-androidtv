@@ -1,0 +1,1 @@
+Glacier now speaks Spanish. Dolby Vision profile 7 from dual layer MKV files plays in Dolby Vision. Sound sent to the receiver comes back by itself when the TV or a short HDMI drop interrupts it. Some Dolby Vision MKV files no longer stop with a read error.

@@ -1,0 +1,1 @@
+Glacier ya habla español. Dolby Vision perfil 7 de archivos MKV de doble capa se reproduce en Dolby Vision. El sonido enviado al receptor vuelve solo cuando la tele o un corte breve de HDMI lo interrumpe. Algunos archivos MKV con Dolby Vision ya no se detienen con un error de lectura.

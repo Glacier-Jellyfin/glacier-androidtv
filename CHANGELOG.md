@@ -16,11 +16,13 @@ omit empty ones:
 Reference issues or pull requests at the end of a line as `(#123)`; the app
 renders the reference separately.
 
-[CHANGELOG.de.md](CHANGELOG.de.md) holds the same sections in German. The
-release notes carry them in a collapsed block, and the app shows them when its
-language is German.
+[CHANGELOG.de.md](CHANGELOG.de.md) and [CHANGELOG.es.md](CHANGELOG.es.md) hold
+the same sections in German and Spanish. The release notes carry each in a
+collapsed block, and the app shows it when its language is German or Spanish.
 
 ## [Unreleased]
+
+## [0.9.0] - 2026-11-05
 
 ### New
 - Spanish user interface
