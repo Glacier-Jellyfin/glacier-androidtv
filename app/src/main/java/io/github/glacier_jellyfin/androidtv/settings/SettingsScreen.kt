@@ -1456,7 +1456,7 @@ private val rowTexts = mapOf(
 )
 
 /** Languages of Glacier itself, each named in its own language. */
-private val UiLanguages = listOf(Language("de", "Deutsch"), Language("en", "English"))
+private val UiLanguages = listOf(Language("de", "Deutsch"), Language("en", "English"), Language("es", "Español"))
 
 /** A language code as the server keeps it, named in the device language. */
 private fun languageName(state: SettingsUiState, code: String): String =

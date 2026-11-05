@@ -152,7 +152,7 @@ data class MusicSettings(
 /** Language of Glacier's own texts (Settings › Account); [System] follows Android. */
 @Serializable
 enum class UiLanguage(val tag: String?) {
-    System(null), German("de"), English("en");
+    System(null), German("de"), English("en"), Spanish("es");
 
     companion object {
         fun of(tag: String?): UiLanguage = entries.firstOrNull { it.tag == tag } ?: System

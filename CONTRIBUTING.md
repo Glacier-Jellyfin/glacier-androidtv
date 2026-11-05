@@ -30,8 +30,8 @@ The maintainer takes care of the changelog, releases and the
 
 ## Translations
 
-Glacier is available in English and German, and follows the language of the
-TV. To add a language:
+Glacier is available in English, German and Spanish, and follows the language
+of the TV. To add a language:
 
 1. Copy `app/src/main/res/values/strings.xml` to
    `app/src/main/res/values-<lang>/strings.xml`, where `<lang>` is the

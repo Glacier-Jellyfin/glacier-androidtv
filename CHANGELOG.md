@@ -22,6 +22,9 @@ language is German.
 
 ## [Unreleased]
 
+### New
+- Spanish user interface
+
 ### Improved
 - Dolby Vision profile 7 from dual layer MKV files plays in Dolby Vision
 - Sound sent to the receiver starts again by itself when the TV stops playing it

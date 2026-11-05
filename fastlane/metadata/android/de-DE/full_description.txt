@@ -28,7 +28,7 @@ DAS KLEINGEDRUCKTE
 • Die Suche findet auch Titel, die noch nicht auf deinem Server sind. Anfragen gehen über Seerr mit dem Plugin Jellyfin Enhanced.
 • Mehrere Fassungen eines Titels, etwa 4K und 1080p oder ein Director's Cut, passend für deinen Fernseher gewählt
 • Weiterschauen und Kanäle auf dem Startbildschirm von Android TV (nicht auf Fire TV)
-• Deutsch und Englisch, neun Akzentfarben und ein kompaktes Layout
+• Deutsch, Englisch und Spanisch, neun Akzentfarben und ein kompaktes Layout
 
 Glacier ist kostenlos und Open Source unter der GPL-3.0. Die App zeigt keine Werbung und braucht kein Konto.
 

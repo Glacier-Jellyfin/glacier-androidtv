@@ -105,7 +105,7 @@ PIN goes in with the D-pad. The settings come along to a new TV.
 - Audio and subtitle preferences synced with your Jellyfin account
 - Android TV home screen: "Watch next" and three optional channels (not on
   Fire TV)
-- English and German user interface, accent colours and a compact layout
+- English, German and Spanish user interface, accent colours and a compact layout
 - When playback fails, the message names the error and shows a QR code to
   download the log for a bug report. Settings › System also sends a cleaned
   log to your server

@@ -28,7 +28,7 @@ THE SMALL PRINT
 • Search also finds titles that are not on your server yet. Request them through Seerr with the Jellyfin Enhanced plugin.
 • Several versions of a title, such as 4K and 1080p or a director's cut, with the right one picked for your TV
 • Continue watching and channels on the Android TV home screen (not on Fire TV)
-• English and German, nine accent colours and a compact layout
+• English, German and Spanish, nine accent colours and a compact layout
 
 Glacier is free and open source under the GPL-3.0. It shows no ads and needs no account.
 

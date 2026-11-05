@@ -7,6 +7,9 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ## [Unreleased]
 
+### Neu
+- Spanische Oberfläche
+
 ### Verbessert
 - Dolby Vision Profil 7 aus Dual-Layer-MKV-Dateien läuft in Dolby Vision
 - Ton für den Receiver startet von selbst neu, wenn der Fernseher ihn nicht mehr abspielt
