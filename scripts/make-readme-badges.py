@@ -21,8 +21,8 @@ THEMES = {
 }
 BUTTONS = [
     ("amazon", "Amazon Appstore", "Fire TV", 214, True),
-    ("play", "Google Play", "Become a tester", 184, False),
-    ("github", "Download APK", "From GitHub", 184, False),
+    ("play", "Google Play", "Become a tester", 214, False),
+    ("github", "Download APK", "From GitHub", 214, False),
     ("kofi", "Buy me a coffee", "on Ko-fi", 196, True),
 ]
 
