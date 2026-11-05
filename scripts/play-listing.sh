@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Updates the Google Play store listing of each language from
 # fastlane/metadata/android: title, descriptions, promo video (video.txt),
-# graphics and TV screenshots. Uses fastlane supply, which only uploads images
-# whose checksum Google Play does not have yet and removes screenshots that no
-# longer exist here. Builds and release notes are uploaded separately, so this
+# graphics and screenshots. The TV screenshots also go in as phone
+# screenshots, which Google Play requires even for a TV app. Uses fastlane
+# supply, which only uploads images whose checksum Google Play does not have
+# yet and removes screenshots that no longer exist here. Builds and release notes are uploaded separately, so this
 # runs after the bundle of <version> is in <track>. See docs/RELEASING.md.
 #
 # Usage: scripts/play-listing.sh <version> <track>
@@ -23,10 +24,19 @@ fi
 # supply needs it to pick the release in the track, even without changelogs.
 code=$(( BASH_REMATCH[1] * 1000000 + BASH_REMATCH[2] * 10000 + BASH_REMATCH[3] * 100 + 99 ))
 
+# A copy of the metadata, so the phone screenshots need not live in the repo twice.
+metadata="$(mktemp -d)"
+trap 'rm -rf "$metadata"' EXIT
+cp -R "$root/fastlane/metadata/android/." "$metadata/"
+for shots in "$metadata"/*/images/tvScreenshots; do
+  rm -rf "${shots%/*}/phoneScreenshots"
+  cp -R "$shots" "${shots%/*}/phoneScreenshots"
+done
+
 # The key goes through the environment, so it never shows up in the command line.
 SUPPLY_JSON_KEY_DATA="$PLAY_SERVICE_ACCOUNT_JSON" FASTLANE_SKIP_UPDATE_CHECK=1 fastlane supply \
   --package_name io.github.glacier_jellyfin.androidtv \
-  --metadata_path "$root/fastlane/metadata/android" \
+  --metadata_path "$metadata" \
   --track "$track" \
   --version_code "$code" \
   --skip_upload_apk true \

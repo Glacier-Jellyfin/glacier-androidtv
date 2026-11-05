@@ -197,7 +197,8 @@ Texts and graphics of the listings live in `fastlane/metadata/`. After the
 bundle, the workflow `stores.yml` updates the Google Play listing of each language
 from `fastlane/metadata/android` (`scripts/play-listing.sh`, fastlane
 supply): title, descriptions, video, feature graphic, icon, TV banner and TV
-screenshots. Only images Google Play does not have yet are uploaded, and
+screenshots. The TV screenshots also go in as phone screenshots, which Google
+Play requires even for a TV app. Only images Google Play does not have yet are uploaded, and
 screenshots no longer in the folder are removed there. Changes in the Play
 Console are overwritten with the next release, so change the files instead.
 
