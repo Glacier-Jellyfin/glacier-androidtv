@@ -8,21 +8,24 @@
   <br>
 </p>
 
+<h3 align="center">The TV is yours again.</h3>
+
 <p align="center">
-  A Jellyfin client for Android TV, Google TV and Fire TV.
+  Glacier brings your Jellyfin server to Android TV, Google TV and Fire TV.<br>
+  Built for the remote, with the sound and picture your files really have.
 </p>
 
 <p align="center">
-  <a href="https://www.amazon.com/dp/B0HPL2YVVQ"><img src="docs/badges/amazon-appstore.png" height="56" alt="Available at Amazon Appstore"></a>
-  &nbsp;
-  <a href="https://play.google.com/apps/testing/io.github.glacier_jellyfin.androidtv"><img src="docs/badges/google-play.png" height="56" alt="Get it on Google Play"></a>
-  &nbsp;
-  <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest"><img src="docs/badges/github.png" height="56" alt="Get it on GitHub"></a>
+  <a href="https://www.amazon.com/dp/B0HPL2YVVQ"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/amazon-dark.svg"><img src="docs/badges/amazon-light.svg" height="56" alt="Get it from the Amazon Appstore for Fire TV"></picture></a>
+  <a href="#become-a-tester-on-google-play"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/play-dark.svg"><img src="docs/badges/play-light.svg" height="56" alt="Google Play: become a tester"></picture></a>
+  <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest/download/glacier-androidtv.apk"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/github-dark.svg"><img src="docs/badges/github-light.svg" height="56" alt="Download the APK from GitHub"></picture></a>
 </p>
 
 <p align="center">
   <a href="https://glacier-jellyfin.github.io/glacier-androidtv/">Website</a> ·
-  <a href="CHANGELOG.md">Changelog</a>
+  <a href="#installation">Installation</a> ·
+  <a href="CHANGELOG.md">Changelog</a> ·
+  <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/issues">Report a bug</a>
 </p>
 
 <p align="center">
@@ -33,43 +36,82 @@
 > Glacier is young and still growing. If something does not work, please
 > [report it](https://github.com/Glacier-Jellyfin/glacier-androidtv/issues).
 
-## Features
+## What Glacier does differently
 
-- Movies, shows and music from your Jellyfin server, with search, sorting and
-  filters, collections and an A–Z rail. Large libraries open fast, and sorts by
-  year, date added or artist show a heading over each group
-- Several versions of a title, such as 2160p and 1080p or a Director's Cut,
+<p align="center">
+  <img src="website/assets/screenshots/player.jpg" width="32%" alt="The player with Skip intro">
+  <img src="website/assets/screenshots/trickplay.jpg" width="32%" alt="Seeking with a preview picture">
+  <img src="website/assets/screenshots/picker.jpg" width="32%" alt="Who's watching with three profiles">
+</p>
+
+**For the system under the TV.** TrueHD and DTS-HD reach your receiver exactly
+as they are on the disc, even where Android only passes the DTS core or gives
+up on TrueHD. If nothing gets through, the server converts to E-AC-3 and
+surround stays.
+
+**For the TV itself.** Dolby Vision plays even from UHD Blu-rays with profile
+7, converted on the device. The TV switches to the frame rate of the film, and
+Settings › System › Check playback tests with real files what your TV can
+play.
+
+**For everyone on the sofa.** Everyone gets a profile with their own picture,
+colour and progress. The kids profile only shows what suits their age, and the
+PIN goes in with the D-pad. The settings come along to a new TV.
+
+## What the remote does
+
+<p align="center">
+  <img src="website/assets/screenshots/library.jpg" width="49%" alt="The movie library with the A–Z rail">
+  <img src="website/assets/screenshots/detail.jpg" width="49%" alt="A title's page with audio tracks">
+</p>
+
+- OK skips the intro, and recaps skip themselves. Credits can skip too
+- Seeking shows preview pictures, so you land on the right scene. Chapters are
+  one press away
+- The next episode is ready before the credits end, with a countdown that can
+  shrink out of the way
+- The A–Z rail jumps straight to the letter. Large libraries open fast, and
+  sorts by year, date added or artist show a heading over each group
+- A title's page names every audio and subtitle track in full, with region,
+  flag and marks for forced, commentary, audio description or sing-along
+- Several versions of a title, such as 2160p and 1080p or a director's cut,
   with the right one picked for your TV and your pick kept per movie or show
-- Search that also finds titles missing from your library and requests them
+
+## The shelf next to it
+
+<p align="center">
+  <img src="website/assets/screenshots/music.jpg" width="32%" alt="The music player in full screen with large lyrics">
+  <img src="website/assets/screenshots/photos.jpg" width="32%" alt="The photo gallery">
+  <img src="website/assets/screenshots/livetv.jpg" width="32%" alt="Live TV with the channel list and a preview">
+</p>
+
+- **Music** that keeps playing while you browse: a mini player, a full screen
+  with large lyrics, queue, playlists, instant mix and music videos mixed in
+  with the songs
+- **Photos and home videos** by folder, as cards or a gallery, full screen with
+  a slideshow on OK
+- **Live TV** with a running preview on every channel, a programme guide,
+  recordings of programmes and series, pause and rewind, and radio stations
+  that play like music
+
+## The small print
+
+- Search also finds titles missing from your library and requests them
   through Seerr (needs the Jellyfin Enhanced plugin on the server)
 - Multiple servers and profiles, server discovery and Quick Connect. A start
   profile can open by itself
-- Parental controls: age limits and PINs for profiles, titles and settings,
-  stored only on the device. The PIN goes in with the D-pad, like on a Fire TV
-- A player made for watching: skip intros, recaps and credits, trickplay
-  previews while seeking, chapters and "next episode" with a countdown
-- The TV switches to the frame rate of the video, so films play without judder
-- TrueHD and DTS-HD sent to the receiver as the whole lossless bitstream,
-  extended audio codec support via FFmpeg for more direct playback, and
-  surround sound that stays surround over HDMI ARC
-- Live TV: channels with a live preview, a programme guide, recordings of
-  programmes and series, pause and rewind, and radio stations that play like
-  music
-- Music that keeps playing while you browse, with a mini player, a full
-  screen with lyrics, queue, playlists, instant mix and music videos mixed
-  in with the songs
-- Photos and home videos by folder, as cards or a gallery, full screen with
-  a slideshow
+- Parental controls with age limits and PINs for profiles, titles and
+  settings, stored only on the device
 - Local and YouTube trailers with subtitles, and theme songs on detail pages
 - A Favorites page with everything you marked with the heart, in the rows you
   pick
-- Audio and subtitle tracks named in full, with their region and flag and
-  marks for forced, commentary, audio description or sing-along tracks
 - Audio and subtitle preferences synced with your Jellyfin account
 - Android TV home screen: "Watch next" and three optional channels (not on
   Fire TV)
 - English and German user interface, accent colours and a compact layout
-- Diagnostics that send a cleaned error log to your server for bug reports
+- When playback fails, the message names the error and shows a QR code to
+  download the log for a bug report. Settings › System also sends a cleaned
+  log to your server
 - Built-in updates for the GitHub version, with a Stable and a Beta channel
 
 ## Requirements
@@ -81,50 +123,61 @@
 
 ## Installation
 
-Glacier is free and needs no account. Get it from a store or straight from
-[GitHub releases](https://github.com/Glacier-Jellyfin/glacier-androidtv/releases).
+Glacier is free and needs no account.
 
-### From a store
+### On your TV in two minutes
 
-<a href="https://www.amazon.com/dp/B0HPL2YVVQ"><img src="docs/badges/amazon-appstore.png" height="56" alt="Available at Amazon Appstore"></a>
-&nbsp;
-<a href="https://play.google.com/apps/testing/io.github.glacier_jellyfin.androidtv"><img src="docs/badges/google-play.png" height="56" alt="Get it on Google Play"></a>
-
-The Amazon Appstore has Glacier for Fire TV. Google Play is coming soon and is
-in closed testing now. The store keeps Glacier up to date, like any other app.
-
-#### Become a tester on Google Play
-
-Google Play needs at least 12 testers for 14 days before Glacier can go
-public. If you have an Android TV or Google TV device, you can help:
-
-1. Join the [tester group](https://groups.google.com/g/glacier-jellyfin-client-testers).
-2. [Opt in to the test](https://play.google.com/apps/testing/io.github.glacier_jellyfin.androidtv)
-   with the same Google account.
-3. Install Glacier from the Play Store on your TV and keep it for two weeks.
-
-### With Downloader
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/code-dark.svg"><img src="docs/badges/code-light.svg" width="300" alt="Downloader code 2423112"></picture>
 
 1. Install the free [Downloader](https://www.aftvnews.com/downloader/) app from
    the app store on your TV.
-2. Open Downloader and enter the code **2423112**.
-3. Allow the install when Android asks. The code always loads the newest
-   version.
+2. Open it, enter the code **2423112** and allow the install.
+3. Done. The code always loads the newest version, and from then on Glacier
+   keeps itself up to date.
+
+### From a store
+
+<a href="https://www.amazon.com/dp/B0HPL2YVVQ"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/amazon-dark.svg"><img src="docs/badges/amazon-light.svg" height="56" alt="Get it from the Amazon Appstore for Fire TV"></picture></a>
+<a href="#become-a-tester-on-google-play"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/play-dark.svg"><img src="docs/badges/play-light.svg" height="56" alt="Google Play: become a tester"></picture></a>
+
+The Amazon Appstore has Glacier for Fire TV, and the store keeps it up to
+date like any other app. Google Play is in closed testing.
+
+### Become a tester on Google Play
+
+> [!TIP]
+> Google publishes apps from new personal developer accounts only after a
+> closed test with at least 12 testers over 14 days. If you have an Android TV
+> or Google TV, you can be one of them:
+>
+> 1. Join the [tester group](https://groups.google.com/g/glacier-jellyfin-client-testers)
+>    with the Google account you use on your TV.
+> 2. [Opt in to the test](https://play.google.com/apps/testing/io.github.glacier_jellyfin.androidtv)
+>    with the same account.
+> 3. Open the Play Store on your TV and install Glacier. It can take a few
+>    minutes until it shows up.
 
 ### As an APK
 
+<a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest/download/glacier-androidtv.apk"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/github-dark.svg"><img src="docs/badges/github-light.svg" height="56" alt="Download the APK from GitHub"></picture></a>
+
 Download
 [`glacier-androidtv.apk`](https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest/download/glacier-androidtv.apk)
-and sideload it, for example with `adb install glacier-androidtv.apk`.
+and sideload it, for example with `adb install glacier-androidtv.apk`. All
+versions are on the [releases page](https://github.com/Glacier-Jellyfin/glacier-androidtv/releases).
 
-### Updates
+<details>
+<summary><b>Updates</b></summary>
 
 Installed from GitHub, Glacier keeps itself up to date. It checks for new versions
 at every start and installs them from GitHub releases. Android asks once for
 permission to install updates from Glacier. You can pick the Stable or Beta
 channel in Settings › System.
 
-### Checking a download
+</details>
+
+<details>
+<summary><b>Checking a download</b></summary>
 
 Every release is built on GitHub from the source code in this repository and
 carries a signed build provenance attestation. With the
@@ -134,6 +187,8 @@ here:
 ```sh
 gh attestation verify glacier-androidtv.apk --repo Glacier-Jellyfin/glacier-androidtv
 ```
+
+</details>
 
 ## Building
 
@@ -174,8 +229,10 @@ Bug reports, ideas, pull requests and translations are welcome. Please read
 
 ## Support
 
-Glacier is free and stays that way. If you'd like to support development, you can
-[buy me a coffee on Ko-fi](https://ko-fi.com/jeansy91).
+Glacier is built in spare time and stays free. If it makes your evenings a
+little better, a coffee on Ko-fi keeps it going.
+
+<a href="https://ko-fi.com/jeansy91"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/kofi-dark.svg"><img src="docs/badges/kofi-light.svg" height="56" alt="Buy me a coffee on Ko-fi"></picture></a>
 
 ## License
 

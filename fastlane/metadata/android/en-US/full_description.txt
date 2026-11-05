@@ -1,19 +1,35 @@
-Glacier is a modern Jellyfin client for Android TV, Google TV and Fire TV. It is built for the remote from the ground up, so you find something to watch fast.
+The TV is yours again.
 
-Glacier needs your own Jellyfin server (version 12.0 or newer). It does not come with any movies, shows or music.
+Glacier brings your Jellyfin server into the living room. It was built for the remote from the first day, so the way to your next film stays short.
 
-• Movies, shows and music from your server, with search, sorting, filters, collections and an A to Z rail
-• A player made for watching: skip intros, recaps and credits, previews while seeking, chapters and the next episode with a countdown
-• The TV switches to the frame rate of the video, so films play without judder
-• TrueHD and DTS-HD as the lossless bitstream to your receiver, DTS and more through the built-in FFmpeg audio decoder, and surround sound that stays surround over HDMI ARC
-• Several versions of a title, such as 4K and 1080p or a Director's Cut, with the right one picked for your TV
-• Live TV with a programme guide, recordings, pause and rewind
-• Music that keeps playing while you browse, with a queue, playlists, full-screen lyrics, instant mix and music videos
-• Photos and home videos by folder, as a gallery or full screen with a slideshow
-• Multiple servers and profiles, Quick Connect and parental controls with age limits and PINs
-• Requests through Seerr for titles missing from your library (needs the Jellyfin Enhanced plugin)
+Glacier needs your own Jellyfin server, version 12.0 or newer. It comes without any films, shows or music.
+
+FOR THE SYSTEM UNDER THE TV
+TrueHD and DTS-HD reach your receiver exactly as they are on the disc, even where Android only passes the DTS core or gives up on TrueHD. If nothing gets through, the server converts to E-AC-3 and surround stays.
+
+FOR THE TV ITSELF
+Dolby Vision plays even from UHD Blu-rays with profile 7, converted on the device. The TV switches to the frame rate of the film. Before that, Glacier checks with real test files what your TV can play.
+
+FOR EVERYONE ON THE SOFA
+Everyone gets a profile with their own picture, colour and progress. The kids profile only shows what suits their age, and the PIN goes in with the D-pad. When a new TV arrives, the settings come along.
+
+WHAT THE REMOTE DOES
+• OK skips the intro. Recaps skip themselves.
+• Seeking shows preview pictures, so you land on the right scene.
+• The next episode is ready before the credits end.
+• The A to Z rail jumps straight to the letter, even in big libraries.
+
+THE SHELF NEXT TO IT
+• Music with large lyrics in full screen, music videos in the queue and a mini player that stays while you browse
+• Photos and home videos by folder, as a gallery or a slideshow
+• Live TV with a running preview, a programme guide, recordings, pause and rewind
+
+THE SMALL PRINT
+• Search also finds titles that are not on your server yet. Request them through Seerr with the Jellyfin Enhanced plugin.
+• Several versions of a title, such as 4K and 1080p or a director's cut, with the right one picked for your TV
+• Continue watching and channels on the Android TV home screen (not on Fire TV)
 • English and German, nine accent colours and a compact layout
 
-Glacier is free and open source under the GPL-3.0. There are no ads, no accounts and no tracking.
+Glacier is free and open source under the GPL-3.0. It shows no ads and needs no account.
 
 Glacier is not affiliated with the Jellyfin project.

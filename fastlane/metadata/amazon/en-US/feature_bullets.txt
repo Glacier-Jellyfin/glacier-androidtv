@@ -1,6 +1,7 @@
-Movies, shows, music and photos from your own Jellyfin server
-Skip intros, recaps and credits, with previews while seeking
-Frame rate matching and lossless TrueHD and DTS-HD bitstream
-Live TV with a programme guide and recordings
-Several servers and profiles, with parental controls and PINs
-Free and open source, no ads and no tracking
+Your Jellyfin server on the TV, built for the remote
+TrueHD and DTS-HD reach your receiver as they are on the disc
+Dolby Vision, frame rate matching and a playback check for your TV
+OK skips the intro, recaps skip themselves, previews show while seeking
+A profile for everyone, with a kids profile and a PIN
+Music with lyrics, photos as a slideshow and Live TV with recordings
+Free and open source, with no ads and no account

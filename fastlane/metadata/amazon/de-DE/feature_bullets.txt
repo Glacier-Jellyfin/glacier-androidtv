@@ -1,6 +1,7 @@
-Filme, Serien, Musik und Fotos von deinem eigenen Jellyfin-Server
-Intros, Rückblicke und Abspann überspringen, mit Vorschau beim Spulen
-Bildratenanpassung und verlustfreier TrueHD- und DTS-HD-Bitstream
-Live-TV mit Programmführer und Aufnahmen
-Mehrere Server und Profile, mit Kindersicherung und PINs
-Kostenlos und Open Source, ohne Werbung und Tracking
+Dein Jellyfin-Server auf dem Fernseher, gebaut für die Fernbedienung
+TrueHD und DTS-HD kommen am Receiver an, wie sie auf der Platte liegen
+Dolby Vision, Bildratenanpassung und eine Wiedergabeprüfung für deinen Fernseher
+OK überspringt das Intro, Rückblicke überspringen sich selbst, Vorschau beim Spulen
+Ein Profil für jeden, mit Kinderprofil und PIN
+Musik mit Songtexten, Fotos als Diashow und Live-TV mit Aufnahmen
+Kostenlos und Open Source, ohne Werbung und ohne Konto

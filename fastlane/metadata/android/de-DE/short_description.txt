@@ -1,1 +1,1 @@
-Schneller Jellyfin-Client für den Fernseher, mit Live-TV, Musik und Player
+Dein Jellyfin-Server im Wohnzimmer, gebaut für die Fernbedienung

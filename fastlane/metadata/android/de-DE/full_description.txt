@@ -1,19 +1,35 @@
-Glacier ist ein moderner Jellyfin-Client für Android TV, Google TV und Fire TV. Er ist von Grund auf für die Fernbedienung gebaut, damit du schnell etwas zum Schauen findest.
+Der Fernseher gehört wieder dir.
 
-Glacier braucht deinen eigenen Jellyfin-Server (Version 12.0 oder neuer). Filme, Serien oder Musik sind nicht enthalten.
+Glacier holt deinen Jellyfin-Server ins Wohnzimmer. Die App ist vom ersten Tag an für die Fernbedienung gebaut, damit der Weg zum nächsten Film kurz bleibt.
 
-• Filme, Serien und Musik von deinem Server, mit Suche, Sortierung, Filtern, Sammlungen und einer A-bis-Z-Leiste
-• Ein Player zum Schauen gemacht: Intros, Rückblicke und Abspann überspringen, Vorschaubilder beim Spulen, Kapitel und die nächste Folge mit Countdown
-• Der Fernseher wechselt auf die Bildrate des Videos, damit Filme ohne Ruckeln laufen
-• TrueHD und DTS-HD als verlustfreier Bitstream an deinen Receiver, DTS und mehr über den eingebauten FFmpeg-Audiodecoder, und Raumklang bleibt über HDMI ARC Raumklang
+Glacier braucht deinen eigenen Jellyfin-Server ab Version 12.0. Filme, Serien oder Musik sind nicht enthalten.
+
+FÜR DIE ANLAGE UNTER DEM FERNSEHER
+TrueHD und DTS-HD kommen am Receiver so an, wie sie auf der Platte liegen, auch dort, wo Android sonst nur den DTS-Kern durchlässt oder an TrueHD scheitert. Geht gar nichts durch, wandelt der Server in E-AC-3 um, und Surround bleibt.
+
+FÜR DEN FERNSEHER SELBST
+Dolby Vision läuft auch von UHD-Blu-rays mit Profil 7, direkt auf dem Gerät umgerechnet. Der Fernseher wechselt auf die Bildrate des Films. Vorher prüft Glacier mit echten Testdateien, was dein Fernseher abspielen kann.
+
+FÜR ALLE AUF DEM SOFA
+Jeder hat sein Profil mit Bild, Farbe und eigenem Fortschritt. Das Kinderprofil zeigt nur, was zum Alter passt, und die PIN geht per Steuerkreuz. Kommt ein neuer Fernseher, ziehen die Einstellungen mit.
+
+WAS DIE FERNBEDIENUNG KANN
+• OK überspringt das Intro. Rückblicke überspringen sich selbst.
+• Beim Spulen zeigen Vorschaubilder, wo du landest.
+• Die nächste Folge steht bereit, bevor der Abspann vorbei ist.
+• Die A-bis-Z-Leiste springt direkt zum Buchstaben, auch in großen Bibliotheken.
+
+DAS REGAL DANEBEN
+• Musik mit großem Songtext im Vollbild, Musikvideos in der Warteschlange und ein Mini-Player, der beim Stöbern bleibt
+• Fotos und Heimvideos nach Ordnern, als Galerie oder Diashow
+• Live-TV mit laufender Vorschau, Programmführer, Aufnahmen, Pause und Zurückspulen
+
+DAS KLEINGEDRUCKTE
+• Die Suche findet auch Titel, die noch nicht auf deinem Server sind. Anfragen gehen über Seerr mit dem Plugin Jellyfin Enhanced.
 • Mehrere Fassungen eines Titels, etwa 4K und 1080p oder ein Director's Cut, passend für deinen Fernseher gewählt
-• Live-TV mit Programmführer, Aufnahmen, Pause und Zurückspulen
-• Musik, die beim Stöbern weiterläuft, mit Warteschlange, Playlists, Songtexten im Vollbild, Instant Mix und Musikvideos
-• Fotos und Heimvideos nach Ordnern, als Galerie oder im Vollbild mit Diashow
-• Mehrere Server und Profile, Quick Connect und Kindersicherung mit Altersgrenzen und PINs
-• Fehlende Titel über Seerr anfragen (braucht das Plugin Jellyfin Enhanced)
+• Weiterschauen und Kanäle auf dem Startbildschirm von Android TV (nicht auf Fire TV)
 • Deutsch und Englisch, neun Akzentfarben und ein kompaktes Layout
 
-Glacier ist kostenlos und Open Source unter der GPL-3.0. Es gibt keine Werbung, kein Konto und kein Tracking.
+Glacier ist kostenlos und Open Source unter der GPL-3.0. Die App zeigt keine Werbung und braucht kein Konto.
 
-Glacier ist kein offizielles Projekt von Jellyfin.
+Glacier ist nicht mit dem Jellyfin-Projekt verbunden.
