@@ -7,6 +7,8 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-05
+
 ### Behoben
 - TrueHD und DTS-HD brechen die Wiedergabe nicht mehr nach kurzer Zeit mit einem Fehler ab
 

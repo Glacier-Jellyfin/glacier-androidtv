@@ -1,0 +1,1 @@
+TrueHD and DTS-HD no longer stop playback with an error after a moment.

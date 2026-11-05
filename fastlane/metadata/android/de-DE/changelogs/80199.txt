@@ -1,0 +1,1 @@
+TrueHD und DTS-HD brechen die Wiedergabe nicht mehr nach kurzer Zeit mit einem Fehler ab.
