@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="214" height="56" viewBox="0 0 214 56" role="img" aria-label="Google Play, Become a tester">
-  <rect x="1" y="1" width="212" height="54" rx="5" fill="none" stroke="#eef8fa" stroke-width="2"/>
-  <g transform="translate(16 16)" fill="none" stroke="#eef8fa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5Z"/></g>
-  <text x="52" y="26" fill="#eef8fa" font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700">Google Play</text>
-  <text x="52" y="43" fill="#eef8fa" font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" opacity="0.85">Become a tester</text>
-</svg>

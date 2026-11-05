@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="214" height="56" viewBox="0 0 214 56" role="img" aria-label="Download APK, From GitHub">
+  <style>.frame { fill: #fbf8f3; stroke: #2b2520; } .ink { stroke: #2b2520; } text { fill: #2b2520; } @media (prefers-color-scheme: dark) { .frame { fill: #0e2a33; stroke: #eef8fa; } .ink { stroke: #eef8fa; } text { fill: #eef8fa; } }</style>
+  <rect class="frame" x="1" y="1" width="212" height="54" rx="5" stroke-width="2"/>
+  <g class="ink" transform="translate(16 16)" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></g>
+  <text x="52" y="26" font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700">Download APK</text>
+  <text x="52" y="43" font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" opacity="0.85">From GitHub</text>
+</svg>

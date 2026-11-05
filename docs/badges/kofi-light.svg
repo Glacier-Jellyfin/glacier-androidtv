@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="196" height="56" viewBox="0 0 196 56" role="img" aria-label="Buy me a coffee, on Ko-fi">
-  <rect width="196" height="56" rx="6" fill="#2b2520"/>
-  <g transform="translate(16 16)" fill="none" stroke="#f3ece1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h12v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5Z"/><path d="M16 11h1.5a2.5 2.5 0 0 1 0 5H16"/><path d="M8 3c-1 1.5 1 2.5 0 4M12 3c-1 1.5 1 2.5 0 4"/></g>
-  <text x="52" y="26" fill="#f3ece1" font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700">Buy me a coffee</text>
-  <text x="52" y="43" fill="#f3ece1" font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" opacity="0.85">on Ko-fi</text>
-</svg>

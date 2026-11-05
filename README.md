@@ -1,9 +1,6 @@
 <p align="center">
   <br>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="website/assets/wordmark-dark.svg">
-    <img src="website/assets/wordmark-light.svg" height="84" alt="Glacier">
-  </picture>
+  <img src="docs/badges/wordmark.svg" height="84" alt="Glacier">
   <br>
   <br>
 </p>
@@ -16,9 +13,9 @@
 </p>
 
 <p align="center">
-  <a href="https://www.amazon.com/dp/B0HPL2YVVQ"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/amazon-dark.svg"><img src="docs/badges/amazon-light.svg" height="56" alt="Get it from the Amazon Appstore for Fire TV"></picture></a>
-  <a href="#become-a-tester-on-google-play"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/play-dark.svg"><img src="docs/badges/play-light.svg" height="56" alt="Google Play: become a tester"></picture></a>
-  <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest/download/glacier-androidtv.apk"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/github-dark.svg"><img src="docs/badges/github-light.svg" height="56" alt="Download the APK from GitHub"></picture></a>
+  <a href="https://www.amazon.com/dp/B0HPL2YVVQ"><img src="docs/badges/amazon.svg" height="56" alt="Get it from the Amazon Appstore for Fire TV"></a>
+  <a href="#become-a-tester-on-google-play"><img src="docs/badges/play.svg" height="56" alt="Google Play: become a tester"></a>
+  <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest/download/glacier-androidtv.apk"><img src="docs/badges/github.svg" height="56" alt="Download the APK from GitHub"></a>
 </p>
 
 <p align="center">
@@ -127,7 +124,7 @@ Glacier is free and needs no account.
 
 ### On your TV in two minutes
 
-<picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/code-dark.svg"><img src="docs/badges/code-light.svg" width="300" alt="Downloader code 2423112"></picture>
+<img src="docs/badges/code.svg" width="300" alt="Downloader code 2423112">
 
 1. Install the free [Downloader](https://www.aftvnews.com/downloader/) app from
    the app store on your TV.
@@ -137,8 +134,8 @@ Glacier is free and needs no account.
 
 ### From a store
 
-<a href="https://www.amazon.com/dp/B0HPL2YVVQ"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/amazon-dark.svg"><img src="docs/badges/amazon-light.svg" height="56" alt="Get it from the Amazon Appstore for Fire TV"></picture></a>
-<a href="#become-a-tester-on-google-play"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/play-dark.svg"><img src="docs/badges/play-light.svg" height="56" alt="Google Play: become a tester"></picture></a>
+<a href="https://www.amazon.com/dp/B0HPL2YVVQ"><img src="docs/badges/amazon.svg" height="56" alt="Get it from the Amazon Appstore for Fire TV"></a>
+<a href="#become-a-tester-on-google-play"><img src="docs/badges/play.svg" height="56" alt="Google Play: become a tester"></a>
 
 The Amazon Appstore has Glacier for Fire TV, and the store keeps it up to
 date like any other app. Google Play is in closed testing.
@@ -159,7 +156,7 @@ date like any other app. Google Play is in closed testing.
 
 ### As an APK
 
-<a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest/download/glacier-androidtv.apk"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/github-dark.svg"><img src="docs/badges/github-light.svg" height="56" alt="Download the APK from GitHub"></picture></a>
+<a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest/download/glacier-androidtv.apk"><img src="docs/badges/github.svg" height="56" alt="Download the APK from GitHub"></a>
 
 Download
 [`glacier-androidtv.apk`](https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest/download/glacier-androidtv.apk)
@@ -232,7 +229,7 @@ Bug reports, ideas, pull requests and translations are welcome. Please read
 Glacier is built in spare time and stays free. If it makes your evenings a
 little better, a coffee on Ko-fi keeps it going.
 
-<a href="https://ko-fi.com/jeansy91"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/kofi-dark.svg"><img src="docs/badges/kofi-light.svg" height="56" alt="Buy me a coffee on Ko-fi"></picture></a>
+<a href="https://ko-fi.com/jeansy91"><img src="docs/badges/kofi.svg" height="56" alt="Buy me a coffee on Ko-fi"></a>
 
 ## License
 

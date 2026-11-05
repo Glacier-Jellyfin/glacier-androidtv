@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="214" height="56" viewBox="0 0 214 56" role="img" aria-label="Amazon Appstore, Fire TV">
-  <rect width="214" height="56" rx="6" fill="#7dc7d9"/>
-  <g transform="translate(16 16)" fill="none" stroke="#06222a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1 12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></g>
-  <text x="52" y="26" fill="#06222a" font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700">Amazon Appstore</text>
-  <text x="52" y="43" fill="#06222a" font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12" opacity="0.85">Fire TV</text>
-</svg>
