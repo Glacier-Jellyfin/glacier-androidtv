@@ -22,6 +22,9 @@ collapsed block, and the app shows it when its language is German or Spanish.
 
 ## [Unreleased]
 
+### Improved
+- The app can be moved to external storage on devices that support it
+
 ## [0.9.0] - 2026-11-05
 
 ### New

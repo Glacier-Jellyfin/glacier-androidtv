@@ -7,6 +7,9 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ## [Unreleased]
 
+### Verbessert
+- Die App lässt sich auf Geräten, die es unterstützen, auf externen Speicher verschieben
+
 ## [0.9.0] - 2026-11-05
 
 ### Neu

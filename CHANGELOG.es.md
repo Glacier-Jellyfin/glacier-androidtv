@@ -8,6 +8,9 @@ only in English.
 
 ## [Unreleased]
 
+### Mejoras
+- La aplicación se puede mover al almacenamiento externo en los dispositivos que lo admiten
+
 ## [0.9.0] - 2026-11-05
 
 ### Novedades
