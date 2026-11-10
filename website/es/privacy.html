@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Política de privacidad · Glacier</title>
+  <meta name="description" content="Cómo trata tus datos Glacier, el cliente de Jellyfin para Android TV, Google TV y Fire TV.">
+  <link rel="canonical" href="https://glacier-jellyfin.github.io/glacier-androidtv/es/privacy.html">
+  <link rel="alternate" hreflang="en" href="https://glacier-jellyfin.github.io/glacier-androidtv/privacy.html">
+  <link rel="alternate" hreflang="de" href="https://glacier-jellyfin.github.io/glacier-androidtv/de/privacy.html">
+  <link rel="alternate" hreflang="es" href="https://glacier-jellyfin.github.io/glacier-androidtv/es/privacy.html">
+  <link rel="icon" href="../assets/mark.svg" type="image/svg+xml">
+  <script>try{var t=localStorage.getItem("glacier-theme");if(t==="night"||(!t&&matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.setAttribute("data-theme","night")}catch(e){}</script>
+  <link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+  <header class="wrap top">
+    <a class="brand" href="./"><img src="../assets/mark.svg" width="26" height="26" alt="">glacier</a>
+    <nav aria-label="Secciones">
+      <a href="./#different">Qué cambia</a>
+      <a href="./#shelf">Música, fotos, TV</a>
+      <a href="./#film">La película</a>
+      <a href="./#get">Descargar</a>
+    </nav>
+    <div class="top-tools">
+      <div class="lang" role="group" aria-label="Idioma">
+        <a href="../privacy.html" hreflang="en" lang="en">EN</a>
+        <a href="../de/privacy.html" hreflang="de" lang="de">DE</a>
+        <a href="privacy.html" hreflang="es" lang="es" aria-current="page">ES</a>
+      </div>
+      <button class="tool" type="button" data-theme-toggle aria-pressed="false" aria-label="Luz de noche">
+        <svg class="theme-night" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>
+        <svg class="theme-day" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+      <a class="tool" href="https://github.com/Glacier-Jellyfin/glacier-androidtv" aria-label="Glacier en GitHub"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg></a>
+    </div>
+  </header>
+
+  <main class="wrap legal">
+        <h1>Política de privacidad</h1>
+        <p class="updated">Última actualización: 5 de noviembre de 2026</p>
+
+        <p><strong>En resumen:</strong> Glacier no recoge datos para sí. No hay cuenta, ni analítica, ni publicidad, ni seguimiento. Glacier habla con los servidores Jellyfin que añades y, para algunas funciones, con los servicios que se nombran abajo.</p>
+
+        <h2>Quién es el responsable</h2>
+        <p>Glacier es una app gratuita y de código abierto de je.apps. Para preguntas sobre esta política, escribe a <a href="mailto:support@eberts.cloud">support@eberts.cloud</a> o abre un issue en <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/issues">GitHub</a>.</p>
+
+        <h2>Lo que se queda en tu dispositivo</h2>
+        <p>Glacier guarda lo siguiente en su propio almacenamiento en la tele. Nunca sale del dispositivo, salvo como se describe abajo, y se borra al desinstalar Glacier.</p>
+        <ul>
+          <li>Las direcciones de tus servidores Jellyfin, tus nombres de usuario y los tokens de acceso que emiten los servidores. Tu contraseña solo se envía a tu servidor para iniciar sesión y no se guarda.</li>
+          <li>Tus ajustes, incluidos los PIN de los perfiles y los límites de edad del control parental.</li>
+          <li>Un registro de la app para informar de errores. Antes de enviarlo o descargarlo se eliminan las direcciones de servidor, los nombres, las contraseñas y los tokens de acceso.</li>
+        </ul>
+
+        <h2>Tu servidor Jellyfin</h2>
+        <p>Glacier envía a tu servidor lo que necesita para funcionar: tu inicio de sesión, lo que reproduces y hasta dónde lo viste, tus favoritos y tus ajustes de audio y subtítulos. Tu dispositivo aparece en la lista de dispositivos del servidor como “Glacier”. Si eliges “Enviar el registro al servidor” en los ajustes, el registro limpio de la app va a tu servidor. El servidor lo gestionas tú o quien te invitó, y su operador es el responsable de los datos que se guardan allí.</p>
+
+        <h2>Otros servicios</h2>
+        <ul>
+          <li><strong>GitHub</strong>, solo en la versión de GitHub: Glacier consulta <code>api.github.com</code> al iniciarse para buscar una versión nueva y descarga las actualizaciones desde GitHub. Puedes desactivar la búsqueda en los ajustes. GitHub ve tu dirección IP. Consulta la <a href="https://docs.github.com/es/site-policy/privacy-policies/github-general-privacy-statement">declaración de privacidad de GitHub</a>.</li>
+          <li><strong>YouTube</strong>: Cuando un título tiene un tráiler de YouTube, su imagen de vista previa se carga desde YouTube y el tráiler se reproduce en el reproductor integrado de YouTube. Google recibe tu dirección IP e información sobre la reproducción. Consulta la <a href="https://policies.google.com/privacy?hl=es">política de privacidad de Google</a>.</li>
+          <li><strong>The Movie Database (TMDB)</strong>: Si tu servidor tiene el plugin Jellyfin Enhanced con Seerr, la búsqueda también muestra títulos que faltan en tu biblioteca. Sus carteles se cargan desde <code>image.tmdb.org</code>, que ve tu dirección IP. Consulta la <a href="https://www.themoviedb.org/privacy-policy">política de privacidad de TMDB</a>.</li>
+          <li><strong>Tiendas de apps</strong>: Si instalaste Glacier desde Google Play o Amazon Appstore, la tienda lo instala y lo actualiza según su propia política de privacidad.</li>
+        </ul>
+
+        <h2>Red local</h2>
+        <p>Para encontrar servidores, Glacier envía una solicitud de búsqueda a tu red local. “Descargar el registro en la red” inicia un pequeño servidor web en la tele mientras se muestra el código QR, para que un móvil u ordenador de la misma red pueda guardar el registro. Cuando falla una reproducción, el mensaje de error también muestra un código QR así, y el servidor web funciona mientras el mensaje está abierto.</p>
+
+        <h2>Pantalla de inicio de Android TV</h2>
+        <p>En Android TV y Google TV, Glacier llena “Seguir viendo” y sus propios canales de la pantalla de inicio con títulos de tu servidor. El sistema guarda estas entradas en tu dispositivo. Puedes ocultar los canales en los ajustes de la pantalla de inicio.</p>
+
+        <h2>Este sitio web</h2>
+        <p>Este sitio web está alojado en GitHub Pages. GitHub recibe tu dirección IP y los datos técnicos habituales de cada solicitud para entregar las páginas. La página también pregunta a <code>api.github.com</code> por el número de la última versión para mostrarlo. Las fuentes, las imágenes y los videos vienen de este mismo sitio, no se contacta con ningún otro servicio. No hay cookies, ni analítica, ni seguimiento. Tu navegador solo recuerda si elegiste el aspecto de día o de noche, y esa elección nunca sale de él. Consulta la <a href="https://docs.github.com/es/site-policy/privacy-policies/github-general-privacy-statement">declaración de privacidad de GitHub</a>.</p>
+
+        <h2>Cambios</h2>
+        <p>Si Glacier empieza a tratar los datos de otra forma, esta página se actualiza primero. La fecha de arriba muestra el último cambio.</p>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap">
+      <div class="coffee">
+        <svg viewBox="0 0 84 84" aria-hidden="true"><path class="mug" d="M14 30h44v30a14 14 0 0 1-14 14H28a14 14 0 0 1-14-14Z"/><path class="handle" d="M58 38h6a9 9 0 0 1 0 18h-6" stroke-width="5" fill="none"/><path class="steam" d="M28 6c-4 6 4 10 0 18M42 6c-4 6 4 10 0 18" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+        <p>Glacier se hace en el tiempo libre y seguirá siendo gratis. Si hace tus noches un poco mejores, ayuda un <a href="https://ko-fi.com/jeansy91">café en Ko-fi</a>.</p>
+      </div>
+      <nav class="foot-links" aria-label="Enlaces">
+        <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv">GitHub</a>
+        <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases">Versiones</a>
+        <a href="https://www.amazon.com/dp/B0HPL2YVVQ">Amazon Appstore</a>
+        <a href="privacy.html" aria-current="page">Privacidad</a>
+        <a href="../privacy.html" hreflang="en">English</a>
+        <a href="../de/privacy.html" hreflang="de">Deutsch</a>
+      </nav>
+      <p class="foot-legal">Con licencia GPL-3.0-or-later. Sin relación con el proyecto Jellyfin.</p>
+    </div>
+  </footer>
+
+  <script src="../assets/room.js"></script>
+</body>
+</html>
