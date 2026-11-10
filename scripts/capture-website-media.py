@@ -152,13 +152,18 @@ class Device:
     def online(self, timeout: float) -> bool:
         deadline = time.time() + timeout
         while time.time() < deadline:
-            out = subprocess.run(self.base + ["shell", "getprop sys.boot_completed"], capture_output=True,
-                                 text=True, env=self.env, timeout=30)
-            # A snapshot restores sys.boot_completed at once; the services the takes use come a bit later.
-            if out.stdout.strip() == "1" and "not found" not in subprocess.run(
-                    self.base + ["shell", "service check alarm"], capture_output=True, text=True,
-                    env=self.env, timeout=30).stdout:
-                return True
+            try:
+                out = subprocess.run(self.base + ["shell", "getprop sys.boot_completed"], capture_output=True,
+                                     text=True, env=self.env, timeout=30)
+                # A snapshot restores sys.boot_completed at once; the services the takes use come a bit later.
+                # "service check" hangs on the Google TV image (API 36), "cmd alarm" answers once it is up.
+                if out.stdout.strip() == "1" and "Alarm manager" in subprocess.run(
+                        self.base + ["shell", "cmd alarm help"], capture_output=True, text=True,
+                        env=self.env, timeout=30).stdout:
+                    return True
+            except subprocess.TimeoutExpired:
+                # A shell that hangs after a snapshot load counts as offline, so restart() can step in.
+                pass
             time.sleep(2)
         return False
 
@@ -172,7 +177,7 @@ class Device:
         port = self.serial.split("-")[1]
         subprocess.Popen([str(emulator), "-avd", self.avd, "-port", port, "-no-boot-anim", "-snapshot", snapshot,
                           "-no-snapshot-save"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        if not self.online(240):
+        if not self.online(420):
             sys.exit(f"Emulator {self.avd} did not come back")
 
     def fresh(self, snapshot: str) -> None:
