@@ -155,13 +155,11 @@ for file in "$notes"/whatsnew-*; do
   upload "$path/promo-images" "$(graphic featureGraphic.png)"
   echo "Replaced the icons, background and promo image for $language"
 
-  # Amazon's check requires the Fire TV list in every language. The general list, which
-  # the Developer Console filled for some languages, is kept up to date where it has any.
+  # Amazon's check requires 3 to 10 screenshots in both lists, the Fire TV one and the general
+  # one, in every language. A language without pictures of its own gets the English ones.
   shots="$metadata/android/$language/images/tvScreenshots"
   [ -d "$shots" ] || shots="$metadata/android/en-US/images/tvScreenshots"
-  types=(firetv-screenshots)
-  if [ "$(call GET "$path/screenshots" | count)" -gt 0 ]; then types+=(screenshots); fi
-  for type in "${types[@]}"; do
+  for type in firetv-screenshots screenshots; do
     clear_all "$path/$type"
     for shot in "$shots"/*.jpg; do
       upload "$path/$type" "$shot"
