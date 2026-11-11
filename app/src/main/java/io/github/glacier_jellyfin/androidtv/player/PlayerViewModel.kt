@@ -1,10 +1,12 @@
 package io.github.glacier_jellyfin.androidtv.player
 
 import android.content.Context
+import android.os.SystemClock
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
@@ -13,6 +15,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.util.Util
 import androidx.annotation.OptIn
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -53,6 +56,9 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackPosition
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SourceFile
+import io.github.glacier_jellyfin.androidtv.core.data.playback.StreamBudget
+import io.github.glacier_jellyfin.androidtv.core.data.settings.MaxBitrate
+import io.github.glacier_jellyfin.androidtv.core.log.DebugOptions
 import io.github.glacier_jellyfin.androidtv.core.data.playback.TranscodeStatus
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.HlsSegments
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
@@ -61,7 +67,11 @@ import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -71,6 +81,11 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URI
+import java.net.URL
 import java.util.UUID
 import javax.inject.Inject
 
@@ -200,6 +215,26 @@ class PlayerViewModel @Inject constructor(
     private var segments: HlsSegments? = null
     /** Output failures already recovered from for this title. */
     private var outputRecoveries = 0
+    private val stalls = StallTracker()
+    /** Times this title already moved to a smaller stream because playback ran dry. */
+    private var qualitySteps = 0
+    /** Times a ladder's segment failed in time and was tried again; counted from the start of the title. */
+    private var linkRetries = 0
+    /** Retries of an open after a step down. */
+    private var openRetries = 0
+    private var lastSeekMs = 0L
+    /** Waits out a stall that does not end. */
+    private var stallWatch: Job? = null
+    /** How long the buffer has been nearly empty while playing; draining is a stall that has not happened yet. */
+    private var lowBufferMs = 0L
+    /** When the stream first played, so the filling of the buffer at the start is not mistaken for draining. */
+    private var playingSinceMs = 0L
+    /** Keeps a ladder's tier within what the link carries; null for a stream of one tier. */
+    private var tiers: TierController? = null
+    /** Waits for the link to recover while a reduced stream plays. */
+    private var recovery: Job? = null
+    /** Times this title went back to the file's quality. */
+    private var returns = 0
 
     @OptIn(UnstableApi::class)
     private val decoders = object : AnalyticsListener {
@@ -222,10 +257,20 @@ class PlayerViewModel @Inject constructor(
     private val listener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
             when (playbackState) {
+                Player.STATE_BUFFERING -> onBuffering()
                 Player.STATE_READY -> {
+                    stallWatch?.cancel()
                     _state.update { it.copy(loading = false) }
                     if (!started) {
                         started = true
+                        playingSinceMs = SystemClock.elapsedRealtime()
+                        openRetries = 0
+                        if (DebugOptions.segmentLog && DebugOptions.probe) viewModelScope.launch {
+                            delay(PROBE_DELAY_MS)
+                            probeSegments()
+                        }
+                        if (DebugOptions.pauseOnStart) _state.value.player?.playWhenReady = false
+                        lowBufferMs = 0
                         source?.let { playback.reportStart(it, position()) }
                     }
                 }
@@ -246,10 +291,14 @@ class PlayerViewModel @Inject constructor(
         // Report a seek at once: if the app is killed before the next periodic report,
         // the server would otherwise keep the position from before the jump.
         override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+            if (reason == Player.DISCONTINUITY_REASON_SEEK || reason == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT) {
+                lastSeekMs = SystemClock.elapsedRealtime()
+            }
             if (reason == Player.DISCONTINUITY_REASON_SEEK && started) source?.let { playback.reportProgress(it, position()) }
         }
 
         override fun onTracksChanged(tracks: Tracks) {
+            if (tiers == null) startTiers(tracks)
             if (tracksPending) tracksPending = !applyTracks()
         }
 
@@ -274,6 +323,21 @@ class PlayerViewModel @Inject constructor(
                     delay(OUTPUT_RECOVERY_DELAY_MS)
                     if (_state.value.player === player) reopen(audio = _state.value.audioIndex, subtitle = _state.value.subtitleIndex)
                 }
+                return
+            }
+            // The tiers of a ladder: a segment that did not come in time is tried again, and the link is measured, before it
+            // is an error. A move to another tier waits for that measurement.
+            val controller = tiers
+            if (controller != null && player != null && error.errorCode in LINK_ERRORS && linkRetries < MAX_LINK_RETRIES) {
+                linkRetries++
+                Log.w(TAG, "A segment did not come in time, trying again ($linkRetries)", error)
+                viewModelScope.launch { checkLink(controller) }
+                player.prepare()
+                return
+            }
+            // A link too slow for the stream ends in a timeout or a closed connection: a smaller stream first.
+            if (error.errorCode in LINK_ERRORS && lowerQuality()) {
+                Log.w(TAG, "The link failed the stream, trying a smaller one", error)
                 return
             }
             Log.w(TAG, "Playback failed", error)
@@ -305,6 +369,11 @@ class PlayerViewModel @Inject constructor(
 
     fun load() {
         outputRecoveries = 0
+        qualitySteps = 0
+        linkRetries = 0
+        openRetries = 0
+        returns = 0
+        stalls.clear()
         val selection = trackSelections.get(itemId)
         versionId = selection?.versionId
         // A choice made on the detail page wins; "off" there is sent as -1 so the server does not pick one.
@@ -316,7 +385,7 @@ class PlayerViewModel @Inject constructor(
      * [startMs] null: the saved resume point (or 0 for "from start").
      * [fromLastTitle]: no tracks were chosen for this title, so the last title's may be taken over.
      */
-    private fun open(startMs: Long?, audio: Int?, subtitle: Int?, fromLastTitle: Boolean = false) {
+    private fun open(startMs: Long?, audio: Int?, subtitle: Int?, fromLastTitle: Boolean = false, retry: Boolean = false) {
         opening?.cancel()
         opening = viewModelScope.launch {
             releasePlayer()
@@ -338,7 +407,7 @@ class PlayerViewModel @Inject constructor(
                 } else {
                     null
                 }
-                val opened = playback.open(itemId, start, remembered?.audio ?: audio, remembered?.subtitle ?: subtitle, segments, versionId)
+                val opened = playback.open(itemId, start, remembered?.audio ?: audio, remembered?.subtitle ?: subtitle, segments, versionId, reuse = retry)
                 source = opened
                 recordTracks(opened.audioIndex, opened.subtitleIndex)
                 val request = StreamRequest(
@@ -346,6 +415,10 @@ class PlayerViewModel @Inject constructor(
                     isHls = opened.isHls,
                     headers = opened.headers,
                     startPositionMs = start,
+                    playlist = opened.ladder,
+                    patient = opened.isHls && !opened.live,
+                    // The tier the link carries; Media3 takes the one this estimate allows.
+                    startBitrate = opened.streamBitrate?.let { it * 110L / 100 }?.toInt(),
                     subtitles = opened.subtitles
                         .filter { it.delivery == SubtitleDelivery.External && it.url != null }
                         .map { SideloadedSubtitle(it.track.index, it.url!!, it.track.codec, it.track.language) },
@@ -371,9 +444,22 @@ class PlayerViewModel @Inject constructor(
                     )
                 }
                 startTicker()
+                watchRecovery()
+                if (!opened.live && opened.ladder == null) {
+                    // A transcode takes its time to start: a 4K source needs well over 20 s before the first segment.
+                    watchStartup(player, if (opened.method == PlaybackMethod.DirectPlay) STARTUP_MS else TRANSCODE_STARTUP_MS)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // Right after a step down the link is still full of the old stream: the server's answer may be late.
+                if (e is IOException && qualitySteps > 0 && openRetries < MAX_OPEN_RETRIES) {
+                    openRetries++
+                    Log.w(TAG, "Opening the smaller stream failed, trying again ($openRetries)", e)
+                    delay(OPEN_RETRY_DELAY_MS)
+                    open(startMs, audio, subtitle, fromLastTitle, retry = true)
+                    return@launch
+                }
                 Log.w(TAG, "Opening playback failed", e)
                 fail(e.javaClass.simpleName, onDevice = false)
             }
@@ -532,6 +618,218 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Playback ran dry while playing (not at the start, not after a jump). Twice within a minute and a half,
+     * or once for [LONG_STALL_MS], the stream is more than the link carries: the next one asks for less.
+     */
+    private fun onBuffering() {
+        val player = _state.value.player ?: return
+        if (!started || !player.playWhenReady) return
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastSeekMs < SEEK_BUFFERING_MS) return
+        // Tiers: a stall may be the link or the server. A move costs a new transcode (about 16 s), so only a measurement that
+        // says the link does not carry the tier moves it; a new stream is for a title that has none.
+        tiers?.let { controller ->
+            Log.w(TAG, "Stalled at tier ${controller.bitrate / 1000} kbit/s, measuring the link")
+            viewModelScope.launch { checkLink(controller) }
+            return
+        }
+        noteStall(now, wait = true)
+    }
+
+    /** One stall, or a buffer that ran down to nothing; [wait]: one that does not end is acted on after [LONG_STALL_MS]. */
+    private fun noteStall(now: Long, wait: Boolean) {
+        if (stalls.record(now)) {
+            lowerQuality()
+            return
+        }
+        if (!wait) return
+        stallWatch?.cancel()
+        stallWatch = viewModelScope.launch {
+            delay(LONG_STALL_MS)
+            if (_state.value.player?.playbackState == Player.STATE_BUFFERING) lowerQuality()
+        }
+    }
+
+    /**
+     * The buffer tells before a stall does: a stream that takes more than the link carries drains it. Seconds
+     * of nearly nothing ahead, after the buffer had its time to fill, count as a stall; a buffer that
+     * holds up leaves the quality alone.
+     */
+    private fun watchBuffer(player: ExoPlayer) {
+        val now = SystemClock.elapsedRealtime()
+        val ahead = player.bufferedPosition - player.currentPosition
+        // A ladder: the server hands out segments about as fast as they play, so the buffer is small by nature.
+        if (tiers != null) return
+        val settled = started && now - playingSinceMs > BUFFER_SETTLE_MS && now - lastSeekMs > BUFFER_SETTLE_MS
+        when {
+            !settled || !player.isPlaying || ahead >= BUFFER_RECOVERED_MS -> lowBufferMs = 0
+            ahead < BUFFER_LOW_MS -> {
+                lowBufferMs += TICK_MS
+                if (lowBufferMs >= BUFFER_DRAIN_MS) {
+                    lowBufferMs = 0
+                    Log.w(TAG, "Buffer is down to ${ahead / 1000} s")
+                    noteStall(now, wait = false)
+                }
+            }
+        }
+    }
+
+    /**
+     * A reduced stream goes back to the file's quality when the link has recovered: measured again every
+     * few minutes while the buffer is full, since the measurement then costs no picture.
+     */
+    private fun watchRecovery() {
+        recovery?.cancel()
+        val current = source ?: return
+        // A ladder: every test moves the window of tiers, no new stream.
+        if (current.ladder != null && !current.live) {
+            recovery = viewModelScope.launch {
+                while (isActive) {
+                    delay(RECOVERY_CHECK_MS)
+                    val player = _state.value.player ?: return@launch
+                    if (settings.settings.value.playback.maxBitrate != MaxBitrate.Auto) return@launch
+                    if (!player.isPlaying) continue
+                    tiers?.let { checkLink(it) }
+                }
+            }
+            return
+        }
+        val wanted = current.file?.bitrate ?: return
+        val reduced = current.streamBitrate?.let { it < wanted } == true
+        if (!reduced || current.live || current.ladder != null || returns >= MAX_RETURNS) return
+        recovery = viewModelScope.launch {
+            while (isActive) {
+                delay(RECOVERY_CHECK_MS)
+                val player = _state.value.player ?: return@launch
+                if (settings.settings.value.playback.maxBitrate != MaxBitrate.Auto) return@launch
+                val ahead = player.bufferedPosition - player.currentPosition
+                if (!player.isPlaying || ahead < RECOVERY_BUFFER_MS) continue
+                val budget = playback.probeBudget() ?: continue
+                if (StreamBudget.returnsTo(wanted, budget)) {
+                    returns++
+                    _events.send(UiEvent.Toast(R.string.player_full_quality))
+                    Log.i(TAG, "The link carries ${budget / 1_000_000} Mbit/s again, back to the file's ${wanted / 1_000_000}")
+                    reopen(audio = _state.value.audioIndex, subtitle = _state.value.subtitleIndex)
+                    return@launch
+                }
+            }
+        }
+    }
+
+    /**
+     * Debug: asks the server for the next segments of the playing tier all at once and logs when each answers. If they answer
+     * together, the wait is a fixed delay per request and loading ahead in parallel would fill the buffer; if one after the
+     * other, the server hands them out at its own pace.
+     */
+    private suspend fun probeSegments() {
+        val current = source ?: return
+        val player = _state.value.player ?: return
+        val variant = current.ladder?.lines()?.firstOrNull { it.isNotBlank() && !it.startsWith("#") } ?: return
+        // The player is read on the main thread, the requests run on another.
+        val ahead = (player.bufferedPosition / PROBE_SEGMENT_MS).toInt()
+        // Old segments exist already: how fast they are handed out tells the server's own delay per request.
+        val next = if (DebugOptions.probeOld) maxOf(0, ahead - PROBE_OLD_BEHIND) else ahead
+        val buffered = player.bufferedPosition - player.currentPosition
+        try {
+            withContext(Dispatchers.IO) {
+            fun open(url: String) = (URL(url).openConnection() as HttpURLConnection).apply {
+                current.headers.forEach { (name, value) -> setRequestProperty(name, value) }
+                connectTimeout = 15_000
+                readTimeout = 60_000
+            }
+            val segments = open(variant).run { inputStream.bufferedReader().use { it.readLines() } }
+                .filter { it.isNotBlank() && !it.startsWith("#") }
+            val base = URI(variant)
+            val t0 = SystemClock.elapsedRealtime()
+            Log.i("Probe", "asking for ${if (DebugOptions.probeOld) "old " else ""}segments $next to ${next + PROBE_COUNT - 1} at once, buffered $buffered ms")
+            coroutineScope {
+                (0 until PROBE_COUNT).map { k ->
+                    async {
+                        val connection = open(base.resolve(segments[next + k]).toString())
+                        val code = connection.responseCode
+                        val answered = SystemClock.elapsedRealtime() - t0
+                        val bytes = connection.inputStream.use { it.readBytes().size }
+                        Log.i("Probe", "segment ${next + k}: answered after $answered ms, ${bytes / 1024} KiB, done after ${SystemClock.elapsedRealtime() - t0} ms (code $code)")
+                    }
+                }.awaitAll()
+            }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // A debug aid: whatever goes wrong with it must not end the playback.
+            Log.w("Probe", "failed: ${e.javaClass.simpleName} ${e.message}")
+        }
+    }
+
+    /** Measures the link and moves the tier down when the link does not carry it. */
+    private suspend fun checkLink(controller: TierController) {
+        val budget = playback.probeBudget() ?: return
+        Log.i(TAG, "The link carries ${budget / 1_000_000} Mbit/s")
+        controller.limitTo(budget, SystemClock.elapsedRealtime())?.let { pinTier(it) }
+    }
+
+    /** The tiers of a ladder, once Media3 lists them: the stream starts at the one that fits the budget. */
+    @OptIn(UnstableApi::class)
+    private fun startTiers(tracks: Tracks) {
+        val current = source ?: return
+        if (current.ladder == null || DebugOptions.fixedTier) return
+        val formats = tracks.groups.filter { it.type == C.TRACK_TYPE_VIDEO }
+            .flatMap { group -> (0 until group.length).map { group.getTrackFormat(it) } }
+            .filter { it.bitrate > 0 }
+            .distinctBy { it.bitrate }
+            .sortedBy { it.bitrate }
+        if (formats.size < 2) {
+            Log.i(TAG, "Video formats listed so far: ${formats.joinToString { "${it.height}p" }}")
+            return
+        }
+        val bitrates = formats.map { it.bitrate }
+        val start = bitrates.indexOfLast { it <= (current.streamBitrate ?: bitrates.last()) * 105L / 100 }.coerceAtLeast(0)
+        val controller = TierController(bitrates, formats.map { StreamBudget.expectedBitrate(it.height) }, start)
+        tiers = controller
+        Log.i(TAG, "Tiers ${formats.joinToString { "${it.height}p (${it.bitrate / 1000} kbit/s)" }}, starting at ${controller.bitrate / 1000}")
+        pinTier(controller.bitrate)
+    }
+
+    /** Asks the player for the tier of [bitrate]; it switches at the next segment, the buffer already loaded plays on. */
+    private fun pinTier(bitrate: Int) {
+        Log.i(TAG, "Tier ${bitrate / 1000} kbit/s" + tiers?.reason?.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty())
+        _state.value.playback?.steer(bitrate)
+    }
+
+    /** Opens the title again at the current position with a stream that asks less of the link. */
+    private fun lowerQuality(): Boolean {
+        stallWatch?.cancel()
+        val current = source ?: return false
+        val streamBitrate = current.streamBitrate
+        // Only "Auto" decides by itself; a chosen cap stays. Live TV has no bitrate to lower.
+        // Tiers follow the link by themselves; a new stream is for the one that cannot.
+        if (current.ladder != null || current.live || streamBitrate == null || qualitySteps >= MAX_QUALITY_STEPS ||
+            streamBitrate <= StreamBudget.FLOOR || settings.settings.value.playback.maxBitrate != MaxBitrate.Auto
+        ) {
+            return false
+        }
+        qualitySteps++
+        stalls.clear()
+        playback.lowerBudget(streamBitrate)
+        viewModelScope.launch { _events.send(UiEvent.Toast(R.string.player_lower_quality)) }
+        reopen(audio = _state.value.audioIndex, subtitle = _state.value.subtitleIndex)
+        return true
+    }
+
+    /** A stream that shows no picture within [timeoutMs] is more than the link carries, too. */
+    private fun watchStartup(player: Player, timeoutMs: Long) {
+        stallWatch?.cancel()
+        stallWatch = viewModelScope.launch {
+            delay(timeoutMs)
+            if (_state.value.player === player && !started) {
+                Log.w(TAG, "No picture after ${timeoutMs / 1000} s")
+                lowerQuality()
+            }
+        }
+    }
+
     private fun reopen(audio: Int?, subtitle: Int?) {
         val position = currentPositionMs()
         source?.let { playback.reportStopped(it, position) }
@@ -618,6 +916,7 @@ class PlayerViewModel @Inject constructor(
                 if (segment != null && policy.action(segment.kind) == SegmentAction.Skip && player.isPlaying) {
                     autoSkip(segment)
                 }
+                watchBuffer(player)
                 val upNext = upNext(position, duration)
                 _progress.value = PlayerProgress(
                     positionMs = player.currentPosition,
@@ -664,6 +963,9 @@ class PlayerViewModel @Inject constructor(
 
     private fun releasePlayer() {
         ticker?.cancel()
+        stallWatch?.cancel()
+        recovery?.cancel()
+        tiers = null
         _state.value.player?.let {
             it.removeListener(listener)
             it.release()
@@ -731,6 +1033,43 @@ class PlayerViewModel @Inject constructor(
         const val MAX_OUTPUT_RECOVERIES = 3
         /** Long enough for the TV to finish switching its picture mode. */
         const val OUTPUT_RECOVERY_DELAY_MS = 1_500L
+        /** A stall this long moves to a smaller stream at once. */
+        const val LONG_STALL_MS = 8_000L
+        /** Buffering this soon after a jump is the jump, not the link. */
+        const val SEEK_BUFFERING_MS = 3_000L
+        const val MAX_OPEN_RETRIES = 3
+        /** Media3 tries a segment several times itself before an error reaches here, each with the long timeout. */
+        const val MAX_LINK_RETRIES = 3
+        /** The segment probe (debug): when it runs after the first picture, how long a segment is, how many it asks for. */
+        const val PROBE_DELAY_MS = 25_000L
+        const val PROBE_SEGMENT_MS = 10_000L
+        const val PROBE_COUNT = 6
+        const val PROBE_OLD_BEHIND = 6
+        const val OPEN_RETRY_DELAY_MS = 3_000L
+        /** A ladder's buffer is judged from this long after the start. */
+        /** A new stream must show a picture within this time. */
+        const val STARTUP_MS = 20_000L
+        const val TRANSCODE_STARTUP_MS = 75_000L
+        /** Errors of a connection that cannot keep up. */
+        val LINK_ERRORS = setOf(
+            PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+        )
+
+        /** Seconds ahead below which the buffer counts as nearly empty, and above which as recovered. */
+        const val BUFFER_LOW_MS = 4_000L
+        const val BUFFER_RECOVERED_MS = 10_000L
+        /** Nearly empty for this long while playing: the stream drains the buffer. */
+        const val BUFFER_DRAIN_MS = 5_000L
+        /** The buffer of a stream that just started, or just jumped, fills first. */
+        const val BUFFER_SETTLE_MS = 30_000L
+        /** A reduced stream checks the link this often, and only with this much buffer ahead. */
+        const val RECOVERY_CHECK_MS = 120_000L
+        const val RECOVERY_BUFFER_MS = 20_000L
+        const val MAX_RETURNS = 2
+        /** Smaller streams one title may move to: 70 %, 49 %, 34 % of the first. */
+        const val MAX_QUALITY_STEPS = 3
 
         /** A dead AudioTrack, or a runtime error such as a decoder refusing its new surface or a player stuck after either. */
         @OptIn(UnstableApi::class)

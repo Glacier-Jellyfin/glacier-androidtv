@@ -24,6 +24,11 @@ collapsed block, and the app shows it when its language is German or Spanish.
 
 ### Improved
 - The app can be moved to external storage on devices that support it
+- Playback measures the connection and fits a transcode to it, so it does not stutter on a slower link
+- A transcode moves to a smaller picture (4K, 1080p, 720p) when the connection is too slow
+- Transcoded video builds a large buffer and stalls much less
+- A transcode is made for the size of the display
+- A slow server no longer ends playback with an error
 
 ## [0.9.0] - 2026-11-05
 

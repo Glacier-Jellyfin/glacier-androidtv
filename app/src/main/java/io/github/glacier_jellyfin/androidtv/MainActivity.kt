@@ -66,6 +66,7 @@ import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.music.NowPlaying
 import io.github.glacier_jellyfin.androidtv.navigation.GlacierNavHost
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
+import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ServerListRoute
 import io.github.glacier_jellyfin.androidtv.ui.CardSizes
@@ -191,6 +192,11 @@ class StartViewModel @Inject constructor(
         val session = sessions.session.value
         val same = session != null && session.server.id == launch.serverId && session.user.userId == launch.userId
         _relaunch.trySend(if (same) HomeRoute else ProfilesRoute(launch.serverId, appStart = true, userId = launch.userId))
+    }
+
+    /** Debug builds: plays a title straight away, from [startMs], for tests that cannot press buttons reliably. */
+    fun play(itemId: String, startMs: Long) {
+        _relaunch.trySend(PlayerRoute(itemId, startMs = startMs))
     }
 
     fun closeCrashShare() {
@@ -364,11 +370,17 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         HomeLaunch.from(intent)?.let(startViewModel::open)
+        // adb shell am start -n <package>/...MainActivity -a io.github.glacier_jellyfin.androidtv.PLAY_TITLE --es item <id> --el startms <ms>
+        if (BuildConfig.DEBUG && intent.action == PLAY_ACTION) {
+            intent.getStringExtra("item")?.let { startViewModel.play(it, intent.getLongExtra("startms", 0)) }
+        }
     }
 
     private companion object {
         /** False until the first activity of this process is created, so a restore after the process ended can be told apart. */
         var processAlive = false
+
+        const val PLAY_ACTION = "io.github.glacier_jellyfin.androidtv.PLAY_TITLE"
     }
 }
 

@@ -513,6 +513,8 @@
     <string name="player_info_hdr">HDR formats</string>
     <string name="player_info_seconds">%1$d s</string>
     <string name="player_info_bandwidth">Bandwidth ≈ %1$s</string>
+    <string name="player_lower_quality">Connection too slow · switching to a lower quality</string>
+    <string name="player_full_quality">Connection is fine again · back to full quality</string>
     <string name="player_info_why">Why</string>
     <string name="player_info_on_server">File on the server</string>
     <string name="player_info_to_device">Stream to this device</string>
@@ -806,7 +808,7 @@
     <string name="settings_seek_forward">Skip forward</string>
     <string name="settings_seek_sub">Left/Right, the remote\'s rewind and fast-forward keys and the player buttons · also in the music player</string>
     <string name="settings_bitrate">Maximum bitrate</string>
-    <string name="settings_bitrate_sub">In Mbit/s · only applies when the server has to transcode</string>
+    <string name="settings_bitrate_sub">In Mbit/s · Auto measures the connection and transcodes only when the file is too big for it</string>
     <string name="settings_bitrate_low">1.5</string>
     <string name="settings_segment_none">No action</string>
     <string name="settings_segment_ask">Ask</string>

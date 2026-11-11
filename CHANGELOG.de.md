@@ -9,6 +9,11 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ### Verbessert
 - Die App lässt sich auf Geräten, die es unterstützen, auf externen Speicher verschieben
+- Die Wiedergabe misst die Verbindung und passt einen Transcode daran an, damit es bei einer langsameren Leitung nicht ruckelt
+- Ein Transcode wechselt auf ein kleineres Bild (4K, 1080p, 720p), wenn die Verbindung zu langsam ist
+- Transkodiertes Video baut einen großen Puffer auf und stockt deutlich seltener
+- Ein Transcode wird für die Größe des Displays erzeugt
+- Ein langsamer Server beendet die Wiedergabe nicht mehr mit einem Fehler
 
 ## [0.9.0] - 2026-11-05
 

@@ -507,6 +507,8 @@
     <string name="player_info_hdr">HDR-Formate</string>
     <string name="player_info_seconds">%1$d s</string>
     <string name="player_info_bandwidth">Bandbreite ≈ %1$s</string>
+    <string name="player_lower_quality">Verbindung zu langsam · wechselt zu niedrigerer Qualität</string>
+    <string name="player_full_quality">Verbindung wieder gut · zurück zur vollen Qualität</string>
     <string name="player_info_why">Warum</string>
     <string name="player_info_on_server">Datei auf dem Server</string>
     <string name="player_info_to_device">Stream zum Gerät</string>
@@ -800,7 +802,7 @@
     <string name="settings_seek_forward">Vorspulen</string>
     <string name="settings_seek_sub">Links/Rechts, Spultasten der Fernbedienung und Schaltflächen im Player · auch im Musik-Player</string>
     <string name="settings_bitrate">Maximale Bitrate</string>
-    <string name="settings_bitrate_sub">In Mbit/s · gilt nur, wenn transkodiert werden muss</string>
+    <string name="settings_bitrate_sub">In Mbit/s · Auto misst die Verbindung und transkodiert nur, wenn die Datei dafür zu groß ist</string>
     <string name="settings_bitrate_low">1,5</string>
     <string name="settings_segment_none">Keine Aktion</string>
     <string name="settings_segment_ask">Nachfragen</string>

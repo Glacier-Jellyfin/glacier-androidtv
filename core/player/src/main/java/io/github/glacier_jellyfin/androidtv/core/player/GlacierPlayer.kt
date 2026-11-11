@@ -4,22 +4,34 @@ import android.content.Context
 import android.net.Uri
 import android.os.Handler
 import androidx.annotation.OptIn
+import android.util.Base64
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.DecoderReuseEvaluation
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.LoadEventInfo
+import androidx.media3.exoplayer.source.MediaLoadData
+import androidx.media3.exoplayer.trackselection.AdaptiveTrackSelection
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.exoplayer.upstream.BandwidthMeter
+import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.ui.SubtitleView
+import io.github.glacier_jellyfin.androidtv.core.log.DebugOptions
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.peerless2012.ass.media.AssHandler
 import io.github.peerless2012.ass.media.factory.AssRenderersFactory
@@ -41,6 +53,15 @@ data class StreamRequest(
     /** A Live TV channel: starts at the live edge, [startPositionMs] does not apply. */
     val live: Boolean = false,
     val setup: PlaybackSetup = PlaybackSetup(),
+    /** An HLS master playlist the app built (tiers of one transcode); played instead of [url]. */
+    val playlist: String? = null,
+    /** With [playlist]: the biggest tier to start with, in bit/s; the player then follows [GlacierPlayback.steer]. */
+    val startBitrate: Int? = null,
+    /**
+     * The server makes this stream as it goes (a transcode of a title): it may be slow, so segments get time to arrive and
+     * playback starts with more in the buffer. Not for live channels and previews, which must start and fail quickly.
+     */
+    val patient: Boolean = false,
 )
 
 /** How this device plays what it cannot take as it is, decided by the app from its capabilities and settings. */
@@ -63,7 +84,14 @@ data class SideloadedSubtitle(
  * view that [attachAss] puts into the SubtitleView; every other format still
  * arrives as Media3 cues.
  */
-class GlacierPlayback(val player: ExoPlayer, private val ass: AssHandler) {
+class GlacierPlayback(val player: ExoPlayer, private val ass: AssHandler, private val meter: SteeredBandwidthMeter) {
+
+    /**
+     * Makes the player choose the tier of [bitrate] (bit/s) of a ladder from the next segment on. Media3 switches
+     * between tiers by its speed estimate, which for a transcode is low, since the server takes its time for every
+     * segment, so the app gives it the estimate that suits the tier it wants. The buffer already loaded plays on.
+     */
+    fun steer(bitrate: Int) = meter.steer(bitrate)
 
     /** The video decoder Media3 picked, for the info panels; also known when the stream changed hands. */
     var videoDecoder: String? = null
@@ -132,18 +160,45 @@ class GlacierPlayback(val player: ExoPlayer, private val ass: AssHandler) {
 /** Creates the ExoPlayers for video and music, set up for TV playback. */
 object GlacierPlayer {
 
+    private const val REBUFFER_MS = 10_000
+    private const val RUN_UP_MS = 8_000
+
+    /**
+     * Media3 moves to a smaller tier only while less than this is buffered (15 s by default). The app decides when to move, after
+     * a measurement, and a move costs the server a new transcode (16 to 29 s), so it must happen while the buffer, up to
+     * about 56 s, can still cover that: the block is lifted by a value above any buffer.
+     */
+    private const val DECREASE_ANYTIME_MS = 600_000
+    private const val HLS_CONNECT_TIMEOUT_MS = 15_000
+    private const val HLS_READ_TIMEOUT_MS = 60_000
+
+    /** The share of its speed estimate Media3 lets a tier take; [SteeredBandwidthMeter.steer] counts with it. */
+    const val STEER_FRACTION = 0.9f
+
+    /** A playlist the app wrote, as an address Media3 reads without a request. */
+    private fun playlistUri(playlist: String): Uri =
+        Uri.parse("data:application/x-mpegURL;base64," + Base64.encodeToString(playlist.toByteArray(), Base64.NO_WRAP))
+
     @OptIn(UnstableApi::class)
     fun create(context: Context, request: StreamRequest): GlacierPlayback {
         val dataSource = DefaultHttpDataSource.Factory()
             .setDefaultRequestProperties(request.headers)
             .setAllowCrossProtocolRedirects(true)
+            .apply {
+                // The server answers a segment of a transcode when it has made it, and a slow transcode takes far longer
+                // than the 8 s Media3 waits by default: that ended the playback with an error.
+                if (request.patient) {
+                    setConnectTimeoutMs(HLS_CONNECT_TIMEOUT_MS)
+                    setReadTimeoutMs(HLS_READ_TIMEOUT_MS)
+                }
+            }
         // Rendered on its own GL thread above the video, with animation and embedded fonts.
         val ass = AssHandler(AssRenderType.OVERLAY_OPEN_GL)
         val assParsers = AssSubtitleParserFactory(ass)
         // libass's Matroska extractor, which also hands on Dolby Vision block additions.
         val extractors = DefaultExtractorsFactory().withDolbyVisionMkvSupport(assParsers, ass)
         // HTTP for the server's streams; asset:// for the playback check's samples.
-        val sources = DefaultDataSource.Factory(context, dataSource)
+        val sources = ThrottledDataSource.Factory(DefaultDataSource.Factory(context, dataSource))
         val profile7 = request.setup.dolbyVisionProfile7
         Log.i("Player", "Setup: Dolby Vision profile 7 $profile7, IEC 61937 ${if (request.setup.iec61937) "on" else "off"}")
         val mediaSources = DefaultMediaSourceFactory(
@@ -161,7 +216,30 @@ object GlacierPlayer {
             .setEnableDecoderFallback(true)
             // FFmpeg (core/ffmpeg) for audio formats no platform decoder or passthrough handles, e.g. DTS.
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+        // After a stall it takes more buffer to start again (default 5 s), so a link that just kept up
+        // does not run dry again at once.
+        val loadControl = DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
+                DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
+                // A transcode produces its segments at the server's pace: it starts with more in the buffer.
+                if (request.patient) RUN_UP_MS else DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
+                REBUFFER_MS,
+            )
+            .build()
+        // Tiers of one transcode: quality comes first, so it moves up as soon as the link allows and down only when
+        // the buffer runs low, and uses more of the measured speed than Media3's default 70 %.
+        val trackSelector = DefaultTrackSelector(context, AdaptiveTrackSelection.Factory(5_000, DECREASE_ANYTIME_MS, 25_000, STEER_FRACTION))
+        // Media3 leaves out tiers bigger than the display; a test of the display scaling a bigger picture down lets them in.
+        if (!DebugOptions.fitDisplay) {
+            trackSelector.setParameters(trackSelector.buildUponParameters().setViewportSize(3840, 2160, true))
+        }
+        val meter = SteeredBandwidthMeter(DefaultBandwidthMeter.getSingletonInstance(context))
+        request.startBitrate?.let { if (request.playlist != null) meter.steer(it) }
         val player = ExoPlayer.Builder(context, AssRenderersFactory(ass, renderers))
+            .setBandwidthMeter(meter)
+            .setTrackSelector(trackSelector)
+            .setLoadControl(loadControl)
             .setMediaSourceFactory(mediaSources)
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -173,8 +251,70 @@ object GlacierPlayer {
             .build()
         built = player
         Media3Logs.attach(player)
+        // Which tier of a ladder plays, for tests of the switching.
+        player.addAnalyticsListener(object : AnalyticsListener {
+            override fun onLoadCompleted(
+                eventTime: AnalyticsListener.EventTime,
+                loadEventInfo: LoadEventInfo,
+                mediaLoadData: MediaLoadData,
+            ) {
+                if (!DebugOptions.segmentLog) return
+                val kind = when (mediaLoadData.dataType) {
+                    C.DATA_TYPE_MEDIA -> "segment"
+                    C.DATA_TYPE_MEDIA_INITIALIZATION -> "init"
+                    C.DATA_TYPE_MANIFEST -> "playlist"
+                    else -> "type ${mediaLoadData.dataType}"
+                }
+                val ms = loadEventInfo.loadDurationMs.coerceAtLeast(1)
+                Log.i(
+                    "Segment",
+                    "$kind ${loadEventInfo.bytesLoaded / 1024} KiB in $ms ms (${loadEventInfo.bytesLoaded * 8 / ms} kbit/s), " +
+                        "tier ${mediaLoadData.trackFormat?.height}p ${(mediaLoadData.trackFormat?.bitrate ?: 0) / 1000} kbit/s, at ${mediaLoadData.mediaStartTimeMs / 1000} s, " +
+                        "ahead ${(eventTime.totalBufferedDurationMs) / 1000} s",
+                )
+            }
+
+            override fun onLoadStarted(
+                eventTime: AnalyticsListener.EventTime,
+                loadEventInfo: LoadEventInfo,
+                mediaLoadData: MediaLoadData,
+            ) {
+                if (!DebugOptions.segmentLog || mediaLoadData.dataType != C.DATA_TYPE_MEDIA) return
+                Log.i(
+                    "Segment",
+                    "load starts: tier ${mediaLoadData.trackFormat?.height}p ${(mediaLoadData.trackFormat?.bitrate ?: 0) / 1000} kbit/s, estimate ${meter.bitrateEstimate / 1000} kbit/s, " +
+                        "ahead ${eventTime.totalBufferedDurationMs / 1000} s",
+                )
+            }
+
+            override fun onLoadError(
+                eventTime: AnalyticsListener.EventTime,
+                loadEventInfo: LoadEventInfo,
+                mediaLoadData: MediaLoadData,
+                error: java.io.IOException,
+                wasCanceled: Boolean,
+            ) {
+                if (DebugOptions.segmentLog) Log.w("Segment", "load failed after ${loadEventInfo.loadDurationMs} ms: ${error.javaClass.simpleName}")
+            }
+
+            override fun onPlaybackStateChanged(eventTime: AnalyticsListener.EventTime, state: Int) {
+                if (DebugOptions.segmentLog) {
+                    val name = when (state) {
+                        Player.STATE_IDLE -> "idle"
+                        Player.STATE_BUFFERING -> "BUFFERING"
+                        Player.STATE_READY -> "ready"
+                        else -> "ended"
+                    }
+                    Log.i("Segment", "state $name, ahead ${eventTime.totalBufferedDurationMs / 1000} s")
+                }
+            }
+
+            override fun onVideoInputFormatChanged(eventTime: AnalyticsListener.EventTime, format: Format, decoderReuseEvaluation: DecoderReuseEvaluation?) {
+                if (request.playlist != null) Log.i("Player", "Video tier ${format.bitrate / 1000} kbit/s ${format.width}x${format.height}")
+            }
+        })
         val item = MediaItem.Builder()
-            .setUri(request.url)
+            .setUri(request.playlist?.let(::playlistUri) ?: Uri.parse(request.url))
             .apply { if (request.isHls) setMimeType(MimeTypes.APPLICATION_M3U8) }
             .setSubtitleConfigurations(request.subtitles.map { it.toConfiguration() })
             .build()
@@ -183,7 +323,7 @@ object GlacierPlayer {
             prepare()
         }
         ass.init(player)
-        return GlacierPlayback(player, ass)
+        return GlacierPlayback(player, ass, meter)
     }
 
     /**
@@ -270,4 +410,25 @@ object GlacierPlayer {
         "ttml" -> MimeTypes.APPLICATION_TTML
         else -> MimeTypes.APPLICATION_SUBRIP
     }
+}
+
+/**
+ * Media3's speed meter, with an estimate the app can set (see [GlacierPlayback.steer]); it measures on as usual, so
+ * the info panel still shows what the link did.
+ */
+@UnstableApi
+class SteeredBandwidthMeter(private val real: BandwidthMeter) : BandwidthMeter by real {
+
+    @Volatile
+    private var steered = 0L
+
+    /** The estimate that makes Media3 take the tier of [bitrate]: its share of it just fits, the next tier up does not. */
+    fun steer(bitrate: Int) {
+        steered = (bitrate * 1.05 / GlacierPlayer.STEER_FRACTION).toLong()
+    }
+
+    override fun getBitrateEstimate(): Long = steered.takeIf { it > 0 } ?: real.bitrateEstimate
+
+    /** A transcode answers late for every segment; Media3 would take that off the speed it allows a tier. */
+    override fun getTimeToFirstByteEstimateUs(): Long = if (steered > 0) C.TIME_UNSET else real.timeToFirstByteEstimateUs
 }
