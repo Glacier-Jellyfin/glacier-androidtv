@@ -38,6 +38,7 @@ sealed interface UpNextMode {
     data object Off : UpNextMode
     /**
      * When the last credits start (episodes with a scene between two credits have two outro segments);
+     * when something follows the last credits, once they end;
      * without an outro segment [FALLBACK_MS] before the end.
      */
     data object WithCredits : UpNextMode
@@ -45,6 +46,9 @@ sealed interface UpNextMode {
 
     companion object {
         const val FALLBACK_MS = 30_000L
+
+        /** More than this left after the last credits counts as a scene after them. */
+        const val TRAILING_SCENE_MS = 15_000L
     }
 }
 
@@ -78,8 +82,15 @@ data class SegmentPolicy(
         if (durationMs <= 0) return null
         return when (val mode = upNext) {
             UpNextMode.Off -> null
-            UpNextMode.WithCredits -> segments.lastOrNull { it.kind == SegmentKind.Outro }?.startMs
-                ?: (durationMs - UpNextMode.FALLBACK_MS)
+            UpNextMode.WithCredits -> {
+                val outro = segments.lastOrNull { it.kind == SegmentKind.Outro }
+                when {
+                    outro == null -> durationMs - UpNextMode.FALLBACK_MS
+                    // A scene after the credits: the card waits until the credits are over.
+                    durationMs - outro.endMs > UpNextMode.TRAILING_SCENE_MS -> outro.endMs
+                    else -> outro.startMs
+                }
+            }
             is UpNextMode.Before -> durationMs - mode.ms
         }?.coerceAtLeast(0)
     }
