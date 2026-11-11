@@ -31,10 +31,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
@@ -42,6 +44,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.diagnostics.ISSUES_URL
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogShare
 import io.github.glacier_jellyfin.androidtv.diagnostics.QrImage
+import io.github.glacier_jellyfin.androidtv.update.DialogMark
 
 /**
  * Playback failed for good: the player's own recoveries are used up. A raised card over the
@@ -52,21 +55,24 @@ import io.github.glacier_jellyfin.androidtv.diagnostics.QrImage
 internal fun PlaybackFailureCard(state: PlayerUiState, onRetry: () -> Unit, onBack: () -> Unit) {
     val retryFocus = remember { FocusRequester() }
     val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
+    // The right panel holds the QR code, or says why there is none; while the log server starts, the card stays narrow.
+    val hasPanel = state.logShare != null || state.logOffline
     Box(Modifier.fillMaxSize().background(Color(0xB805090F)), contentAlignment = Alignment.Center) {
         Row(
             Modifier
                 // The OSD below stays composed; focus must not wander there.
                 .focusProperties { onExit = { cancelFocusChange() } }
                 .focusGroup()
-                .width(if (state.logShare != null) 1340.dp else 780.dp)
+                .width(if (hasPanel) 1340.dp else 820.dp)
                 .height(IntrinsicSize.Min)
                 .clip(shape)
                 .background(GlacierColors.Deep)
                 .border(1.dp, GlacierColors.GlassBorder2, shape)
-                .padding(56.dp),
-            horizontalArrangement = Arrangement.spacedBy(56.dp),
+                .padding(48.dp),
+            horizontalArrangement = Arrangement.spacedBy(48.dp),
         ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(26.dp)) {
+            Column(Modifier.weight(1f).padding(start = 8.dp, top = 8.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+                DialogMark(GlacierIcons.Alert)
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     itemLabel(state)?.let {
                         Text(
@@ -85,18 +91,13 @@ internal fun PlaybackFailureCard(state: PlayerUiState, onRetry: () -> Unit, onBa
                     color = GlacierColors.Mist,
                 )
                 state.failureCode?.let { FailureCode(it) }
-                if (state.logOffline) {
-                    Text(stringResource(R.string.player_error_log_offline), style = GlacierText.body(17), color = GlacierColors.Mist)
-                }
-                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Box(Modifier.weight(1f, fill = false))
+                Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     PillButton(stringResource(R.string.action_retry), onClick = onRetry, primary = true, modifier = Modifier.focusRequester(retryFocus))
                     PillButton(stringResource(R.string.action_back), onClick = onBack)
                 }
             }
-            state.logShare?.let {
-                Box(Modifier.width(1.dp).fillMaxHeight().background(GlacierColors.GlassBorder))
-                LogQr(it)
-            }
+            if (hasPanel) LogPanel(state.logShare)
         }
     }
     LaunchedEffect(Unit) {
@@ -129,21 +130,34 @@ private fun FailureCode(code: String) {
     )
 }
 
+/** The glass panel on the right: the QR code for the log, or, without a network, where to find the log later. */
 @Composable
-private fun LogQr(share: LogShare) {
+private fun LogPanel(share: LogShare?) {
+    val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
     Column(
-        Modifier.width(460.dp).fillMaxHeight(),
+        Modifier
+            .width(500.dp)
+            .fillMaxHeight()
+            .clip(shape)
+            .background(GlacierColors.GlassFill)
+            .border(1.dp, GlacierColors.GlassBorder, shape)
+            .padding(horizontal = 36.dp, vertical = 36.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically),
+        verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically),
     ) {
-        Text(stringResource(R.string.player_error_log_title), style = GlacierText.display(24), color = GlacierColors.Ice, textAlign = TextAlign.Center)
-        QrImage(share.url, Modifier.size(240.dp).clip(RoundedCornerShape(GlacierShapes.RadiusMd)))
-        Text(share.url, style = GlacierText.mono(15), color = GlacierColors.Ice, textAlign = TextAlign.Center)
-        Text(
-            stringResource(R.string.player_error_log_body, ISSUES_URL),
-            style = GlacierText.body(16),
-            color = GlacierColors.Mist,
-            textAlign = TextAlign.Center,
-        )
+        Text(stringResource(R.string.player_error_log_title), style = GlacierText.display(26), color = GlacierColors.Ice, textAlign = TextAlign.Center)
+        if (share != null) {
+            QrImage(share.url, Modifier.size(240.dp).clip(RoundedCornerShape(GlacierShapes.RadiusMd)))
+            Text(share.url, style = GlacierText.mono(16), color = GlacierColors.Ice, textAlign = TextAlign.Center)
+            Text(
+                stringResource(R.string.player_error_log_body, ISSUES_URL),
+                style = GlacierText.body(17),
+                color = GlacierColors.Mist,
+                textAlign = TextAlign.Center,
+            )
+        } else {
+            Icon(GlacierIcons.WifiOff, contentDescription = null, tint = GlacierColors.Mist, modifier = Modifier.size(72.dp))
+            Text(stringResource(R.string.player_error_log_offline), style = GlacierText.body(19), color = GlacierColors.Mist, textAlign = TextAlign.Center)
+        }
     }
 }
