@@ -21,6 +21,13 @@ data class RememberedTracks(val audio: Int?, val subtitle: Int?) {
     }
 }
 
+/** What a pick of [audio] and [subtitle] (null: off) leaves for the show's next episode. */
+fun lastTracksOf(choices: TrackChoices, audio: Int?, subtitle: Int?) = LastTracks(
+    audio = choices.audio.firstOrNull { it.index == audio }?.toKey(),
+    subtitle = choices.subtitles.firstOrNull { it.index == subtitle }?.toKey(),
+    subtitlesOff = subtitle == null,
+)
+
 fun rememberedTracks(last: LastTracks?, preferences: ServerPreferences, choices: TrackChoices?): RememberedTracks {
     if (choices == null || last == null) return RememberedTracks(null, null)
     val audio = last.audio?.takeIf { preferences.rememberAudio }?.let { closestTrack(it, choices.audio) }?.index

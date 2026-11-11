@@ -26,6 +26,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.RememberedTracks
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.closestTrack
+import io.github.glacier_jellyfin.androidtv.core.data.settings.lastTracksOf
 import io.github.glacier_jellyfin.androidtv.core.data.settings.toKey
 import io.github.glacier_jellyfin.androidtv.core.data.settings.rememberedTracks
 import io.github.glacier_jellyfin.androidtv.core.data.settings.showKey
@@ -629,9 +630,19 @@ class DetailViewModel @Inject constructor(
         val selection = if (kind == TrackKind.Audio) current.copy(audio = index) else current.copy(subtitle = index)
         trackSelections.set(itemId, selection)
         _state.update { it.copy(selection = selection, trackPanel = null) }
+        recordTracks(selection)
         viewModelScope.launch {
             _events.send(UiEvent.Toast(if (kind == TrackKind.Audio) R.string.track_audio_set else R.string.track_subtitles_set, listOf(label)))
         }
+    }
+
+    /** A pick here, "subtitles off" included, is what the show's next episode starts with, as in the player. */
+    private fun recordTracks(selection: TrackSelection) {
+        val details = _state.value.details ?: return
+        val tracks = details.tracks ?: return
+        val last = lastTracksOf(tracks, selection.audio, selection.subtitle)
+        val key = details.showKey()
+        viewModelScope.launch { settings.update { it.copy(showTracks = it.showTracks + (key to last)) } }
     }
 
     /**

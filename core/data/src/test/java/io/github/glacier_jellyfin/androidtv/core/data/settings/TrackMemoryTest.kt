@@ -50,6 +50,19 @@ class TrackMemoryTest {
     }
 
     @Test
+    fun `an active pick of no subtitles is kept as off`() {
+        val off = lastTracksOf(choices, audio = 2, subtitle = null)
+        assertEquals(LastTracks(audio = japanese.toKey(), subtitle = null, subtitlesOff = true), off)
+        assertEquals(RememberedTracks(2, RememberedTracks.SUBTITLES_OFF), rememberedTracks(off, ServerPreferences(), choices))
+    }
+
+    @Test
+    fun `a picked subtitle is kept as that track`() {
+        val last = lastTracksOf(choices, audio = 1, subtitle = 5)
+        assertEquals(LastTracks(audio = german.toKey(), subtitle = englishSdh.toKey(), subtitlesOff = false), last)
+    }
+
+    @Test
     fun `nothing remembered leaves the choice to the server`() {
         assertEquals(RememberedTracks(null, null), rememberedTracks(LastTracks(), ServerPreferences(), choices))
         assertEquals(RememberedTracks(null, null), rememberedTracks(null, ServerPreferences(), choices))
