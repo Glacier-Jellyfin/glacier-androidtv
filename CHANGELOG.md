@@ -30,6 +30,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - A transcode is made for the size of the display
 - A slow server no longer ends playback with an error
 - Redesigned playback error dialog
+- When the connection is too slow for a file, only the sound is converted and the picture stays untouched (setting)
 
 ### Fixed
 - "Subtitles off" picked on the detail page also applies to the next episode

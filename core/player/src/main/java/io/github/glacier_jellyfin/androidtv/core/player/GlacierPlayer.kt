@@ -62,6 +62,8 @@ data class StreamRequest(
      * playback starts with more in the buffer. Not for live channels and previews, which must start and fail quickly.
      */
     val patient: Boolean = false,
+    /** A film or an episode in the player: not a preview, a trailer or a live channel. Gets the big buffer, also for direct play. */
+    val title: Boolean = false,
 )
 
 /** How this device plays what it cannot take as it is, decided by the app from its capabilities and settings. */
@@ -227,9 +229,9 @@ object GlacierPlayer {
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
         // After a stall it takes more buffer to start again (default 5 s), so a link that just kept up
         // does not run dry again at once.
-        // Live has no stock to buffer, previews must start fast: only a title the server makes as it goes
-        // (patient) gets the big buffer, which carries a tier switch (a new transcode takes 16 to 29 s).
-        val bigBuffer = request.patient && !request.live
+        // Live has no stock to buffer, previews must start fast: only a title gets the big buffer, which carries a tier
+        // switch (a new transcode takes 16 to 29 s) and the high bitrates of direct play.
+        val bigBuffer = request.title && !request.live
         val bufferMs = if (bigBuffer) VIDEO_BUFFER_MS else DefaultLoadControl.DEFAULT_MAX_BUFFER_MS
         val maxMemory = Runtime.getRuntime().maxMemory()
         val loadControlBuilder = DefaultLoadControl.Builder()

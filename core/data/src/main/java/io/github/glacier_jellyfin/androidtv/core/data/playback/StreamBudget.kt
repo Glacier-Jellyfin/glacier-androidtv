@@ -57,6 +57,32 @@ object StreamBudget {
     fun afterStall(streamBitrate: Int, current: Int?): Int =
         minOf(current ?: Int.MAX_VALUE, (streamBitrate.toLong() * AFTER_STALL_PERCENT / 100).toInt()).coerceAtLeast(FLOOR)
 
+    /** Segment length of a video copy, in seconds; see [fitsWithSegments]. */
+    const val COPY_SEGMENT_SECONDS = 30
+
+    /** The server's wait per segment request, in seconds (one after the other). */
+    const val SEGMENT_WAIT_SECONDS = 3
+
+    /** What the server converts the audio to, in bit/s: 640 kbit/s from 6 channels (E-AC-3), else 384 kbit/s. */
+    fun audioBitrate(channels: Int): Int = if (channels >= 6) 640_000 else 384_000
+
+    /** What a stream asks of the link when only the audio is converted: the picture as it is plus the new audio. */
+    fun copyDemand(videoBitrate: Int, audioChannels: Int): Int = videoBitrate + audioBitrate(audioChannels)
+
+    /**
+     * True when [budget] carries [demand] with segments of [COPY_SEGMENT_SECONDS]: the server answers each request after
+     * about [SEGMENT_WAIT_SECONDS], so only (L - 3) / L of the time moves data.
+     */
+    fun fitsWithSegments(demand: Int, budget: Int): Boolean =
+        demand.toLong() * COPY_SEGMENT_SECONDS <= budget.toLong() * (COPY_SEGMENT_SECONDS - SEGMENT_WAIT_SECONDS)
+
+    /**
+     * The maximum bitrate to ask for so the server copies the picture: its video share (the request minus its own audio
+     * guess) must reach [videoBitrate], else it transcodes the picture.
+     */
+    fun copyRequest(videoBitrate: Int, audioChannels: Int): Int =
+        (videoBitrate.toLong() * 102 / 100 + audioBitrate(audioChannels) + 64_000).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+
     /** True when [budget] carries [bitrate] with room to spare, so a reduced stream may go back to it. */
     fun returnsTo(bitrate: Int, budget: Int): Boolean = budget.toLong() * 100 >= bitrate.toLong() * RETURN_PERCENT
 }

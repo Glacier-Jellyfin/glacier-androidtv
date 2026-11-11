@@ -323,6 +323,7 @@ data class PlaybackSettings(
     val hdAudio: HdAudioOutput = HdAudioOutput.Glacier,
     val dolbyVisionProfile7: DolbyVisionProfile7Choice = DolbyVisionProfile7Choice.DolbyVision,
     val subtitleBurnIn: SubtitleBurnIn = SubtitleBurnIn.Auto,
+    val slowLink: SlowLink = SlowLink.KeepPicture,
 ) {
     val segmentPolicy: SegmentPolicy get() = SegmentPolicy(SegmentPolicy.DefaultActions + segments, upNext.mode)
 }
@@ -372,6 +373,15 @@ enum class MaxBitrate(val bitsPerSecond: Int?) {
     M10(10_000_000),
     M4(4_000_000),
     M1_5(1_500_000),
+}
+
+/** What gives way when the measured link is too slow for a file (bitrate "Auto" only). */
+@Serializable
+enum class SlowLink {
+    /** The server converts only the audio and copies the picture, where the picture fits the link. */
+    KeepPicture,
+    /** The audio stays as it is; the picture is converted to what fits. */
+    KeepSound,
 }
 
 /** Most audio channels the server may send; more are downmixed. */

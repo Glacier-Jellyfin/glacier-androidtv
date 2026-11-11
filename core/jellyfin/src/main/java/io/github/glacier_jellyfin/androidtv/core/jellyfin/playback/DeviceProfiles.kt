@@ -32,6 +32,7 @@ object DeviceProfiles {
         maxBitrate: Int,
         burnIn: SubtitleBurnIn = SubtitleBurnIn.Auto,
         segments: HlsSegments = HlsSegments.preferredFor(capabilities),
+        videoSegmentSeconds: Int = HLS_SEGMENT_SECONDS,
     ): DeviceProfile = buildDeviceProfile {
         name = "Glacier"
         maxStreamingBitrate = maxBitrate
@@ -75,7 +76,7 @@ object DeviceProfiles {
             copyTimestamps = false
             // The server answers every segment request after about 3 s, one after the other, however fast ffmpeg is. With
             // segments of 3 s that is real time, and the buffer cannot grow; longer segments carry more per request.
-            segmentLength = HLS_SEGMENT_SECONDS
+            segmentLength = videoSegmentSeconds
         }
         transcodingProfile {
             type = DlnaProfileType.AUDIO
@@ -178,7 +179,7 @@ object DeviceProfiles {
     private const val MUSIC_BITRATE = 320_000
 
     /** How long a segment of a video transcode is, in seconds. */
-    private const val HLS_SEGMENT_SECONDS = 10
+    const val HLS_SEGMENT_SECONDS = 10
 }
 
 /** Which subtitles the server burns into the picture instead of sending them to the device. */

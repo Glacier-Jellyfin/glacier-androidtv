@@ -16,6 +16,7 @@ only in English.
 - La transcodificación se genera para el tamaño de la pantalla
 - Un servidor lento ya no termina la reproducción con un error
 - Nuevo diseño del diálogo de errores de reproducción
+- Si la conexión es demasiado lenta para un archivo, solo se convierte el sonido y la imagen queda intacta (ajuste)
 
 ### Correcciones
 - «Subtítulos desactivados» elegido en la página de detalles también se aplica al siguiente episodio

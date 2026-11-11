@@ -15,6 +15,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Ein Transcode wird für die Größe des Displays erzeugt
 - Ein langsamer Server beendet die Wiedergabe nicht mehr mit einem Fehler
 - Neu gestalteter Dialog bei Wiedergabefehlern
+- Ist die Verbindung für eine Datei zu langsam, wird nur der Ton umgewandelt und das Bild bleibt unverändert (Einstellung)
 
 ### Behoben
 - „Untertitel aus“ auf der Detailseite gilt auch für die nächste Folge
