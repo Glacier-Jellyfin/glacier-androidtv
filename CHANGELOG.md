@@ -29,6 +29,11 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - Transcoded video builds a large buffer and stalls much less
 - A transcode is made for the size of the display
 - A slow server no longer ends playback with an error
+- Redesigned playback error dialog
+
+### Fixed
+- "Subtitles off" picked on the detail page also applies to the next episode
+- Up next waits while a scene still follows the credits
 
 ## [0.9.0] - 2026-11-05
 

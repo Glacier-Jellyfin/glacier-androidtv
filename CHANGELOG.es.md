@@ -15,6 +15,11 @@ only in English.
 - El vídeo transcodificado crea un búfer grande y se entrecorta mucho menos
 - La transcodificación se genera para el tamaño de la pantalla
 - Un servidor lento ya no termina la reproducción con un error
+- Nuevo diseño del diálogo de errores de reproducción
+
+### Correcciones
+- «Subtítulos desactivados» elegido en la página de detalles también se aplica al siguiente episodio
+- «A continuación» espera mientras aún sigue una escena tras los créditos
 
 ## [0.9.0] - 2026-11-05
 

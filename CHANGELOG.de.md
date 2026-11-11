@@ -14,6 +14,11 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Transkodiertes Video baut einen großen Puffer auf und stockt deutlich seltener
 - Ein Transcode wird für die Größe des Displays erzeugt
 - Ein langsamer Server beendet die Wiedergabe nicht mehr mit einem Fehler
+- Neu gestalteter Dialog bei Wiedergabefehlern
+
+### Behoben
+- „Untertitel aus“ auf der Detailseite gilt auch für die nächste Folge
+- „Als Nächstes“ wartet, solange nach dem Abspann noch eine Szene folgt
 
 ## [0.9.0] - 2026-11-05
 
