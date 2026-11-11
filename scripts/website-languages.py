@@ -4,7 +4,8 @@
 Each page holds the same menu, with its own language marked, so the entries
 never move from page to page. The order follows one rule:
 
-  1. English first: it is the language of the source texts and the one everybody finds at the top.
+  1. English first, set apart by a divider line (class "source", see site.css): it is the language of
+     the source texts and the one everybody finds at the top.
   2. Then every language written in Latin letters, alphabetically by its own name
      (accents and case ignored): Deutsch, Español, Français, Italiano, Nederlands, ...
   3. Then the other scripts, by language code: العربية (ar), 日本語 (ja), 한국어 (ko), Русский (ru), 中文 (zh), ...
@@ -76,7 +77,8 @@ def menu(here: str, page: str) -> str:
     items = []
     for code, name, _, _, _ in ordered():
         current = ' aria-current="page"' if code == here else ""
-        items.append(f'          <li><a href="{address(here, code, page)}" hreflang="{code}" lang="{code}"{current}>{name}</a></li>')
+        divided = ' class="source"' if code == "en" else ""
+        items.append(f'          <li{divided}><a href="{address(here, code, page)}" hreflang="{code}" lang="{code}"{current}>{name}</a></li>')
     name_here, label = names[here]
     return "\n".join([
         '<details class="lang">',
