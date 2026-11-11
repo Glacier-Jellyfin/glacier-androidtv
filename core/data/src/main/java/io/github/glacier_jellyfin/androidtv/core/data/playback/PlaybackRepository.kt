@@ -64,6 +64,7 @@ import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URI
 import java.net.URL
+import java.net.URLEncoder
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -118,6 +119,11 @@ data class PlaybackSource(
      * them with the link; [url] is the single stream it is made from. Null for everything else.
      */
     val ladder: String? = null,
+    /**
+     * The PlaySessionId of each tier of [ladder], by picture height. Every tier is its own request with its own session, so
+     * its own transcoding job on the server; the stop report only ends the job of [playSessionId].
+     */
+    val tierSessions: Map<Int, String> = emptyMap(),
 ) {
     /** A Live TV channel: no end, no resume point. */
     val live: Boolean get() = liveStreamId != null
@@ -422,7 +428,7 @@ class PlaybackRepository @Inject constructor(
         resolutions: List<StreamBudget.Resolution>,
         baseUrl: String,
         transcodingUrl: suspend (StreamBudget.Resolution) -> String?,
-    ): String? = coroutineScope {
+    ): BuiltLadder? = coroutineScope {
         val tiers = resolutions.map { resolution ->
             async {
                 runSuspendCatching {
@@ -439,8 +445,11 @@ class PlaybackRepository @Inject constructor(
         Log.i(TAG, "Tiers: " + fitting.joinToString { "${RESOLUTION.find(it.info)?.groupValues?.get(1) ?: "?"} (${it.bandwidth / 1_000_000} Mbit/s)" })
         // Segments start on a keyframe (the server forces one at every segment), which Media3 only assumes with this tag:
         // without it the first segment of a new tier overlaps the last of the old one and is loaded twice.
-        "#EXTM3U\n#EXT-X-INDEPENDENT-SEGMENTS\n" + fitting.joinToString("") { "${it.info}\n${it.url}\n" }
+        val playlist = "#EXTM3U\n#EXT-X-INDEPENDENT-SEGMENTS\n" + fitting.joinToString("") { "${it.info}\n${it.url}\n" }
+        BuiltLadder(playlist, fitting.mapNotNull { tier -> tier.height?.let { h -> tier.playSessionId?.let { h to it } } }.toMap())
     }
+
+    private class BuiltLadder(val playlist: String, val sessions: Map<Int, String>)
 
     /** The one variant of the server's master playlist at [masterUrl], with its address made absolute. */
     private fun fetchTier(session: Session, masterUrl: String, main: Boolean = false): Tier? {
@@ -465,10 +474,45 @@ class PlaybackRepository @Inject constructor(
             bandwidth = BANDWIDTH.find(info)?.groupValues?.get(1)?.toLongOrNull() ?: 0,
             codec = CODECS.find(info)?.groupValues?.get(1)?.substringBefore(',')?.substringBefore('.'),
             main = main,
+            height = RESOLUTION.find(info)?.groupValues?.get(1)?.substringAfter('x')?.toIntOrNull(),
+            playSessionId = PLAY_SESSION.find(uri)?.groupValues?.get(1),
         )
     }
 
-    private class Tier(val info: String, val url: String, val bandwidth: Long, val codec: String?, val main: Boolean)
+    private class Tier(
+        val info: String,
+        val url: String,
+        val bandwidth: Long,
+        val codec: String?,
+        val main: Boolean,
+        val height: Int?,
+        /** From the variant's address; the server's job of this tier is named by it. */
+        val playSessionId: String?,
+    )
+
+    /**
+     * Ends the server's transcoding job of [playSessionId] (a tier that no longer plays). Best effort: a failure is only
+     * logged, since the job ends on its own when the server's idle timeout is reached. The SDK has no call for it.
+     */
+    suspend fun stopTierJob(playSessionId: String) = withContext(Dispatchers.IO) {
+        val session = sessions.session.value ?: return@withContext
+        runSuspendCatching {
+            val base = checkNotNull(session.api.baseUrl).trimEnd('/')
+            val deviceId = URLEncoder.encode(session.api.deviceInfo.id, "UTF-8")
+            val connection = (URL("$base/Videos/ActiveEncodings?deviceId=$deviceId&playSessionId=${URLEncoder.encode(playSessionId, "UTF-8")}")
+                .openConnection() as HttpURLConnection).apply {
+                requestMethod = "DELETE"
+                setRequestProperty("Authorization", session.authorization())
+                connectTimeout = TIER_TIMEOUT_MS
+                readTimeout = TIER_TIMEOUT_MS
+            }
+            try {
+                Log.i(TAG, "Ended the transcode of session $playSessionId: HTTP ${connection.responseCode}")
+            } finally {
+                connection.disconnect()
+            }
+        }.onFailure { Log.w(TAG, "Ending the transcode of session $playSessionId failed", it) }
+    }
 
     /**
      * A stream of [streamBitrate] stalled: streams may use less from now on, so the next one is
@@ -684,7 +728,8 @@ class PlaybackRepository @Inject constructor(
                 fmp4Segments = method != PlaybackMethod.DirectPlay && source.transcodingSubProtocol == MediaStreamProtocol.HLS &&
                     source.transcodingContainer.equals("mp4", ignoreCase = true),
                 liveStreamId = source.liveStreamId,
-                ladder = ladder,
+                ladder = ladder?.playlist,
+                tierSessions = ladder?.sessions.orEmpty(),
                 // A ladder starts at what it was built for; the file's bitrate is no guide for a transcode to the display.
                 streamBitrate = if (ladder != null) resolutions[startTier].bitrate else listOfNotNull(source.bitrate, limit.takeIf { method != PlaybackMethod.DirectPlay }).minOrNull(),
                 method = method,
@@ -883,6 +928,9 @@ class PlaybackRepository @Inject constructor(
                 ),
             )
             if (watched) userDataApi.markPlayedItem(itemId = source.itemId)
+        }.also {
+            // The stop report ends the job of its own PlaySessionId only; the other tiers' jobs would run until the idle timeout.
+            source.tierSessions.values.filter { it != source.playSessionId }.forEach { id -> reportScope.launch { stopTierJob(id) } }
         }
 
     private fun report(what: String, onDone: () -> Unit = {}, call: suspend ApiClient.() -> Unit) {
@@ -944,6 +992,7 @@ class PlaybackRepository @Inject constructor(
         val SUBTITLES_GROUP = Regex(",SUBTITLES=\"[^\"]*\"")
         val BANDWIDTH = Regex("[:,]BANDWIDTH=(\\d+)")
         val RESOLUTION = Regex("RESOLUTION=([0-9x]+)")
+        val PLAY_SESSION = Regex("[?&]PlaySessionId=([^&]+)", RegexOption.IGNORE_CASE)
         val CODECS = Regex("CODECS=\"([^\"]*)\"")
 
         /** The size of the download that measures the link: a few seconds on a weak one. */

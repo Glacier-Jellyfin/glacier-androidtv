@@ -14,6 +14,8 @@ import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.source.LoadEventInfo
+import androidx.media3.exoplayer.source.MediaLoadData
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
 import androidx.annotation.OptIn
@@ -231,6 +233,13 @@ class PlayerViewModel @Inject constructor(
     private var playingSinceMs = 0L
     /** Keeps a ladder's tier within what the link carries; null for a stream of one tier. */
     private var tiers: TierController? = null
+    /** Picture height of each tier by its bitrate, as the player lists them. */
+    private var tierHeights: Map<Int, Int> = emptyMap()
+    /** Height of the tier asked for last; its transcode is the one running now or about to. */
+    private var pinnedHeight: Int? = null
+    /** Heights of tiers left behind whose server job still runs, until the current tier has loaded its first segment. */
+    private val retired = mutableSetOf<Int>()
+    private var slowLoads = SlowLoads()
     /** Waits for the link to recover while a reduced stream plays. */
     private var recovery: Job? = null
     /** Times this title went back to the file's quality. */
@@ -251,6 +260,26 @@ class PlayerViewModel @Inject constructor(
         @OptIn(UnstableApi::class)
         override fun onAudioTrackInitialized(eventTime: AnalyticsListener.EventTime, audioTrackConfig: AudioSink.AudioTrackConfig) {
             _state.update { it.copy(audioOutput = audioOutput(audioTrackConfig)) }
+        }
+    }
+
+    /** Media segments of a ladder: tells when a tier has taken over, and when loading falls behind playing. */
+    @OptIn(UnstableApi::class)
+    private val loads = object : AnalyticsListener {
+        @OptIn(UnstableApi::class)
+        override fun onLoadCompleted(eventTime: AnalyticsListener.EventTime, loadEventInfo: LoadEventInfo, mediaLoadData: MediaLoadData) {
+            val controller = tiers ?: return
+            if (mediaLoadData.dataType != C.DATA_TYPE_MEDIA) return
+            val height = mediaLoadData.trackFormat?.height?.takeIf { it > 0 } ?: return
+            // The first segment of the new tier is here: the old tier's transcode has nothing left to give.
+            if (height == pinnedHeight && retired.isNotEmpty()) endRetiredJobs(height)
+            val playMs = mediaLoadData.mediaEndTimeMs - mediaLoadData.mediaStartTimeMs
+            if (mediaLoadData.mediaStartTimeMs != C.TIME_UNSET && mediaLoadData.mediaEndTimeMs != C.TIME_UNSET && playMs > 0 &&
+                slowLoads.record(loadEventInfo.loadDurationMs, playMs, SystemClock.elapsedRealtime())
+            ) {
+                Log.w(TAG, "Two segments in a row loaded slower than they play (${loadEventInfo.loadDurationMs} ms for ${playMs} ms), measuring the link")
+                viewModelScope.launch { checkLink(controller) }
+            }
         }
     }
 
@@ -763,11 +792,34 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    /** Measures the link and moves the tier down when the link does not carry it. */
+    /**
+     * Measures the link and moves the tier down when the link does not carry it, or up when the buffer is full and the link has
+     * room: with up to two minutes loaded, the run-up of the new transcode does not show.
+     */
     private suspend fun checkLink(controller: TierController) {
         val budget = playback.probeBudget() ?: return
         Log.i(TAG, "The link carries ${budget / 1_000_000} Mbit/s")
-        controller.limitTo(budget, SystemClock.elapsedRealtime())?.let { pinTier(it) }
+        // The measurement took a while: the stream may have been replaced meanwhile.
+        if (tiers !== controller) return
+        val now = SystemClock.elapsedRealtime()
+        controller.limitTo(budget, now)?.let {
+            pinTier(it)
+            return
+        }
+        val player = _state.value.player ?: return
+        controller.raiseTo(budget, player.totalBufferedDuration, now)?.let { pinTier(it) }
+    }
+
+    /** Ends the server's jobs of the tiers left behind; [current] is the tier that plays and is never touched. */
+    private fun endRetiredJobs(current: Int) {
+        val sessions = source?.tierSessions.orEmpty()
+        val ended = retired.filter { it != current }
+        retired.clear()
+        for (height in ended) {
+            val id = sessions[height] ?: continue
+            Log.i(TAG, "${current}p has its first segment, ending the transcode of ${height}p")
+            viewModelScope.launch { playback.stopTierJob(id) }
+        }
     }
 
     /** The tiers of a ladder, once Media3 lists them: the stream starts at the one that fits the budget. */
@@ -788,6 +840,8 @@ class PlayerViewModel @Inject constructor(
         val start = bitrates.indexOfLast { it <= (current.streamBitrate ?: bitrates.last()) * 105L / 100 }.coerceAtLeast(0)
         val controller = TierController(bitrates, formats.map { StreamBudget.expectedBitrate(it.height) }, start)
         tiers = controller
+        tierHeights = formats.associate { it.bitrate to it.height }
+        slowLoads = SlowLoads()
         Log.i(TAG, "Tiers ${formats.joinToString { "${it.height}p (${it.bitrate / 1000} kbit/s)" }}, starting at ${controller.bitrate / 1000}")
         pinTier(controller.bitrate)
     }
@@ -795,6 +849,12 @@ class PlayerViewModel @Inject constructor(
     /** Asks the player for the tier of [bitrate]; it switches at the next segment, the buffer already loaded plays on. */
     private fun pinTier(bitrate: Int) {
         Log.i(TAG, "Tier ${bitrate / 1000} kbit/s" + tiers?.reason?.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty())
+        val height = tierHeights[bitrate]
+        val before = pinnedHeight
+        // The tier left behind keeps its job until the new one has a segment; one that is asked for again stays.
+        if (before != null && height != null && before != height) retired += before
+        if (height != null) retired -= height
+        pinnedHeight = height
         _state.value.playback?.steer(bitrate)
     }
 
@@ -959,13 +1019,18 @@ class PlayerViewModel @Inject constructor(
     private fun position() = PlaybackPosition(currentPositionMs(), paused = _state.value.player?.isPlaying != true)
 
     @OptIn(UnstableApi::class)
-    private fun addDecoderListener(player: ExoPlayer) = player.addAnalyticsListener(decoders)
+    private fun addDecoderListener(player: ExoPlayer) {
+        player.addAnalyticsListener(decoders)
+        player.addAnalyticsListener(loads)
+    }
 
     private fun releasePlayer() {
         ticker?.cancel()
         stallWatch?.cancel()
         recovery?.cancel()
         tiers = null
+        pinnedHeight = null
+        retired.clear()
         _state.value.player?.let {
             it.removeListener(listener)
             it.release()

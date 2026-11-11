@@ -113,9 +113,10 @@ fun InfoPanel(
     }
     val context = LocalContext.current
     val player = state.player
-    val stats by produceState<StreamStats?>(null, player) {
+    val maxBufferMs = state.playback?.maxBufferMs
+    val stats by produceState<StreamStats?>(null, player, maxBufferMs) {
         while (player != null) {
-            value = player.streamStats(context)
+            value = player.streamStats(context, maxBufferMs)
             delay(1_000)
         }
     }
@@ -456,7 +457,7 @@ internal fun BufferRow(stats: StreamStats?) {
         Row(horizontalArrangement = Arrangement.spacedBy(28.dp), verticalAlignment = Alignment.CenterVertically) {
             SectionLabel(stringResource(R.string.player_info_buffer))
             val seconds = stats?.bufferSeconds ?: 0
-            InfoBar(seconds.toFloat() / MAX_BUFFER_SECONDS, LocalAccent.current.main, Modifier.weight(1f), thickness = 8)
+            InfoBar(seconds.toFloat() / (stats?.maxBufferSeconds ?: DEFAULT_MAX_BUFFER_SECONDS), LocalAccent.current.main, Modifier.weight(1f), thickness = 8)
             Text(
                 stringResource(R.string.player_info_seconds, seconds.toInt()),
                 style = GlacierText.body(18, FontWeight.SemiBold),

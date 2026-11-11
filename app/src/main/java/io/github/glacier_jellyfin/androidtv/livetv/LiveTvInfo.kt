@@ -89,7 +89,7 @@ internal fun LiveTvInfoPanel(
 }
 
 private fun GlacierPlayback.liveStats(context: android.content.Context) = LiveStats(
-    stream = player.streamStats(context),
+    stream = player.streamStats(context, maxBufferMs),
     videoDecoder = videoDecoder,
     audioDecoder = audioDecoder,
     output = audioEncoding?.let { audioOutput(it, audioChannelMask) },

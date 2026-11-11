@@ -84,6 +84,7 @@ data class SideloadedSubtitle(
  * view that [attachAss] puts into the SubtitleView; every other format still
  * arrives as Media3 cues.
  */
+@OptIn(UnstableApi::class)
 class GlacierPlayback(val player: ExoPlayer, private val ass: AssHandler, private val meter: SteeredBandwidthMeter) {
 
     /**
@@ -92,6 +93,10 @@ class GlacierPlayback(val player: ExoPlayer, private val ass: AssHandler, privat
      * segment, so the app gives it the estimate that suits the tier it wants. The buffer already loaded plays on.
      */
     fun steer(bitrate: Int) = meter.steer(bitrate)
+
+    /** The most the load control buffers ahead, in ms: the scale of the buffer bar in the info panel. */
+    var maxBufferMs: Int = DefaultLoadControl.DEFAULT_MAX_BUFFER_MS
+        internal set
 
     /** The video decoder Media3 picked, for the info panels; also known when the stream changed hands. */
     var videoDecoder: String? = null
@@ -162,11 +167,15 @@ object GlacierPlayer {
 
     private const val REBUFFER_MS = 10_000
     private const val RUN_UP_MS = 8_000
+    private const val MB = 1024L * 1024L
+
+    /** The server delivers a transcode about 2.8 times faster than real time; 120 s of it lasts through a tier switch. */
+    private const val VIDEO_BUFFER_MS = 120_000
 
     /**
      * Media3 moves to a smaller tier only while less than this is buffered (15 s by default). The app decides when to move, after
      * a measurement, and a move costs the server a new transcode (16 to 29 s), so it must happen while the buffer, up to
-     * about 56 s, can still cover that: the block is lifted by a value above any buffer.
+     * about 120 s, can still cover that: the block is lifted by a value above any buffer.
      */
     private const val DECREASE_ANYTIME_MS = 600_000
     private const val HLS_CONNECT_TIMEOUT_MS = 15_000
@@ -218,15 +227,33 @@ object GlacierPlayer {
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
         // After a stall it takes more buffer to start again (default 5 s), so a link that just kept up
         // does not run dry again at once.
-        val loadControl = DefaultLoadControl.Builder()
+        // Live has no stock to buffer, previews must start fast: only a title the server makes as it goes
+        // (patient) gets the big buffer, which carries a tier switch (a new transcode takes 16 to 29 s).
+        val bigBuffer = request.patient && !request.live
+        val bufferMs = if (bigBuffer) VIDEO_BUFFER_MS else DefaultLoadControl.DEFAULT_MAX_BUFFER_MS
+        val maxMemory = Runtime.getRuntime().maxMemory()
+        val loadControlBuilder = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
-                DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
+                // Min = max: Media3 keeps loading instead of pausing between the two.
+                if (bigBuffer) bufferMs else DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
+                bufferMs,
                 // A transcode produces its segments at the server's pace: it starts with more in the buffer.
                 if (request.patient) RUN_UP_MS else DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
                 REBUFFER_MS,
             )
-            .build()
+        if (bigBuffer) {
+            // Sized by the heap: a high-bitrate remux hits the default byte limit after about 14 s. The byte limit
+            // must keep deciding (not the time), or a full heap ends in an OutOfMemoryError.
+            val targetBytes = BufferSizing.targetBytes(
+                maxMemory,
+                DefaultLoadControl.DEFAULT_VIDEO_BUFFER_SIZE + DefaultLoadControl.DEFAULT_AUDIO_BUFFER_SIZE,
+            )
+            loadControlBuilder.setTargetBufferBytes(targetBytes).setPrioritizeTimeOverSizeThresholds(false)
+            Log.i("Player", "Buffer: ${bufferMs / 1000} s, ${targetBytes / MB} MB target, ${maxMemory / MB} MB heap")
+        } else {
+            Log.i("Player", "Buffer: ${bufferMs / 1000} s, default byte target, ${maxMemory / MB} MB heap")
+        }
+        val loadControl = loadControlBuilder.build()
         // Tiers of one transcode: quality comes first, so it moves up as soon as the link allows and down only when
         // the buffer runs low, and uses more of the measured speed than Media3's default 70 %.
         val trackSelector = DefaultTrackSelector(context, AdaptiveTrackSelection.Factory(5_000, DECREASE_ANYTIME_MS, 25_000, STEER_FRACTION))
@@ -323,7 +350,7 @@ object GlacierPlayer {
             prepare()
         }
         ass.init(player)
-        return GlacierPlayback(player, ass, meter)
+        return GlacierPlayback(player, ass, meter).also { it.maxBufferMs = bufferMs }
     }
 
     /**

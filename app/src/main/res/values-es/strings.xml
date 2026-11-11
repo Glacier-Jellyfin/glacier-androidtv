@@ -526,6 +526,8 @@
     <string name="player_info_hdr">Formatos HDR</string>
     <string name="player_info_seconds">%1$d s</string>
     <string name="player_info_bandwidth">Ancho de banda ≈ %1$s</string>
+    <string name="player_lower_quality">Conexión demasiado lenta · cambiando a una calidad inferior</string>
+    <string name="player_full_quality">La conexión vuelve a ir bien · de vuelta a la calidad completa</string>
     <string name="player_info_why">Motivo</string>
     <string name="player_info_on_server">Archivo en el servidor</string>
     <string name="player_info_to_device">Stream a este dispositivo</string>

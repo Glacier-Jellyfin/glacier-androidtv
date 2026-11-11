@@ -11,7 +11,7 @@ only in English.
 ### Mejoras
 - La aplicación se puede mover al almacenamiento externo en los dispositivos que lo admiten
 - La reproducción mide la conexión y adapta la transcodificación a ella, para que no se entrecorte con una conexión más lenta
-- Una transcodificación pasa a una imagen más pequeña (4K, 1080p, 720p) cuando la conexión es demasiado lenta
+- Una transcodificación pasa a una imagen más pequeña (4K, 1080p, 720p) cuando la conexión es demasiado lenta, y vuelve cuando se recupera
 - El vídeo transcodificado crea un búfer grande y se entrecorta mucho menos
 - La transcodificación se genera para el tamaño de la pantalla
 - Un servidor lento ya no termina la reproducción con un error

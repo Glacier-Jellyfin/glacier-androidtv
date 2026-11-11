@@ -30,20 +30,23 @@ data class StreamStats(
     val droppedFrames: Int?,
     /** Media3's estimate of the network speed, bits per second. */
     val bandwidth: Long?,
+    /** What a full buffer holds, in seconds: the scale of the buffer bar. It differs per playback. */
+    val maxBufferSeconds: Int = DEFAULT_MAX_BUFFER_SECONDS,
 )
 
+/** Media3's default buffer (DefaultLoadControl), the scale when the player's own is unknown, as for music. */
+internal const val DEFAULT_MAX_BUFFER_SECONDS = 50
+
 @OptIn(UnstableApi::class)
-internal fun ExoPlayer.streamStats(context: Context) = StreamStats(
+internal fun ExoPlayer.streamStats(context: Context, maxBufferMs: Int? = null) = StreamStats(
     video = videoFormat,
     audio = audioFormat,
     bufferSeconds = ((bufferedPosition - currentPosition) / 1000).coerceAtLeast(0),
     droppedFrames = videoDecoderCounters?.droppedBufferCount,
     // The meter ExoPlayer.Builder uses unless told otherwise.
     bandwidth = DefaultBandwidthMeter.getSingletonInstance(context).bitrateEstimate.takeIf { it > 0 },
+    maxBufferSeconds = maxBufferMs?.let { it / 1000 }?.takeIf { it > 0 } ?: DEFAULT_MAX_BUFFER_SECONDS,
 )
-
-/** How much Media3 buffers at most (DefaultLoadControl), the scale of the buffer bar. */
-internal const val MAX_BUFFER_SECONDS = 50
 
 /** "HEVC · 3840×2160". */
 @OptIn(UnstableApi::class)
