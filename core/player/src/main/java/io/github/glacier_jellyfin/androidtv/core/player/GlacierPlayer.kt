@@ -120,6 +120,36 @@ class GlacierPlayback(
     private var plannedInItemMs = 0L
     private var postponedMs = 0L
 
+    /**
+     * The end of the furthest media load of the stream that waits that has completed, in ms of the title (the time base of
+     * [MediaLoadData.mediaEndTimeMs], which the clipping source passes on as it is); [C.TIME_UNSET] while none has, and for a
+     * file, whose loads have no end time.
+     */
+    @Volatile
+    private var pendingLoadedToMs = C.TIME_UNSET
+
+    /** What the stream that waits has loaded, in ms beyond the point where it takes over; see [loadedMs]. */
+    internal val nextLoadedMs: Long get() = loadedMs(loadControl?.preloadedMs ?: Long.MAX_VALUE)
+
+    /**
+     * Media3 asks the load control about the preloaded stream only between two of its loads, so [HandoverLoadControl.preloadedMs]
+     * lags behind by a segment, or by all that was loaded since the last question. The completed loads are reported at once, so
+     * the larger of both is taken; for a file the load control's value is all there is.
+     */
+    private fun loadedMs(fromLoadControl: Long): Long {
+        val startMs = pending?.clippingConfiguration?.startPositionMs ?: return fromLoadControl
+        val loadedTo = pendingLoadedToMs
+        if (loadedTo == C.TIME_UNSET) return fromLoadControl
+        return maxOf(fromLoadControl, (loadedTo - startMs).coerceAtLeast(0))
+    }
+
+    /** For the log: how far the completed loads reach beyond the hand over point, "none" for a file or before the first. */
+    private fun loadedToLog(): String {
+        val startMs = pending?.clippingConfiguration?.startPositionMs ?: return "none"
+        val loadedTo = pendingLoadedToMs
+        return if (loadedTo == C.TIME_UNSET) "none" else "${(loadedTo - startMs).coerceAtLeast(0) / 1000} s"
+    }
+
     /** True for a title: its stream can be handed over to another without the player starting again. */
     val canHandOver: Boolean get() = current != null
 
@@ -154,6 +184,7 @@ class GlacierPlayback(
         pending = nextItem
         plannedInItemMs = inItemMs
         postponedMs = 0
+        pendingLoadedToMs = C.TIME_UNSET
         scheduleMove(nextItem, inItemMs)
         Log.i(TAG, "Hand over at $atMs ms: the playing stream goes on, the next is queued and loads ahead (${stateName(player.playbackState)} at ${player.currentPosition} ms, ${player.mediaItemCount} items)")
         return true
@@ -175,17 +206,18 @@ class GlacierPlayback(
     private fun moveOn(item: MediaItem) {
         if (pending !== item || player.mediaItemCount < 2 || player.currentMediaItemIndex != 0) return
         val position = player.currentPosition
-        val loaded = loadControl?.preloadedMs ?: Long.MAX_VALUE
+        val fromLoadControl = loadControl?.preloadedMs ?: Long.MAX_VALUE
+        val loaded = loadedMs(fromLoadControl)
         val nextStop = plannedInItemMs + postponedMs + POSTPONE_STEP_MS
         if (loaded < READY_MS && postponedMs + POSTPONE_STEP_MS <= POSTPONE_MAX_MS && player.bufferedPosition >= nextStop + KEEP_MS) {
             postponedMs += POSTPONE_STEP_MS
-            Log.i(TAG, "Hand over point reached at $position ms, the next stream has ${loaded / 1000} s: waiting, now $postponedMs ms past the plan")
+            Log.i(TAG, "Hand over point reached at $position ms, the next stream has ${loaded / 1000} s (load control ${fromLoadControl / 1000} s, completed loads ${loadedToLog()}): waiting, now $postponedMs ms past the plan")
             scheduleMove(item, plannedInItemMs + postponedMs)
             return
         }
         // The stream that waits begins at the hand over point; the way on from there is its position, in its own item.
         val into = (position - plannedInItemMs).takeIf { it >= MIN_SKIP_MS } ?: 0L
-        Log.i(TAG, "Hand over point reached at $position ms (${loaded / 1000} s of the next stream loaded), moving on to the next stream" + if (into > 0) " at +$into ms" else "")
+        Log.i(TAG, "Hand over point reached at $position ms (${loaded / 1000} s of the next stream loaded, load control ${fromLoadControl / 1000} s, completed loads ${loadedToLog()}), moving on to the next stream" + if (into > 0) " at +$into ms" else "")
         enterNext(into)
     }
 
@@ -222,6 +254,7 @@ class GlacierPlayback(
         switchMessage = null
         current = next
         pending = null
+        pendingLoadedToMs = C.TIME_UNSET
         loadControl?.endPreloading()
         afterTakeOver {
             if (player.mediaItemCount > 1) player.removeMediaItem(0)
@@ -236,6 +269,7 @@ class GlacierPlayback(
         switchMessage?.cancel()
         switchMessage = null
         pending = null
+        pendingLoadedToMs = C.TIME_UNSET
         if (player.mediaItemCount > 1) player.removeMediaItem(1)
         loadControl?.endPreloading()
         player.setPreloadConfiguration(ExoPlayer.PreloadConfiguration.DEFAULT)
@@ -285,6 +319,14 @@ class GlacierPlayback(
     @OptIn(UnstableApi::class)
     private fun addDecoderListener() {
         player.addAnalyticsListener(object : AnalyticsListener {
+            // The stream that waits is the second item. Its completed media loads tell how far it has loaded at once, which the
+            // load control only learns between two loads; a file has no end time on its loads and is skipped.
+            override fun onLoadCompleted(eventTime: AnalyticsListener.EventTime, loadEventInfo: LoadEventInfo, mediaLoadData: MediaLoadData) {
+                if (pending == null || eventTime.windowIndex != 1 || mediaLoadData.dataType != C.DATA_TYPE_MEDIA) return
+                if (mediaLoadData.mediaEndTimeMs == C.TIME_UNSET) return
+                pendingLoadedToMs = maxOf(pendingLoadedToMs, mediaLoadData.mediaEndTimeMs)
+            }
+
             // Logged on every playback: a bug report shows the decoders and the sound output without detailed logging.
             override fun onVideoDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
                 videoDecoder = decoderName

@@ -70,6 +70,7 @@ class HandoverBufferTest {
     private val readTo = java.util.concurrent.ConcurrentHashMap<String, Long>()
     private lateinit var player: ExoPlayer
     private lateinit var playback: GlacierPlayback
+    private lateinit var loadControl: HandoverLoadControl
     private lateinit var first: File
     private lateinit var second: File
     private lateinit var hlsDir: File
@@ -167,7 +168,7 @@ class HandoverBufferTest {
                 override fun close() = file.close()
             }
         }
-        val loadControl = HandoverLoadControl(
+        loadControl = HandoverLoadControl(
             minBufferMs = 80_000,
             maxBufferMs = 80_000,
             bufferForPlaybackMs = 1_000,
@@ -381,6 +382,30 @@ class HandoverBufferTest {
         // What was loaded ahead is not asked for again; only what follows it is.
         assertEquals(segmentsBefore, opened("seg").take(segmentsBefore.size))
         assertEquals(1, opened("seg4").size)
+    }
+
+    @Test
+    fun theLoadedAmountOfTheNextStreamFollowsItsCompletedSegments() {
+        val ends = java.util.Collections.synchronizedList(mutableListOf<Long>())
+        player.addAnalyticsListener(object : androidx.media3.exoplayer.analytics.AnalyticsListener {
+            override fun onLoadCompleted(
+                eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+                loadEventInfo: androidx.media3.exoplayer.source.LoadEventInfo,
+                mediaLoadData: androidx.media3.exoplayer.source.MediaLoadData,
+            ) {
+                if (eventTime.windowIndex == 1 && mediaLoadData.dataType == C.DATA_TYPE_MEDIA) ends += mediaLoadData.mediaEndTimeMs
+            }
+        })
+        playAndBuffer()
+        assertTrue(playback.handOver(25_000, hlsRequest()))
+        TestPlayerRunHelper.advance(player).untilBackgroundThreadCondition { opened("seg6").isNotEmpty() }
+        settle()
+        // The end times are in time of the title (the clip starts at 25 s): three segments of 6 s are loaded, up to 42 s.
+        val completed = synchronized(ends) { ends.toList() }
+        val loadedToMs = completed.max() - 25_000
+        // The load control was asked after the second segment only: it knows 11 s of the 17 s that are loaded.
+        assertTrue("the load control lags: $completed, ${loadControl.preloadedMs}", loadControl.preloadedMs < loadedToMs)
+        assertEquals("what the playback reports is what the loads completed: $completed", loadedToMs, playback.nextLoadedMs)
     }
 
     @Test
