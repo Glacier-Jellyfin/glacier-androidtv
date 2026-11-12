@@ -1,9 +1,13 @@
 package io.github.glacier_jellyfin.androidtv.core.player
 
+import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.extractor.Extractor
 import androidx.media3.extractor.ExtractorInput
+import androidx.media3.extractor.ExtractorOutput
+import androidx.media3.extractor.SeekMap
 import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.text.SubtitleParser
@@ -62,9 +66,41 @@ internal class BlockAddition {
     var size = 0
 }
 
-/** These extractors with [DolbyVisionMatroskaExtractor] for Matroska, in the same place among them. */
+/**
+ * These extractors with [DolbyVisionMatroskaExtractor] for Matroska, in the same place among them. The seek points of each
+ * Matroska file are remembered ([SyncPoints]), so a later open of the same file can start where it does not have to decode
+ * and discard anything.
+ */
 @OptIn(UnstableApi::class)
-internal fun ExtractorsFactory.withDolbyVisionMkvSupport(subtitleParsers: SubtitleParser.Factory, ass: AssHandler): ExtractorsFactory =
-    ExtractorsFactory {
-        createExtractors().map { if (it is MatroskaExtractor) DolbyVisionMatroskaExtractor(subtitleParsers, ass) else it }.toTypedArray()
+internal fun ExtractorsFactory.withDolbyVisionMkvSupport(subtitleParsers: SubtitleParser.Factory, ass: AssHandler): ExtractorsFactory {
+    val inner = this
+    return object : ExtractorsFactory {
+        override fun createExtractors(): Array<Extractor> = wrap(inner.createExtractors(), null)
+
+        override fun createExtractors(uri: Uri, responseHeaders: Map<String, List<String>>): Array<Extractor> =
+            wrap(inner.createExtractors(uri, responseHeaders), SyncPoints.keyOf(uri.toString()))
+
+        private fun wrap(extractors: Array<Extractor>, key: String?): Array<Extractor> =
+            extractors.map {
+                if (it !is MatroskaExtractor) return@map it
+                val dolbyVision = DolbyVisionMatroskaExtractor(subtitleParsers, ass)
+                if (key == null) dolbyVision else SeekMapReporter(dolbyVision, key)
+            }.toTypedArray()
     }
+}
+
+/** An extractor that hands the seek map of its file to [SyncPoints] as well as to the player. */
+@OptIn(UnstableApi::class)
+private class SeekMapReporter(private val inner: Extractor, private val key: String) : Extractor by inner {
+    override fun init(output: ExtractorOutput) {
+        inner.init(object : ExtractorOutput by output {
+            override fun seekMap(seekMap: SeekMap) {
+                SyncPoints.remember(key, seekMap)
+                output.seekMap(seekMap)
+            }
+        })
+    }
+
+    // The code that looks for block additions asks the extractor behind this one.
+    override fun getUnderlyingImplementation(): Extractor = inner.underlyingImplementation
+}

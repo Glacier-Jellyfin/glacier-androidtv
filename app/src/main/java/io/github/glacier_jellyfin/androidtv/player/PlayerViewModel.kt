@@ -445,15 +445,16 @@ class PlayerViewModel @Inject constructor(
         val selection = trackSelections.get(itemId)
         versionId = selection?.versionId
         // A choice made on the detail page wins; "off" there is sent as -1 so the server does not pick one.
-        open(startMs = startOverride, audio = selection?.audio, subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE }, fromLastTitle = selection == null)
+        open(startMs = startOverride, audio = selection?.audio, subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE }, fromLastTitle = selection == null, snapStart = true)
         startOverride = null
     }
 
     /**
-     * [startMs] null: the saved resume point (or 0 for "from start").
+     * [startMs] null: the saved resume point (or 0 for "from start"). [snapStart]: the start comes from outside the player, so it may begin at
+     * the file's seek point before it (see [StreamRequest.snapStart]); not for a reopen or a retry.
      * [fromLastTitle]: no tracks were chosen for this title, so the last title's may be taken over.
      */
-    private fun open(startMs: Long?, audio: Int?, subtitle: Int?, fromLastTitle: Boolean = false, retry: Boolean = false) {
+    private fun open(startMs: Long?, audio: Int?, subtitle: Int?, fromLastTitle: Boolean = false, retry: Boolean = false, snapStart: Boolean = false) {
         opening?.cancel()
         opening = viewModelScope.launch {
             releasePlayer()
@@ -478,7 +479,7 @@ class PlayerViewModel @Inject constructor(
                 val opened = playback.open(itemId, start, remembered?.audio ?: audio, remembered?.subtitle ?: subtitle, segments, versionId, reuse = retry)
                 source = opened
                 recordTracks(opened.audioIndex, opened.subtitleIndex)
-                val request = streamRequest(opened, start)
+                val request = streamRequest(opened, start).copy(snapStart = snapStart)
                 val playback = GlacierPlayer.create(context, request)
                 val player = playback.player
                 player.addListener(listener)
@@ -632,7 +633,7 @@ class PlayerViewModel @Inject constructor(
         _progress.value = PlayerProgress()
         val selection = trackSelections.get(item.id)
         versionId = selection?.versionId
-        open(startMs = item.resumePositionMs, audio = selection?.audio, subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE }, fromLastTitle = selection == null)
+        open(startMs = item.resumePositionMs, audio = selection?.audio, subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE }, fromLastTitle = selection == null, snapStart = true)
     }
 
     fun openTracks(kind: TrackKind) = _state.update { it.copy(trackPanel = kind, chaptersOpen = false) }
@@ -877,14 +878,16 @@ class PlayerViewModel @Inject constructor(
             try {
                 opened = playback.open(itemId, plan.atMs, audio, subtitle, segments, versionId)
                 val now = currentPositionMs()
+                var atMs = plan.atMs
+                if (!lowering) atMs = movedToSyncPoint(player, handOver, opened, atMs, now)
                 val problem = when {
                     _state.value.player !== player || lastSeekMs != seekMark -> "playback moved on meanwhile"
                     lowering && (opened.streamBitrate ?: 0) >= (before.streamBitrate ?: Int.MAX_VALUE) -> "the server did not give a smaller stream"
-                    !HandoverPlanner.stillWorks(lowering, plan.atMs, now) -> "the stream took too long to open (${(plan.atMs - now) / 1000} s of the lead left)"
+                    !HandoverPlanner.stillWorks(lowering, atMs, now) -> "the stream took too long to open (${(atMs - now) / 1000} s of the lead left)"
                     else -> null
                 }
-                if (problem == null && handOver.handOver(plan.atMs, streamRequest(opened, plan.atMs))) {
-                    queued = Handover(trigger, plan.atMs, opened, lowering)
+                if (problem == null && handOver.handOver(atMs, streamRequest(opened, atMs))) {
+                    queued = Handover(trigger, atMs, opened, lowering)
                     opened = null
                     return@launch
                 }
@@ -901,6 +904,28 @@ class PlayerViewModel @Inject constructor(
                 reopen(audio = _state.value.audioIndex, subtitle = _state.value.subtitleIndex)
             }
         }
+    }
+
+    /**
+     * The way back to the file starts it at a point it can be entered without a pre-roll, if that is near enough: a file that
+     * starts between two cue points first decodes and discards up to 40 s, and the switch stalls for seconds. The playing stream
+     * must have the data to bridge the extra wait, else the point stays as planned.
+     */
+    private suspend fun movedToSyncPoint(player: ExoPlayer, handOver: GlacierPlayback, opened: PlaybackSource, atMs: Long, nowMs: Long): Long {
+        if (opened.method != PlaybackMethod.DirectPlay) return atMs
+        val bufferedToMs = nowMs + (player.bufferedPosition - player.currentPosition)
+        val limit = HandoverPlanner.syncShiftLimit(bufferedToMs - atMs, handOver.handOverLoadAheadMs)
+        if (limit < 0) {
+            Log.i(TAG, "Hand over point stays at $atMs ms: the playing stream has too little buffered beyond it to wait for the file's sync point")
+            return atMs
+        }
+        val point = handOver.syncPointAtOrAfter(streamRequest(opened, atMs), atMs, limit)
+        if (point == null) {
+            Log.i(TAG, "Hand over point stays at $atMs ms: no sync point of the file within $limit ms is known")
+            return atMs
+        }
+        Log.i(TAG, "Hand over point moved ${point - atMs} ms to the file's sync point at $point ms")
+        return point
     }
 
     /** The player is on the stream handed over to: its positions count from the hand over, and the server hears of it. */

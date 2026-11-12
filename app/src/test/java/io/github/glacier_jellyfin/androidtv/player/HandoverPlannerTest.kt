@@ -152,4 +152,16 @@ class HandoverPlannerTest {
         // Falls 1 s per second: fires at 30 s and again 30 s after that, not at every sample.
         assertEquals(1, fires)
     }
+
+    @Test
+    fun `the sync point may be moved to by at most 30 s`() {
+        assertEquals(30_000, HandoverPlanner.syncShiftLimit(bufferedBeyondMs = 100_000, loadAheadMs = 10_000))
+    }
+
+    @Test
+    fun `the sync point must leave the reserve and the load ahead of the playing stream`() {
+        assertEquals(10_000, HandoverPlanner.syncShiftLimit(bufferedBeyondMs = 25_000, loadAheadMs = 10_000))
+        assertEquals(0, HandoverPlanner.syncShiftLimit(bufferedBeyondMs = 15_000, loadAheadMs = 10_000))
+        assertTrue(HandoverPlanner.syncShiftLimit(bufferedBeyondMs = 14_999, loadAheadMs = 10_000) < 0)
+    }
 }

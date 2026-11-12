@@ -3,6 +3,7 @@ package io.github.glacier_jellyfin.androidtv.core.player
 import android.content.Context
 import android.net.Uri
 import android.os.Handler
+import android.os.SystemClock
 import androidx.annotation.OptIn
 import android.util.Base64
 import androidx.media3.common.AudioAttributes
@@ -16,6 +17,7 @@ import androidx.media3.common.util.ExperimentalApi
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.DecoderCounters
 import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
@@ -74,6 +76,11 @@ data class StreamRequest(
     val patient: Boolean = false,
     /** A film or an episode in the player: not a preview, a trailer or a live channel. Gets the big buffer, also for direct play. */
     val title: Boolean = false,
+    /**
+     * A start that comes from outside the player (the detail page, a resume): it may begin at the seek point of the file before
+     * [startPositionMs], see [SyncPoints.snapsStart]. Never for what happens inside the player.
+     */
+    val snapStart: Boolean = false,
 )
 
 /** How this device plays what it cannot take as it is, decided by the app from its capabilities and settings. */
@@ -149,6 +156,18 @@ class GlacierPlayback(
         val loadedTo = pendingLoadedToMs
         return if (loadedTo == C.TIME_UNSET) "none" else "${(loadedTo - startMs).coerceAtLeast(0) / 1000} s"
     }
+
+    /** What the playing stream loads beyond the hand over point while the next stream loads ahead. */
+    val handOverLoadAheadMs: Long get() = POSTPONE_MAX_MS
+
+    /**
+     * The first point at or after [atMs] where the file of [request] can be entered without decoding and discarding what is
+     * before it, if its seek points are known (the player or an earlier open has read them) and it is no more than
+     * [maxShiftMs] later. Matroska has cue points only every 20 to 40 s; a stream that starts between two of them first
+     * decodes from the one before, which made the hand over to the file stall for seconds.
+     */
+    fun syncPointAtOrAfter(request: StreamRequest, atMs: Long, maxShiftMs: Long): Long? =
+        if (request.isHls) null else SyncPoints.atOrAfter(request.url, atMs, maxShiftMs)
 
     /** True for a title: its stream can be handed over to another without the player starting again. */
     val canHandOver: Boolean get() = current != null
@@ -316,6 +335,20 @@ class GlacierPlayback(
         addDecoderListener()
     }
 
+    private var audioStartAt = 0L
+
+    /** One line of the audio start timeline: [what], in ms since the audio was enabled, or a seek or item change; the first line starts it if none did. */
+    private fun audioStart(what: String) {
+        val now = SystemClock.elapsedRealtime()
+        if (audioStartAt == 0L) audioStartAt = now
+        Log.i("AudioStart", "+${now - audioStartAt} ms $what")
+    }
+
+    private fun audioStartReset(what: String) {
+        audioStartAt = SystemClock.elapsedRealtime()
+        audioStart(what)
+    }
+
     @OptIn(UnstableApi::class)
     private fun addDecoderListener() {
         player.addAnalyticsListener(object : AnalyticsListener {
@@ -336,12 +369,47 @@ class GlacierPlayback(
             override fun onAudioDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
                 audioDecoder = decoderName
                 Log.i(TAG, "Audio decoder: $decoderName")
+                audioStart("decoder $decoderName ready, init ${initializationDurationMs} ms")
+            }
+
+            // Timeline of one audio start ("AudioStart"): where the time between the decoder and the audio output goes.
+            override fun onAudioEnabled(eventTime: AnalyticsListener.EventTime, decoderCounters: DecoderCounters) {
+                audioStartReset("audio enabled")
+            }
+
+            override fun onPositionDiscontinuity(eventTime: AnalyticsListener.EventTime, oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+                audioStartReset("discontinuity reason $reason to ${newPosition.positionMs} ms")
+            }
+
+            override fun onMediaItemTransition(eventTime: AnalyticsListener.EventTime, mediaItem: MediaItem?, reason: Int) {
+                audioStartReset("media item transition reason $reason")
+            }
+
+            override fun onAudioInputFormatChanged(eventTime: AnalyticsListener.EventTime, format: Format, decoderReuseEvaluation: DecoderReuseEvaluation?) {
+                audioStart("input ${format.codecs?.let { "$it " } ?: ""}${format.sampleMimeType} ${format.channelCount} ch ${format.sampleRate} Hz ${format.averageBitrate} bit/s")
+            }
+
+            override fun onAudioPositionAdvancing(eventTime: AnalyticsListener.EventTime, playoutStartSystemTimeMs: Long) {
+                audioStart("position advancing, playout start ${playoutStartSystemTimeMs - SystemClock.elapsedRealtime()} ms from now (system time)")
+            }
+
+            override fun onAudioUnderrun(eventTime: AnalyticsListener.EventTime, bufferSize: Int, bufferSizeMs: Long, elapsedSinceLastFeedMs: Long) {
+                audioStart("underrun, buffer $bufferSizeMs ms, ${elapsedSinceLastFeedMs} ms since last feed")
+            }
+
+            override fun onRenderedFirstFrame(eventTime: AnalyticsListener.EventTime, output: Any, renderTimeMs: Long) {
+                audioStart("first video frame")
+            }
+
+            override fun onPlaybackStateChanged(eventTime: AnalyticsListener.EventTime, state: Int) {
+                audioStart("state ${stateName(state)}, buffered ${player.totalBufferedDuration} ms")
             }
 
             override fun onAudioTrackInitialized(eventTime: AnalyticsListener.EventTime, audioTrackConfig: AudioSink.AudioTrackConfig) {
                 audioEncoding = audioTrackConfig.encoding
                 audioChannelMask = audioTrackConfig.channelConfig
                 Log.i(TAG, "Audio output: ${encodingName(audioTrackConfig.encoding)}, ${Integer.bitCount(audioTrackConfig.channelConfig)} channels, ${audioTrackConfig.sampleRate} Hz")
+                audioStart("track ${encodingName(audioTrackConfig.encoding)} ${audioTrackConfig.sampleRate} Hz")
             }
         })
     }
@@ -706,9 +774,33 @@ object GlacierPlayer {
             }
         })
         val item = if (handOverable) titleItem(request, "title", 0) else itemOf(request)
+        // Media3 gives a start position of a file as it is and decodes from the seek point before it, discarding what it decodes.
+        var startMs = request.startPositionMs
+        val snapKey = if (request.snapStart && !request.live && !request.isHls && startMs > 0) SyncPoints.keyOf(request.url) else null
+        if (snapKey != null) {
+            val point = SyncPoints.atOrBefore(request.url, startMs, SyncPoints.START_SNAP_MAX_MS)
+            if (SyncPoints.snapsStart(true, startMs, point)) {
+                Log.i("Player", "Start moved ${startMs - point!!} ms back to the file's sync point at $point ms")
+                startMs = point
+            }
+        }
         player.apply {
-            if (request.live) setMediaItem(item) else setMediaItem(item, request.startPositionMs)
+            if (request.live) setMediaItem(item) else setMediaItem(item, startMs)
             prepare()
+        }
+        // A file not seen before: its seek points arrive while the player first buffers; if it still does, it starts again at the point.
+        if (snapKey != null && startMs == request.startPositionMs) {
+            val wanted = startMs
+            SyncPoints.whenKnown(snapKey) { seekMap ->
+                Handler(player.applicationLooper).post {
+                    val point = SyncPoints.lastAtOrBefore(seekMap, wanted, SyncPoints.START_SNAP_MAX_MS)
+                    val untouched = player.playbackState == Player.STATE_BUFFERING && player.currentPosition == wanted
+                    if (untouched && SyncPoints.snapsStart(true, wanted, point)) {
+                        Log.i("Player", "Start moved ${wanted - point!!} ms back to the file's sync point at $point ms")
+                        player.seekTo(point)
+                    }
+                }
+            }
         }
         ass.init(player)
         return GlacierPlayback(player, ass, meter, current = item.takeIf { handOverable }, makePatient = { makePatient(dataSource) }, loadControl = handOverLoadControl)

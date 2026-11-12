@@ -98,6 +98,17 @@ internal object HandoverPlanner {
     ): Boolean = fileFits && fileBitrate != null && !handoverActive && returns < maxReturns &&
         aheadMs >= RETURN_MIN_BUFFER_MS && StreamBudget.returnsTo(fileBitrate, budget)
 
+    /** The most the way back to the file moves its hand over point to where the file can be entered without a pre-roll. */
+    const val MAX_SYNC_SHIFT_MS = 30_000L
+
+    /**
+     * How far the hand over point may move on to a sync point of the file, or a negative number for not at all. The playing
+     * stream has [bufferedBeyondMs] beyond the planned point, and must keep [RESERVE_MS] of it past the new point while the
+     * next stream loads ahead ([loadAheadMs], what the playing stream still loads meanwhile) so the move does not run dry.
+     */
+    fun syncShiftLimit(bufferedBeyondMs: Long, loadAheadMs: Long): Long =
+        minOf(MAX_SYNC_SHIFT_MS, bufferedBeyondMs - RESERVE_MS - loadAheadMs)
+
     /** True when the new stream is open and enough of the lead is left for it to start before the hand over. */
     fun stillWorks(lowering: Boolean, atMs: Long, positionMs: Long): Boolean =
         atMs - positionMs >= if (lowering) MIN_REMAINING_DOWN_MS else MIN_REMAINING_BACK_MS
