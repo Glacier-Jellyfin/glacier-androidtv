@@ -36,6 +36,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Wird eine Serie als gesehen oder ungesehen markiert, ziehen Folgen und Staffeln sofort mit
 - Während etwas lädt oder verbindet, springt der Fokus mit der Fernbedienung nicht mehr auf Schaltflächen hinter dem Ladebildschirm, und ein zweites OK meldet nicht doppelt an
 - Der Fokus springt nicht mehr weg, wenn man schon weiternavigiert hat, während eine Seite fertig lädt
+- Zurück im Musik-Bildschirmschoner beendet nur den Bildschirmschoner, die Seite dahinter bleibt, wie sie war
 
 ## [0.9.0] - 2026-11-05
 

@@ -6,8 +6,12 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.NavigationSetting
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.OnBackPressedDispatcher
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
@@ -304,6 +308,17 @@ class MainActivity : ComponentActivity() {
                     var lastInput by remember { mutableLongStateOf(SystemClock.uptimeMillis()) }
                     var saverOn by remember { mutableStateOf(false) }
                     var swallowKeyUp by remember { mutableStateOf(false) }
+                    // When the Back that ends the saver came, so that its key events and dispatcher Back do nothing else.
+                    var saverBackAt by remember { mutableLongStateOf(0L) }
+                    val backGuard = remember {
+                        BackGuard(onBackPressedDispatcher) {
+                            saverBackAt = SystemClock.uptimeMillis()
+                            saverOn = false
+                        }
+                    }
+                    // While the saver shows, and a moment after, Back is the saver's: the pages' handlers never see it.
+                    LaunchedEffect(saverOn) { if (saverOn) backGuard.raise() else backGuard.lapseSoon() }
+                    DisposableEffect(backGuard) { onDispose { backGuard.release() } }
                     LaunchedEffect(musicPlaying, videoVisible, lastInput) {
                         if (!musicPlaying || videoVisible) {
                             saverOn = false
@@ -319,6 +334,12 @@ class MainActivity : ComponentActivity() {
                             if (saverOn && event.type == KeyEventType.KeyDown && !startViewModel.music.ownsKey(event.nativeKeyEvent.keyCode)) {
                                 saverOn = false
                                 swallowKeyUp = true
+                                if (event.key == Key.Back) saverBackAt = SystemClock.uptimeMillis()
+                                return@onPreviewKeyEvent true
+                            }
+                            // Newer Android may hand the dispatcher this Back before its key: the key then belongs to the saver as well.
+                            if (event.key == Key.Back && SystemClock.uptimeMillis() - saverBackAt < BACK_GUARD_MS) {
+                                swallowKeyUp = false
                                 return@onPreviewKeyEvent true
                             }
                             if (swallowKeyUp && event.type == KeyEventType.KeyUp) {
@@ -388,7 +409,38 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * A Back callback for the saver: [onBack] ends it and nothing else sees that Back. It is added fresh each time, since the
+     * dispatcher asks the newest callback first and a page opened later would otherwise take Back before a fixed one.
+     */
+    private class BackGuard(private val dispatcher: OnBackPressedDispatcher, private val onBack: () -> Unit) {
+        private val handler = Handler(Looper.getMainLooper())
+        private val callback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() = onBack()
+        }
+        private val expire = Runnable { callback.remove() }
+
+        fun raise() {
+            handler.removeCallbacks(expire)
+            callback.remove()
+            dispatcher.addCallback(callback)
+        }
+
+        /** Older Android sends only the key and never calls it, so it lapses on its own; the late Back of a press still finds it. */
+        fun lapseSoon() {
+            handler.removeCallbacks(expire)
+            handler.postDelayed(expire, BACK_GUARD_MS)
+        }
+
+        fun release() {
+            handler.removeCallbacks(expire)
+            callback.remove()
+        }
+    }
+
     private companion object {
+        const val BACK_GUARD_MS = 600L
+
         /** False until the first activity of this process is created, so a restore after the process ended can be told apart. */
         var processAlive = false
 

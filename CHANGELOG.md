@@ -51,6 +51,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - Marking a show watched or unwatched updates its episodes and seasons at once
 - While something loads or connects, the remote no longer moves the focus to buttons behind the loading screen, and a second OK no longer signs in twice
 - The focus no longer jumps away when you have already moved on while a page finishes loading
+- Back in the music screensaver only ends the screensaver, the page behind it stays as it was
 
 ## [0.9.0] - 2026-11-05
 

@@ -37,6 +37,7 @@ only in English.
 - Al marcar una serie como vista o no vista, los episodios y las temporadas se actualizan al instante
 - Mientras algo se carga o se conecta, el mando ya no mueve el foco a botones que quedan detrás de la pantalla de carga, y un segundo OK ya no inicia sesión dos veces
 - El foco ya no salta a otro sitio si ya te has movido mientras una página termina de cargar
+- Atrás en el salvapantallas de música solo cierra el salvapantallas, la página de detrás se queda como estaba
 
 ## [0.9.0] - 2026-11-05
 
