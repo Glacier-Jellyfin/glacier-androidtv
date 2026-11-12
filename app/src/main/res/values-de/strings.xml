@@ -476,12 +476,8 @@
     <string name="player_info_dropped">Verworfene Frames</string>
     <string name="player_info_server">Server</string>
     <string name="player_info_directors">Regie</string>
-    <string name="player_info_cast">Darsteller</string>
     <string name="player_info_studios">Studio</string>
     <string name="player_info_premiere">Erstausstrahlung</string>
-    <string name="player_info_chapter">Kapitel %1$d von %2$d</string>
-    <string name="player_info_chapter_left">%1$s · noch %2$s im Kapitel</string>
-    <string name="player_info_next_episode">Nächste Folge</string>
     <string name="player_info_up_next">Als Nächstes</string>
     <string name="player_info_tv">Fernseher</string>
     <string name="player_info_hardware">Hardware</string>

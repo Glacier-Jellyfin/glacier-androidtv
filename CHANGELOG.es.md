@@ -24,7 +24,7 @@ only in English.
 - Reanudar un título empieza más rápido y puede comenzar unos segundos antes del punto guardado
 - El panel de información muestra un cambio de transmisión próximo y su motivo
 - La cuenta atrás para saltar y para el siguiente episodio avanza con fluidez
-- El panel de información de una película muestra el reparto con fotos y papeles
+- El panel de información de una película o un episodio muestra el reparto con fotos y papeles en lugar del capítulo y el siguiente episodio, que el reproductor ya muestra
 
 ### Correcciones
 - «Subtítulos desactivados» elegido en la página de detalles también se aplica al siguiente episodio

@@ -62,11 +62,9 @@ import androidx.media3.common.util.UnstableApi
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.CastMember
-import io.github.glacier_jellyfin.androidtv.core.data.media.Chapter
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.Languages
-import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.Track
 import io.github.glacier_jellyfin.androidtv.core.data.media.channelLayout
 import io.github.glacier_jellyfin.androidtv.core.data.media.subtitleFormat
@@ -140,7 +138,7 @@ fun InfoPanel(
         growsWithContent = { it == TAB_TECHNICAL },
     ) { tab ->
         when (tab) {
-            TAB_TITLE -> TitleTab(state, details, progress)
+            TAB_TITLE -> TitleTab(details, progress, details.cast.ifEmpty { state.seriesCast })
             TAB_TECHNICAL -> TechnicalTab(state, stats)
             else -> ServerTab(state, stats, transcodeStatus)
         }
@@ -219,12 +217,10 @@ internal fun InfoPanelFrame(
 // Title
 
 @Composable
-private fun TitleTab(state: PlayerUiState, details: ItemDetails, progress: PlayerProgress) {
+private fun TitleTab(details: ItemDetails, progress: PlayerProgress, cast: List<CastMember>) {
     val item = details.item
     val episode = item.kind == ItemKind.Episode
     val locale = LocalConfiguration.current.locales[0]
-    val chapter = currentChapter(state.chapters, progress.positionMs)
-    val next = state.next
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(28.dp)) {
         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(52.dp)) {
             // Episodes have a 16:9 still of their own; films and the rest a 2:3 poster.
@@ -263,7 +259,6 @@ private fun TitleTab(state: PlayerUiState, details: ItemDetails, progress: Playe
                 }
                 val facts = listOfNotNull(
                     details.directors.takeIf { it.isNotEmpty() }?.let { stringResource(R.string.player_info_directors) to it.take(2).joinToString(", ") },
-                    details.cast.takeIf { it.isNotEmpty() && episode }?.let { cast -> stringResource(R.string.player_info_cast) to cast.take(4).joinToString(", ") { it.name } },
                     details.studios.takeIf { it.isNotEmpty() }?.let { stringResource(R.string.player_info_studios) to it.take(3).joinToString(", ") },
                     details.premiereDate?.takeIf { episode }?.let {
                         stringResource(R.string.player_info_premiere) to it.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(locale))
@@ -276,16 +271,7 @@ private fun TitleTab(state: PlayerUiState, details: ItemDetails, progress: Playe
                 }
             }
         }
-        if (episode) {
-            if (chapter != null || next != null) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                    if (chapter != null) ChapterCard(state.chapters, chapter, progress, Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
-                    if (next != null) NextCard(next, episode, Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
-                }
-            }
-        } else if (details.cast.isNotEmpty()) {
-            CastRow(details.cast)
-        }
+        if (cast.isNotEmpty()) CastRow(cast)
     }
 }
 
@@ -293,7 +279,7 @@ private val CastItemWidth = 150.dp
 private val CastItemGap = 16.dp
 private const val CAST_PORTRAIT = 100
 
-/** The cast as far as it fits the width: portraits with name and role, display only. */
+/** The cast of a film or an episode as far as it fits the width: portraits with name and role, display only. */
 @Composable
 private fun CastRow(cast: List<CastMember>) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -326,40 +312,6 @@ private fun CastRow(cast: List<CastMember>) {
             }
         }
     }
-}
-
-/** Index of the chapter at [positionMs]; null without real chapters. */
-private fun currentChapter(chapters: List<Chapter>, positionMs: Long): Int? {
-    if (chapters.size < 2) return null
-    return chapters.indexOfLast { it.startMs <= positionMs }.takeIf { it >= 0 }
-}
-
-@Composable
-private fun ChapterCard(chapters: List<Chapter>, index: Int, progress: PlayerProgress, modifier: Modifier) {
-    val chapter = chapters[index]
-    val end = chapters.getOrNull(index + 1)?.startMs ?: progress.durationMs
-    val length = (end - chapter.startMs).coerceAtLeast(1)
-    val into = (progress.positionMs - chapter.startMs).coerceIn(0, length)
-    MiniCard(
-        imageUrl = chapter.imageUrl,
-        label = stringResource(R.string.player_info_chapter, index + 1, chapters.size),
-        title = chapter.name.ifBlank { stringResource(R.string.player_info_chapter, index + 1, chapters.size) },
-        sub = stringResource(R.string.player_info_chapter_left, formatTime(progress.positionMs), formatTime(length - into)),
-        fraction = into.toFloat() / length,
-        modifier = modifier,
-    )
-}
-
-@Composable
-private fun NextCard(next: MediaItem, episode: Boolean, modifier: Modifier) {
-    MiniCard(
-        imageUrl = next.thumbUrl,
-        label = stringResource(if (episode) R.string.player_info_next_episode else R.string.player_info_up_next),
-        title = listOfNotNull(episodeText(next), next.title).joinToString(" · "),
-        sub = next.runtimeMinutes?.let { runtimeText(it) },
-        fraction = null,
-        modifier = modifier,
-    )
 }
 
 @Composable

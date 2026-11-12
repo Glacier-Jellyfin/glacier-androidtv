@@ -23,6 +23,7 @@ import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.core.data.media.CastMember
 import io.github.glacier_jellyfin.androidtv.core.data.media.Chapter
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
@@ -134,6 +135,8 @@ data class PlayerUiState(
     /** Neighbouring episodes of the show; null for films and at either end. */
     val previous: MediaItem? = null,
     val next: MediaItem? = null,
+    /** The show's main cast, loaded for an episode that lists no cast of its own. */
+    val seriesCast: List<CastMember> = emptyList(),
     /** "Watch credits" hides the "Up next" card for the rest of this episode. */
     val upNextDismissed: Boolean = false,
     /** Remote Left/Right and the skip buttons (Settings › Playback). */
@@ -566,6 +569,19 @@ class PlayerViewModel @Inject constructor(
             val segments = playback.segments(id)
             if (id == itemId) _state.update { it.copy(segments = segments) }
         }
+        val showId = item.seriesId
+        if (item.item.kind == ItemKind.Episode && item.cast.isEmpty() && showId != null) {
+            viewModelScope.launch {
+                try {
+                    val cast = details.details(showId).cast
+                    if (id == itemId) _state.update { it.copy(seriesCast = cast) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(TAG, "Loading the show's cast failed", e)
+                }
+            }
+        }
         val queueSource = queueOf
         if (queueSource != null) {
             viewModelScope.launch {
@@ -644,6 +660,7 @@ class PlayerViewModel @Inject constructor(
                 segments = emptyList(),
                 previous = null,
                 next = null,
+                seriesCast = emptyList(),
                 upNextDismissed = false,
                 chaptersOpen = false,
                 trackPanel = null,
