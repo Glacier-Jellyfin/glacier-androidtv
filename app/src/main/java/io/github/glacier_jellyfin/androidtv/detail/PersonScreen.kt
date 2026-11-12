@@ -83,6 +83,7 @@ import io.github.glacier_jellyfin.androidtv.ui.GridCard
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
@@ -234,7 +235,8 @@ fun PersonScreen(
         runCatching { titleFocus.requestFocus() }
     }
 
-    Box(Modifier.fillMaxSize().background(ImagePageGround)) {
+    // A loader covers the page: the remote must not reach the navigation or anything else behind it.
+    Box(Modifier.fillMaxSize().blockKeysWhile(person == null && !state.failed, takeFocus = true).background(ImagePageGround)) {
         when {
             person == null && state.failed -> Column(
                 Modifier.fillMaxSize(),

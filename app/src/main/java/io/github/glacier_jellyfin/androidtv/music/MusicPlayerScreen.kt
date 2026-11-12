@@ -124,6 +124,7 @@ import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
 import io.github.glacier_jellyfin.androidtv.ui.OverlayCard
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -208,6 +209,8 @@ fun MusicPlayerScreen(
         Modifier
             .fillMaxSize()
             .background(GlacierColors.Void)
+            // The loader covers the player: only Back gets through (a radio loads in its status line instead).
+            .blockKeysWhile(state.loading && !state.failed && state.radio == null, takeFocus = true)
             .onPreviewKeyEvent { event ->
                 // Back acts on the first press, whatever has focus (see PlayerScreen); Compose would spend it on moving focus out.
                 if (event.key == Key.Back) {

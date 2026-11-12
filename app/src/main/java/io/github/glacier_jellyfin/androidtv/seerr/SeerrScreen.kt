@@ -68,6 +68,7 @@ import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.ratingText
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
@@ -87,7 +88,8 @@ fun SeerrScreen(
     val details = state.details
     when {
         details == null && state.failed -> ErrorState(onRetry = viewModel::load)
-        details == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
+        // Nothing to focus yet: the loader takes focus so the remote cannot reach the navigation behind it.
+        details == null -> Box(Modifier.fillMaxSize().blockKeysWhile(true, takeFocus = true), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
         else -> Page(state, details, viewModel)
     }
 }

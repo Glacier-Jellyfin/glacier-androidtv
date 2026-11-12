@@ -85,6 +85,7 @@ import io.github.glacier_jellyfin.androidtv.ui.SortMenu
 import io.github.glacier_jellyfin.androidtv.ui.ToggleChip
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 
 private val RowShape = RoundedCornerShape(18.dp)
 
@@ -231,7 +232,8 @@ fun LiveTvScreen(
         if (!restored) runCatching { listFocus.requestFocus() }
     }
 
-    Box(Modifier.fillMaxSize()) {
+    // A loader covers the page: the remote must not reach the navigation or anything else behind it.
+    Box(Modifier.fillMaxSize().blockKeysWhile(state.loading && state.channels == null, takeFocus = true)) {
         val channels = state.channels
         when {
             state.loading && channels == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }

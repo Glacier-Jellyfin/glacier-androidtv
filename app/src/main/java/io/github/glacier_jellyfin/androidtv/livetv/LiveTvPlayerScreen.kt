@@ -98,6 +98,7 @@ import io.github.glacier_jellyfin.androidtv.player.osdScrim
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.OverlayCard
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -295,6 +296,8 @@ fun LiveTvPlayerScreen(
             .fillMaxSize()
             .background(Color.Black)
             .focusRequester(rootFocus)
+            // The channel is tuning: the banner and lists behind the loader must not react to the remote, but zapping goes on.
+            .blockKeysWhile(state.loading && !state.failed, pass = ZapKeys)
             .onPreviewKeyEvent { event ->
                 // The sheet and the info panel handle their own keys, Back included.
                 if (sheetProgram != null || infoOpen) return@onPreviewKeyEvent false
@@ -1034,3 +1037,10 @@ private fun digit(key: Key): Char? = when (key) {
 }
 
 private const val MAX_DIGITS = 5
+
+private val ZapKeys = setOf(
+    Key.DirectionUp, Key.DirectionDown, Key.ChannelUp, Key.ChannelDown, Key.PageUp, Key.PageDown,
+    Key.Zero, Key.One, Key.Two, Key.Three, Key.Four, Key.Five, Key.Six, Key.Seven, Key.Eight, Key.Nine,
+    Key.NumPad0, Key.NumPad1, Key.NumPad2, Key.NumPad3, Key.NumPad4,
+    Key.NumPad5, Key.NumPad6, Key.NumPad7, Key.NumPad8, Key.NumPad9,
+)

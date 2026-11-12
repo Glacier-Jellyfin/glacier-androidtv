@@ -81,6 +81,7 @@ import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -136,6 +137,8 @@ fun PhotoScreen(
             .fillMaxSize()
             .background(Color.Black)
             .focusRequester(focus)
+            // The loader shows while no photo is there yet: only Back gets through.
+            .blockKeysWhile(state.loading && state.current == null)
             .onPreviewKeyEvent { event ->
                 // Without photos the keys belong to the retry button.
                 if (event.type != KeyEventType.KeyDown || state.media.isEmpty()) return@onPreviewKeyEvent false

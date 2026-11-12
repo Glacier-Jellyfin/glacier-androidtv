@@ -65,6 +65,7 @@ import io.github.glacier_jellyfin.androidtv.detail.TrackKind
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.OverlayCard
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import kotlinx.coroutines.delay
 
 /** OSD hides after this long without input while playing (agreed: 3 s). */
@@ -232,6 +233,8 @@ fun PlayerScreen(
             .fillMaxSize()
             .background(Color.Black)
             .focusRequester(rootFocus)
+            // Loading shows over a live OSD: nothing behind the loader may react to the remote.
+            .blockKeysWhile(state.loading && !state.failed)
             .onPreviewKeyEvent { event ->
                 if (overlayOpen) return@onPreviewKeyEvent false
                 // Compose turns an unhandled Back into "exit focus": with focus on an OSD control it would

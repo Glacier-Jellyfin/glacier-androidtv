@@ -116,6 +116,7 @@ import io.github.glacier_jellyfin.androidtv.ui.ToggleChip
 import io.github.glacier_jellyfin.androidtv.ui.ToolbarButton
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.ratingText
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
@@ -316,8 +317,9 @@ fun LibraryScreen(
         viewModel.jumpHandled()
     }
 
+    // The first load covers the page: the remote must not reach the toolbar or the navigation behind it.
     Box(
-        Modifier.fillMaxSize().onPreviewKeyEvent {
+        Modifier.fillMaxSize().blockKeysWhile(!state.failed && state.loading && state.items.isEmpty() && folder == null, takeFocus = true).onPreviewKeyEvent {
             if (it.type == KeyEventType.KeyDown) keyPressed = true
             false
         },

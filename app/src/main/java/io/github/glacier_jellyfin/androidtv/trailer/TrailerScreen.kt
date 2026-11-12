@@ -113,6 +113,7 @@ import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
 import io.github.glacier_jellyfin.androidtv.ui.OverlayCard
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.ageRatingText
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import io.github.glacier_jellyfin.androidtv.ui.yearText
 import java.time.LocalTime
@@ -210,6 +211,8 @@ fun TrailerScreen(
             .fillMaxSize()
             .background(GlacierColors.Void)
             .focusRequester(rootFocus)
+            // Same condition as the loading overlay: the OSD behind it must not react to the remote.
+            .blockKeysWhile(state.loading && !state.failed && current != null)
             .onPreviewKeyEvent { event ->
                 // The subtitle menu handles its own keys, Back included.
                 if (state.subtitlesOpen) return@onPreviewKeyEvent false

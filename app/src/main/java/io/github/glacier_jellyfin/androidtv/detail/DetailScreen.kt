@@ -82,6 +82,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.seasonLabel
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
@@ -149,7 +150,8 @@ fun DetailScreen(
     val pageFocus = remember { FocusRequester() }
     val miniFocus = remember { FocusRequester() }
 
-    Box(Modifier.fillMaxSize()) {
+    // A loader covers the page: the remote must not reach the navigation or anything else behind it.
+    Box(Modifier.fillMaxSize().blockKeysWhile(details == null && !state.failed, takeFocus = true)) {
         // Down from the mini player lands where Up left.
         Box(Modifier.fillMaxSize().focusRequester(pageFocus).focusRestorer()) {
             CompositionLocalProvider(LocalMiniPlayerFocus provides miniFocus.takeIf { nowPlaying != null }) {

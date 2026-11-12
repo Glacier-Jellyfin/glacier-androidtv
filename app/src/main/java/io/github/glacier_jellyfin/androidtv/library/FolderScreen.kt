@@ -131,6 +131,7 @@ import io.github.glacier_jellyfin.androidtv.ui.SortButton
 import io.github.glacier_jellyfin.androidtv.ui.SortMenu
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.rememberEdgeSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
@@ -224,7 +225,8 @@ fun FolderScreen(
     }
     val title = viewModel.title ?: stringResource(LibraryKind.HomeVideos.title)
 
-    Box(Modifier.fillMaxSize()) {
+    // A loader covers the page: the remote must not reach the navigation or anything else behind it.
+    Box(Modifier.fillMaxSize().blockKeysWhile(state.loading && content == null, takeFocus = true)) {
         when {
             state.loading && content == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
             state.failed && content == null -> Message(

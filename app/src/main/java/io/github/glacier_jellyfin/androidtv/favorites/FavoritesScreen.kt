@@ -49,6 +49,7 @@ import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.PosterCard
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import io.github.glacier_jellyfin.androidtv.ui.yearText
 
@@ -81,7 +82,8 @@ fun FavoritesScreen(
         if (!restored) runCatching { listFocus.requestFocus() }
     }
 
-    Box(Modifier.fillMaxSize()) {
+    // A loader covers the page: the remote must not reach the navigation or anything else behind it.
+    Box(Modifier.fillMaxSize().blockKeysWhile(state.loading && favorites == null, takeFocus = true)) {
         when {
             state.loading && favorites == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
             state.failed && favorites == null -> Message(

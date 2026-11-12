@@ -55,6 +55,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.libraryTitle
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeRow
@@ -236,7 +237,13 @@ fun HomeScreen(
     }
 
     // The spotlight fades into the solid ground, so the page below it keeps that ground too.
-    Box(Modifier.fillMaxSize().then(if (spotlight.isNotEmpty()) Modifier.background(ImagePageGround) else Modifier)) {
+    // A loader covers the page: the remote must not reach the navigation or anything else behind it.
+    Box(
+        Modifier
+            .fillMaxSize()
+            .blockKeysWhile(state.loading && state.content == null, takeFocus = true)
+            .then(if (spotlight.isNotEmpty()) Modifier.background(ImagePageGround) else Modifier),
+    ) {
         val content = state.content
         val rows = state.settings
         when {
