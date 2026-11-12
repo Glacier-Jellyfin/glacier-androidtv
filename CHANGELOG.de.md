@@ -19,6 +19,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Der Wechsel zwischen der Datei und einem umgewandelten Strom unterbricht das Bild nicht mehr
 - Fortsetzen startet schneller und beginnt dafür eventuell einige Sekunden vor dem gespeicherten Stand
 - Das Infofeld zeigt einen bevorstehenden Wechsel zwischen Strömen und seinen Grund
+- Der Ton behält seine Lautstärke, wenn die Wiedergabe zwischen der Datei und einem umgewandelten Strom wechselt
 
 ### Behoben
 - „Untertitel aus“ auf der Detailseite gilt auch für die nächste Folge

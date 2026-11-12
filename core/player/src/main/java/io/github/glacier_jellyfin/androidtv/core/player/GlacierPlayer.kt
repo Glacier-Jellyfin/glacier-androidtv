@@ -17,6 +17,7 @@ import androidx.media3.common.util.ExperimentalApi
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.decoder.ffmpeg.FfmpegLibrary
 import androidx.media3.exoplayer.DecoderCounters
 import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -25,8 +26,10 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.LoadControl
 import androidx.media3.exoplayer.PlayerMessage
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.audio.AudioCapabilities
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.source.ClippingMediaSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.ForwardingMediaSourceFactory
@@ -81,6 +84,11 @@ data class StreamRequest(
      * [startPositionMs], see [SyncPoints.snapsStart]. Never for what happens inside the player.
      */
     val snapStart: Boolean = false,
+    /**
+     * The audio of a title that may alternate between the file and a transcode; null for everything else (music, Live TV, a
+     * title that only ever plays as a transcode). The player keeps the sound of all its streams on one output path, see [AudioPath].
+     */
+    val audio: TitleAudio? = null,
 )
 
 /** How this device plays what it cannot take as it is, decided by the app from its capabilities and settings. */
@@ -121,7 +129,28 @@ class GlacierPlayback(
     private val makePatient: () -> Unit = {},
     /** Lets the stream that is handed over to load while the playing one still does. */
     private val loadControl: HandoverLoadControl? = null,
+    /** The audio of a title that may alternate between streams, see [StreamRequest.audio]; null when its sound is left alone. */
+    private val titleAudio: TitleAudio? = null,
+    /** The title's first stream is the file, so its first audio output tells how the file's sound leaves the device. */
+    private val startsAsFile: Boolean = false,
+    /** Makes the audio sink decode compressed sound to PCM (true) or leave passing it on to Media3 (false). */
+    private val decodeSwitch: (Boolean) -> Unit = {},
 ) {
+
+    /**
+     * Whether the file's sound of this title is decoded on this device, null while that is not known. Kept by the app across
+     * the players of one title, see [TitleAudio.decoded].
+     */
+    var fileAudioDecoded: Boolean? = titleAudio?.decoded
+        private set
+
+    /** Records how the file's sound leaves the device and sets the audio sink to match; once per title, see [AudioPath]. */
+    internal fun setFileDecoded(decoded: Boolean, announce: Boolean = true) {
+        val decode = AudioPath.decodeOtherStreams(titleAudio != null, decoded)
+        fileAudioDecoded = decoded
+        decodeSwitch(decode)
+        if (decode && announce) Log.i(TAG, "Audio of other streams is decoded like the file's (PCM)")
+    }
 
     /** The stream waiting to take over. */
     private var pending: MediaItem? = null
@@ -428,6 +457,10 @@ class GlacierPlayback(
             override fun onAudioTrackInitialized(eventTime: AnalyticsListener.EventTime, audioTrackConfig: AudioSink.AudioTrackConfig) {
                 audioEncoding = audioTrackConfig.encoding
                 audioChannelMask = audioTrackConfig.channelConfig
+                // The first output of a title that starts as the file is the file's own: it tells which way the sound goes.
+                if (titleAudio != null && startsAsFile && fileAudioDecoded == null) {
+                    setFileDecoded(AudioPath.isDecoded(audioTrackConfig.encoding))
+                }
                 Log.i(TAG, "Audio output: ${encodingName(audioTrackConfig.encoding)}, ${Integer.bitCount(audioTrackConfig.channelConfig)} channels, ${audioTrackConfig.sampleRate} Hz")
                 audioStart("track ${encodingName(audioTrackConfig.encoding)} ${audioTrackConfig.sampleRate} Hz")
             }
@@ -656,9 +689,10 @@ object GlacierPlayer {
             .setSubtitleParserFactory(assParsers)
         // A silent bitstream track: a seek to where the player stands flushes the sink, which opens a new one.
         var built: ExoPlayer? = null
-        val renderers = GuardedRenderersFactory(context, request.setup.iec61937) {
+        val guarded = GuardedRenderersFactory(context, request.setup.iec61937) {
             built?.let { player -> Handler(player.applicationLooper).post { player.seekTo(player.currentPosition) } }
         }
+        val renderers = guarded
             // Platform decoders first; a software fallback only when a hardware decoder fails.
             .setEnableDecoderFallback(true)
             // FFmpeg (core/ffmpeg) for audio formats no platform decoder or passthrough handles, e.g. DTS.
@@ -823,8 +857,40 @@ object GlacierPlayer {
             }
         }
         ass.init(player)
-        return GlacierPlayback(player, ass, meter, current = item.takeIf { handOverable }, makePatient = { makePatient(dataSource) }, loadControl = handOverLoadControl)
-            .also { it.maxBufferMs = bufferMs }
+        // One output path for all streams of a title: where the file's sound is decoded here, so is the transcode's.
+        val titleAudio = request.audio?.takeIf { !request.live }
+        val startsAsFile = !request.isHls && request.playlist == null
+        val decodeSwitch = { decode: Boolean -> guarded.sink?.decodeCompressed = decode }
+        var predicted: Boolean? = titleAudio?.decoded
+        if (titleAudio != null && predicted == null && !startsAsFile) {
+            // The file has not played yet: predict from what the output takes as it is.
+            predicted = predictFileDecoded(context, titleAudio, request.setup.iec61937)
+            Log.i("Player", "The file's audio is ${when (predicted) { true -> "decoded on this device"; false -> "passed on as a bitstream"; null -> "not known" }} (predicted)")
+        }
+        val playback = GlacierPlayback(
+            player, ass, meter,
+            current = item.takeIf { handOverable },
+            makePatient = { makePatient(dataSource) },
+            loadControl = handOverLoadControl,
+            titleAudio = titleAudio,
+            startsAsFile = startsAsFile,
+            decodeSwitch = decodeSwitch,
+        )
+        playback.maxBufferMs = bufferMs
+        if (predicted != null) playback.setFileDecoded(predicted, announce = titleAudio?.decoded == null)
+        return playback
+    }
+
+    /** Whether the file's audio goes out as PCM on this device, predicted from the sink's support for its format. */
+    @OptIn(UnstableApi::class)
+    private fun predictFileDecoded(context: Context, audio: TitleAudio, iec61937: Boolean): Boolean? {
+        val mime = AudioPath.mimeOf(audio.codec, audio.profile)
+        val passthrough = mime != null && mime in AudioPath.COMPRESSED && runCatching {
+            val attributes = androidx.media3.common.AudioAttributes.DEFAULT
+            AudioCapabilities.getCapabilities(context, attributes, null)
+                .isPassthroughPlaybackSupported(Format.Builder().setSampleMimeType(mime).setChannelCount(6).setSampleRate(48_000).build(), attributes)
+        }.getOrDefault(false)
+        return AudioPath.predictDecoded(mime, passthrough, iec61937)
     }
 
     /**
@@ -886,6 +952,24 @@ object GlacierPlayer {
         private val iec61937: Boolean,
         private val onStall: () -> Unit,
     ) : DefaultRenderersFactory(context) {
+        /** The sink of the player built with this factory, for the switch that decodes compressed sound. */
+        var sink: GuardedAudioSink? = null
+            private set
+
+        init {
+            // Media3 asks for the decoders at every track selection (also for the period of a stream handed over to), so
+            // the answer follows the sink's switch: while compressed sound is decoded here, FFmpeg takes it, not a platform
+            // decoder (see AudioPath.platformMayDecode); the renderer then reports the format as unsupported.
+            setMediaCodecSelector { mimeType, secure, tunneling ->
+                val ffmpeg = mimeType in AudioPath.COMPRESSED && FfmpegLibrary.isAvailable() && FfmpegLibrary.supportsFormat(mimeType)
+                if (AudioPath.platformMayDecode(mimeType, sink?.decodeCompressed == true, ffmpeg)) {
+                    MediaCodecSelector.DEFAULT.getDecoderInfos(mimeType, secure, tunneling)
+                } else {
+                    emptyList()
+                }
+            }
+        }
+
         override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioOutputPlaybackParams: Boolean): AudioSink =
             GuardedAudioSink(
                 DefaultAudioSink.Builder(context)
@@ -894,7 +978,7 @@ object GlacierPlayer {
                     .apply { if (iec61937) setAudioOutputProvider(Iec61937OutputProvider.create(context)) }
                     .build(),
                 onStall,
-            )
+            ).also { sink = it }
     }
 
     private fun SideloadedSubtitle.toConfiguration() =

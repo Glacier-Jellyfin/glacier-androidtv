@@ -34,6 +34,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - Switching between the file and a converted stream no longer interrupts the picture
 - Resuming a title starts faster and may begin a few seconds before the saved point
 - The info panel shows an upcoming switch between streams and why it happens
+- The sound keeps its volume when playback switches between the file and a converted stream
 
 ### Fixed
 - "Subtitles off" picked on the detail page also applies to the next episode

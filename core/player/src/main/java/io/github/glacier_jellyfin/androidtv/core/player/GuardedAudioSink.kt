@@ -6,8 +6,10 @@ import androidx.annotation.OptIn
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.decoder.ffmpeg.FfmpegLibrary
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.ForwardingAudioSink
+import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import java.nio.ByteBuffer
 
@@ -31,6 +33,8 @@ internal class GuardedAudioSink(
     private val onStall: () -> Unit,
     private val guard: BitstreamGuard = BitstreamGuard(),
     private val clock: () -> Long = SystemClock::elapsedRealtime,
+    /** Whether a decoder for a compressed MIME type exists; see [decodeCompressed]. */
+    private val decoders: (String) -> Boolean = ::decoderExists,
 ) : ForwardingAudioSink(sink) {
 
     private var format: Format? = null
@@ -39,6 +43,25 @@ internal class GuardedAudioSink(
     private var deadTrack: AudioSink.WriteException? = null
     /** A capability change held back during a link hold. */
     private var capabilitiesChanged = false
+
+    /**
+     * Set while the title's file is decoded on this device (see [AudioPath]): the sink then claims no direct support for
+     * compressed formats, so the renderer decodes them to PCM instead of passing them through. Media3 asks again for every
+     * track selection, so a stream handed over to takes the current value.
+     */
+    @Volatile
+    var decodeCompressed = false
+
+    /** Without a decoder the format must stay as it is, or it would not play at all. */
+    private fun mustDecode(format: Format): Boolean {
+        val mime = format.sampleMimeType
+        return decodeCompressed && mime != null && mime in AudioPath.COMPRESSED && decoders(mime)
+    }
+
+    override fun supportsFormat(format: Format): Boolean = !mustDecode(format) && super.supportsFormat(format)
+
+    override fun getFormatSupport(format: Format): Int =
+        if (mustDecode(format)) AudioSink.SINK_FORMAT_UNSUPPORTED else super.getFormatSupport(format)
 
     override fun setListener(listener: AudioSink.Listener) {
         this.listener = listener
@@ -56,7 +79,7 @@ internal class GuardedAudioSink(
         // Refusing data is ordinary back pressure: the renderer offers the buffer again.
         if (guard.holdWrites(now)) return false
         val holding = guard.holdingRoute
-        when (guard.routeDecision(routeBack = holding && format?.let(::supportsFormat) == true, now)) {
+        when (guard.routeDecision(routeBack = holding && format?.let { super.supportsFormat(it) } == true, now)) {
             BitstreamGuard.RouteDecision.Wait -> return false
             BitstreamGuard.RouteDecision.GiveUp -> giveUp()
             BitstreamGuard.RouteDecision.Write -> Unit
@@ -152,6 +175,12 @@ internal class GuardedAudioSink(
 
     private companion object {
         const val TAG = "AudioGuard"
+
+        /** FFmpeg (core/ffmpeg) or a platform decoder takes [mime]. */
+        fun decoderExists(mime: String): Boolean =
+            (FfmpegLibrary.isAvailable() && FfmpegLibrary.supportsFormat(mime)) ||
+                runCatching { MediaCodecUtil.getDecoderInfos(mime, false, false).isNotEmpty() }.getOrDefault(false)
+
         /** The native code for AudioTrack.ERROR_DEAD_OBJECT, which some devices return (see Media3's AudioTrackAudioOutput). */
         const val ERROR_NATIVE_DEAD_OBJECT = -32
     }

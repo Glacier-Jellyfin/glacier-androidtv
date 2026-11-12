@@ -20,6 +20,7 @@ only in English.
 - El cambio entre el archivo y una transmisión convertida ya no interrumpe la imagen
 - Reanudar un título empieza más rápido y puede comenzar unos segundos antes del punto guardado
 - El panel de información muestra un cambio de transmisión próximo y su motivo
+- El sonido mantiene su volumen cuando la reproducción cambia entre el archivo y una transmisión convertida
 
 ### Correcciones
 - «Subtítulos desactivados» elegido en la página de detalles también se aplica al siguiente episodio

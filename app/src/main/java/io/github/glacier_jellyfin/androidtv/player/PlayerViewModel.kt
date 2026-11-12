@@ -66,6 +66,7 @@ import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.HlsSegments
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
+import io.github.glacier_jellyfin.androidtv.core.player.TitleAudio
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import kotlinx.coroutines.CancellationException
@@ -208,6 +209,9 @@ class PlayerViewModel @Inject constructor(
     val events = _events.receiveAsFlow()
 
     private var source: PlaybackSource? = null
+
+    /** Whether the file's sound is decoded on this device, once known; kept across the players of one title, see [TitleAudio]. */
+    private var fileAudioDecoded: Boolean? = null
     private var started = false
     private var closing = false
     private var ticker: Job? = null
@@ -439,6 +443,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun load() {
+        fileAudioDecoded = null
         outputRecoveries = 0
         qualitySteps = 0
         linkRetries = 0
@@ -540,7 +545,19 @@ class PlayerViewModel @Inject constructor(
             .filter { it.delivery == SubtitleDelivery.External && it.url != null }
             .map { SideloadedSubtitle(it.track.index, it.url!!, it.track.codec, it.track.language) },
         setup = playback.device.playbackSetup(settings.current().playback, playback.iec61937),
+        audio = titleAudio(opened),
     )
+
+    /**
+     * The audio of a title that may alternate between the file and a transcode (a transcode that only the link made, or the
+     * file itself), so the player keeps one output path across its streams; null for Live TV and for a title that always plays
+     * as a transcode.
+     */
+    private fun titleAudio(opened: PlaybackSource): TitleAudio? {
+        if (opened.live || !(opened.fileFitsDevice || opened.method == PlaybackMethod.DirectPlay)) return null
+        val track = opened.audioTracks.firstOrNull { it.index == opened.audioIndex }
+        return TitleAudio(track?.codec, track?.profile, fileAudioDecoded)
+    }
 
     /** Segments and the neighbouring episodes; playback does without them when they fail. */
     private fun loadExtras(item: ItemDetails) {
@@ -1358,6 +1375,7 @@ class PlayerViewModel @Inject constructor(
         tiers = null
         pinnedHeight = null
         retired.clear()
+        _state.value.playback?.fileAudioDecoded?.let { fileAudioDecoded = it }
         _state.value.player?.let {
             it.removeListener(listener)
             it.release()
