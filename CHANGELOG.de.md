@@ -10,16 +10,14 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 ### Verbessert
 - Die App lässt sich auf Geräten, die es unterstützen, auf externen Speicher verschieben
 - Die Wiedergabe misst die Verbindung und passt einen Transcode daran an, damit es bei einer langsameren Leitung nicht ruckelt
-- Ein Transcode wechselt auf ein kleineres Bild (4K, 1080p, 720p), wenn die Verbindung zu langsam ist, und zurück, sobald sie sich erholt
+- Ändert sich die Verbindung, wechselt die Wiedergabe ohne Unterbrechung zwischen der Datei und kleineren Bildern (4K, 1080p, 720p)
 - Transkodiertes Video baut einen großen Puffer auf und stockt deutlich seltener
 - Ein Transcode wird für die Größe des Displays erzeugt
 - Ein langsamer Server beendet die Wiedergabe nicht mehr mit einem Fehler
 - Neu gestalteter Dialog bei Wiedergabefehlern
 - Ist die Leitung für eine Datei zu langsam, wandelt der Server nur den Ton um und behält das Bild, wo es passt
-- Der Wechsel zwischen der Datei und einem umgewandelten Strom unterbricht das Bild nicht mehr
 - Fortsetzen startet schneller und beginnt dafür eventuell einige Sekunden vor dem gespeicherten Stand
 - Das Infofeld zeigt einen bevorstehenden Wechsel zwischen Strömen und seinen Grund
-- Der Ton behält seine Lautstärke, wenn die Wiedergabe zwischen der Datei und einem umgewandelten Strom wechselt
 
 ### Behoben
 - „Untertitel aus“ auf der Detailseite gilt auch für die nächste Folge

@@ -25,16 +25,14 @@ collapsed block, and the app shows it when its language is German or Spanish.
 ### Improved
 - The app can be moved to external storage on devices that support it
 - Playback measures the connection and fits a transcode to it, so it does not stutter on a slower link
-- A transcode moves to a smaller picture (4K, 1080p, 720p) when the connection is too slow, and back once it recovers
+- When the connection changes, playback moves between the file and smaller pictures (4K, 1080p, 720p) without interrupting the picture
 - Transcoded video builds a large buffer and stalls much less
 - A transcode is made for the size of the display
 - A slow server no longer ends playback with an error
 - Redesigned playback error dialog
 - On a link too slow for a file, the server converts only the sound and keeps the picture where it fits
-- Switching between the file and a converted stream no longer interrupts the picture
 - Resuming a title starts faster and may begin a few seconds before the saved point
 - The info panel shows an upcoming switch between streams and why it happens
-- The sound keeps its volume when playback switches between the file and a converted stream
 
 ### Fixed
 - "Subtitles off" picked on the detail page also applies to the next episode

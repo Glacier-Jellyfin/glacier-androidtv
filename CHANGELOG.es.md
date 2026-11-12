@@ -11,16 +11,14 @@ only in English.
 ### Mejoras
 - La aplicación se puede mover al almacenamiento externo en los dispositivos que lo admiten
 - La reproducción mide la conexión y adapta la transcodificación a ella, para que no se entrecorte con una conexión más lenta
-- Una transcodificación pasa a una imagen más pequeña (4K, 1080p, 720p) cuando la conexión es demasiado lenta, y vuelve cuando se recupera
+- Cuando cambia la conexión, la reproducción pasa sin interrupciones entre el archivo e imágenes más pequeñas (4K, 1080p, 720p)
 - El vídeo transcodificado crea un búfer grande y se entrecorta mucho menos
 - La transcodificación se genera para el tamaño de la pantalla
 - Un servidor lento ya no termina la reproducción con un error
 - Nuevo diseño del diálogo de errores de reproducción
 - Con una conexión demasiado lenta para un archivo, el servidor convierte solo el sonido y mantiene la imagen donde cabe
-- El cambio entre el archivo y una transmisión convertida ya no interrumpe la imagen
 - Reanudar un título empieza más rápido y puede comenzar unos segundos antes del punto guardado
 - El panel de información muestra un cambio de transmisión próximo y su motivo
-- El sonido mantiene su volumen cuando la reproducción cambia entre el archivo y una transmisión convertida
 
 ### Correcciones
 - «Subtítulos desactivados» elegido en la página de detalles también se aplica al siguiente episodio
