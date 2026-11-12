@@ -50,4 +50,14 @@ subprojects {
         val flavour = if (processor) "jre" else "android"
         dependencyConstraints.add(project.dependencies.constraints.create("com.google.guava:guava:33.7.2-$flavour"))
     }
+
+    // Robolectric brings Bouncy Castle into the unit tests. Raised past known
+    // vulnerabilities. Remove once Robolectric brings at least this version.
+    configurations.matching { it.isCanBeResolved && it.name != "androidLintTool" }.configureEach {
+        listOf(
+            "org.bouncycastle:bcprov-jdk18on:1.86",
+            "org.bouncycastle:bcpkix-jdk18on:1.86",
+            "org.bouncycastle:bcutil-jdk18on:1.86",
+        ).forEach { dependencyConstraints.add(project.dependencies.constraints.create(it)) }
+    }
 }
