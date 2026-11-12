@@ -22,6 +22,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,20 +57,28 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 
 /**
- * Milliseconds played since [sample] arrived, counted on frame by frame while
- * [playing], so prompts move smoothly between the ticks of the position.
- * Read it in the draw phase; reading it in composition recomposes every frame.
+ * [sampleMs] smoothed into a display value that runs on every frame while [playing]
+ * (see [SmoothClock]); the loop never restarts per sample. Read it in the draw phase;
+ * reading it in composition recomposes every frame.
  */
 @Composable
-private fun rememberSinceSample(sample: Any, playing: Boolean): LongState {
-    val elapsed = remember { mutableLongStateOf(0) }
-    LaunchedEffect(sample, playing) {
-        elapsed.longValue = 0
-        if (!playing) return@LaunchedEffect
-        val anchor = withFrameMillis { it }
-        while (true) withFrameMillis { elapsed.longValue = it - anchor }
+private fun rememberSmoothPosition(sampleMs: Long, playing: Boolean): LongState {
+    val display = remember { mutableLongStateOf(sampleMs) }
+    val latest by rememberUpdatedState(sampleMs)
+    val isPlaying by rememberUpdatedState(playing)
+    LaunchedEffect(Unit) {
+        val clock = SmoothClock()
+        var seen: Long? = null
+        while (true) withFrameMillis { now ->
+            val sample = latest
+            if (sample != seen) {
+                seen = sample
+                clock.onSample(sample, now)
+            }
+            display.longValue = clock.onFrame(now, isPlaying)
+        }
     }
-    return elapsed
+    return display
 }
 
 /**
@@ -80,10 +89,10 @@ private fun rememberSinceSample(sample: Any, playing: Boolean): LongState {
 @Composable
 fun SkipButton(segment: MediaSegment, positionMs: Long, playing: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val accent = LocalAccent.current.main
-    val elapsed = rememberSinceSample(positionMs, playing)
+    val position = rememberSmoothPosition(positionMs, playing)
     // The label recomposes once a second; the ring reads the position while drawing.
-    val remaining by remember(segment, positionMs) {
-        derivedStateOf { (segment.endMs - positionMs - elapsed.longValue).coerceAtLeast(0) / 1000 * 1000 }
+    val remaining by remember(segment) {
+        derivedStateOf { (segment.endMs - position.longValue).coerceAtLeast(0) / 1000 * 1000 }
     }
     GlacierClickable(onClick = onClick, shape = PillShape, modifier = modifier) { focused ->
         val color = if (focused) GlacierColors.Void else GlacierColors.Ice
@@ -103,7 +112,7 @@ fun SkipButton(segment: MediaSegment, positionMs: Long, playing: Boolean, onClic
             }
             Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxSize()) {
-                    val played = ((positionMs + elapsed.longValue - segment.startMs).toFloat() / (segment.endMs - segment.startMs)).coerceIn(0f, 1f)
+                    val played = ((position.longValue - segment.startMs).toFloat() / (segment.endMs - segment.startMs)).coerceIn(0f, 1f)
                     val stroke = 4.dp.toPx()
                     val inset = stroke / 2 + 1.5.dp.toPx()
                     val arcSize = Size(size.width - 2 * inset, size.height - 2 * inset)
@@ -156,9 +165,9 @@ fun UpNextCard(
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            val elapsed = rememberSinceSample(countdown, playing)
-            val remainingMs by remember(countdown) {
-                derivedStateOf { (countdown.remainingMs - elapsed.longValue).coerceAtLeast(0) / 1000 * 1000 }
+            val elapsed = rememberSmoothPosition(-countdown.remainingMs, playing)
+            val remainingMs by remember {
+                derivedStateOf { (-elapsed.longValue).coerceAtLeast(0) / 1000 * 1000 }
             }
             val seconds = remainingMs / 1000
             val remaining = if (seconds >= 60) formatTime(remainingMs) else "$seconds s"
@@ -174,10 +183,7 @@ fun UpNextCard(
                     .clip(PillShape)
                     .background(GlacierColors.GlassFill2)
                     .drawBehind {
-                        // The lead time behind the fraction stays put, so the bar shrinks with the time left.
-                        val left = (countdown.remainingMs - elapsed.longValue).coerceAtLeast(0)
-                        val fraction = if (countdown.remainingMs > 0) countdown.fraction * left / countdown.remainingMs else countdown.fraction
-                        val width = size.width * fraction.coerceIn(0f, 1f)
+                        val width = size.width * upNextFraction(-elapsed.longValue, countdown.leadMs)
                         val from = if (layoutDirection == LayoutDirection.Rtl) size.width - width else 0f
                         drawRoundRect(accent, topLeft = Offset(from, 0f), size = size.copy(width = width), cornerRadius = CornerRadius(size.height / 2))
                     },
@@ -219,9 +225,9 @@ fun UpNextCard(
 @Composable
 fun UpNextRing(countdown: UpNextCountdown, playing: Boolean, modifier: Modifier = Modifier) {
     val accent = LocalAccent.current.main
-    val elapsed = rememberSinceSample(countdown, playing)
-    val remainingMs by remember(countdown) {
-        derivedStateOf { (countdown.remainingMs - elapsed.longValue).coerceAtLeast(0) / 1000 * 1000 }
+    val elapsed = rememberSmoothPosition(-countdown.remainingMs, playing)
+    val remainingMs by remember {
+        derivedStateOf { (-elapsed.longValue).coerceAtLeast(0) / 1000 * 1000 }
     }
     Box(
         modifier
@@ -233,8 +239,7 @@ fun UpNextRing(countdown: UpNextCountdown, playing: Boolean, modifier: Modifier 
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.size(64.dp)) {
-            val left = (countdown.remainingMs - elapsed.longValue).coerceAtLeast(0)
-            val fraction = if (countdown.remainingMs > 0) countdown.fraction * left / countdown.remainingMs else countdown.fraction
+            val fraction = upNextFraction(-elapsed.longValue, countdown.leadMs)
             val stroke = 4.dp.toPx()
             val arcSize = Size(size.width - stroke, size.height - stroke)
             val topLeft = Offset(stroke / 2, stroke / 2)
@@ -242,7 +247,7 @@ fun UpNextRing(countdown: UpNextCountdown, playing: Boolean, modifier: Modifier 
             drawArc(
                 accent,
                 startAngle = -90f,
-                sweepAngle = 360f * fraction.coerceIn(0f, 1f),
+                sweepAngle = 360f * fraction,
                 useCenter = false,
                 topLeft = topLeft,
                 size = arcSize,
@@ -257,6 +262,10 @@ fun UpNextRing(countdown: UpNextCountdown, playing: Boolean, modifier: Modifier 
         )
     }
 }
+
+/** Share of the up-next lead time still left, 0..1. */
+private fun upNextFraction(remainingMs: Long, leadMs: Long): Float =
+    (remainingMs.toFloat() / leadMs.coerceAtLeast(1)).coerceIn(0f, 1f)
 
 /** The card's buttons: smaller than [io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton] (design: 56 high, 19 px). */
 @Composable

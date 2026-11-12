@@ -165,7 +165,7 @@ data class PlayerProgress(
 )
 
 /** The "Up next" card: time until the next episode starts and how much of the lead time is left. */
-data class UpNextCountdown(val remainingMs: Long, val fraction: Float)
+data class UpNextCountdown(val remainingMs: Long, val leadMs: Long)
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
@@ -1341,7 +1341,7 @@ class PlayerViewModel @Inject constructor(
         val at = policy.upNextAtMs(state.segments, durationMs) ?: return null
         if (positionMs < at) return null
         val remaining = (durationMs - positionMs).coerceAtLeast(0)
-        return UpNextCountdown(remaining, remaining.toFloat() / (durationMs - at).coerceAtLeast(1))
+        return UpNextCountdown(remaining, (durationMs - at).coerceAtLeast(1))
     }
 
     /** Once per segment; seeking back into it later plays it. */
