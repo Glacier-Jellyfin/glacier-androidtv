@@ -7,6 +7,8 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-13
+
 ### Neu
 - Eine einzelne Staffel lässt sich als gesehen oder ungesehen markieren (OK auf der Staffel gedrückt halten), gesehene Staffeln zeigen einen Haken
 

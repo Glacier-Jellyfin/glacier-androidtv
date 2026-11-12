@@ -22,6 +22,8 @@ collapsed block, and the app shows it when its language is German or Spanish.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-13
+
 ### New
 - A single season can be marked watched or unwatched (hold OK on the season), and watched seasons show a check
 

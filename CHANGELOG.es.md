@@ -8,6 +8,8 @@ only in English.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-13
+
 ### Novedades
 - Una temporada se puede marcar como vista o no vista (mantén pulsado OK en la temporada), y las temporadas vistas muestran una marca
 
