@@ -145,6 +145,9 @@ data class PlayerUiState(
     val skipHideMs: Long = 10_000,
     /** The "Up next" card shrinks to its countdown after this long with the OSD hidden, 0 for never (Settings › Playback). */
     val upNextCollapseMs: Long = 0,
+    /** The hand over to another stream that is under way, for the info sheet; null without one. */
+    val switch: StreamSwitch? = null,
+    /** The last completed changes of stream of this title (hand overs and moves between tiers), newest last. */
 ) {
     val chapters: List<Chapter> get() = details?.chapters.orEmpty()
     val isEpisode: Boolean get() = details?.item?.kind == ItemKind.Episode
@@ -250,7 +253,7 @@ class PlayerViewModel @Inject constructor(
     private val throughput = ThroughputWatch()
 
     /** A stream opened to take over from the playing one; see [beginHandover]. */
-    private class Handover(val trigger: HandoverTrigger?, val atMs: Long, val source: PlaybackSource, val lowering: Boolean)
+    private class Handover(val trigger: HandoverTrigger?, val atMs: Long, val source: PlaybackSource, val lowering: Boolean, val switch: StreamSwitch)
 
     /** Opening the stream for a hand over. */
     private var handoverJob: Job? = null
@@ -768,7 +771,7 @@ class PlayerViewModel @Inject constructor(
             val full = ahead >= playback.maxBufferMs - ThroughputWatch.FULL_MARGIN_MS
             if (throughput.check(now, player.isLoading, rate, streamBps, full)) {
                 Log.w(TAG, "The link loads ${rate / 1000} kbit/s, the stream asks ${streamBps / 1000} kbit/s, ${ahead / 1000} s buffered")
-                lowerQuality(HandoverTrigger.Throughput)
+                lowerQuality(HandoverTrigger.Throughput, linkBps = rate.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
                 return
             }
         } else {
@@ -836,13 +839,13 @@ class PlayerViewModel @Inject constructor(
                 Log.i(TAG, "The link carries ${budget / 1_000_000} Mbit/s, the stream asks ${streamBitrate / 1_000_000}")
                 if (!reduced) {
                     // The measurement before the start is old by now: a link that carries less than the file is no news at a stall.
-                    if (StreamBudget.exceeds(streamBitrate, budget) && lowerQuality(HandoverTrigger.Link) && qualitySteps >= MAX_QUALITY_STEPS) return@launch
+                    if (StreamBudget.exceeds(streamBitrate, budget) && lowerQuality(HandoverTrigger.Link, linkBps = budget) && qualitySteps >= MAX_QUALITY_STEPS) return@launch
                 } else if (StreamBudget.returnsTo(wanted, budget)) {
                     val plan = HandoverPlanner.back(ahead, currentPositionMs(), titleDuration())
                     if (plan is HandoverPlan.At) {
                         returns++
                         Log.i(TAG, "The link carries ${budget / 1_000_000} Mbit/s again, back to the file's ${wanted / 1_000_000}")
-                        beginHandover(plan, trigger = null, lowering = false)
+                        beginHandover(plan, trigger = null, lowering = false, reason = switchReason(null, linkBps = budget))
                         return@launch
                     }
                     Log.i(TAG, "Back to the file would have to wait: ${ahead / 1000} s buffered")
@@ -858,9 +861,10 @@ class PlayerViewModel @Inject constructor(
      * Opens the stream that takes over from the playing one at [HandoverPlan.At.atMs] and queues it in the player, which
      * moves on there without a pause: the playing stream goes on from its buffer while the server starts the new one.
      * [lowering]: a smaller stream, else the file. Nothing is queued when the new stream is not ready in time; the stream
-     * that plays then goes on, and after a stall ([trigger]) the title is opened again as it was before hand overs.
+     * that plays then goes on, and after a stall ([trigger]) the title is opened again as it was before hand overs. [reason]
+     * is what the info panel tells about it.
      */
-    private fun beginHandover(plan: HandoverPlan.At, trigger: HandoverTrigger?, lowering: Boolean) {
+    private fun beginHandover(plan: HandoverPlan.At, trigger: HandoverTrigger?, lowering: Boolean, reason: SwitchReason) {
         val player = _state.value.player ?: return
         val handOver = _state.value.playback ?: return
         val before = source ?: return
@@ -887,7 +891,9 @@ class PlayerViewModel @Inject constructor(
                     else -> null
                 }
                 if (problem == null && handOver.handOver(atMs, streamRequest(opened, atMs))) {
-                    queued = Handover(trigger, atMs, opened, lowering)
+                    val switch = StreamSwitch(labelOf(before, pinnedHeight), labelOf(opened), reason, atMs)
+                    queued = Handover(trigger, atMs, opened, lowering, switch)
+                    _state.update { it.copy(switch = switch) }
                     opened = null
                     return@launch
                 }
@@ -957,6 +963,7 @@ class PlayerViewModel @Inject constructor(
                 subtitleIndex = opened.subtitleIndex,
                 imageHeaders = opened.headers,
                 file = opened.file,
+                switch = null,
             )
         }
         recordTracks(opened.audioIndex, opened.subtitleIndex)
@@ -993,7 +1000,12 @@ class PlayerViewModel @Inject constructor(
         }
         queued = null
         awaitingStart = false
+        _state.update { it.copy(switch = null) }
     }
+
+    /** What the info panel calls [source]; [tierHeight] is the tier a ladder plays now, if it has left the tier it started with. */
+    private fun labelOf(source: PlaybackSource, tierHeight: Int? = null): StreamLabel =
+        streamLabel(source.method, if (source.ladder != null) tierHeight ?: source.pictureHeight else source.pictureHeight)
 
     /**
      * Debug: asks the server for the next segments of the playing tier all at once and logs when each answers. If they answer
@@ -1065,7 +1077,7 @@ class PlayerViewModel @Inject constructor(
             if (plan is HandoverPlan.At) {
                 returns++
                 Log.i(TAG, "The link carries ${budget / 1_000_000} Mbit/s again, back to the file's ${wanted / 1_000_000}")
-                beginHandover(plan, trigger = null, lowering = false)
+                beginHandover(plan, trigger = null, lowering = false, reason = switchReason(null, linkBps = budget))
                 return
             }
             Log.i(TAG, "Back to the file would have to wait: ${ahead / 1000} s buffered")
@@ -1114,7 +1126,9 @@ class PlayerViewModel @Inject constructor(
         pinTier(controller.bitrate)
     }
 
-    /** Asks the player for the tier of [bitrate]; it switches at the next segment, the buffer already loaded plays on. */
+    /**
+     * Asks the player for the tier of [bitrate]; it switches at the next segment, the buffer already loaded plays on.
+     */
     private fun pinTier(bitrate: Int) {
         Log.i(TAG, "Tier ${bitrate / 1000} kbit/s" + tiers?.reason?.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty())
         val height = tierHeights[bitrate]
@@ -1131,7 +1145,7 @@ class PlayerViewModel @Inject constructor(
      * stream's start (see [HandoverPlanner]), else the title is opened again at the current position. Not while a hand over
      * is on its way. False when there is nothing to lower; true when it is handled, also when it waits for a better moment.
      */
-    private fun lowerQuality(trigger: HandoverTrigger = HandoverTrigger.Stalls): Boolean {
+    private fun lowerQuality(trigger: HandoverTrigger = HandoverTrigger.Stalls, linkBps: Int? = null): Boolean {
         if (handoverActive) return true
         stallWatch?.cancel()
         val current = source ?: return false
@@ -1159,7 +1173,7 @@ class PlayerViewModel @Inject constructor(
         trend.clear()
         playback.lowerBudget(streamBitrate)
         if (plan is HandoverPlan.At) {
-            beginHandover(plan, trigger, lowering = true)
+            beginHandover(plan, trigger, lowering = true, reason = switchReason(trigger, linkBps, streamBitrate))
             return true
         }
         Log.i(TAG, "Opening the title again with a smaller stream ($trigger)")
@@ -1348,7 +1362,7 @@ class PlayerViewModel @Inject constructor(
             it.removeListener(listener)
             it.release()
         }
-        _state.update { it.copy(player = null, playback = null, videoDecoder = null, audioDecoder = null, audioOutput = null) }
+        _state.update { it.copy(player = null, playback = null, videoDecoder = null, audioDecoder = null, audioOutput = null, switch = null) }
         started = false
     }
 

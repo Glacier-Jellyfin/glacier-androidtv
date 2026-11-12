@@ -142,6 +142,11 @@ data class PlaybackSource(
      * subtitle), where a way back would only end in another transcode, and for the file itself.
      */
     val fileFitsDevice: Boolean = false,
+    /**
+     * The picture height of a transcode (the tier a ladder starts with, the source's own height for a copied picture, else the
+     * source's height capped to the display), for the info panel; null for the file as it is (direct play or stream).
+     */
+    val pictureHeight: Int? = null,
 ) {
     /** A Live TV channel: no end, no resume point. */
     val live: Boolean get() = liveStreamId != null
@@ -844,6 +849,13 @@ class PlaybackRepository @Inject constructor(
                 videoCopied = copyDemand != null,
                 // Only a stream the budget reduced: the file itself (direct play) has nothing to go back to.
                 fileFitsDevice = fileFits && method != PlaybackMethod.DirectPlay,
+                pictureHeight = when {
+                    // A copied picture keeps the source's height, even where the server calls the stream a direct stream.
+                    copyDemand != null -> sourceVideo?.height
+                    ladder != null -> resolutions[startTier].height
+                    method == PlaybackMethod.Transcode -> sourceVideo?.height?.let { minOf(it, displayHeight) }
+                    else -> null
+                },
                 method = method,
                 headers = mapOf("Authorization" to session.authorization()),
                 // A stream carries the audio the server put in it, whatever was asked for.

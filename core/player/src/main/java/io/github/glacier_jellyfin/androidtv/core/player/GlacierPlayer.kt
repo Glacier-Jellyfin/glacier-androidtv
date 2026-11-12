@@ -99,6 +99,13 @@ data class SideloadedSubtitle(
 )
 
 /**
+ * A hand over that waits to happen: the point where the next stream takes over, in ms of the playing item, how far it was moved
+ * on because the next stream had loaded too little ([postponedMs], 0 when not), and what the next stream has loaded beyond the
+ * point.
+ */
+data class HandOverProgress(val pointInItemMs: Long, val postponedMs: Long, val nextLoadedMs: Long)
+
+/**
  * A player and its ASS renderer. libass draws ASS/SSA subtitles itself, in a
  * view that [attachAss] puts into the SubtitleView; every other format still
  * arrives as Media3 cues.
@@ -148,6 +155,19 @@ class GlacierPlayback(
         val loadedTo = pendingLoadedToMs
         if (loadedTo == C.TIME_UNSET) return fromLoadControl
         return maxOf(fromLoadControl, (loadedTo - startMs).coerceAtLeast(0))
+    }
+
+    /**
+     * Where the pending hand over stands, for the info panel; null without one. The point is in ms of the playing item (the
+     * player's own positions); what the next stream has loaded is counted beyond the point, 0 while nothing is known.
+     */
+    fun handOverProgress(): HandOverProgress? {
+        if (pending == null) return null
+        return HandOverProgress(
+            pointInItemMs = plannedInItemMs + postponedMs,
+            postponedMs = postponedMs,
+            nextLoadedMs = nextLoadedMs.takeIf { it != Long.MAX_VALUE }?.coerceAtLeast(0) ?: 0L,
+        )
     }
 
     /** For the log: how far the completed loads reach beyond the hand over point, "none" for a file or before the first. */

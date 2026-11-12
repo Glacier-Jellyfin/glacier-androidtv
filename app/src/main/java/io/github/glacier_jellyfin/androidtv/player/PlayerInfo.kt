@@ -34,6 +34,9 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -114,9 +117,10 @@ fun InfoPanel(
     val context = LocalContext.current
     val player = state.player
     val maxBufferMs = state.playback?.maxBufferMs
-    val stats by produceState<StreamStats?>(null, player, maxBufferMs) {
+    val playback = state.playback
+    val stats by produceState<StreamStats?>(null, player, maxBufferMs, playback) {
         while (player != null) {
-            value = player.streamStats(context, maxBufferMs)
+            value = player.streamStats(context, maxBufferMs, playback)
             delay(1_000)
         }
     }
@@ -343,7 +347,7 @@ private fun TechnicalTab(state: PlayerUiState, stats: StreamStats?) {
             SubtitleCard(state, Modifier.weight(1f).fillMaxHeight())
             DisplayCard(state, stats, display, Modifier.weight(1f).fillMaxHeight())
         }
-        BufferRow(stats)
+        BufferRow(stats, state.switch)
     }
 }
 
@@ -450,24 +454,92 @@ private fun DisplayCard(state: PlayerUiState, stats: StreamStats?, display: Disp
     }
 }
 
-/** How much of the stream waits on this device, and how fast it comes in. */
+/** The width of the labels of the buffer row once it has a line of a stream change under it. */
+private val BufferLabelWidth = 120.dp
+
+/**
+ * How much of the stream waits on this device, and how fast it comes in. While a hand over to another stream is pending
+ * ([switch]) the bar shows both streams' share and a line tells of the change.
+ */
 @Composable
-internal fun BufferRow(stats: StreamStats?) {
+internal fun BufferRow(stats: StreamStats?, switch: StreamSwitch? = null) {
+    val handOver = stats?.handOver.takeIf { switch != null }
+    val labelModifier = if (switch != null) Modifier.width(BufferLabelWidth) else Modifier
+    val maxSeconds = stats?.maxBufferSeconds ?: DEFAULT_MAX_BUFFER_SECONDS
+    val accent = LocalAccent.current
     InfoSurface(Modifier.fillMaxWidth(), padding = 20) {
-        Row(horizontalArrangement = Arrangement.spacedBy(28.dp), verticalAlignment = Alignment.CenterVertically) {
-            SectionLabel(stringResource(R.string.player_info_buffer))
-            val seconds = stats?.bufferSeconds ?: 0
-            InfoBar(seconds.toFloat() / (stats?.maxBufferSeconds ?: DEFAULT_MAX_BUFFER_SECONDS), LocalAccent.current.main, Modifier.weight(1f), thickness = 8)
-            Text(
-                stringResource(R.string.player_info_seconds, seconds.toInt()),
-                style = GlacierText.body(18, FontWeight.SemiBold),
-                color = GlacierColors.Ice,
-                softWrap = false,
-            )
-            stats?.bandwidth?.let(::bitrateText)?.let {
-                Text(stringResource(R.string.player_info_bandwidth, it), style = GlacierText.body(18), color = OsdSecondary, softWrap = false)
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(28.dp), verticalAlignment = Alignment.CenterVertically) {
+                SectionLabel(stringResource(R.string.player_info_buffer), labelModifier)
+                val seconds = if (handOver != null) {
+                    (minOf(handOver.bufferedMs, handOver.pointInMs) + handOver.nextLoadedMs) / 1000
+                } else {
+                    stats?.bufferSeconds ?: 0
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (handOver != null && switch != null) {
+                        SplitInfoBar(
+                            bufferSplit(handOver.bufferedMs, handOver.pointInMs, handOver.nextLoadedMs, maxSeconds * 1000L),
+                            accent.main,
+                            accent.main.copy(alpha = 0.4f),
+                            thickness = 8,
+                        )
+                        val until = stringResource(R.string.player_info_buffer_until, switch.from.labelText(), formatTime(switch.atMs + handOver.postponedMs))
+                        val loaded = stringResource(R.string.player_info_buffer_loaded, switch.to.labelText(), handOver.nextLoadedMs / 1000)
+                        Text("$until │ $loaded", style = GlacierText.body(16), color = OsdSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    } else {
+                        InfoBar(seconds.toFloat() / maxSeconds, accent.main, thickness = 8)
+                    }
+                }
+                Text(
+                    stringResource(R.string.player_info_seconds, seconds.toInt()),
+                    style = GlacierText.body(18, FontWeight.SemiBold),
+                    color = GlacierColors.Ice,
+                    softWrap = false,
+                )
+                stats?.bandwidth?.let(::bitrateText)?.let {
+                    Text(stringResource(R.string.player_info_bandwidth, it), style = GlacierText.body(18), color = OsdSecondary, softWrap = false)
+                }
+            }
+            if (switch != null) {
+                val from = switch.from.labelText()
+                val to = switch.to.labelText()
+                Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+                    SectionLabel(stringResource(R.string.player_info_switch), labelModifier)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        val headline = if (handOver != null && handOver.postponedMs > 0) {
+                            stringResource(R.string.player_info_switch_waiting, from, to)
+                        } else {
+                            stringResource(R.string.player_info_switch_in, from, to, ((handOver?.pointInMs ?: 0L) / 1000).toInt())
+                        }
+                        Text(headline, style = GlacierText.body(18, FontWeight.SemiBold), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(switch.reason.text(), style = GlacierText.body(16), color = OsdSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun StreamLabel.labelText(): String = when (this) {
+    StreamLabel.File -> stringResource(R.string.player_info_label_file)
+    StreamLabel.Converted -> stringResource(R.string.player_info_label_converted)
+    is StreamLabel.Picture -> pictureText(height)
+}
+
+/** Why the stream changed, with the numbers behind it where the cause has them. */
+@Composable
+private fun SwitchReason.text(): String {
+    val numbers = mbit
+    return when (cause) {
+        SwitchCause.LinkSlow ->
+            if (numbers != null) stringResource(R.string.player_info_reason_link_numbers, numbers.first, numbers.second) else stringResource(R.string.player_info_reason_link)
+        SwitchCause.Draining -> stringResource(R.string.player_info_reason_draining)
+        SwitchCause.Stalls -> stringResource(R.string.player_info_reason_stalls)
+        SwitchCause.Throughput ->
+            if (numbers != null) stringResource(R.string.player_info_reason_throughput_numbers, numbers.first, numbers.second) else stringResource(R.string.player_info_reason_throughput)
+        SwitchCause.LinkRecovered -> stringResource(R.string.player_info_reason_recovered)
     }
 }
 
@@ -801,6 +873,28 @@ internal fun InfoBar(fraction: Float, color: Color, modifier: Modifier = Modifie
     Box(modifier.fillMaxWidth().height(thickness.dp).clip(PillShape).background(GlacierColors.GlassFill2)) {
         Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).fillMaxHeight().clip(PillShape).background(color))
     }
+}
+
+/**
+ * [InfoBar] for a pending hand over: the playing stream's buffer up to the point where the next stream takes over, a thin
+ * divider at the point, then what the next stream has loaded in [nextColor].
+ */
+@Composable
+internal fun SplitInfoBar(split: BufferSplit, color: Color, nextColor: Color, modifier: Modifier = Modifier, thickness: Int = 6) {
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(thickness.dp)
+            .clip(PillShape)
+            .background(GlacierColors.GlassFill2)
+            .drawBehind {
+                val width = size.width
+                drawRect(color, size = Size(width * split.playing, size.height))
+                drawRect(nextColor, topLeft = Offset(width * split.point, 0f), size = Size(width * (split.nextEnd - split.point), size.height))
+                val divider = 2.dp.toPx()
+                drawRect(GlacierColors.Ice, topLeft = Offset((width * split.point - divider / 2).coerceAtLeast(0f), 0f), size = Size(divider, size.height))
+            },
+    )
 }
 
 @Composable

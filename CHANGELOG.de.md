@@ -18,6 +18,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Ist die Leitung für eine Datei zu langsam, wandelt der Server nur den Ton um und behält das Bild, wo es passt
 - Der Wechsel zwischen der Datei und einem umgewandelten Strom unterbricht das Bild nicht mehr
 - Fortsetzen startet schneller und beginnt dafür eventuell einige Sekunden vor dem gespeicherten Stand
+- Das Infofeld zeigt einen bevorstehenden Wechsel zwischen Strömen und seinen Grund
 
 ### Behoben
 - „Untertitel aus“ auf der Detailseite gilt auch für die nächste Folge

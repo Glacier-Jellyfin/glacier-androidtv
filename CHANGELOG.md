@@ -33,6 +33,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - On a link too slow for a file, the server converts only the sound and keeps the picture where it fits
 - Switching between the file and a converted stream no longer interrupts the picture
 - Resuming a title starts faster and may begin a few seconds before the saved point
+- The info panel shows an upcoming switch between streams and why it happens
 
 ### Fixed
 - "Subtitles off" picked on the detail page also applies to the next episode

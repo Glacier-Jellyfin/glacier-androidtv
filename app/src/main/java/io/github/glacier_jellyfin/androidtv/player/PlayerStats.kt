@@ -17,6 +17,7 @@ import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import io.github.glacier_jellyfin.androidtv.core.data.media.channelLayout
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SourceAudio
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SourceVideo
+import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -32,13 +33,15 @@ data class StreamStats(
     val bandwidth: Long?,
     /** What a full buffer holds, in seconds: the scale of the buffer bar. It differs per playback. */
     val maxBufferSeconds: Int = DEFAULT_MAX_BUFFER_SECONDS,
+    /** A hand over to another stream that waits to happen; null without one. */
+    val handOver: HandOverStats? = null,
 )
 
 /** Media3's default buffer (DefaultLoadControl), the scale when the player's own is unknown, as for music. */
 internal const val DEFAULT_MAX_BUFFER_SECONDS = 50
 
 @OptIn(UnstableApi::class)
-internal fun ExoPlayer.streamStats(context: Context, maxBufferMs: Int? = null) = StreamStats(
+internal fun ExoPlayer.streamStats(context: Context, maxBufferMs: Int? = null, playback: GlacierPlayback? = null) = StreamStats(
     video = videoFormat,
     audio = audioFormat,
     bufferSeconds = ((bufferedPosition - currentPosition) / 1000).coerceAtLeast(0),
@@ -46,6 +49,7 @@ internal fun ExoPlayer.streamStats(context: Context, maxBufferMs: Int? = null) =
     // The meter ExoPlayer.Builder uses unless told otherwise.
     bandwidth = DefaultBandwidthMeter.getSingletonInstance(context).bitrateEstimate.takeIf { it > 0 },
     maxBufferSeconds = maxBufferMs?.let { it / 1000 }?.takeIf { it > 0 } ?: DEFAULT_MAX_BUFFER_SECONDS,
+    handOver = playback?.handOverProgress()?.toStats(currentPosition, bufferedPosition),
 )
 
 /** "HEVC · 3840×2160". */

@@ -19,6 +19,7 @@ only in English.
 - Con una conexión demasiado lenta para un archivo, el servidor convierte solo el sonido y mantiene la imagen donde cabe
 - El cambio entre el archivo y una transmisión convertida ya no interrumpe la imagen
 - Reanudar un título empieza más rápido y puede comenzar unos segundos antes del punto guardado
+- El panel de información muestra un cambio de transmisión próximo y su motivo
 
 ### Correcciones
 - «Subtítulos desactivados» elegido en la página de detalles también se aplica al siguiente episodio
