@@ -347,7 +347,13 @@ class MainActivity : ComponentActivity() {
                             GlacierNavHost(navController, startDestination = it)
                             LaunchedEffect(navController) {
                                 startViewModel.relaunch.collect { route ->
-                                    navController.navigate(route) { popUpTo(0) { inclusive = true } }
+                                    // A title played straight away (debug builds) gets Home beneath it, so Back has a screen to return to.
+                                    if (route is PlayerRoute) {
+                                        navController.navigate(HomeRoute) { popUpTo(0) { inclusive = true } }
+                                        navController.navigate(route)
+                                    } else {
+                                        navController.navigate(route) { popUpTo(0) { inclusive = true } }
+                                    }
                                 }
                             }
                         }
