@@ -209,6 +209,14 @@ class LiveTvRepository @Inject constructor(
         settings.update { it.copy(liveTv = it.liveTv.copy(sort = sort, descending = descending)) }
     }
 
+    /** The heart filter of the channel lists, saved per profile. */
+    suspend fun setFavoritesOnly(on: Boolean) {
+        settings.update { it.copy(liveTv = it.liveTv.copy(favoritesOnly = on)) }
+    }
+
+    /** The saved settings now, to open the page on the right filter. */
+    suspend fun savedSettings(): LiveTvSettings = settings.current().liveTv
+
     /** Moves [channelId] to the radio stations, or back to the TV channels. */
     suspend fun moveChannel(channelId: UUID, toRadio: Boolean) {
         settings.update { it.copy(liveTv = it.liveTv.moved(channelId.toString(), toRadio)) }

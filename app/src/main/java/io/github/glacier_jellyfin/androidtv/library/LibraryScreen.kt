@@ -114,6 +114,7 @@ import io.github.glacier_jellyfin.androidtv.ui.SortButton
 import io.github.glacier_jellyfin.androidtv.ui.SortMenu
 import io.github.glacier_jellyfin.androidtv.ui.ToggleChip
 import io.github.glacier_jellyfin.androidtv.ui.ToolbarButton
+import io.github.glacier_jellyfin.androidtv.ui.BackFromTop
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
@@ -163,6 +164,7 @@ fun LibraryScreen(
         snapshotFlow { firstRowHome(gridState) }.collect { top -> if (top != null) railTop = top }
     }
     val restoreFocus = remember { FocusRequester() }
+    LaunchedEffect(lastFocusId) { lastFocusId?.let(viewModel::focused) }
     // By id: titles loaded in before them (on the way back up after a jump) move them down.
     var focusedId by remember { mutableStateOf<String?>(null) }
     var jumpTarget by remember { mutableStateOf<String?>(null) }
@@ -237,11 +239,19 @@ fun LibraryScreen(
         }
     }
     // In a music video folder, Back on the toolbar goes up a folder before it goes to the bar.
-    BackHandler(enabled = inToolbar) { if (!(state.inFolders && viewModel.folderUp())) runCatching { navFocus.requestFocus() } }
+    // The folder it came from gets the focus up in the parent, as in Photos & Videos.
+    var enteredFolder by remember { mutableStateOf(false) }
+    var leftFolderId by remember { mutableStateOf<String?>(null) }
+    BackFromTop(inToolbar, viewModel.inNavBar, navFocus, viewModel::onNav) {
+        val left = state.folderPath.lastOrNull()?.id?.toString()
+        (state.inFolders && viewModel.folderUp()).also { if (it) { leftFolderId = left; enteredFolder = true } }
+    }
 
     // The folder view: an entry's focus is kept like a card's. Into a subfolder, the focus goes to its first entry.
     val folder = state.folder?.takeIf { state.inFolders }
-    var enteredFolder by remember { mutableStateOf(false) }
+    // A key pressed on the page before the titles came: the user moved on (the first load of a
+    // big library takes a while) and the focus stays where they put it.
+    var keyPressed by remember { mutableStateOf(false) }
     fun entryFocus(id: String, first: Boolean): Modifier =
         (if (first) Modifier.focusRequester(firstCardFocus) else Modifier)
             .then(if (id == lastFocusId) Modifier.focusRequester(restoreFocus) else Modifier)
@@ -255,8 +265,22 @@ fun LibraryScreen(
     LaunchedEffect(folder) {
         if (folder == null || folder.isEmpty || (initialFocusDone && !enteredFolder)) return@LaunchedEffect
         enteredFolder = false
+        val cameFrom = leftFolderId
+        leftFolderId = null
+        // Back through the navigation bar: the entry focused when the library was left, if still in this folder.
+        val restored = (cameFrom ?: viewModel.restoredFocus.takeIf { !initialFocusDone && !keyPressed })
+            ?.takeIf { id -> folder.folders.any { it.id.toString() == id } || folder.media.any { it is FolderMedia.Video && it.item.id.toString() == id } }
+        if (restored != null) {
+            lastFocusId = restored
+            // Further down than what is composed: scroll there first (after the title, toolbar and headings).
+            val videos = folder.media.filterIsInstance<FolderMedia.Video>()
+            val folderIndex = folder.folders.indexOfFirst { it.id.toString() == restored }
+            val position = if (folderIndex >= 0) HEADER_ITEMS + 1 + folderIndex
+            else HEADER_ITEMS + (if (folder.folders.isEmpty()) 0 else folder.folders.size + 1) + 1 + videos.indexOfFirst { it.item.id.toString() == restored }
+            gridState.scrollToItem(position)
+        }
         withFrameNanos { }
-        initialFocusDone = runCatching { firstCardFocus.requestFocus() }.isSuccess
+        initialFocusDone = runCatching { (if (restored != null) restoreFocus else firstCardFocus).requestFocus() }.isSuccess
     }
 
     // Load the next page when the grid gets within three rows of the end.
@@ -268,16 +292,22 @@ fun LibraryScreen(
     // Once per composition: a filter change later empties and refills the grid, and the
     // focus stays on the chip then.
     var focusPlaced by remember { mutableStateOf(false) }
-    // A key pressed on the page before the titles came: the user moved on (the first load of a
-    // big library takes a while) and the focus stays where they put it.
-    var keyPressed by remember { mutableStateOf(false) }
     // Revealing the title Back came from can load more titles while the effect runs.
     val currentPositions by rememberUpdatedState(positions)
     LaunchedEffect(state.items.isNotEmpty()) {
         if (state.items.isEmpty() || focusPlaced) return@LaunchedEffect
         focusPlaced = true
         // Back after "More like this": the title the user came back from, when it is here.
-        takeReturnFocus()?.takeIf { viewModel.reveal(it, columns) }?.let { lastFocusId = it }
+        val returned = takeReturnFocus()?.takeIf { viewModel.reveal(it, columns) }
+        if (returned != null) {
+            lastFocusId = returned
+        } else if (!initialFocusDone && !keyPressed) {
+            // Back through the navigation bar: the title focused when the library was left, if still there.
+            viewModel.restoredFocus?.takeIf { viewModel.reveal(it, columns) }?.let {
+                lastFocusId = it
+                initialFocusDone = true
+            }
+        }
         withFrameNanos { }
         if (!initialFocusDone && keyPressed) {
             initialFocusDone = true
@@ -594,10 +624,10 @@ fun LibraryScreen(
             userName = state.userName,
             onSelect = viewModel::onNav,
             down = gridFocus,
+            focusRequester = navFocus,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 34.dp)
-                .focusRequester(navFocus)
                 .onFocusChanged { if (it.hasFocus) inContent = false },
             backHome = viewModel.inNavBar,
         )

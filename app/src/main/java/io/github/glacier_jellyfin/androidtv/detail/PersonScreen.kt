@@ -238,14 +238,7 @@ fun PersonScreen(
     // A loader covers the page: the remote must not reach the navigation or anything else behind it.
     Box(Modifier.fillMaxSize().blockKeysWhile(person == null && !state.failed, takeFocus = true).background(ImagePageGround)) {
         when {
-            person == null && state.failed -> Column(
-                Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterVertically),
-            ) {
-                Text(stringResource(R.string.detail_error), style = GlacierText.display(30), color = GlacierColors.Ice)
-                PillButton(stringResource(R.string.action_retry), onClick = viewModel::load, primary = true)
-            }
+            person == null && state.failed -> ErrorState(onRetry = viewModel::load)
             person == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
             else -> {
                 DetailBackdrop(

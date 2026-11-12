@@ -33,6 +33,8 @@ import io.github.glacier_jellyfin.androidtv.navigation.LiveTvPlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
+import io.github.glacier_jellyfin.androidtv.ui.BrowseMemory
+import io.github.glacier_jellyfin.androidtv.ui.LiveTvMemory
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.CancellationException
@@ -119,12 +121,20 @@ class LiveTvViewModel @Inject constructor(
     private val handoff: LiveStreamHandoff,
     private val music: MusicController,
     private val sessions: SessionManager,
+    private val memory: BrowseMemory,
 ) : ViewModel(), RecordActions {
 
     /** The channel watched last in the player, for the list and the guide to land on. */
     val lastWatched: StateFlow<WatchedChannel?> = repository.lastWatched
 
-    private val _state = MutableStateFlow(LiveTvState(userName = sessions.session.value?.user?.name.orEmpty()))
+    // The bar starts the page anew; it opens on the view the user left it with (for the session).
+    // The heart filter and the sort are the profile's settings, read before the first load.
+    private val _state = MutableStateFlow(
+        LiveTvState(
+            userName = sessions.session.value?.user?.name.orEmpty(),
+            view = memory.liveTv()?.view ?: LiveTvView.Channels,
+        ),
+    )
     val state: StateFlow<LiveTvState> = _state.asStateFlow()
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
@@ -160,7 +170,14 @@ class LiveTvViewModel @Inject constructor(
     private val guideRequested = mutableSetOf<UUID>()
 
     init {
-        load()
+        // The saved heart filter first: the list must not show all channels and then narrow down.
+        viewModelScope.launch {
+            runSuspendCatching { repository.savedSettings() }
+                .onSuccess { saved -> _state.update { it.copy(favoritesOnly = saved.favoritesOnly) } }
+                .onFailure { Log.w(TAG, "Reading the heart filter failed", it) }
+            load()
+            if (_state.value.view == LiveTvView.Recordings) loadRecordings()
+        }
         // A channel moved to radio or TV (here, or found out by the player): the lists follow.
         viewModelScope.launch { repository.radioMarks.drop(1).collect { refresh() } }
         viewModelScope.launch { repository.radioMarks.collect { marks -> _state.update { it.copy(sort = marks.sort, descending = marks.descending) } } }
@@ -211,7 +228,14 @@ class LiveTvViewModel @Inject constructor(
         }
     }
 
-    fun setFavoritesOnly(on: Boolean) = _state.update { it.copy(favoritesOnly = on) }
+    fun setFavoritesOnly(on: Boolean) {
+        _state.update { it.copy(favoritesOnly = on) }
+        viewModelScope.launch {
+            runSuspendCatching { repository.setFavoritesOnly(on) }.onFailure { Log.w(TAG, "Saving the heart filter failed", it) }
+        }
+    }
+
+    private fun remember() = memory.remember(LiveTvMemory(_state.value.view))
 
     /**
      * By number or by name, like the library's sort menu: picking the active sort again flips the
@@ -227,6 +251,7 @@ class LiveTvViewModel @Inject constructor(
 
     fun setView(view: LiveTvView) {
         _state.update { it.copy(view = view) }
+        remember()
         if (view == LiveTvView.Channels) schedulePreview() else stopPreview()
         if (view == LiveTvView.Recordings) loadRecordings()
     }

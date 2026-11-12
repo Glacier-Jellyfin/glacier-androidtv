@@ -58,6 +58,7 @@ import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PosterCard
+import io.github.glacier_jellyfin.androidtv.ui.BackFromTop
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
@@ -108,7 +109,7 @@ fun SearchScreen(
     var inResults by remember { mutableStateOf(false) }
     var inInput by remember { mutableStateOf(false) }
     BackHandler(enabled = inResults) { runCatching { keyFocus.requestFocus() } }
-    BackHandler(enabled = inInput) { runCatching { navFocus.requestFocus() } }
+    BackFromTop(inInput, backHome = true, navFocus, viewModel::onNav)
 
     Box(Modifier.fillMaxSize()) {
         Row(
@@ -165,7 +166,8 @@ fun SearchScreen(
             kinds = LocalLibraryKinds.current,
             userName = state.userName,
             onSelect = viewModel::onNav,
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp).focusRequester(navFocus),
+            focusRequester = navFocus,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp),
         )
     }
 

@@ -41,12 +41,16 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - The info panel of a film or episode shows the cast with photos and roles instead of the chapter and the next episode, which the player already shows
 - The info panel of a song puts the song first: album, year, track and genre, how often and when it was last played, and the artist with photo and biography. Up next and the queue, which the player already shows, are gone. A music video shows its still, its length and how often it was watched
 - The Live TV info panel shows the channel's schedule as a line with the coming programmes instead of the cards for now and next
+- Back on the tabs of a library, Live TV, folders, search or settings goes straight to the home screen, where the focus stays in the navigation bar instead of jumping into the page once it has loaded
+- Back in the rows of the home screen scrolls back to the top
+- Libraries and Live TV keep their filters (heart, unwatched) and sort, also after a restart. Until the profile changes they also return to the tab or view, the folder and the title last used
 
 ### Fixed
 - "Subtitles off" picked on the detail page also applies to the next episode
 - Up next waits while a scene still follows the credits
 - Marking a show watched or unwatched updates its episodes and seasons at once
-- While something loads, the remote no longer moves the focus to buttons behind the loading screen
+- While something loads or connects, the remote no longer moves the focus to buttons behind the loading screen, and a second OK no longer signs in twice
+- The focus no longer jumps away when you have already moved on while a page finishes loading
 
 ## [0.9.0] - 2026-11-05
 

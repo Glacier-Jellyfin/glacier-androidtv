@@ -46,6 +46,9 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -83,6 +86,7 @@ import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.SortButton
 import io.github.glacier_jellyfin.androidtv.ui.SortMenu
 import io.github.glacier_jellyfin.androidtv.ui.ToggleChip
+import io.github.glacier_jellyfin.androidtv.ui.BackFromTop
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
@@ -119,6 +123,9 @@ fun LiveTvScreen(
     val watched by viewModel.lastWatched.collectAsStateWithLifecycle()
     var landed by rememberSaveable { mutableStateOf<String?>(null) }
 
+    // A key pressed on the page: the user moved on, and a late focus request must not pull it back.
+    var keyPressed by remember { mutableStateOf(false) }
+
     // Back from inside a view (the long guide above all) first goes up to the chips, from there to the navigation bar.
     var contentFocused by remember { mutableStateOf(false) }
     val contentFocus = Modifier.onFocusChanged { contentFocused = it.hasFocus }
@@ -128,7 +135,7 @@ fun LiveTvScreen(
     }
     val navFocus = remember { FocusRequester() }
     var chipsFocused by remember { mutableStateOf(false) }
-    BackHandler(enabled = chipsFocused && state.sheet == null) { runCatching { navFocus.requestFocus() } }
+    BackFromTop(chipsFocused && state.sheet == null, backHome = true, navFocus, viewModel::onNav)
 
     // The sort menu takes the focus with it when it closes; it goes back to the sort button.
     // A new order shows from the top, so Down lands on the first channel.
@@ -155,7 +162,11 @@ fun LiveTvScreen(
 
     // The preview's tuner is freed while the page is away (player, other app), and comes back with it.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.stopPreview() }
-    LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.onStart() }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) {
+        // Back on the page (from the player, say): keys pressed before do not count for the new landing.
+        keyPressed = false
+        viewModel.onStart()
+    }
 
     // Back from playing a recording: the list shows what changed meanwhile.
     LaunchedEffect(Unit) { if (state.view == LiveTvView.Recordings) viewModel.loadRecordings() }
@@ -205,7 +216,13 @@ fun LiveTvScreen(
             landed = watched?.key
             lastFocus = watchedKey
         }
-        if (state.view == LiveTvView.Recordings) return@LaunchedEffect
+        if (state.view == LiveTvView.Recordings) {
+            // Opened on the recordings (the view comes back from the session): the list places the
+            // focus itself when it comes back from playing one. Otherwise the view's chip takes it.
+            repeat(3) { withFrameNanos { } }
+            if (!contentFocused && !keyPressed) runCatching { activeChip.requestFocus() }
+            return@LaunchedEffect
+        }
         if (shown.isEmpty()) {
             withFrameNanos { }
             runCatching { chipsFocus.requestFocus() }
@@ -225,6 +242,8 @@ fun LiveTvScreen(
         var restored = false
         for (frame in 0 until FOCUS_FRAMES) {
             withFrameNanos { }
+            // The user already moved on (to another row, say): that focus stays.
+            if (keyPressed) return@LaunchedEffect
             requesters[key]?.let { runCatching { it.requestFocus() } }
             restored = focusedRow == key
             if (restored) break
@@ -233,7 +252,12 @@ fun LiveTvScreen(
     }
 
     // A loader covers the page: the remote must not reach the navigation or anything else behind it.
-    Box(Modifier.fillMaxSize().blockKeysWhile(state.loading && state.channels == null, takeFocus = true)) {
+    Box(
+        Modifier.fillMaxSize().blockKeysWhile(state.loading && state.channels == null, takeFocus = true).onPreviewKeyEvent {
+            if (it.type == KeyEventType.KeyDown) keyPressed = true
+            false
+        },
+    ) {
         val channels = state.channels
         when {
             state.loading && channels == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
@@ -419,7 +443,8 @@ fun LiveTvScreen(
                 state.view == LiveTvView.Guide -> gridFocus
                 else -> listFocus
             },
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp).focusRequester(navFocus),
+            focusRequester = navFocus,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp),
         )
 
         val anchor = sortAnchor

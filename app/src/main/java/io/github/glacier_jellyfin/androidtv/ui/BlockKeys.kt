@@ -3,10 +3,14 @@ package io.github.glacier_jellyfin.androidtv.ui
 import androidx.compose.foundation.focusable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -27,8 +31,12 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 fun Modifier.blockKeysWhile(active: Boolean, takeFocus: Boolean = false, pass: Set<Key> = emptySet()): Modifier {
     if (!active) return this
     val requester = remember { FocusRequester() }
-    if (takeFocus) LaunchedEffect(Unit) { runCatching { requester.requestFocus() } }
+    // Taking focus from a control the user already holds would drop it for good
+    // once the loader leaves (a filter chip on a reload), so only grab it when empty.
+    var hasFocus by remember { mutableStateOf(false) }
+    if (takeFocus) LaunchedEffect(Unit) { if (!hasFocus) runCatching { requester.requestFocus() } }
     return this
+        .onFocusChanged { hasFocus = it.hasFocus }
         .then(if (takeFocus) Modifier.focusRequester(requester).focusable() else Modifier)
         .onPreviewKeyEvent { it.key != Key.Back && it.key != Key.Escape && it.key !in pass }
 }

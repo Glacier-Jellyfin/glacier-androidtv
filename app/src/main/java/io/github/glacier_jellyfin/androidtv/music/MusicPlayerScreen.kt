@@ -210,7 +210,7 @@ fun MusicPlayerScreen(
             .fillMaxSize()
             .background(GlacierColors.Void)
             // The loader covers the player: only Back gets through (a radio loads in its status line instead).
-            .blockKeysWhile(state.loading && !state.failed && state.radio == null, takeFocus = true)
+            .blockKeysWhile(state.loading && !state.failed && state.radio == null, takeFocus = state.current == null)
             .onPreviewKeyEvent { event ->
                 // Back acts on the first press, whatever has focus (see PlayerScreen); Compose would spend it on moving focus out.
                 if (event.key == Key.Back) {

@@ -38,6 +38,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SystemTextInput
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.ServerInfo
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 
@@ -62,7 +63,9 @@ fun SignInScreen(
         keyboardOpen = true
     }
 
+    // The overlay does not stop the buttons behind it: swallow the keys while signing in.
     SetupLayout(
+        modifier = Modifier.blockKeysWhile(state.busy),
         intro = {
             SetupHeading(stringResource(R.string.signin_title), stringResource(R.string.signin_intro))
             state.server?.let { ServerBadge(it) }

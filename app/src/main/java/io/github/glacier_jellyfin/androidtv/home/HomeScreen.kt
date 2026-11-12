@@ -34,6 +34,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -93,6 +94,7 @@ import io.github.glacier_jellyfin.androidtv.core.updater.UpdateCandidate
 import io.github.glacier_jellyfin.androidtv.ui.rememberCardPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 
@@ -100,6 +102,8 @@ import kotlin.math.roundToInt
 @Composable
 fun HomeScreen(
     onNavigate: (UiEvent.Navigate) -> Unit,
+    /** True once when the screen was opened through the navigation: the focus then stays on its bar. */
+    takeFocusNav: () -> Boolean = { false },
     viewModel: HomeViewModel = hiltViewModel(),
     updates: UpdateViewModel = hiltViewModel(),
     restore: RestoreViewModel = hiltViewModel(),
@@ -138,8 +142,14 @@ fun HomeScreen(
         spotIndex = (spotIndex + 1) % spotlight.size
         timerStart++
     }
-    // Focus "Play" once, when the spotlight first appears (not when returning later).
-    var initialFocusDone by rememberSaveable { mutableStateOf(false) }
+    // Arrived through the navigation (Back from a page, OK on "Home"): the focus stays on the bar's entry, also
+    // when the content comes later, so no jump into the page meets a key the user already pressed. Down goes in.
+    var navArrival by rememberSaveable { mutableStateOf(takeFocusNav()) }
+    val navFocus = remember { FocusRequester() }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    // Focus "Play" once, when the spotlight first appears (not when returning later). Not on a navigation arrival.
+    var initialFocusDone by rememberSaveable { mutableStateOf(navArrival) }
     // Back from another page the screen is composed anew; focus goes back to the element the
     // user left from (the lists keep their scroll), not to the nav on top.
     var lastFocus by rememberSaveable { mutableStateOf<String?>(null) }
@@ -168,7 +178,14 @@ fun HomeScreen(
     }
     val hasContent = state.content != null
     LaunchedEffect(hasContent) {
-        if (!hasContent || !initialFocusDone) return@LaunchedEffect
+        if (!hasContent) return@LaunchedEffect
+        if (navArrival) {
+            // The loader's key block is gone with the content; the focus goes to the bar's entry for this page.
+            withFrameNanos { }
+            runCatching { navFocus.requestFocus() }
+            return@LaunchedEffect
+        }
+        if (!initialFocusDone) return@LaunchedEffect
         withFrameNanos { }
         val restored = lastFocus?.let { requesters[it] }?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true
         if (!restored) runCatching { listFocus.requestFocus() }
@@ -223,15 +240,25 @@ fun HomeScreen(
     // Home is the bottom of the stack: Back asks before it closes the app.
     var exitAsked by remember { mutableStateOf(false) }
     BackHandler(enabled = !exitAsked) { exitAsked = true }
-    // Back among the rows first goes up to the navigation bar. The page keeps its place below.
-    val navFocus = remember { FocusRequester() }
+    // Back among the rows scrolls to the top and goes up to the navigation bar, so the page shows where it is.
     var inList by remember { mutableStateOf(false) }
-    BackHandler(enabled = !exitAsked && inList) { runCatching { navFocus.requestFocus() } }
+    // Set by that Back: Down from the bar then starts at the top, not at the card left in the rows.
+    var toTop by remember { mutableStateOf(false) }
+    BackHandler(enabled = !exitAsked && inList) {
+        toTop = true
+        runCatching { navFocus.requestFocus() }
+        scope.launch {
+            listState.scrollToItem(0)
+            // The first row would stay shifted sideways otherwise.
+            continueRow.scrollToItem(0)
+        }
+    }
     var exitWasOpen by remember { mutableStateOf(false) }
     LaunchedEffect(exitAsked) {
         if (!exitAsked && exitWasOpen) {
             withFrameNanos { }
-            lastFocus?.let { requesters[it] }?.let { runCatching { it.requestFocus() } }
+            val restored = !toTop && lastFocus?.let { requesters[it] }?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true
+            if (!restored) runCatching { navFocus.requestFocus() }
         }
         exitWasOpen = exitAsked
     }
@@ -250,12 +277,21 @@ fun HomeScreen(
             state.loading && content == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
             state.failed && content == null -> ErrorState(onRetry = viewModel::load)
             content != null -> {
-                val listState = rememberLazyListState()
                 CompositionLocalProvider(LocalBringIntoViewSpec provides rememberRowPivotSpec(listState, SpotlightHeight)) {
                     LazyColumn(
                         state = listState,
                         // Down from the nav returns to the last focused card.
-                        modifier = Modifier.fillMaxSize().onFocusChanged { inList = it.hasFocus }.focusRequester(listFocus).focusRestorer(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .onFocusChanged {
+                                inList = it.hasFocus
+                                if (it.hasFocus) {
+                                    toTop = false
+                                    navArrival = false
+                                }
+                            }
+                            .focusRequester(listFocus)
+                            .then(if (toTop) Modifier else Modifier.focusRestorer()),
                     ) {
                         item(key = "spotlight") {
                             if (spotlight.isNotEmpty()) {
@@ -449,10 +485,10 @@ fun HomeScreen(
             userName = state.userName,
             onSelect = viewModel::onNav,
             down = listFocus,
+            focusRequester = navFocus,
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = 34.dp)
-                .focusRequester(navFocus),
+                .padding(top = 34.dp),
         )
 
         if (exitAsked) {

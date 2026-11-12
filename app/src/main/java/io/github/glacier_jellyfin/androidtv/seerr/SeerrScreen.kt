@@ -105,6 +105,8 @@ private fun Page(state: SeerrState, details: SeerrDetails, viewModel: SeerrViewM
     // Back from a cast member lands on their card again, not on the first control.
     var lastPerson by rememberSaveable { mutableStateOf<Int?>(null) }
     val personFocus = remember { FocusRequester() }
+    // The page itself, for the first focusable thing (season chip, cast card) when no button can hold focus.
+    val pageFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         if (focusedFor != focusKey || lastPerson == null) return@LaunchedEffect
         withFrameNanos { }
@@ -114,7 +116,7 @@ private fun Page(state: SeerrState, details: SeerrDetails, viewModel: SeerrViewM
     Box(Modifier.fillMaxSize().background(ImagePageGround)) {
         ScrollingBackdrop(item.backdropUrl, BACKDROP, listState)
         CompositionLocalProvider(LocalBringIntoViewSpec provides rememberRowPivotSpec(listState, HEADER_REGION)) {
-            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize().focusRequester(pageFocus)) {
                 item(key = "header") {
                     Column(
                         Modifier.padding(start = PageEdge.dp, end = PageEdge.dp, top = 130.dp, bottom = 20.dp),
@@ -168,6 +170,13 @@ private fun Page(state: SeerrState, details: SeerrDetails, viewModel: SeerrViewM
                                         if (focusedFor == focusKey) return@LaunchedEffect
                                         withFrameNanos { }
                                         if (runCatching { requestFocus.requestFocus() }.isSuccess) focusedFor = focusKey
+                                    }
+                                } else {
+                                    // Neither a request nor a trailer to press: the first chip or card takes the focus.
+                                    LaunchedEffect(focusKey) {
+                                        if (focusedFor == focusKey) return@LaunchedEffect
+                                        withFrameNanos { }
+                                        if (runCatching { pageFocus.requestFocus() }.isSuccess) focusedFor = focusKey
                                     }
                                 }
                             }

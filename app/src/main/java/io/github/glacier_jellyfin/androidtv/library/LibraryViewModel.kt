@@ -19,6 +19,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryQuery
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryScope
+import io.github.glacier_jellyfin.androidtv.core.data.settings.LibraryFilterChoice
 import io.github.glacier_jellyfin.androidtv.core.data.settings.LibrarySortChoice
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
@@ -36,6 +37,8 @@ import io.github.glacier_jellyfin.androidtv.music.MusicTarget
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
+import io.github.glacier_jellyfin.androidtv.ui.BrowseMemory
+import io.github.glacier_jellyfin.androidtv.ui.LibraryMemory
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.CancellationException
@@ -100,26 +103,46 @@ class LibraryViewModel @Inject constructor(
     playback: PlaybackRepository,
     home: HomeRepository,
     private val folders: FolderRepository,
+    private val memory: BrowseMemory,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<LibraryRoute>()
 
+    /** Opened from the navigation bar, not for one library or genre from another page. */
+    val inNavBar: Boolean get() = route.libraryId == null && route.genreId == null
+
+    private val kind = LibraryKind.valueOf(route.kind)
+
+    /** Where the user left this library last time (the bar starts it anew); only for the bar's own libraries. */
+    private val remembered: LibraryMemory? = memory.library(kind)?.takeIf {
+        inNavBar && it.scope in LibraryQuery.scopes(kind, inGenre = false, musicVideos = true)
+    }
+
+    /** The title that had the focus then, for the grid to go back to. */
+    val restoredFocus: String? = remembered?.focusId
+
     private val _state = MutableStateFlow(
         LibraryState(
             query = LibraryQuery(
-                kind = LibraryKind.valueOf(route.kind),
+                kind = kind,
                 libraryId = route.libraryId?.let(UUID::fromString),
                 genreId = route.genreId?.let(UUID::fromString),
                 groupCollections = settings.settings.value.appearance.groupCollections,
+                scope = remembered?.scope ?: LibraryQuery.defaultScope(kind),
             ),
             title = route.title,
             userName = sessions.session.value?.user?.name.orEmpty(),
+            // Dropped again below when the tab turns out not to list folders.
+            folderPath = remembered?.folderPath.orEmpty(),
         ),
     )
     val state: StateFlow<LibraryState> = _state.asStateFlow()
 
     /** How far a big list has come while the grid waits for it. */
     val progress: StateFlow<LoadProgress?> = repository.progress
+
+    /** The folder path came from the memory and has not loaded yet: a folder that is gone sends the tab back to the top. */
+    private var restoredPath = remembered?.folderPath?.isNotEmpty() == true
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
@@ -137,14 +160,24 @@ class LibraryViewModel @Inject constructor(
     private var refreshJob: Job? = null
 
     init {
-        // The kept sort comes from the settings file, which may not be read yet right after start.
+        // The kept sort and toggles come from the settings file, which may not be read yet right after start.
         viewModelScope.launch {
-            val kept = runSuspendCatching { settings.current().librarySorts }
+            val current = runSuspendCatching { settings.current() }
                 .onFailure { Log.w(TAG, "Reading the library sort failed", it) }
                 .getOrNull()
-            if (kept != null) _state.update { it.copy(query = it.query.withKeptSort(kept)) }
+            if (current != null) {
+                val filters = current.libraryFilters[kind.name]
+                _state.update {
+                    it.copy(
+                        query = it.query.withKeptSort(current.librarySorts).copy(
+                            favoritesOnly = filters?.favoritesOnly ?: false,
+                            unwatchedOnly = filters?.unwatchedOnly ?: false,
+                        ),
+                    )
+                }
+            }
             val view = runSuspendCatching { settings.current().musicVideoView }.getOrNull()
-            _state.update { it.copy(musicVideoView = view) }
+            _state.update { it.copy(musicVideoView = view, folderPath = it.folderPath.takeIf { view == MusicVideoView.Folders }.orEmpty()) }
             reload()
         }
         // Marked watched (here, on a detail page or by watching it): the grid shows it at once,
@@ -221,10 +254,26 @@ class LibraryViewModel @Inject constructor(
     }
 
     /** The heart toggle; it stays on across the tabs. */
-    fun toggleFavoritesOnly() = update { it.copy(favoritesOnly = !it.favoritesOnly) }
+    fun toggleFavoritesOnly() {
+        update { it.copy(favoritesOnly = !it.favoritesOnly) }
+        saveFilters()
+    }
 
     /** The "Unwatched" toggle of movies and shows; it stays on across the tabs. */
-    fun toggleUnwatchedOnly() = update { it.copy(unwatchedOnly = !it.unwatchedOnly) }
+    fun toggleUnwatchedOnly() {
+        update { it.copy(unwatchedOnly = !it.unwatchedOnly) }
+        saveFilters()
+    }
+
+    /** The toggles are kept for the profile, like the sort, so they outlast the app. */
+    private fun saveFilters() {
+        val query = _state.value.query
+        val choice = LibraryFilterChoice(query.favoritesOnly, query.unwatchedOnly)
+        viewModelScope.launch {
+            runSuspendCatching { settings.update { it.copy(libraryFilters = it.libraryFilters + (kind.name to choice)) } }
+                .onFailure { Log.w(TAG, "Saving the library filters failed", it) }
+        }
+    }
 
     fun toggleSortMenu(open: Boolean = !_state.value.sortMenuOpen) = _state.update { it.copy(sortMenuOpen = open) }
 
@@ -235,6 +284,7 @@ class LibraryViewModel @Inject constructor(
         _state.update { it.copy(viewMenuOpen = false) }
         if (view == _state.value.musicVideoView) return
         _state.update { it.copy(musicVideoView = view, folderPath = emptyList(), folder = null) }
+        remember(focusId = null)
         reload()
         viewModelScope.launch {
             runSuspendCatching { settings.update { it.copy(musicVideoView = view) } }
@@ -245,6 +295,7 @@ class LibraryViewModel @Inject constructor(
     /** Opens a subfolder in the folder view. */
     fun openFolder(folder: MediaFolder) {
         _state.update { it.copy(folderPath = it.folderPath + folder, folder = null) }
+        remember(focusId = null)
         reload()
     }
 
@@ -252,6 +303,7 @@ class LibraryViewModel @Inject constructor(
     fun folderUp(): Boolean {
         if (_state.value.folderPath.isEmpty()) return false
         _state.update { it.copy(folderPath = it.folderPath.dropLast(1), folder = null) }
+        remember(focusId = null)
         reload()
         return true
     }
@@ -438,9 +490,6 @@ class LibraryViewModel @Inject constructor(
         )
     }
 
-    /** Opened from the navigation bar, not for one library or genre from another page. */
-    val inNavBar: Boolean get() = route.libraryId == null && route.genreId == null
-
     fun onNav(target: NavTarget) {
         val event = sessions.navEvent(target, current = NavTarget.Library(_state.value.query.kind).takeIf { inNavBar }) ?: return
         viewModelScope.launch { _events.send(event) }
@@ -448,7 +497,18 @@ class LibraryViewModel @Inject constructor(
 
     private fun update(change: (LibraryQuery) -> LibraryQuery) {
         _state.update { it.copy(query = change(it.query)) }
+        // The title focused before may not be in the new list.
+        remember(focusId = null)
         reload()
+    }
+
+    /** The grid reports the title that has the focus, for the way back through the navigation bar. */
+    fun focused(id: String) = remember(focusId = id)
+
+    private fun remember(focusId: String?) {
+        if (!inNavBar) return
+        val query = _state.value.query
+        memory.remember(kind, LibraryMemory(query.scope, focusId, _state.value.folderPath))
     }
 
     private fun reload() {
@@ -483,7 +543,7 @@ class LibraryViewModel @Inject constructor(
                 .onFailure { Log.w(TAG, "Counting the music videos' artists failed", it) }
                 .getOrDefault(1f)
             val view = if (share >= TAGGED_SHARE) MusicVideoView.All else MusicVideoView.Folders
-            _state.update { it.copy(musicVideoView = view, loading = false) }
+            _state.update { it.copy(musicVideoView = view, loading = false, folderPath = it.folderPath.takeIf { view == MusicVideoView.Folders }.orEmpty()) }
             reload()
         }
     }
@@ -499,6 +559,8 @@ class LibraryViewModel @Inject constructor(
             try {
                 val content = folders.load(path.lastOrNull()?.id, CollectionType.MUSICVIDEOS)
                 val sorted = content.copy(folders = content.folders.foldersFor(query), media = content.media.filterIsInstance<FolderMedia.Video>().videosFor(query))
+                if (restoredPath && content.isEmpty) return@launch backToTop()
+                restoredPath = false
                 _state.update {
                     if (it.query != query || it.folderPath != path) it
                     else it.copy(folder = sorted, total = sorted.folders.size + sorted.media.size, loading = false)
@@ -507,9 +569,18 @@ class LibraryViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Loading the music video folder failed", e)
+                if (restoredPath) return@launch backToTop()
                 _state.update { it.copy(loading = false, failed = true) }
             }
         }
+    }
+
+    /** The remembered folder is gone: the folder view starts at its top folder instead. */
+    private fun backToTop() {
+        restoredPath = false
+        _state.update { it.copy(folderPath = emptyList(), folder = null) }
+        remember(focusId = null)
+        reload()
     }
 
     /** Loads pages until position [index] is covered (or everything is loaded). */

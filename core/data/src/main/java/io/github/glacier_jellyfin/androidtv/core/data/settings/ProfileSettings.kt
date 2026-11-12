@@ -33,6 +33,8 @@ data class ProfileSettings(
     val music: MusicSettings = MusicSettings(),
     /** The library sort last picked, keyed by library kind name (Movies, Shows, ...). */
     val librarySorts: Map<String, LibrarySortChoice> = emptyMap(),
+    /** The heart and "Unwatched" toggles last set, keyed by library kind name. */
+    val libraryFilters: Map<String, LibraryFilterChoice> = emptyMap(),
     val liveTv: LiveTvSettings = LiveTvSettings(),
     /** The version picked for a movie, or for all episodes of a show, keyed by the movie's or show's id. */
     val versions: Map<String, VersionKey> = emptyMap(),
@@ -110,6 +112,8 @@ data class LiveTvSettings(
     val sort: ChannelSort = ChannelSort.Number,
     /** Highest number or Z first. */
     val descending: Boolean = false,
+    /** The heart filter: only favorite channels. Kept for good, like the library's filters. */
+    val favoritesOnly: Boolean = false,
 ) {
     /** Radio or TV: the user's choice first, then what a playback found, then what the server says. */
     fun isRadio(channelId: String, serverSaysRadio: Boolean): Boolean = when (channelId) {
@@ -140,6 +144,13 @@ enum class ChannelSort {
 data class LibrarySortChoice(
     val sort: LibrarySort = LibrarySort.Title,
     val descending: Boolean = false,
+)
+
+/** One library kind's toggles, kept from one time to the next. */
+@Serializable
+data class LibraryFilterChoice(
+    val favoritesOnly: Boolean = false,
+    val unwatchedOnly: Boolean = false,
 )
 
 /** Shuffle (music pages and player share it) and lyrics in the player. */

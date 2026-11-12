@@ -129,6 +129,7 @@ import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.RowPivot
 import io.github.glacier_jellyfin.androidtv.ui.SortButton
 import io.github.glacier_jellyfin.androidtv.ui.SortMenu
+import io.github.glacier_jellyfin.androidtv.ui.BackFromTop
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
@@ -158,18 +159,20 @@ fun FolderScreen(
     CollectEvents(viewModel.events, onNavigate)
     // The gallery's preview does not play on behind another screen.
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onStop() }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.shown() }
     val pageFocus = remember { FocusRequester() }
     // At the top, Back on the page first goes up to the navigation bar. In a folder it goes up a folder.
     val navFocus = remember { FocusRequester() }
     var onPage by remember { mutableStateOf(false) }
     // The gallery's preview and rows have the focus and fill the screen.
     var stageInFront by remember { mutableStateOf(false) }
-    BackHandler(enabled = onPage && viewModel.inNavBar) { runCatching { navFocus.requestFocus() } }
+    BackFromTop(onPage && viewModel.inNavBar, backHome = true, navFocus, viewModel::onNav)
     var inToolbar by remember { mutableStateOf(false) }
     val gridState = rememberLazyGridState()
     val scope = rememberCoroutineScope()
     // Back from a video, photo or subfolder lands on its card again; the first time on the first one.
-    var lastFocus by rememberSaveable { mutableStateOf<String?>(null) }
+    var lastFocus by rememberSaveable { mutableStateOf(viewModel.restoredFocus) }
+    LaunchedEffect(lastFocus) { lastFocus?.let(viewModel::focused) }
     val requesters = remember { mutableMapOf<String, FocusRequester>() }
     val remembered: (String) -> Modifier = { key ->
         Modifier
@@ -207,6 +210,13 @@ fun FolderScreen(
         if (content == null || empty) return@LaunchedEffect
         withFrameNanos { }
         fun focus(key: String?) = key?.let { requesters[it] }?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true
+        // A card further down is not composed yet: the grid scrolls to it first.
+        if (!gallery && lastFocus != null && !focus(lastFocus)) {
+            gridKeys(content, mediaSections(content, settings), settings).indexOf(lastFocus).takeIf { it >= 0 }?.let {
+                gridState.scrollToItem(it)
+                withFrameNanos { }
+            }
+        }
         // The first folder; without folders the toolbar's active filter (or the view's button), so the
         // gallery does not bring its picture to the front at once.
         if (!focus(lastFocus) && !focus(content.folders.firstOrNull()?.id?.toString()) &&
@@ -316,7 +326,8 @@ fun FolderScreen(
                 // Down goes back to the card left last. Not a focus restorer on the page: it would also
                 // take a focus request meant for another card, such as Left from the A–Z rail.
                 down = lastFocus?.let { key -> requesters.getOrPut(key) { FocusRequester() } } ?: pageFocus,
-                modifier = Modifier.padding(top = 34.dp).focusRequester(navFocus),
+                focusRequester = navFocus,
+                modifier = Modifier.padding(top = 34.dp),
                 backHome = viewModel.inNavBar,
             )
         }
@@ -438,6 +449,22 @@ private fun GridLayout(
                     .padding(end = 22.dp)
                     .offset { IntOffset(0, if (railTop >= 0) railTop else RAIL_TOP.dp.roundToPx()) },
             )
+        }
+    }
+}
+
+/** The grid's items in order, by the keys [GridLayout] gives them (those of the cards and tiles as their ids), to find a card's position. */
+private fun gridKeys(content: FolderContent, sections: List<MediaSection>, settings: FolderSettings): List<String> = buildList {
+    add("title")
+    add("toolbar")
+    if (content.folders.isNotEmpty()) add("folders")
+    content.folders.forEach { add(it.id.toString()) }
+    sections.forEach { section ->
+        add("section-${section.kind}")
+        val groups = if (settings.sort == FolderSort.Date) section.media.byMonth() else listOf(null to section.media)
+        groups.forEach { (month, media) ->
+            if (settings.sort == FolderSort.Date) add("month-${section.kind}-${month ?: "none"}")
+            media.forEach { add(it.id.toString()) }
         }
     }
 }

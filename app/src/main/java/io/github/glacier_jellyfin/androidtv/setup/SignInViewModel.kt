@@ -86,6 +86,7 @@ class SignInViewModel @Inject constructor(
 
     fun signIn() {
         val current = _state.value
+        if (current.busy) return
         val server = current.server ?: return
         if (current.username.isBlank()) {
             viewModelScope.launch { _events.send(UiEvent.Toast(R.string.signin_username_required)) }

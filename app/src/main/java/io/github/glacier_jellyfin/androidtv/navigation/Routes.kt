@@ -34,6 +34,9 @@ data object HomeRoute
  */
 const val RETURN_FOCUS = "returnFocus"
 
+/** Set on the home screen's entry when it was opened through the navigation: the focus stays on the bar. */
+const val FOCUS_NAV = "focusNav"
+
 /** Movies, shows or music across all libraries of that kind, or one library when [libraryId] is set. */
 @Serializable
 data class LibraryRoute(
@@ -46,10 +49,11 @@ data class LibraryRoute(
 
 /**
  * A folder of a home video library ([folderId], named [title]). Without one, the top:
- * the home video libraries, or the content of the only one.
+ * the home video libraries, or the content of the only one. [focus] is the entry to focus first,
+ * for a screen rebuilt on the back stack from what the user left.
  */
 @Serializable
-data class FolderRoute(val folderId: String? = null, val title: String? = null)
+data class FolderRoute(val folderId: String? = null, val title: String? = null, val focus: String? = null)
 
 /** The photos of a home video folder ([folderId]) full screen, starting with [photoId]. */
 @Serializable

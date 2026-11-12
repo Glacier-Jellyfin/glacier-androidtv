@@ -136,10 +136,15 @@ fun TopNav(
      * opened from another page, where Back goes back to that page.
      */
     backHome: Boolean = active != NavTarget.Home,
+    /**
+     * The page's handle on the bar: requestFocus() lands on the page's entry. Not on [modifier]: a request
+     * on the outer node takes the first child (search) when nothing on the page had focus, as after a dialog.
+     */
+    focusRequester: FocusRequester? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
     BackHandler(enabled = focused && backHome) { onSelect(NavTarget.Home) }
-    val activeFocus = remember { FocusRequester() }
+    val activeFocus = focusRequester ?: remember { FocusRequester() }
     val profileFocus = remember { FocusRequester() }
     val miniFocus = remember { FocusRequester() }
     val nowPlaying = LocalNowPlaying.current
@@ -262,6 +267,25 @@ fun TopNav(
             pill.placeRelative(pillX, 0)
             mini?.placeRelative(miniEnd - mini.width, 0)
         }
+    }
+}
+
+/**
+ * Back on the top level of a page, the first selection under the bar: straight home, like Back on the
+ * bar itself. [backHome] is off on a page opened from another page; Back goes up to the bar there, and
+ * from the bar back to that page. [handled] first lets the page take Back for itself, such as a folder up.
+ */
+@Composable
+fun BackFromTop(
+    enabled: Boolean,
+    backHome: Boolean,
+    navFocus: FocusRequester,
+    onSelect: (NavTarget) -> Unit,
+    handled: () -> Boolean = { false },
+) {
+    BackHandler(enabled = enabled) {
+        if (handled()) return@BackHandler
+        if (backHome) onSelect(NavTarget.Home) else runCatching { navFocus.requestFocus() }
     }
 }
 

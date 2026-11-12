@@ -26,6 +26,7 @@ import io.github.glacier_jellyfin.androidtv.navigation.FolderRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PhotoRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
+import io.github.glacier_jellyfin.androidtv.ui.BrowseMemory
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.channels.Channel
@@ -88,6 +89,7 @@ class FolderViewModel @Inject constructor(
     private val sessions: SessionManager,
     private val settings: SettingsRepository,
     playback: PlaybackRepository,
+    private val memory: BrowseMemory,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<FolderRoute>()
     private val folderId = route.folderId?.let(UUID::fromString)
@@ -97,6 +99,12 @@ class FolderViewModel @Inject constructor(
 
     /** The top is the navigation bar's entry; a folder opened from another page goes back to it. */
     val inNavBar: Boolean get() = folderId == null
+
+    /**
+     * The entry to focus first: the one the user left (a folder rebuilt on the back stack carries it in its route),
+     * for the top also from the memory when it was left without a folder open.
+     */
+    val restoredFocus: String? = route.focus ?: if (folderId == null) memory.folders().takeIf { it.path.isEmpty() }?.focusId else null
 
     private val _state = MutableStateFlow(FolderState(userName = sessions.session.value?.user?.name.orEmpty()))
     val state: StateFlow<FolderState> = _state.asStateFlow()
@@ -140,7 +148,16 @@ class FolderViewModel @Inject constructor(
         }
     }
 
-    fun open(folder: MediaFolder) = navigate(FolderRoute(folder.id.toString(), folder.name))
+    fun open(folder: MediaFolder) {
+        memory.openFolder(folderId, folder)
+        navigate(FolderRoute(folder.id.toString(), folder.name))
+    }
+
+    /** The screen is shown (again): the folders below it were left, so Back from them lands here. */
+    fun shown() = memory.folderShown(folderId)
+
+    /** The grid reports the entry that has the focus, for the way back through the navigation bar. */
+    fun focused(id: String) = memory.folderFocused(folderId, id)
 
     /**
      * A video plays, then the folder's next ones, from where the gallery's preview has come to;

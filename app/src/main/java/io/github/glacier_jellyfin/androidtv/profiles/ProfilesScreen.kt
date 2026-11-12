@@ -53,6 +53,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinDots
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.PinEntry
 import io.github.glacier_jellyfin.androidtv.ui.TvPlatform
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
@@ -73,7 +74,9 @@ fun ProfilesScreen(
         if (ready) runCatching { firstFocus.requestFocus() }
     }
 
-    Box(Modifier.fillMaxSize()) {
+    // Until the profiles are there (or the start profile opens) the tiles must not react: the
+    // blocker holds focus meanwhile and hands it to the first tile once ready.
+    Box(Modifier.fillMaxSize().blockKeysWhile(!ready, takeFocus = true)) {
         Column(
             modifier = Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,

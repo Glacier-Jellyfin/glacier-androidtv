@@ -22,9 +22,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +35,9 @@ import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
@@ -95,8 +100,16 @@ fun CollectionDetail(state: DetailState, details: ItemDetails, viewModel: Detail
     // Held outside the list: the header leaves the composition when scrolled away and must not take focus again on its way back.
     val focusedFor = rememberSaveable(collection.id) { mutableStateOf<Boolean?>(null) }
     val accent = LocalAccent.current.main
+    // A key pressed before the titles came: the user moved on, so the late jump to the play button
+    // must not take the focus (a second OK would start the playback).
+    var keyPressed by remember { mutableStateOf(false) }
 
-    Box(Modifier.fillMaxSize().background(ImagePageGround)) {
+    Box(
+        Modifier.fillMaxSize().background(ImagePageGround).onPreviewKeyEvent {
+            if (it.type == KeyEventType.KeyDown) keyPressed = true
+            false
+        },
+    ) {
         DetailBackdrop(
             url = collection.backdropUrl ?: items.firstOrNull()?.backdropUrl,
             height = COLLECTION_BACKDROP,
@@ -205,7 +218,7 @@ fun CollectionDetail(state: DetailState, details: ItemDetails, viewModel: Detail
                     LaunchedEffect(collection.id, playable) {
                         if (focusedFor.value == playable) return@LaunchedEffect
                         withFrameNanos { }
-                        runCatching { playFocus.requestFocus() }
+                        if (!keyPressed) runCatching { playFocus.requestFocus() }
                         focusedFor.value = playable
                     }
                 }

@@ -44,6 +44,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 
@@ -68,7 +69,12 @@ fun ServerListScreen(
     }
 
     Row(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 130.dp),
+        // Before the saved servers are known nothing can hold focus: take it, so a key
+        // does not act on a card the late first-focus jump would then override.
+        // While connecting, the cards behind the overlay must not react (Back still cancels).
+        modifier = Modifier.fillMaxSize()
+            .blockKeysWhile(state.connecting != null || !state.savedLoaded, takeFocus = !state.savedLoaded)
+            .padding(horizontal = 130.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(110.dp),
     ) {

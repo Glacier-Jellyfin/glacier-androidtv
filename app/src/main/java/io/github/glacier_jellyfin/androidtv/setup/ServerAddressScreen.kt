@@ -29,6 +29,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SystemTextInput
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 
@@ -46,7 +47,9 @@ fun ServerAddressScreen(
     var keyboardOpen by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { fieldFocus.requestFocus() }
 
+    // The overlay does not stop the buttons behind it: swallow the keys while connecting (Back still cancels).
     SetupLayout(
+        modifier = Modifier.blockKeysWhile(state.connecting != null),
         intro = {
             SetupHeading(stringResource(R.string.address_heading), stringResource(R.string.address_intro))
         },

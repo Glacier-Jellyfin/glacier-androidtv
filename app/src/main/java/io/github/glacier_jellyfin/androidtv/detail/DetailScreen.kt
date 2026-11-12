@@ -150,8 +150,9 @@ fun DetailScreen(
     val pageFocus = remember { FocusRequester() }
     val miniFocus = remember { FocusRequester() }
 
+    // A locked title asks for its PIN with no details yet: the dialog must stay operable.
     // A loader covers the page: the remote must not reach the navigation or anything else behind it.
-    Box(Modifier.fillMaxSize().blockKeysWhile(details == null && !state.failed, takeFocus = true)) {
+    Box(Modifier.fillMaxSize().blockKeysWhile(details == null && !state.failed && pinPrompt == null, takeFocus = true)) {
         // Down from the mini player lands where Up left.
         Box(Modifier.fillMaxSize().focusRequester(pageFocus).focusRestorer()) {
             CompositionLocalProvider(LocalMiniPlayerFocus provides miniFocus.takeIf { nowPlaying != null }) {

@@ -13,7 +13,7 @@ import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 fun SessionManager.navEvent(target: NavTarget, current: NavTarget?): UiEvent.Navigate? {
     if (target == current) return null
     return when (target) {
-        NavTarget.Home -> UiEvent.Navigate(HomeRoute, clearBackStack = true)
+        NavTarget.Home -> UiEvent.Navigate(HomeRoute, clearBackStack = true, focusNav = true)
         NavTarget.Search -> UiEvent.Navigate(SearchRoute())
         NavTarget.Settings -> UiEvent.Navigate(SettingsRoute)
         is NavTarget.Library -> UiEvent.Navigate(if (target.kind == LibraryKind.HomeVideos) FolderRoute() else LibraryRoute(target.kind.name))

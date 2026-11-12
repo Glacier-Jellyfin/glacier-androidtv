@@ -65,6 +65,8 @@ import io.github.glacier_jellyfin.androidtv.diagnostics.LogShareScreen
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.music.NowPlaying
 import io.github.glacier_jellyfin.androidtv.navigation.GlacierNavHost
+import io.github.glacier_jellyfin.androidtv.ui.BrowseMemory
+import io.github.glacier_jellyfin.androidtv.ui.FolderMemory
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
@@ -118,10 +120,14 @@ class StartViewModel @Inject constructor(
     val music: MusicController,
     home: HomeRepository,
     private val sessions: SessionManager,
+    private val browseMemory: BrowseMemory,
     private val launches: HomeLaunches,
     private val diagnostics: Diagnostics,
     settingsSync: SettingsSync,
 ) : ViewModel() {
+    /** Where "Fotos & Videos" was left, for the way back into it. */
+    fun folderMemory(): FolderMemory = browseMemory.folders()
+
     /** Library kinds of the server, for every navigation bar. */
     val libraryKinds: StateFlow<List<LibraryKind>> = home.kinds
 
@@ -344,7 +350,7 @@ class MainActivity : ComponentActivity() {
                         // The first screen waits for the crash page, so it cannot take the focus from it.
                         if (crashShare == null) start?.let {
                             val navController = rememberNavController()
-                            GlacierNavHost(navController, startDestination = it)
+                            GlacierNavHost(navController, startDestination = it, folderMemory = startViewModel::folderMemory)
                             LaunchedEffect(navController) {
                                 startViewModel.relaunch.collect { route ->
                                     // A title played straight away (debug builds) gets Home beneath it, so Back has a screen to return to.

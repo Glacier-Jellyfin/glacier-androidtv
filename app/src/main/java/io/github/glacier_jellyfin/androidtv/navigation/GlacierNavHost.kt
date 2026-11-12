@@ -30,6 +30,7 @@ import io.github.glacier_jellyfin.androidtv.setup.QuickConnectScreen
 import io.github.glacier_jellyfin.androidtv.setup.ServerListScreen
 import io.github.glacier_jellyfin.androidtv.setup.SignInScreen
 import io.github.glacier_jellyfin.androidtv.trailer.TrailerScreen
+import io.github.glacier_jellyfin.androidtv.ui.FolderMemory
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 
 /** Screens without arguments; navigating to one that is already on top does nothing. */
@@ -41,7 +42,7 @@ private val TitlePages = listOf(DetailRoute::class, PersonRoute::class, SeerrRou
 private const val TAG = "Navigation"
 
 @Composable
-fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
+fun GlacierNavHost(navController: NavHostController, startDestination: Any, folderMemory: () -> FolderMemory) {
     // The whole back stack is readable only through currentBackStack, which lint reports as
     // library-restricted although Navigation offers no public way to it.
     @SuppressLint("RestrictedApi")
@@ -57,7 +58,13 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
         } else {
             null
         }
-        navController.navigate(event.route) {
+        // "Fotos & Videos" from the bar opens where the user left it: the top and each folder below it get
+        // their screen on the back stack, in one go, so only the last one shows.
+        val trail = folderMemory().takeIf {
+            event.route == FolderRoute() && !event.clearBackStack && !event.replace && navController.currentDestination?.hasRoute(FolderRoute::class) != true
+        }?.takeIf { it.path.isNotEmpty() }
+        val route = if (trail != null) FolderRoute(focus = trail.path.first().id.toString()) else event.route
+        navController.navigate(route) {
             when {
                 event.clearBackStack -> popUpTo(0) { inclusive = true }
                 base != null -> popUpTo(base)
@@ -67,6 +74,11 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
             // detail page with other arguments is a new screen of the same kind.
             launchSingleTop = event.route in SingleScreens
         }
+        trail?.path?.forEachIndexed { index, folder ->
+            val focus = trail.path.getOrNull(index + 1)?.id?.toString() ?: trail.focusId
+            navController.navigate(FolderRoute(folder.id.toString(), folder.name, focus))
+        }
+        if (event.focusNav) navController.currentBackStackEntry?.savedStateHandle?.set(FOCUS_NAV, true)
     }
     val back: () -> Unit = {
         Log.d(TAG, "Back")
@@ -88,7 +100,9 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any) {
         composable<SignInRoute> { SignInScreen(onNavigate = navigate) }
         composable<QuickConnectRoute> { QuickConnectScreen(onNavigate = navigate, onBack = back) }
         composable<ProfilesRoute> { ProfilesScreen(onNavigate = navigate) }
-        composable<HomeRoute> { HomeScreen(onNavigate = navigate) }
+        composable<HomeRoute> { entry ->
+            HomeScreen(onNavigate = navigate, takeFocusNav = { entry.savedStateHandle.remove<Boolean>(FOCUS_NAV) == true })
+        }
         composable<LibraryRoute> { entry ->
             LibraryScreen(onNavigate = navigate, takeReturnFocus = { entry.savedStateHandle.remove<String>(RETURN_FOCUS) })
         }
