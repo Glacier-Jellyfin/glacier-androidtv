@@ -433,23 +433,33 @@ private fun Pill(text: String, modifier: Modifier, background: Color = GlacierCo
 @Composable
 fun CastCard(person: CastMember, onClick: () -> Unit) = CastCard(person.name, person.role, person.imageUrl, onClick)
 
+/** Round portrait of a person: the [imageUrl] over a gradient with the name's initial. [decoration] sits between size and clip. */
+@Composable
+fun CastPortrait(name: String, imageUrl: String?, size: Int, modifier: Modifier = Modifier, decoration: Modifier = Modifier) {
+    val accent = LocalAccent.current
+    Box(
+        modifier
+            .size(size.dp)
+            .then(decoration)
+            .clip(PillShape)
+            .background(Brush.linearGradient(listOf(accent.deep, GlacierColors.Void))),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(name.take(1).uppercase(), style = GlacierText.display(38), color = GlacierColors.Ice)
+        if (imageUrl != null) Artwork(imageUrl, Modifier.fillMaxSize())
+    }
+}
+
 @Composable
 fun CastCard(name: String, role: String?, imageUrl: String?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val accent = LocalAccent.current
     val size = LocalCardSizes.current.castSize
     GlacierCard(onClick = onClick, modifier = modifier.width((size + 18).dp)) { focused ->
-        Box(
-            Modifier
-                .align(Alignment.CenterHorizontally)
-                .size(size.dp)
-                .focusFrame(focused, PillShape)
-                .clip(PillShape)
-                .background(Brush.linearGradient(listOf(accent.deep, GlacierColors.Void))),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(name.take(1).uppercase(), style = GlacierText.display(38), color = GlacierColors.Ice)
-            if (imageUrl != null) Artwork(imageUrl, Modifier.fillMaxSize())
-        }
+        CastPortrait(
+            name, imageUrl, size,
+            Modifier.align(Alignment.CenterHorizontally),
+            decoration = Modifier.focusFrame(focused, PillShape),
+        )
         Text(
             name,
             style = GlacierText.body(17, FontWeight.SemiBold),

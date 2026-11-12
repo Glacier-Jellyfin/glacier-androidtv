@@ -38,6 +38,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - Resuming a title starts faster and may begin a few seconds before the saved point
 - The info panel shows an upcoming switch between streams and why it happens
 - The countdown for skipping and the next episode runs smoothly
+- The info panel of a film shows the cast with photos and roles
 
 ### Fixed
 - "Subtitles off" picked on the detail page also applies to the next episode

@@ -8,6 +8,7 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
@@ -54,11 +55,13 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.core.data.media.CastMember
 import io.github.glacier_jellyfin.androidtv.core.data.media.Chapter
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
@@ -79,6 +82,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.horizontalStep
+import io.github.glacier_jellyfin.androidtv.detail.CastPortrait
 import io.github.glacier_jellyfin.androidtv.detail.trackLabel
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.FactBadge
@@ -259,7 +263,7 @@ private fun TitleTab(state: PlayerUiState, details: ItemDetails, progress: Playe
                 }
                 val facts = listOfNotNull(
                     details.directors.takeIf { it.isNotEmpty() }?.let { stringResource(R.string.player_info_directors) to it.take(2).joinToString(", ") },
-                    details.cast.takeIf { it.isNotEmpty() }?.let { cast -> stringResource(R.string.player_info_cast) to cast.take(4).joinToString(", ") { it.name } },
+                    details.cast.takeIf { it.isNotEmpty() && episode }?.let { cast -> stringResource(R.string.player_info_cast) to cast.take(4).joinToString(", ") { it.name } },
                     details.studios.takeIf { it.isNotEmpty() }?.let { stringResource(R.string.player_info_studios) to it.take(3).joinToString(", ") },
                     details.premiereDate?.takeIf { episode }?.let {
                         stringResource(R.string.player_info_premiere) to it.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(locale))
@@ -272,10 +276,53 @@ private fun TitleTab(state: PlayerUiState, details: ItemDetails, progress: Playe
                 }
             }
         }
-        if (chapter != null || next != null) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                if (chapter != null) ChapterCard(state.chapters, chapter, progress, Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
-                if (next != null) NextCard(next, episode, Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
+        if (episode) {
+            if (chapter != null || next != null) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                    if (chapter != null) ChapterCard(state.chapters, chapter, progress, Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
+                    if (next != null) NextCard(next, episode, Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
+                }
+            }
+        } else if (details.cast.isNotEmpty()) {
+            CastRow(details.cast)
+        }
+    }
+}
+
+private val CastItemWidth = 150.dp
+private val CastItemGap = 16.dp
+private const val CAST_PORTRAIT = 100
+
+/** The cast as far as it fits the width: portraits with name and role, display only. */
+@Composable
+private fun CastRow(cast: List<CastMember>) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val count = ((maxWidth + CastItemGap) / (CastItemWidth + CastItemGap)).toInt().coerceAtLeast(1)
+        Row(horizontalArrangement = Arrangement.spacedBy(CastItemGap)) {
+            cast.take(count).forEach { person ->
+                Column(Modifier.width(CastItemWidth), horizontalAlignment = Alignment.CenterHorizontally) {
+                    CastPortrait(person.name, person.imageUrl, CAST_PORTRAIT)
+                    Text(
+                        person.name,
+                        style = GlacierText.body(17, FontWeight.SemiBold),
+                        color = GlacierColors.Ice,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                    )
+                    person.role?.let {
+                        Text(
+                            it,
+                            style = GlacierText.body(15),
+                            color = GlacierColors.Mist,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
             }
         }
     }
