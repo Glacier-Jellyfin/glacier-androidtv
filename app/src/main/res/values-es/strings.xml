@@ -497,7 +497,6 @@
     <string name="player_info_directors">Dirección</string>
     <string name="player_info_studios">Estudio</string>
     <string name="player_info_premiere">Estreno</string>
-    <string name="player_info_up_next">A continuación</string>
     <string name="player_info_tv">TV</string>
     <string name="player_info_hardware">Hardware</string>
     <string name="player_info_software">Software</string>
@@ -657,8 +656,17 @@
     <string name="music_queue">Cola</string>
     <string name="music_queue_left">Quedan %1$s</string>
     <string name="music_info_song">Canción</string>
+    <string name="music_info_year">Año</string>
     <string name="music_info_track">Pista</string>
-    <string name="music_info_track_disc">%1$d · Disco %2$d</string>
+    <string name="music_info_genre">Género</string>
+    <string name="music_info_track_of_value">%1$d de %2$d</string>
+    <string name="music_info_disc">Disco %1$d</string>
+    <plurals name="music_info_played">
+        <item quantity="one">Reproducida %1$d vez</item>
+        <item quantity="many">Reproducida %1$d veces</item>
+        <item quantity="other">Reproducida %1$d veces</item>
+    </plurals>
+    <string name="music_info_last_played">última vez el %1$s</string>
     <string name="music_info_file">Archivo</string>
     <string name="music_info_not_lossless">Ya no es sin pérdida.</string>
     <string name="music_lossless">Sin pérdida</string>

@@ -25,6 +25,7 @@ only in English.
 - El panel de información muestra un cambio de transmisión próximo y su motivo
 - La cuenta atrás para saltar y para el siguiente episodio avanza con fluidez
 - El panel de información de una película o un episodio muestra el reparto con fotos y papeles en lugar del capítulo y el siguiente episodio, que el reproductor ya muestra
+- El panel de información de una canción pone la canción en primer plano: álbum, año, pista y género, cuántas veces y cuándo se escuchó por última vez, y el artista con foto y biografía. «A continuación» y la cola, que el reproductor ya muestra, desaparecen
 
 ### Correcciones
 - «Subtítulos desactivados» elegido en la página de detalles también se aplica al siguiente episodio

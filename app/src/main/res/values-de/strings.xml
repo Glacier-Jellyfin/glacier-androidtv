@@ -478,7 +478,6 @@
     <string name="player_info_directors">Regie</string>
     <string name="player_info_studios">Studio</string>
     <string name="player_info_premiere">Erstausstrahlung</string>
-    <string name="player_info_up_next">Als Nächstes</string>
     <string name="player_info_tv">Fernseher</string>
     <string name="player_info_hardware">Hardware</string>
     <string name="player_info_software">Software</string>
@@ -638,8 +637,16 @@
     <string name="music_queue">Warteschlange</string>
     <string name="music_queue_left">noch %1$s</string>
     <string name="music_info_song">Titel</string>
-    <string name="music_info_track">Nummer</string>
-    <string name="music_info_track_disc">%1$d · CD %2$d</string>
+    <string name="music_info_year">Jahr</string>
+    <string name="music_info_track">Titel</string>
+    <string name="music_info_genre">Genre</string>
+    <string name="music_info_track_of_value">%1$d von %2$d</string>
+    <string name="music_info_disc">CD %1$d</string>
+    <plurals name="music_info_played">
+        <item quantity="one">%1$d-mal gehört</item>
+        <item quantity="other">%1$d-mal gehört</item>
+    </plurals>
+    <string name="music_info_last_played">zuletzt am %1$s</string>
     <string name="music_info_file">Datei</string>
     <string name="music_info_not_lossless">Nicht mehr verlustfrei.</string>
     <string name="music_lossless">Lossless</string>

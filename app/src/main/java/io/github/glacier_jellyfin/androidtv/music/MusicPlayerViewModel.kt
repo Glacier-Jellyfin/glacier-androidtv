@@ -7,6 +7,7 @@ import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveChannel
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import kotlinx.coroutines.channels.Channel
@@ -27,7 +28,7 @@ import javax.inject.Inject
 class MusicPlayerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val controller: MusicController,
-    music: MusicRepository,
+    private val music: MusicRepository,
 ) : ViewModel() {
 
     val state: StateFlow<MusicUiState> = controller.state
@@ -93,6 +94,7 @@ class MusicPlayerViewModel @Inject constructor(
     fun pictureShown() = controller.pictureShown()
     fun pictureGone() = controller.pictureGone()
     suspend fun transcodeStatus() = controller.transcodeStatus()
+    suspend fun songDetails(track: MusicTrack) = music.songDetails(track)
     fun toggleFavorite() = controller.toggleFavorite()
 
     /** Options for a song of the queue (hold OK, or the menu key). */

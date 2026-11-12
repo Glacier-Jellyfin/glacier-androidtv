@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
+import java.time.LocalDate
 import java.util.UUID
 
 /** How a track is encoded, for the "FLAC · 24 Bit/96 kHz · Stereo" badges. */
@@ -42,6 +43,19 @@ data class MusicTrack(
     /** A music video: it plays in the music player with its picture where a song shows its cover. */
     val isVideo: Boolean = false,
 )
+
+/** What the info panel shows of a song beyond [MusicTrack]; every part is optional. */
+data class SongDetails(
+    val genres: List<String>,
+    val playCount: Int,
+    val lastPlayed: LocalDate?,
+    /** Songs on the album, for "Track 8 of 13". */
+    val albumTrackCount: Int?,
+    val artist: ArtistInfo?,
+)
+
+/** The song's artist: photo and the start of the biography. */
+data class ArtistInfo(val id: UUID, val name: String, val imageUrl: String?, val overview: String?)
 
 /**
  * A song's lyrics; [synced] when the lines carry start times. An

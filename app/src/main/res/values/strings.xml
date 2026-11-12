@@ -484,7 +484,6 @@
     <string name="player_info_directors">Director</string>
     <string name="player_info_studios">Studio</string>
     <string name="player_info_premiere">First aired</string>
-    <string name="player_info_up_next">Up next</string>
     <string name="player_info_tv">TV</string>
     <string name="player_info_hardware">Hardware</string>
     <string name="player_info_software">Software</string>
@@ -644,8 +643,16 @@
     <string name="music_queue">Queue</string>
     <string name="music_queue_left">%1$s left</string>
     <string name="music_info_song">Song</string>
+    <string name="music_info_year">Year</string>
     <string name="music_info_track">Track</string>
-    <string name="music_info_track_disc">%1$d · Disc %2$d</string>
+    <string name="music_info_genre">Genre</string>
+    <string name="music_info_track_of_value">%1$d of %2$d</string>
+    <string name="music_info_disc">Disc %1$d</string>
+    <plurals name="music_info_played">
+        <item quantity="one">Played %1$d time</item>
+        <item quantity="other">Played %1$d times</item>
+    </plurals>
+    <string name="music_info_last_played">last on %1$s</string>
     <string name="music_info_file">File</string>
     <string name="music_info_not_lossless">No longer lossless.</string>
     <string name="music_lossless">Lossless</string>

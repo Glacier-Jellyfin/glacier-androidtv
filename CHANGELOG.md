@@ -39,6 +39,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - The info panel shows an upcoming switch between streams and why it happens
 - The countdown for skipping and the next episode runs smoothly
 - The info panel of a film or episode shows the cast with photos and roles instead of the chapter and the next episode, which the player already shows
+- The info panel of a song puts the song first: album, year, track and genre, how often and when it was last played, and the artist with photo and biography. Up next and the queue, which the player already shows, are gone
 
 ### Fixed
 - "Subtitles off" picked on the detail page also applies to the next episode

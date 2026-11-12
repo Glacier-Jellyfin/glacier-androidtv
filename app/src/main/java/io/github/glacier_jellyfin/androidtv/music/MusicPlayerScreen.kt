@@ -363,7 +363,7 @@ fun MusicPlayerScreen(
                 runCatching { retryFocus.requestFocus() }
             }
         }
-        if (infoOpen) MusicInfoPanel(state, progress, player, transcodeStatus = viewModel::transcodeStatus, onDismiss = { infoOpen = false })
+        if (infoOpen) MusicInfoPanel(state, player, transcodeStatus = viewModel::transcodeStatus, songDetails = viewModel::songDetails, onDismiss = { infoOpen = false })
         MusicActionsSheet(viewModel.musicActions)
     }
     // Closing the panel hands focus back to its button.

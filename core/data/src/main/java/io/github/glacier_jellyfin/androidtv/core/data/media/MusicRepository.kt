@@ -2,18 +2,22 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.log.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.exception.InvalidStatusException
+import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.api.client.extensions.instantMixApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.api.client.extensions.lyricApi
 import org.jellyfin.sdk.api.client.extensions.playlistApi
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.CreatePlaylistDto
+import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.MediaType
@@ -211,6 +215,59 @@ class MusicRepository @Inject constructor(
             .content.items.firstOrNull()?.let(MediaMapper(session.api)::track)
     }
 
+    /**
+     * Genres, play statistics, the album's song count and the artist of [track]. Each part
+     * that cannot be fetched is left out; null when the song itself cannot be.
+     */
+    suspend fun songDetails(track: MusicTrack): SongDetails? = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        val dto = try {
+            session.api.libraryApi.getItem(itemId = track.id, userId = session.userId).content
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Details of song ${track.id} unavailable", e)
+            return@withContext null
+        }
+        val albumId = track.albumId ?: dto.albumId
+        val artistRef = dto.artistItems?.firstOrNull() ?: dto.albumArtists?.firstOrNull()
+        val (albumCount, artist) = coroutineScope {
+            val count = async {
+                albumId?.let { id -> optional("album $id") { session.api.libraryApi.getItem(itemId = id, userId = session.userId).content.childCount } }
+            }
+            val info = async { artistRef?.let { ref -> optional("artist ${ref.id}") { artistInfo(session, ref.id, ref.name) } } }
+            count.await() to info.await()
+        }
+        SongDetails(
+            genres = dto.genres.orEmpty().filter { it.isNotBlank() },
+            playCount = dto.userData?.playCount ?: 0,
+            lastPlayed = dto.userData?.lastPlayedDate?.toLocalDate(),
+            albumTrackCount = albumCount?.takeIf { it > 0 },
+            artist = artist,
+        )
+    }
+
+    private suspend fun artistInfo(session: Session, id: UUID, fallbackName: String?): ArtistInfo? {
+        val dto = session.api.libraryApi.getItem(itemId = id, userId = session.userId).content
+        return ArtistInfo(
+            id = id,
+            name = dto.name?.takeIf { it.isNotBlank() } ?: fallbackName ?: return null,
+            imageUrl = dto.imageTags?.get(ImageType.PRIMARY)?.let { tag ->
+                session.api.imageApi.getItemImageUrl(itemId = id, imageType = ImageType.PRIMARY, tag = tag, maxWidth = ARTIST_IMAGE_WIDTH)
+            },
+            overview = plainText(dto.overview),
+        )
+    }
+
+    private suspend fun <T> optional(what: String, block: suspend () -> T): T? = try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w(TAG, "Details of $what unavailable", e)
+        null
+    }
+
     private fun requireSession(): Session = checkNotNull(sessions.session.value) { "No profile is signed in" }
 
     private val Session.userId: UUID get() = UUID.fromString(user.userId)
@@ -219,6 +276,8 @@ class MusicRepository @Inject constructor(
         const val TICKS_PER_MS = 10_000L
         const val HTTP_NOT_FOUND = 404
         const val MIX_LIMIT = 100
+        const val ARTIST_IMAGE_WIDTH = 400
+        const val TAG = "MusicRepository"
         /** Ids per request for [tracks]; a hundred make an address of about 3.7 kB. */
         const val IDS_PER_REQUEST = 100
         val TRACK_FIELDS = listOf(ItemFields.MEDIA_STREAMS)

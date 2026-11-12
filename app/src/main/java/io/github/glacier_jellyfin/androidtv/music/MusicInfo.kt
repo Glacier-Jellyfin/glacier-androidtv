@@ -1,15 +1,15 @@
 package io.github.glacier_jellyfin.androidtv.music
 
 import androidx.annotation.OptIn
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,32 +19,38 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.AudioFormat
+import io.github.glacier_jellyfin.androidtv.core.data.media.ArtistInfo
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
+import io.github.glacier_jellyfin.androidtv.core.data.media.SongDetails
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackMethod
 import io.github.glacier_jellyfin.androidtv.core.data.playback.TranscodeStatus
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
+import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
+import io.github.glacier_jellyfin.androidtv.detail.CastPortrait
 import io.github.glacier_jellyfin.androidtv.player.DeliveryHeader
-import io.github.glacier_jellyfin.androidtv.player.FactRow
-import io.github.glacier_jellyfin.androidtv.player.InfoBar
 import io.github.glacier_jellyfin.androidtv.player.InfoCard
 import io.github.glacier_jellyfin.androidtv.player.InfoPanelFrame
+import io.github.glacier_jellyfin.androidtv.player.FactRow
 import io.github.glacier_jellyfin.androidtv.player.InfoSurface
 import io.github.glacier_jellyfin.androidtv.player.BufferRow
 import io.github.glacier_jellyfin.androidtv.player.OsdSecondary
-import io.github.glacier_jellyfin.androidtv.player.SectionLabel
 import io.github.glacier_jellyfin.androidtv.player.StreamStats
 import io.github.glacier_jellyfin.androidtv.player.StreamRow
 import io.github.glacier_jellyfin.androidtv.player.StreamRowsTable
@@ -53,12 +59,12 @@ import io.github.glacier_jellyfin.androidtv.player.TranscodeCard
 import io.github.glacier_jellyfin.androidtv.player.audioDetails
 import io.github.glacier_jellyfin.androidtv.player.audioHeadline
 import io.github.glacier_jellyfin.androidtv.player.bitrateText
-import io.github.glacier_jellyfin.androidtv.player.formatTime
 import io.github.glacier_jellyfin.androidtv.player.streamStats
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.audioFormatText
-import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import kotlinx.coroutines.delay
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 /** Lossless as it reaches the TV: a transcode turns it into AAC. */
 internal fun MusicUiState.playsLossless(track: MusicTrack): Boolean =
@@ -71,9 +77,9 @@ internal fun MusicUiState.playsLossless(track: MusicTrack): Boolean =
 @Composable
 internal fun MusicInfoPanel(
     state: MusicUiState,
-    progress: MusicProgress,
     player: ExoPlayer?,
     transcodeStatus: suspend () -> TranscodeStatus?,
+    songDetails: suspend (MusicTrack) -> SongDetails?,
     onDismiss: () -> Unit,
 ) {
     val track = state.current ?: return
@@ -93,7 +99,7 @@ internal fun MusicInfoPanel(
         onDismiss = onDismiss,
     ) { tab ->
         when (tab) {
-            0 -> SongTab(state, track, progress)
+            0 -> SongTab(track, state.playsLossless(track), songDetails)
             1 -> TechnicalTab(state, track, stats)
             else -> ServerTab(state, track, stats, transcodeStatus)
         }
@@ -101,79 +107,87 @@ internal fun MusicInfoPanel(
 }
 
 @Composable
-private fun SongTab(state: MusicUiState, track: MusicTrack, progress: MusicProgress) {
-    val next = state.queue.getOrNull(state.index + 1)?.track
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+private fun SongTab(track: MusicTrack, lossless: Boolean, songDetails: suspend (MusicTrack) -> SongDetails?) {
+    // Fetched in the background: the panel is there at once and the extra lines follow.
+    val details by produceState<SongDetails?>(null, track.id) {
+        value = null
+        value = songDetails(track)
+    }
+    val locale = LocalConfiguration.current.locales[0]
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(32.dp)) {
         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(52.dp)) {
             val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
-            Artwork(track.largeCoverUrl, Modifier.size(340.dp).clip(shape).border(1.dp, GlacierColors.GlassBorder, shape))
-            Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                val crumb = listOfNotNull(track.album, track.year?.toString()).joinToString(" · ")
-                if (crumb.isNotEmpty()) Text(crumb, style = GlacierText.body(18), color = OsdSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(track.title, style = GlacierText.display(44), color = GlacierColors.Ice, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                track.artist?.let { Text(it, style = GlacierText.body(24), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                if (state.playsLossless(track)) LosslessBadge(Modifier.padding(top = 2.dp))
-                val number = track.number?.let { n -> track.disc?.takeIf { it > 0 }?.let { stringResource(R.string.music_info_track_disc, n, it) } ?: n.toString() }
-                val length = (progress.durationMs.takeIf { it > 0 } ?: track.durationMs).takeIf { it > 0 }
-                val facts = listOfNotNull(
-                    track.artist?.let { stringResource(R.string.music_artist) to it },
-                    track.album?.let { stringResource(R.string.music_album) to it },
-                    number?.let { stringResource(R.string.music_info_track) to it },
-                    length?.let { stringResource(R.string.sort_runtime) to formatTime(it) },
-                )
-                Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    facts.forEach { (label, value) -> FactRow(label, value, labelWidth = 190) }
+            Artwork(track.largeCoverUrl, Modifier.size(COVER.dp).clip(shape).border(1.dp, GlacierColors.GlassBorder, shape))
+            // At least as tall as the cover, so the pill at the bottom ends level with it.
+            Column(Modifier.weight(1f).heightIn(min = COVER.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(track.title, style = GlacierText.display(44), color = GlacierColors.Ice, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    track.artist?.let { Text(it, style = GlacierText.body(24), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    if (lossless) LosslessBadge(Modifier.padding(top = 2.dp))
+                    val trackValue = track.number?.let { n ->
+                        val base = details?.albumTrackCount?.takeIf { it >= n }
+                            ?.let { stringResource(R.string.music_info_track_of_value, n, it) }
+                            ?: n.toString()
+                        val disc = track.disc?.takeIf { it > 1 }?.let { stringResource(R.string.music_info_disc, it) }
+                        listOfNotNull(base, disc).joinToString(" · ")
+                    }
+                    val genres = details?.genres?.takeIf { it.isNotEmpty() }?.joinToString(", ")
+                    val facts = listOfNotNull(
+                        track.album?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.music_album) to it },
+                        track.year?.let { stringResource(R.string.music_info_year) to it.toString() },
+                        trackValue?.let { stringResource(R.string.music_info_track) to it },
+                        genres?.let { stringResource(R.string.music_info_genre) to it },
+                    )
+                    if (facts.isNotEmpty()) {
+                        Column(Modifier.padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            facts.forEach { (label, value) -> FactRow(label, value, labelWidth = 190) }
+                        }
+                    }
+                }
+                val plays = details?.playCount?.takeIf { it > 0 }
+                if (plays != null) {
+                    val last = details?.lastPlayed?.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))
+                    val text = listOfNotNull(
+                        pluralStringResource(R.plurals.music_info_played, plays, plays),
+                        last?.let { stringResource(R.string.music_info_last_played, it) },
+                    ).joinToString(" · ")
+                    PlayCountPill(text, Modifier.padding(top = 14.dp))
                 }
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-            if (next != null) SongCard(stringResource(R.string.player_info_up_next), next, Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
-            QueueCard(state, progress, Modifier.weight(1f))
-        }
+        details?.artist?.let { ArtistCard(it) }
     }
 }
 
+private const val COVER = 340
+
+/** How often and when the song was last played: one quiet pill, level with the cover's bottom edge. */
 @Composable
-private fun SongCard(label: String, track: MusicTrack, modifier: Modifier) {
-    InfoSurface(modifier.height(122.dp), padding = 16) {
-        Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Artwork(track.coverUrl, Modifier.size(90.dp).clip(RoundedCornerShape(GlacierShapes.RadiusSm)))
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionLabel(label)
-                Text(track.title, style = GlacierText.body(20, FontWeight.SemiBold), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    listOfNotNull(track.artist, formatTime(track.durationMs)).joinToString(" · "),
-                    style = GlacierText.body(15),
-                    color = GlacierColors.Mist,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+private fun PlayCountPill(text: String, modifier: Modifier = Modifier) {
+    Row(
+        modifier
+            .clip(PillShape)
+            .background(GlacierColors.GlassFill2)
+            .padding(horizontal = 18.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(GlacierIcons.Headphones, contentDescription = null, tint = GlacierColors.Mist, modifier = Modifier.size(20.dp))
+        Text(text, style = GlacierText.body(18), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** The artist of the song: round photo, name and the start of the biography. */
+@Composable
+private fun ArtistCard(artist: ArtistInfo) {
+    InfoSurface(Modifier.fillMaxWidth(), padding = 20) {
+        Row(horizontalArrangement = Arrangement.spacedBy(28.dp), verticalAlignment = Alignment.CenterVertically) {
+            CastPortrait(artist.name, artist.imageUrl, 112)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(artist.name, style = GlacierText.body(24, FontWeight.SemiBold), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                val bio = artist.overview
+                if (bio != null) Text(bio, style = GlacierText.body(18), color = GlacierColors.Mist, maxLines = 3, overflow = TextOverflow.Ellipsis)
             }
-        }
-    }
-}
-
-@Composable
-private fun QueueCard(state: MusicUiState, progress: MusicProgress, modifier: Modifier) {
-    val total = state.queue.sumOf { it.track.durationMs }
-    val before = state.queue.take(state.index).sumOf { it.track.durationMs }
-    val left = total - before - progress.positionMs
-    InfoSurface(modifier.height(122.dp), padding = 16) {
-        Column(Modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically)) {
-            SectionLabel(stringResource(R.string.music_queue))
-            Text(
-                stringResource(R.string.music_track_of, state.index + 1, state.queue.size),
-                style = GlacierText.body(20, FontWeight.SemiBold),
-                color = GlacierColors.Ice,
-                maxLines = 1,
-            )
-            InfoBar(if (total > 0) (before + progress.positionMs).toFloat() / total else 0f, LocalAccent.current.main)
-            Text(
-                stringResource(R.string.music_queue_left, runtimeText((left / 60_000).toInt().coerceAtLeast(1))),
-                style = GlacierText.body(15),
-                color = GlacierColors.Mist,
-                maxLines = 1,
-            )
         }
     }
 }
