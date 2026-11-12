@@ -187,6 +187,8 @@ The environment holds the secrets and variables:
   already open), replaces the APK, updates each listing (see below) and commits the
   edit, which starts Amazon's review. While a version is still in review,
   Amazon opens no new edit and the step fails with Amazon's message.
+  Transient errors (500, 503, connection drops) are retried a few times
+  before the step fails.
 
 Google Play signs with the same key as the GitHub release (the existing
 release key was handed over as the app signing key), so both versions can

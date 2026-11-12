@@ -31,12 +31,37 @@ done
 headers="$(mktemp)"
 body="$(mktemp)"
 
-status="$(curl -sS -o "$body" -w '%{http_code}' https://api.amazon.com/auth/o2/token \
+# send WHAT [curl options]: sends one request into $body and sets $status. Amazon's API
+# now and then answers 500 for no reason, so a transient failure is tried again, 5 attempts
+# in all, waiting 5, 10, 20 and 40 seconds. Transient are 429, 500, 502, 503, 504 and
+# status 000, which is a connection that broke or timed out. Any other answer is final.
+# AMAZON_RETRY_WAIT sets the first wait in seconds. $retried tells if it tried again.
+send() {
+  local what="$1" attempt=1 wait="${AMAZON_RETRY_WAIT:-5}"
+  shift
+  retried=0
+  while :; do
+    # curl fails on a broken connection, which must lead to a retry and not end the script.
+    status="$(curl -sS -o "$body" -w '%{http_code}' "$@")" || status=000
+    case "$status" in
+      000 | 429 | 500 | 502 | 503 | 504) ;;
+      *) return 0 ;;
+    esac
+    [ "$attempt" -lt 5 ] || return 0
+    echo "::warning::Amazon answered $what with $status, trying again in ${wait}s (attempt $((attempt + 1)) of 5)" >&2
+    sleep "$wait"
+    wait=$((wait * 2))
+    attempt=$((attempt + 1))
+    retried=1
+  done
+}
+
+send 'the sign-in request' https://api.amazon.com/auth/o2/token \
   --data-urlencode grant_type=client_credentials \
   --data-urlencode "client_id=$AMAZON_CLIENT_ID" \
   --data-urlencode "client_secret=$AMAZON_CLIENT_SECRET" \
-  --data-urlencode scope=appstore::apps:readwrite)"
-if [ "$status" -ge 300 ]; then
+  --data-urlencode scope=appstore::apps:readwrite
+if [ "$status" -ge 300 ] || [ "$status" = 000 ]; then
   # The answer names the cause, such as invalid_client or invalid_scope, and holds no secret.
   echo "::error::Amazon refused the sign-in with $status: $(cat "$body")" >&2
   exit 1
@@ -49,10 +74,14 @@ call() {
   local method="$1" path="$2"
   shift 2
   local status
-  status="$(curl -sS -X "$method" -D "$headers" -o "$body" -w '%{http_code}' \
-    -H "Authorization: Bearer $token" "$@" "$api$path")"
-  if [ "$status" -ge 300 ]; then
+  send "$method $path" -X "$method" -D "$headers" \
+    -H "Authorization: Bearer $token" "$@" "$api$path"
+  if [ "$status" -ge 300 ] || [ "$status" = 000 ]; then
     echo "::error::Amazon answered $method $path with $status: $(cat "$body")" >&2
+    if [ "$status" = 412 ] && [ "$retried" = 1 ]; then
+      # If-Match fails when an earlier attempt, which looked failed, was applied after all.
+      echo "::error::An earlier attempt of this request may have gone through. Run the job again, which is safe because it reuses the open edit and replaces everything." >&2
+    fi
     exit 1
   fi
   cat "$body"
