@@ -314,31 +314,6 @@ private fun CastRow(cast: List<CastMember>) {
     }
 }
 
-@Composable
-internal fun MiniCard(
-    imageUrl: String?,
-    label: String,
-    title: String,
-    sub: String?,
-    fraction: Float?,
-    modifier: Modifier,
-    /** Stands in for a missing [imageUrl], e.g. a channel's logo. */
-    fallback: (@Composable (Modifier) -> Unit)? = null,
-) {
-    InfoSurface(modifier.height(122.dp), padding = 16) {
-        Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            val picture = Modifier.width(160.dp).height(90.dp).clip(RoundedCornerShape(GlacierShapes.RadiusSm))
-            if (imageUrl == null && fallback != null) fallback(picture) else Artwork(imageUrl, picture)
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionLabel(label)
-                Text(title, style = GlacierText.body(20, FontWeight.SemiBold), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                fraction?.let { InfoBar(it, LocalAccent.current.main, Modifier.padding(vertical = 2.dp)) }
-                sub?.let { Text(it, style = GlacierText.body(15), color = GlacierColors.Mist, maxLines = 1) }
-            }
-        }
-    }
-}
-
 // Technical
 
 @Composable
