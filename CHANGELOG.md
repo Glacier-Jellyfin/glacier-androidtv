@@ -38,6 +38,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 ### Fixed
 - "Subtitles off" picked on the detail page also applies to the next episode
 - Up next waits while a scene still follows the credits
+- Marking a show watched or unwatched updates its episodes and seasons at once
 
 ## [0.9.0] - 2026-11-05
 

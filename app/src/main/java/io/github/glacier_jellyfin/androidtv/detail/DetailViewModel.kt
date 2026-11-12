@@ -567,10 +567,15 @@ class DetailViewModel @Inject constructor(
         val item = _state.value.item ?: return
         if (item.kind == ItemKind.Collection) return toggleCollectionPlayed(item)
         val played = !item.played
-        // The server drops the resume point both ways; the resume button and the episode row follow at once.
-        val marked: (MediaItem) -> MediaItem = { it.copy(played = played, progress = null, remainingMinutes = null, resumePositionMs = 0) }
-        updateItem(marked)
-        _state.update { state -> state.copy(episodes = state.episodes.map { if (it.id == item.id) marked(it) else it }) }
+        val before = _state.value
+        updateItem(playedMark(played))
+        if (item.kind == ItemKind.Series) {
+            // The button marks the whole show: its episode row and season counts follow at once.
+            markSeasonsAndEpisodes(played)
+        } else {
+            val marked = playedMark(played)
+            _state.update { state -> state.copy(episodes = state.episodes.map { if (it.id == item.id) marked(it) else it }) }
+        }
         viewModelScope.launch {
             runSuspendCatching { repository.setPlayed(item.id, played) }
                 .onSuccess {
@@ -583,18 +588,70 @@ class DetailViewModel @Inject constructor(
                         },
                     )
                     // A whole show or collection changes its episodes or movies too.
-                    if (item.kind == ItemKind.Series) {
-                        _state.value.season?.let { selectSeason(it, item.id) }
-                        val next = runSuspendCatching { repository.nextEpisode(item.id) }.getOrNull()
-                        _state.update { it.copy(nextEpisode = next) }
-                    }
+                    if (item.kind == ItemKind.Series) reloadShowState(item.id)
                     if (item.kind == ItemKind.Collection) loadCollection(_state.value.details ?: return@onSuccess)
                 }
                 .onFailure {
                     updateItem { item }
-                    _state.update { state -> state.copy(episodes = state.episodes.map { if (it.id == item.id) item else it }) }
+                    if (item.kind == ItemKind.Series) {
+                        restoreSeasonsAndEpisodes(before)
+                    } else {
+                        _state.update { state -> state.copy(episodes = state.episodes.map { if (it.id == item.id) item else it }) }
+                    }
                 }
         }
+    }
+
+    /** The server drops the resume point both ways; the resume button and the episode row follow at once. */
+    private fun playedMark(played: Boolean): (MediaItem) -> MediaItem =
+        { it.copy(played = played, progress = null, remainingMinutes = null, resumePositionMs = 0) }
+
+    /**
+     * Marks a whole show ([seasonId] null) or one season at once, before the server answers: the listed
+     * episodes and the seasons' unwatched counts. Unwatched, only the listed season's count is known.
+     */
+    private fun markSeasonsAndEpisodes(played: Boolean, seasonId: UUID? = null) {
+        val marked = playedMark(played)
+        _state.update { state ->
+            val listed = state.season?.id
+            state.copy(
+                episodes = if (seasonId == null || seasonId == listed) state.episodes.map(marked) else state.episodes,
+                seasons = state.seasons.map { season ->
+                    if (seasonId != null && season.id != seasonId) {
+                        season
+                    } else {
+                        season.copy(
+                            unwatchedCount = when {
+                                played -> 0
+                                season.id == listed -> state.episodes.size
+                                else -> season.unwatchedCount?.takeIf { it > 0 }
+                            },
+                        )
+                    }
+                },
+            )
+        }
+    }
+
+    /** After a failed marking: the episodes (while their season is still listed) and seasons as they were. */
+    private fun restoreSeasonsAndEpisodes(before: DetailState) {
+        _state.update { state ->
+            state.copy(
+                episodes = if (state.season?.id == before.season?.id) before.episodes else state.episodes,
+                seasons = before.seasons,
+            )
+        }
+    }
+
+    /** After a show or one of its seasons was marked: seasons, the listed season's episodes and the next episode as the server has them. */
+    private suspend fun reloadShowState(seriesId: UUID) {
+        val seasons = runSuspendCatching { repository.seasons(seriesId) }
+            .onFailure { Log.w(TAG, "Reloading the seasons failed", it) }
+            .getOrNull()
+        val next = runSuspendCatching { repository.nextEpisode(seriesId) }.getOrNull()
+        _state.update { it.copy(seasons = seasons ?: it.seasons, nextEpisode = next) }
+        val listed = _state.value.season ?: return
+        selectSeason(seasons?.firstOrNull { it.id == listed.id } ?: listed, seriesId)
     }
 
     /**

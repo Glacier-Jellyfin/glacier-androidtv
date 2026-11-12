@@ -24,6 +24,7 @@ only in English.
 ### Correcciones
 - «Subtítulos desactivados» elegido en la página de detalles también se aplica al siguiente episodio
 - «A continuación» espera mientras aún sigue una escena tras los créditos
+- Al marcar una serie como vista o no vista, los episodios y las temporadas se actualizan al instante
 
 ## [0.9.0] - 2026-11-05
 

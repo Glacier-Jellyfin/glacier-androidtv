@@ -23,6 +23,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 ### Behoben
 - „Untertitel aus“ auf der Detailseite gilt auch für die nächste Folge
 - „Als Nächstes“ wartet, solange nach dem Abspann noch eine Szene folgt
+- Wird eine Serie als gesehen oder ungesehen markiert, ziehen Folgen und Staffeln sofort mit
 
 ## [0.9.0] - 2026-11-05
 
