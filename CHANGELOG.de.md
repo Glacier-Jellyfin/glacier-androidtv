@@ -11,6 +11,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Eine einzelne Staffel lässt sich als gesehen oder ungesehen markieren (OK auf der Staffel gedrückt halten), gesehene Staffeln zeigen einen Haken
 
 ### Verbessert
+- Optionsmenüs öffnen sich als Seitenleiste. Die Seite bleibt sichtbar und jede Option sagt, was sie tut
 - Die App lässt sich auf Geräten, die es unterstützen, auf externen Speicher verschieben
 - Die Wiedergabe misst die Verbindung und passt einen Transcode daran an, damit es bei einer langsameren Leitung nicht ruckelt
 - Ändert sich die Verbindung, wechselt die Wiedergabe ohne Unterbrechung zwischen der Datei und kleineren Bildern (4K, 1080p, 720p)

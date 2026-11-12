@@ -5,7 +5,6 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -65,6 +64,9 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.ignoreHeldOk
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
 import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
+import io.github.glacier_jellyfin.androidtv.ui.OptionRow
+import io.github.glacier_jellyfin.androidtv.ui.OptionsPanel
+import io.github.glacier_jellyfin.androidtv.ui.OptionsPanelScope
 
 private val RowShape = RoundedCornerShape(18.dp)
 
@@ -373,73 +375,66 @@ interface RecordActions {
     fun cancelSeriesTimer(seriesTimerId: String, title: String)
 }
 
-/** The modal sheet of Live TV, holding the focus until it closes. */
-@Composable
-private fun SheetFrame(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    ModalSheet(onDismiss = onDismiss, width = 680) {
-        Column(
-            // Focus stays in the sheet. Holding OK may have opened it: the held key must not pick the first option.
-            Modifier
-                .ignoreHeldOk()
-                .focusProperties { onExit = { cancelFocusChange() } }
-                .focusGroup(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(28.dp),
-            content = content,
-        )
-    }
-}
-
 /** A programme's sheet on its own, for the player: record it or its series. */
 @Composable
 fun ProgramSheet(channel: LiveChannel, program: LiveProgram, nowMs: Long, actions: RecordActions, onDismiss: () -> Unit) {
-    SheetFrame(onDismiss) {
-        val first = remember(program) { FocusRequester() }
-        ProgramChoices(channel, program, nowMs, actions, first, onWatch = null, favorite = null, onFavorite = {})
-        FocusOnStart(first)
+    val first = remember(program) { FocusRequester() }
+    OptionsPanel(
+        title = program.title,
+        subtitle = listOfNotNull(channel.name, dayAndTime(program.startMs, program.endMs)).joinToString(" · "),
+        onDismiss = onDismiss,
+        first = first,
+    ) {
+        ProgramChoices(program, nowMs, actions, first, onWatch = null, favorite = null, onFavorite = {})
     }
 }
 
 /** A channel's or station's sheet on its own, for the radio player: play it, mark it, move it. */
 @Composable
 fun ChannelSheet(channel: LiveChannel, onPlay: () -> Unit, onFavorite: () -> Unit, onMove: () -> Unit, onDismiss: () -> Unit) {
-    SheetFrame(onDismiss) {
-        val first = remember(channel.id) { FocusRequester() }
+    val first = remember(channel.id) { FocusRequester() }
+    OptionsPanel(
+        title = listOfNotNull(channel.number, channel.name).joinToString("  "),
+        subtitle = channel.now?.title,
+        onDismiss = onDismiss,
+        first = first,
+    ) {
         ChannelChoices(channel, first, onPlay, onFavorite, onMove)
-        FocusOnStart(first)
     }
 }
 
-/** A channel's name and choices: watch or listen, the heart, and moving it between TV and radio. */
+/** A channel's choices: watch or listen, the heart, and moving it between TV and radio. */
 @Composable
-private fun ChannelChoices(channel: LiveChannel, first: FocusRequester, onPlay: () -> Unit, onFavorite: () -> Unit, onMove: () -> Unit) {
-    Header(
-        title = listOfNotNull(channel.number, channel.name).joinToString("  "),
-        subtitle = channel.now?.title,
-        body = stringResource(if (channel.radio) R.string.livetv_channel_body_radio else R.string.livetv_channel_body_tv),
-    )
-    Options {
-        Option(if (channel.radio) R.string.radio_listen else R.string.livetv_watch, GlacierIcons.Play, first, onPlay)
-        Option(
-            if (channel.favorite) R.string.livetv_favorite_remove else R.string.livetv_favorite_add,
-            if (channel.favorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
-            onClick = onFavorite,
-        )
-        Option(
-            if (channel.radio) R.string.livetv_move_tv else R.string.livetv_move_radio,
-            if (channel.radio) GlacierIcons.Film else GlacierIcons.Speaker,
-            onClick = onMove,
-        )
+private fun OptionsPanelScope.ChannelChoices(channel: LiveChannel, first: FocusRequester, onPlay: () -> Unit, onFavorite: () -> Unit, onMove: () -> Unit) {
+    if (channel.radio) {
+        OptionRow(stringResource(R.string.radio_listen), stringResource(R.string.radio_listen_desc), onPlay, Modifier.focusRequester(first), GlacierIcons.Play)
+    } else {
+        OptionRow(stringResource(R.string.livetv_watch), stringResource(R.string.livetv_watch_channel_desc), onPlay, Modifier.focusRequester(first), GlacierIcons.Play)
     }
+    FavoriteRow(channel.favorite, onFavorite)
+    if (channel.radio) {
+        OptionRow(stringResource(R.string.livetv_move_tv), stringResource(R.string.livetv_move_tv_desc), onMove, icon = GlacierIcons.Film)
+    } else {
+        OptionRow(stringResource(R.string.livetv_move_radio), stringResource(R.string.livetv_move_radio_desc), onMove, icon = GlacierIcons.Speaker)
+    }
+}
+
+@Composable
+private fun OptionsPanelScope.FavoriteRow(favorite: Boolean, onClick: () -> Unit) {
+    OptionRow(
+        stringResource(if (favorite) R.string.livetv_favorite_remove else R.string.livetv_favorite_add),
+        stringResource(if (favorite) R.string.livetv_favorite_remove_desc else R.string.livetv_favorite_add_desc),
+        onClick,
+        icon = if (favorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
+    )
 }
 
 /**
- * A programme's title and choices: record it or its series, or stop that. With [onWatch]
+ * A programme's choices: record it or its series, or stop that. With [onWatch]
  * it can be watched while it airs, with [favorite] the channel marked.
  */
 @Composable
-private fun ProgramChoices(
-    channel: LiveChannel,
+private fun OptionsPanelScope.ProgramChoices(
     program: LiveProgram,
     nowMs: Long,
     actions: RecordActions,
@@ -450,47 +445,86 @@ private fun ProgramChoices(
 ) {
     val airing = program.airsAt(nowMs)
     val watch = onWatch?.takeIf { airing }
-    Header(
-        title = program.title,
-        subtitle = listOfNotNull(channel.name, dayAndTime(program.startMs, program.endMs)).joinToString(" · "),
-        body = stringResource(R.string.options_body),
-    )
-    Options {
-        if (watch != null) Option(R.string.livetv_watch, GlacierIcons.Play, first, watch)
-        val timerId = program.timerId
-        if (timerId == null) {
-            Option(R.string.livetv_record, GlacierIcons.Record, first.takeIf { watch == null }) { actions.record(program) }
-        } else {
-            Option(
-                if (airing) R.string.livetv_record_stop else R.string.livetv_record_cancel,
-                GlacierIcons.Close,
-                first.takeIf { watch == null },
-            ) { actions.cancelTimer(timerId, program.title) }
-        }
-        val seriesTimerId = program.seriesTimerId
-        if (seriesTimerId != null) {
-            Option(R.string.livetv_series_cancel, GlacierIcons.Close) { actions.cancelSeriesTimer(seriesTimerId, program.title) }
-        } else if (program.series) {
-            Option(R.string.livetv_record_series, GlacierIcons.RecordSeries) { actions.recordSeries(program) }
-        }
-        if (favorite != null) {
-            Option(
-                if (favorite) R.string.livetv_favorite_remove else R.string.livetv_favorite_add,
-                if (favorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
-                onClick = onFavorite,
-            )
-        }
+    if (watch != null) OptionRow(stringResource(R.string.livetv_watch), stringResource(R.string.livetv_watch_airing_desc), watch, Modifier.focusRequester(first), GlacierIcons.Play)
+    val timerId = program.timerId
+    val firstIfNoWatch = if (watch == null) Modifier.focusRequester(first) else Modifier
+    if (timerId == null) {
+        OptionRow(stringResource(R.string.livetv_record), stringResource(R.string.livetv_record_desc), { actions.record(program) }, firstIfNoWatch, GlacierIcons.Record)
+    } else {
+        OptionRow(
+            stringResource(if (airing) R.string.livetv_record_stop else R.string.livetv_record_cancel),
+            stringResource(if (airing) R.string.livetv_record_stop_desc else R.string.livetv_record_cancel_desc),
+            { actions.cancelTimer(timerId, program.title) },
+            firstIfNoWatch,
+            GlacierIcons.Close,
+        )
     }
+    val seriesTimerId = program.seriesTimerId
+    if (seriesTimerId != null) {
+        OptionRow(stringResource(R.string.livetv_series_cancel), stringResource(R.string.livetv_series_cancel_desc), { actions.cancelSeriesTimer(seriesTimerId, program.title) }, icon = GlacierIcons.Close)
+    } else if (program.series) {
+        OptionRow(stringResource(R.string.livetv_record_series), stringResource(R.string.livetv_record_series_desc), { actions.recordSeries(program) }, icon = GlacierIcons.RecordSeries)
+    }
+    if (favorite != null) FavoriteRow(favorite, onFavorite)
 }
 
-/** The options sheet of the Live TV page; the view model holds what it shows. */
+/** The options of the Live TV page; the view model holds what it shows. Deleting asks in a centred dialog. */
 @Composable
 fun LiveTvSheetHost(sheet: LiveTvSheet, nowMs: Long, channels: List<LiveChannel>?, viewModel: LiveTvViewModel) {
-    SheetFrame(onDismiss = viewModel::closeSheet) {
-        val first = remember(sheet) { FocusRequester() }
+    val first = remember(sheet) { FocusRequester() }
+    if (sheet is LiveTvSheet.ConfirmDelete) {
+        // A confirmation forces a decision, so it stays a dialog in the middle.
+        val recording = sheet.recording
+        ModalSheet(onDismiss = viewModel::closeSheet, width = 680) {
+            Column(
+                Modifier
+                    .ignoreHeldOk()
+                    .focusProperties { onExit = { cancelFocusChange() } }
+                    .focusGroup(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(28.dp),
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.livetv_delete_title), style = GlacierText.display(30), color = GlacierColors.Ice, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+                    Text(stringResource(R.string.livetv_delete_body, recording.title), style = GlacierText.body(17), color = GlacierColors.Mist, textAlign = TextAlign.Center)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    PillButton(stringResource(R.string.action_cancel), onClick = viewModel::closeSheet, modifier = Modifier.focusRequester(first))
+                    PillButton(stringResource(R.string.livetv_delete), onClick = { viewModel.deleteRecording(recording) }, primary = true, icon = GlacierIcons.Trash)
+                }
+            }
+        }
+        FocusOnStart(first)
+        return
+    }
+    val title: String
+    val subtitle: String?
+    when (sheet) {
+        is LiveTvSheet.Program -> {
+            title = sheet.program.title
+            subtitle = listOfNotNull(sheet.channel.name, dayAndTime(sheet.program.startMs, sheet.program.endMs)).joinToString(" · ")
+        }
+        is LiveTvSheet.Channel -> {
+            title = listOfNotNull(sheet.channel.number, sheet.channel.name).joinToString("  ")
+            subtitle = sheet.channel.now?.title
+        }
+        is LiveTvSheet.Recording -> {
+            title = sheet.recording.title
+            subtitle = listOfNotNull(sheet.recording.channelName, dayAndTime(sheet.recording.startMs, sheet.recording.endMs)).joinToString(" · ")
+        }
+        is LiveTvSheet.Timer -> {
+            title = sheet.timer.title
+            subtitle = listOfNotNull(sheet.timer.channelName, dayAndTime(sheet.timer.startMs, sheet.timer.endMs)).joinToString(" · ")
+        }
+        is LiveTvSheet.SeriesTimer -> {
+            title = sheet.timer.title
+            subtitle = sheet.timer.channelName ?: stringResource(R.string.livetv_series_any_channel)
+        }
+        is LiveTvSheet.ConfirmDelete -> return
+    }
+    OptionsPanel(title = title, subtitle = subtitle, onDismiss = viewModel::closeSheet, first = first) {
         when (sheet) {
             is LiveTvSheet.Program -> ProgramChoices(
-                channel = sheet.channel,
                 program = sheet.program,
                 nowMs = nowMs,
                 actions = viewModel,
@@ -501,7 +535,6 @@ fun LiveTvSheetHost(sheet: LiveTvSheet, nowMs: Long, channels: List<LiveChannel>
                 onFavorite = { viewModel.toggleFavorite(sheet.channel) },
             )
             is LiveTvSheet.Channel -> {
-                // The sheet holds the channel as it was when it opened.
                 val channel = channels?.firstOrNull { it.id == sheet.channel.id } ?: sheet.channel
                 ChannelChoices(
                     channel = channel,
@@ -516,63 +549,34 @@ fun LiveTvSheetHost(sheet: LiveTvSheet, nowMs: Long, channels: List<LiveChannel>
             }
             is LiveTvSheet.Recording -> {
                 val recording = sheet.recording
-                Header(
-                    title = recording.title,
-                    subtitle = listOfNotNull(recording.channelName, dayAndTime(recording.startMs, recording.endMs)).joinToString(" · "),
-                    body = stringResource(R.string.options_body),
-                )
-                Options {
-                    Option(R.string.livetv_watch, GlacierIcons.Play, first) { viewModel.playRecording(recording) }
-                    val timerId = recording.timerId
-                    if (recording.recording && timerId != null) {
-                        Option(R.string.livetv_record_stop, GlacierIcons.Close) { viewModel.cancelTimer(timerId, recording.title) }
-                    }
-                    Option(R.string.livetv_delete, GlacierIcons.Trash) { viewModel.askDelete(recording) }
+                OptionRow(stringResource(R.string.livetv_watch), stringResource(R.string.livetv_watch_recording_desc), { viewModel.playRecording(recording) }, Modifier.focusRequester(first), GlacierIcons.Play)
+                val timerId = recording.timerId
+                if (recording.recording && timerId != null) {
+                    OptionRow(stringResource(R.string.livetv_record_stop), stringResource(R.string.livetv_record_stop_desc), { viewModel.cancelTimer(timerId, recording.title) }, icon = GlacierIcons.Close)
                 }
-            }
-            is LiveTvSheet.ConfirmDelete -> {
-                val recording = sheet.recording
-                Header(
-                    title = stringResource(R.string.livetv_delete_title),
-                    subtitle = null,
-                    body = stringResource(R.string.livetv_delete_body, recording.title),
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    PillButton(stringResource(R.string.action_cancel), onClick = viewModel::closeSheet, modifier = Modifier.focusRequester(first))
-                    PillButton(stringResource(R.string.livetv_delete), onClick = { viewModel.deleteRecording(recording) }, primary = true, icon = GlacierIcons.Trash)
-                }
+                OptionRow(stringResource(R.string.livetv_delete), stringResource(R.string.livetv_delete_desc), { viewModel.askDelete(recording) }, icon = GlacierIcons.Trash)
             }
             is LiveTvSheet.Timer -> {
                 val timer = sheet.timer
                 val airing = timer.recording || nowMs in timer.startMs until timer.endMs
-                Header(
-                    title = timer.title,
-                    subtitle = listOfNotNull(timer.channelName, dayAndTime(timer.startMs, timer.endMs)).joinToString(" · "),
-                    body = stringResource(R.string.livetv_timer_body),
+                OptionRow(
+                    stringResource(if (airing) R.string.livetv_record_stop else R.string.livetv_record_cancel),
+                    stringResource(if (airing) R.string.livetv_record_stop_desc else R.string.livetv_record_cancel_desc),
+                    { viewModel.cancelTimer(timer.id, timer.title) },
+                    Modifier.focusRequester(first),
+                    GlacierIcons.Close,
                 )
-                Options {
-                    Option(if (airing) R.string.livetv_record_stop else R.string.livetv_record_cancel, GlacierIcons.Close, first) {
-                        viewModel.cancelTimer(timer.id, timer.title)
-                    }
-                    val seriesTimerId = timer.seriesTimerId
-                    if (seriesTimerId != null) {
-                        Option(R.string.livetv_series_cancel, GlacierIcons.Close) { viewModel.cancelSeriesTimer(seriesTimerId, timer.title) }
-                    }
+                val seriesTimerId = timer.seriesTimerId
+                if (seriesTimerId != null) {
+                    OptionRow(stringResource(R.string.livetv_series_cancel), stringResource(R.string.livetv_series_cancel_desc), { viewModel.cancelSeriesTimer(seriesTimerId, timer.title) }, icon = GlacierIcons.Close)
                 }
             }
             is LiveTvSheet.SeriesTimer -> {
                 val timer = sheet.timer
-                Header(
-                    title = timer.title,
-                    subtitle = timer.channelName ?: stringResource(R.string.livetv_series_any_channel),
-                    body = stringResource(R.string.livetv_series_timer_body),
-                )
-                Options {
-                    Option(R.string.livetv_series_cancel, GlacierIcons.Close, first) { viewModel.cancelSeriesTimer(timer.id, timer.title) }
-                }
+                OptionRow(stringResource(R.string.livetv_series_cancel), stringResource(R.string.livetv_series_cancel_desc), { viewModel.cancelSeriesTimer(timer.id, timer.title) }, Modifier.focusRequester(first), GlacierIcons.Close)
             }
+            is LiveTvSheet.ConfirmDelete -> Unit
         }
-        FocusOnStart(first)
     }
 }
 
@@ -582,31 +586,6 @@ private fun FocusOnStart(requester: FocusRequester) {
         withFrameNanos { }
         runCatching { requester.requestFocus() }
     }
-}
-
-@Composable
-private fun Header(title: String, subtitle: String?, body: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, style = GlacierText.display(30), color = GlacierColors.Ice, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-        subtitle?.let { Text(it, style = GlacierText.body(19), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-        Text(body, style = GlacierText.body(17), color = GlacierColors.Mist, textAlign = TextAlign.Center)
-    }
-}
-
-@Composable
-private fun Options(content: @Composable () -> Unit) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
-}
-
-@Composable
-private fun Option(text: Int, icon: ImageVector, focus: FocusRequester? = null, onClick: () -> Unit) {
-    PillButton(
-        stringResource(text),
-        onClick = onClick,
-        icon = icon,
-        fillWidth = true,
-        modifier = if (focus != null) Modifier.focusRequester(focus) else Modifier,
-    )
 }
 
 private const val LIST_WIDTH = 1000

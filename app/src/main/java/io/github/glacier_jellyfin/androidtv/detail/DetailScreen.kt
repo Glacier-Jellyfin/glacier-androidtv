@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -60,7 +59,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -82,7 +80,6 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
-import io.github.glacier_jellyfin.androidtv.core.designsystem.ignoreHeldOk
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 import io.github.glacier_jellyfin.androidtv.ui.seasonLabel
@@ -100,7 +97,8 @@ import io.github.glacier_jellyfin.androidtv.ui.FactsRow
 import io.github.glacier_jellyfin.androidtv.ui.FilterChip
 import io.github.glacier_jellyfin.androidtv.ui.GridCard
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
-import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
+import io.github.glacier_jellyfin.androidtv.ui.OptionRow
+import io.github.glacier_jellyfin.androidtv.ui.OptionsPanel
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 import io.github.glacier_jellyfin.androidtv.ui.PinDialog
@@ -706,45 +704,19 @@ private fun SeasonChips(state: DetailState, viewModel: DetailViewModel) {
 @Composable
 private fun SeasonSheet(season: Season, showTitle: String, onToggle: () -> Unit, onDismiss: () -> Unit) {
     val first = remember(season.id) { FocusRequester() }
-    ModalSheet(onDismiss = onDismiss, width = 680) {
-        Column(
-            // Focus stays in the sheet. Holding OK may have opened it: the held key must not pick the option.
-            Modifier
-                .ignoreHeldOk()
-                .focusProperties { onExit = { cancelFocusChange() } }
-                .focusGroup(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(28.dp),
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    season.number?.let { seasonLabel(it) } ?: season.name,
-                    style = GlacierText.display(30),
-                    color = GlacierColors.Ice,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                )
-                Text(showTitle, style = GlacierText.body(19), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            Text(
-                stringResource(R.string.options_body),
-                style = GlacierText.body(19),
-                color = GlacierColors.Mist,
-                textAlign = TextAlign.Center,
-            )
-            PillButton(
-                stringResource(if (season.played) R.string.season_mark_unwatched else R.string.season_mark_watched),
-                onClick = onToggle,
-                icon = GlacierIcons.Seen,
-                fillWidth = true,
-                modifier = Modifier.focusRequester(first),
-            )
-        }
-    }
-    LaunchedEffect(first) {
-        withFrameNanos { }
-        runCatching { first.requestFocus() }
+    OptionsPanel(
+        title = season.number?.let { seasonLabel(it) } ?: season.name,
+        subtitle = showTitle,
+        onDismiss = onDismiss,
+        first = first,
+    ) {
+        OptionRow(
+            label = stringResource(if (season.played) R.string.season_mark_unwatched else R.string.season_mark_watched),
+            description = stringResource(if (season.played) R.string.season_mark_unwatched_desc else R.string.season_mark_watched_desc),
+            onClick = onToggle,
+            icon = GlacierIcons.Seen,
+            modifier = Modifier.focusRequester(first),
+        )
     }
 }
 

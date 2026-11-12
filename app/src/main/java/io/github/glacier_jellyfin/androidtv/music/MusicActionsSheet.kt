@@ -1,17 +1,13 @@
 package io.github.glacier_jellyfin.androidtv.music
 
-import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,12 +17,9 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
@@ -37,103 +30,87 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SystemTextInput
-import io.github.glacier_jellyfin.androidtv.core.designsystem.ignoreHeldOk
 import io.github.glacier_jellyfin.androidtv.setup.InputField
-import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
+import io.github.glacier_jellyfin.androidtv.ui.OptionRow
+import io.github.glacier_jellyfin.androidtv.ui.OptionsPanel
+import io.github.glacier_jellyfin.androidtv.ui.OptionsPanelScope
 
-/** The sheet of [MusicActions], over whatever page opened it. */
+/** The panel of [MusicActions], over whatever page opened it. */
 @Composable
 fun MusicActionsSheet(actions: MusicActions) {
     val sheet by actions.sheet.collectAsStateWithLifecycle()
     val current = sheet ?: return
-    ModalSheet(onDismiss = actions::back, width = 680) {
-        Column(
-            // Focus stays in the sheet; the page behind it is out of reach.
-            // Holding OK opened it: the held key must not pick the first option.
-            Modifier
-                .ignoreHeldOk()
-                .focusProperties { onExit = { cancelFocusChange() } }
-                .focusGroup(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(28.dp),
-        ) {
-            Header(current)
-            when (current) {
-                is MusicSheet.Menu -> Menu(current, actions)
-                is MusicSheet.Playlists -> Playlists(current, actions)
-                is MusicSheet.NewPlaylist -> NewPlaylist(current, actions)
-            }
+    val title = when (current) {
+        is MusicSheet.Menu -> current.target.title
+        is MusicSheet.Playlists -> stringResource(R.string.music_choose_playlist)
+        is MusicSheet.NewPlaylist -> stringResource(R.string.music_new_playlist)
+    }
+    val subtitle = if (current is MusicSheet.Menu) current.target.subtitle else current.target.title
+    // One panel for every step, so the steps do not move it.
+    OptionsPanel(
+        title = title,
+        subtitle = subtitle,
+        onDismiss = actions::back,
+        note = if (current is MusicSheet.NewPlaylist) stringResource(R.string.music_new_playlist_body) else null,
+    ) {
+        when (current) {
+            is MusicSheet.Menu -> Menu(current, actions)
+            is MusicSheet.Playlists -> Playlists(current, actions)
+            is MusicSheet.NewPlaylist -> NewPlaylist(current, actions)
         }
     }
 }
 
 @Composable
-private fun Header(sheet: MusicSheet) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        val title = when (sheet) {
-            is MusicSheet.Menu -> sheet.target.title
-            is MusicSheet.Playlists -> stringResource(R.string.music_choose_playlist)
-            is MusicSheet.NewPlaylist -> stringResource(R.string.music_new_playlist)
-        }
-        Text(title, style = GlacierText.display(30), color = GlacierColors.Ice, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-        val subtitle = if (sheet is MusicSheet.Menu) sheet.target.subtitle else sheet.target.title
-        subtitle?.let { Text(it, style = GlacierText.body(19), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-        // Every step says what it is for, so the sheet is never just a title over buttons.
-        val body = when (sheet) {
-            is MusicSheet.Menu -> R.string.options_body
-            is MusicSheet.Playlists -> R.string.music_choose_playlist_body
-            is MusicSheet.NewPlaylist -> R.string.music_new_playlist_body
-        }
-        Text(stringResource(body), style = GlacierText.body(17), color = GlacierColors.Mist, textAlign = TextAlign.Center)
-    }
-}
-
-@Composable
-private fun Menu(sheet: MusicSheet.Menu, actions: MusicActions) {
+private fun OptionsPanelScope.Menu(sheet: MusicSheet.Menu, actions: MusicActions) {
     val first = remember { FocusRequester() }
     val target = sheet.target
     // Play all and shuffle all first, when the target has them; the focus starts on the first entry.
     val playFirst = target.play != null
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (target.play != null) {
-            PillButton(stringResource(R.string.music_play_all), onClick = actions::playAll, icon = GlacierIcons.Play, fillWidth = true, modifier = Modifier.focusRequester(first))
+    if (target.play != null) {
+        OptionRow(stringResource(R.string.music_play_all), stringResource(R.string.music_play_all_desc), actions::playAll, Modifier.focusRequester(first), GlacierIcons.Play)
+    }
+    if (target.shuffle != null) {
+        OptionRow(stringResource(R.string.music_shuffle_all), stringResource(R.string.music_shuffle_all_desc), actions::shuffleAll, icon = GlacierIcons.Shuffle)
+    }
+    when {
+        target.playing -> Unit
+        target.queueIndex != null -> {
+            OptionRow(stringResource(R.string.music_options_play_next), stringResource(R.string.music_options_move_next_desc), actions::moveNext, Modifier.focusRequester(first), GlacierIcons.Play)
+            OptionRow(stringResource(R.string.music_options_remove_queue), stringResource(R.string.music_options_remove_queue_desc), actions::removeFromQueue, icon = GlacierIcons.Close)
         }
-        if (target.shuffle != null) {
-            PillButton(stringResource(R.string.music_shuffle_all), onClick = actions::shuffleAll, icon = GlacierIcons.Shuffle, fillWidth = true)
-        }
-        when {
-            target.playing -> Unit
-            target.queueIndex != null -> {
-                PillButton(stringResource(R.string.music_options_play_next), onClick = actions::moveNext, icon = GlacierIcons.Play, fillWidth = true, modifier = Modifier.focusRequester(first))
-                PillButton(stringResource(R.string.music_options_remove_queue), onClick = actions::removeFromQueue, icon = GlacierIcons.Close, fillWidth = true)
+        else -> {
+            OptionRow(
+                stringResource(R.string.music_options_play_next),
+                stringResource(R.string.music_options_play_next_desc),
+                actions::playNext,
+                if (playFirst) Modifier else Modifier.focusRequester(first),
+                GlacierIcons.Play,
+            )
+            OptionRow(stringResource(R.string.music_options_add_queue), stringResource(R.string.music_options_add_queue_desc), actions::addToQueue, icon = GlacierIcons.Chapters)
+            if (target.videos != null) {
+                OptionRow(stringResource(R.string.music_options_add_videos_queue), stringResource(R.string.music_options_add_videos_queue_desc), actions::addVideosToQueue, icon = GlacierIcons.Film)
             }
-            else -> {
-                PillButton(stringResource(R.string.music_options_play_next), onClick = actions::playNext, icon = GlacierIcons.Play, fillWidth = true, modifier = if (playFirst) Modifier else Modifier.focusRequester(first))
-                PillButton(stringResource(R.string.music_options_add_queue), onClick = actions::addToQueue, icon = GlacierIcons.Chapters, fillWidth = true)
-                if (target.videos != null) {
-                    PillButton(stringResource(R.string.music_options_add_videos_queue), onClick = actions::addVideosToQueue, icon = GlacierIcons.Film, fillWidth = true)
-                }
-            }
         }
-        PillButton(
-            stringResource(R.string.music_options_add_playlist),
-            onClick = actions::choosePlaylist,
-            icon = GlacierIcons.PlaylistAdd,
-            fillWidth = true,
-            modifier = if (target.playing) Modifier.focusRequester(first) else Modifier,
-        )
-        if (target.mixFrom != null) {
-            PillButton(stringResource(R.string.music_options_mix), onClick = actions::playMix, icon = GlacierIcons.Compass, fillWidth = true)
-        }
-        if (target.playlistId != null) {
-            PillButton(stringResource(R.string.music_options_remove_playlist), onClick = actions::removeFromPlaylist, icon = GlacierIcons.Close, fillWidth = true)
-        }
+    }
+    OptionRow(
+        stringResource(R.string.music_options_add_playlist),
+        stringResource(R.string.music_options_add_playlist_desc),
+        actions::choosePlaylist,
+        if (target.playing) Modifier.focusRequester(first) else Modifier,
+        GlacierIcons.PlaylistAdd,
+    )
+    if (target.mixFrom != null) {
+        OptionRow(stringResource(R.string.music_options_mix), stringResource(R.string.music_options_mix_desc), actions::playMix, icon = GlacierIcons.Compass)
+    }
+    if (target.playlistId != null) {
+        OptionRow(stringResource(R.string.music_options_remove_playlist), stringResource(R.string.music_options_remove_playlist_desc), actions::removeFromPlaylist, icon = GlacierIcons.Close)
     }
     FocusOnStart(first)
 }
 
 @Composable
-private fun Playlists(sheet: MusicSheet.Playlists, actions: MusicActions) {
+private fun OptionsPanelScope.Playlists(sheet: MusicSheet.Playlists, actions: MusicActions) {
     val first = remember { FocusRequester() }
     val playlists = sheet.playlists
     if (playlists == null) {
@@ -141,21 +118,21 @@ private fun Playlists(sheet: MusicSheet.Playlists, actions: MusicActions) {
         Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) { SpinningDiamond(70) }
         return
     }
-    // Room around the buttons so the focused one can grow without being cut off.
-    LazyColumn(
-        Modifier.fillMaxWidth().heightIn(max = 480.dp),
-        contentPadding = PaddingValues(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item(key = "new") {
-            PillButton(stringResource(R.string.music_new_playlist), onClick = actions::newPlaylist, icon = GlacierIcons.Plus, primary = true, fillWidth = true, modifier = Modifier.focusRequester(first))
-        }
-        items(playlists, key = { it.id }) { playlist ->
-            val count = playlist.childCount
-            PillButton(
+    OptionRow(
+        stringResource(R.string.music_new_playlist),
+        stringResource(R.string.music_new_playlist_desc),
+        actions::newPlaylist,
+        Modifier.focusRequester(first),
+        GlacierIcons.Plus,
+    )
+    val addDescription = stringResource(R.string.music_playlist_add_desc)
+    playlists.forEach { playlist ->
+        val count = playlist.childCount
+        key(playlist.id) {
+            OptionRow(
                 playlist.title,
-                onClick = { actions.addTo(playlist) },
-                fillWidth = true,
+                addDescription,
+                { actions.addTo(playlist) },
                 badge = count?.let { pluralStringResource(R.plurals.count_titles, it, it) },
             )
         }
@@ -181,7 +158,7 @@ private fun NewPlaylist(sheet: MusicSheet.NewPlaylist, actions: MusicActions) {
         down = createFocus,
         modifier = Modifier.fillMaxWidth(),
     )
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+    Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         PillButton(stringResource(R.string.action_cancel), onClick = actions::back)
         PillButton(
             stringResource(R.string.music_playlist_create),

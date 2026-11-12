@@ -26,6 +26,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - A single season can be marked watched or unwatched (hold OK on the season), and watched seasons show a check
 
 ### Improved
+- Option menus open as a panel at the side. The page stays in view and each option says what it does
 - The app can be moved to external storage on devices that support it
 - Playback measures the connection and fits a transcode to it, so it does not stutter on a slower link
 - When the connection changes, playback moves between the file and smaller pictures (4K, 1080p, 720p) without interrupting the picture

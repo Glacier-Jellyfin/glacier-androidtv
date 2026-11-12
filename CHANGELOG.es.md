@@ -12,6 +12,7 @@ only in English.
 - Una temporada se puede marcar como vista o no vista (mantén pulsado OK en la temporada), y las temporadas vistas muestran una marca
 
 ### Mejoras
+- Los menús de opciones se abren como un panel lateral. La página sigue a la vista y cada opción explica lo que hace
 - La aplicación se puede mover al almacenamiento externo en los dispositivos que lo admiten
 - La reproducción mide la conexión y adapta la transcodificación a ella, para que no se entrecorte con una conexión más lenta
 - Cuando cambia la conexión, la reproducción pasa sin interrupciones entre el archivo e imágenes más pequeñas (4K, 1080p, 720p)
