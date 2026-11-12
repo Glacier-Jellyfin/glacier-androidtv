@@ -27,7 +27,7 @@ only in English.
 - El panel de información de una película o un episodio muestra el reparto con fotos y papeles en lugar del capítulo y el siguiente episodio, que el reproductor ya muestra
 - El panel de información de una canción pone la canción en primer plano: álbum, año, pista y género, cuántas veces y cuándo se escuchó por última vez, y el artista con foto y biografía. «A continuación» y la cola, que el reproductor ya muestra, desaparecen. Un videoclip muestra su imagen, su duración y cuántas veces se vio
 - El panel de información de TV en directo muestra la programación del canal como una línea con los próximos programas en lugar de las tarjetas de ahora y a continuación
-- Atrás en las pestañas de una biblioteca, de TV en directo, de carpetas, de la búsqueda o de los ajustes lleva directamente a la pantalla de inicio, donde el foco se queda en la barra de navegación en lugar de saltar a la página cuando termina de cargar
+- Atrás en las pestañas de una biblioteca, de TV en directo o de carpetas lleva directamente a la pantalla de inicio, donde el foco se queda en la barra de navegación en lugar de saltar a la página cuando termina de cargar
 - Atrás en las filas de la pantalla de inicio vuelve arriba
 - Las bibliotecas y TV en directo conservan sus filtros (corazón, no vistos) y el orden, también tras reiniciar. Hasta cambiar de perfil vuelven además a la última pestaña o vista, carpeta y título usados
 

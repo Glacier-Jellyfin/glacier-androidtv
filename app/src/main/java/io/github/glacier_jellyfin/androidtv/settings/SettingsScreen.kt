@@ -111,7 +111,6 @@ import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PinDialog
-import io.github.glacier_jellyfin.androidtv.ui.BackFromTop
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.TvPlatform
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
@@ -277,7 +276,7 @@ fun SettingsScreen(
     var inCards by remember { mutableStateOf(false) }
     var inCategories by remember { mutableStateOf(false) }
     BackHandler(enabled = inCards) { runCatching { categoryFocus.getValue(state.category).requestFocus() } }
-    BackFromTop(inCategories, backHome = true, navFocus, viewModel::onNav)
+    BackHandler(enabled = inCategories) { runCatching { navFocus.requestFocus() } }
     var initialFocusDone by rememberSaveable { mutableStateOf(false) }
     // Closing the language list returns to the button that opened it.
     val languageFocus = remember { FocusRequester() }

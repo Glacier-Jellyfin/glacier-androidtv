@@ -271,8 +271,8 @@ fun TopNav(
 }
 
 /**
- * Back on the top level of a page, the first selection under the bar: straight home, like Back on the
- * bar itself. [backHome] is off on a page opened from another page; Back goes up to the bar there, and
+ * Back on the views of a page (a library's tabs, Live TV's chips, the folder toolbar): straight home, like
+ * Back on the bar itself. Pages without views (search, favorites, settings) go up to the bar first. [backHome] is off on a page opened from another page; Back goes up to the bar there, and
  * from the bar back to that page. [handled] first lets the page take Back for itself, such as a folder up.
  */
 @Composable

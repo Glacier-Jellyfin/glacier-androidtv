@@ -26,7 +26,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Das Infofeld eines Films oder einer Folge zeigt die Besetzung mit Fotos und Rollen statt Kapitel und nächster Folge, die der Player schon anzeigt
 - Das Infofeld eines Songs stellt den Song in den Mittelpunkt: Album, Jahr, Titelnummer und Genre, wie oft und wann er zuletzt gehört wurde, dazu der Künstler mit Foto und Biografie. „Als Nächstes“ und die Warteschlange, die der Player schon zeigt, entfallen. Ein Musikvideo zeigt sein Standbild, seine Länge und wie oft es gesehen wurde
 - Das Live-TV-Infofeld zeigt das Programm des Senders als Linie mit den kommenden Sendungen statt der Karten für Jetzt und Danach
-- Zurück auf den Reitern einer Bibliothek, von Live TV, Ordnern, Suche oder Einstellungen führt direkt zur Startseite. Dort bleibt der Fokus in der Navigation, statt nach dem Laden in die Seite zu springen
+- Zurück auf den Reitern einer Bibliothek, von Live TV oder Ordnern führt direkt zur Startseite. Dort bleibt der Fokus in der Navigation, statt nach dem Laden in die Seite zu springen
 - Zurück in den Reihen der Startseite scrollt wieder nach oben
 - Bibliotheken und Live TV behalten ihre Filter (Herz, Ungesehen) und die Sortierung, auch nach einem Neustart. Bis zum Profilwechsel kehren sie außerdem zum zuletzt genutzten Reiter oder zur Ansicht, zum Ordner und zum Titel zurück
 

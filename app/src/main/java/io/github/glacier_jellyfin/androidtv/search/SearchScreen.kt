@@ -58,7 +58,6 @@ import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PosterCard
-import io.github.glacier_jellyfin.androidtv.ui.BackFromTop
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
@@ -109,7 +108,7 @@ fun SearchScreen(
     var inResults by remember { mutableStateOf(false) }
     var inInput by remember { mutableStateOf(false) }
     BackHandler(enabled = inResults) { runCatching { keyFocus.requestFocus() } }
-    BackFromTop(inInput, backHome = true, navFocus, viewModel::onNav)
+    BackHandler(enabled = inInput) { runCatching { navFocus.requestFocus() } }
 
     Box(Modifier.fillMaxSize()) {
         Row(

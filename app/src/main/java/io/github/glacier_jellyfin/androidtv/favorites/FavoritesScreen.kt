@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.favorites
 
+import androidx.activity.compose.BackHandler
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FavoriteRow
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Spacer
@@ -46,7 +47,6 @@ import io.github.glacier_jellyfin.androidtv.ui.MediaRow
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.PosterCard
-import io.github.glacier_jellyfin.androidtv.ui.BackFromTop
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
@@ -67,7 +67,7 @@ fun FavoritesScreen(
     // Back among the rows first goes up to the navigation bar. The page keeps its place below.
     val navFocus = remember { FocusRequester() }
     var inList by remember { mutableStateOf(false) }
-    BackFromTop(inList, backHome = true, navFocus, viewModel::onNav)
+    BackHandler(enabled = inList) { runCatching { navFocus.requestFocus() } }
     // Back from a title lands on its card again; the first time on the first card.
     var lastFocus by rememberSaveable { mutableStateOf<String?>(null) }
     val requesters = remember { mutableMapOf<String, FocusRequester>() }
