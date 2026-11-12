@@ -4,7 +4,7 @@ package io.github.glacier_jellyfin.androidtv.core.player
 internal object BufferSizing {
 
     private const val MB = 1024L * 1024L
-    private const val HEAP_SHARE_PERCENT = 40
+    private const val HEAP_SHARE_PERCENT = 50
     private const val MAX_BYTES = 400L * MB
 
     /**

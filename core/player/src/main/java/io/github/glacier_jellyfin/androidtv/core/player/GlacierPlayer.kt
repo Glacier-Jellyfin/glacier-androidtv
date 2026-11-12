@@ -12,6 +12,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
+import androidx.media3.common.util.ExperimentalApi
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
@@ -19,15 +20,24 @@ import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.LoadControl
+import androidx.media3.exoplayer.PlayerMessage
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.source.ClippingMediaSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.ForwardingMediaSourceFactory
 import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
+import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.trackselection.AdaptiveTrackSelection
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.BandwidthMeter
+import androidx.media3.exoplayer.upstream.DefaultAllocator
+import androidx.media3.common.Timeline
+import androidx.media3.exoplayer.analytics.PlayerId
+import androidx.media3.exoplayer.source.MediaSource.MediaPeriodId
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.ui.SubtitleView
@@ -87,7 +97,157 @@ data class SideloadedSubtitle(
  * arrives as Media3 cues.
  */
 @OptIn(UnstableApi::class)
-class GlacierPlayback(val player: ExoPlayer, private val ass: AssHandler, private val meter: SteeredBandwidthMeter) {
+class GlacierPlayback(
+    val player: ExoPlayer,
+    private val ass: AssHandler,
+    private val meter: SteeredBandwidthMeter,
+    /** The item of a title as it plays (a clipped source, see [GlacierPlayer.titleItem]); null for streams that cannot be handed over. */
+    private var current: MediaItem? = null,
+    /** Gives the connections the patient timeouts of a transcode, which a stream that started as the file does not have. */
+    private val makePatient: () -> Unit = {},
+    /** Lets the stream that is handed over to load while the playing one still does. */
+    private val loadControl: HandoverLoadControl? = null,
+) {
+
+    /** The stream waiting to take over. */
+    private var pending: MediaItem? = null
+    private var handOvers = 0
+
+    /** The message that moves the player on to [pending] when the playing stream has reached the hand over point. */
+    private var switchMessage: PlayerMessage? = null
+
+    /** Where the hand over was planned, in ms of the playing item, and how far it has been moved on since. */
+    private var plannedInItemMs = 0L
+    private var postponedMs = 0L
+
+    /** True for a title: its stream can be handed over to another without the player starting again. */
+    val canHandOver: Boolean get() = current != null
+
+    /** The media id of the stream that waits to take over; null when none does. */
+    val handOverId: String? get() = pending?.mediaId
+
+    /**
+     * Plays [next] from [atMs] (the position in the title) on, after the stream that plays now. The playing item stays as it
+     * is, with its buffer: Media3 resets the playing period (and with it the buffer, when the file has no keyframe at the
+     * playing position) as soon as its duration changes while a renderer has read up to the new end, and a renderer of a
+     * sparse track (the next subtitle cue) does that; see `MediaPeriodQueue.updateQueuedPeriods`. So [next] is only appended;
+     * it is loaded ahead (preloading, see [HandoverLoadControl]) while the playing stream goes on, and the player moves on to
+     * it when the playing one reaches [atMs]. The positions of the player are relative to the start of the item then (see
+     * [GlacierPlayer.titleItem]). False when this cannot be done.
+     *
+     * Until then the playing stream loads no further than [POSTPONE_MAX_MS] beyond [atMs], so the next one has the connection
+     * to itself. If it has not loaded [READY_MS] by [atMs] and the playing stream still has data, the move waits, in steps of
+     * [POSTPONE_STEP_MS] and for [POSTPONE_MAX_MS] at most.
+     */
+    fun handOver(atMs: Long, next: StreamRequest): Boolean {
+        val item = current ?: return false
+        if (pending != null || player.mediaItemCount != 1) return false
+        val inItemMs = atMs - item.clippingConfiguration.startPositionMs
+        if (inItemMs <= 0) return false
+        makePatient()
+        // The tier the new stream starts with is chosen when its source is prepared, which is before it plays.
+        if (next.playlist != null) next.startBitrate?.let(meter::steer) else meter.unsteer()
+        val nextItem = GlacierPlayer.titleItem(next, "handover-${++handOvers}", atMs)
+        loadControl?.beginPreloading(untilPlayingMs = inItemMs + POSTPONE_MAX_MS)
+        player.setPreloadConfiguration(ExoPlayer.PreloadConfiguration(PRELOAD_US))
+        player.addMediaItem(nextItem)
+        pending = nextItem
+        plannedInItemMs = inItemMs
+        postponedMs = 0
+        scheduleMove(nextItem, inItemMs)
+        Log.i(TAG, "Hand over at $atMs ms: the playing stream goes on, the next is queued and loads ahead (${stateName(player.playbackState)} at ${player.currentPosition} ms, ${player.mediaItemCount} items)")
+        return true
+    }
+
+    private fun scheduleMove(item: MediaItem, atInItemMs: Long) {
+        switchMessage?.cancel()
+        switchMessage = player.createMessage { _, _ -> moveOn(item) }
+            .setLooper(player.applicationLooper)
+            .setPosition(0, atInItemMs)
+            .setDeleteAfterDelivery(true)
+            .send()
+    }
+
+    /**
+     * The playing stream has reached the hand over point: on to the stream that waits, unless that has hardly loaded and the
+     * playing one has data to bridge a little longer.
+     */
+    private fun moveOn(item: MediaItem) {
+        if (pending !== item || player.mediaItemCount < 2 || player.currentMediaItemIndex != 0) return
+        val position = player.currentPosition
+        val loaded = loadControl?.preloadedMs ?: Long.MAX_VALUE
+        val nextStop = plannedInItemMs + postponedMs + POSTPONE_STEP_MS
+        if (loaded < READY_MS && postponedMs + POSTPONE_STEP_MS <= POSTPONE_MAX_MS && player.bufferedPosition >= nextStop + KEEP_MS) {
+            postponedMs += POSTPONE_STEP_MS
+            Log.i(TAG, "Hand over point reached at $position ms, the next stream has ${loaded / 1000} s: waiting, now $postponedMs ms past the plan")
+            scheduleMove(item, plannedInItemMs + postponedMs)
+            return
+        }
+        // The stream that waits begins at the hand over point; the way on from there is its position, in its own item.
+        val into = (position - plannedInItemMs).takeIf { it >= MIN_SKIP_MS } ?: 0L
+        Log.i(TAG, "Hand over point reached at $position ms (${loaded / 1000} s of the next stream loaded), moving on to the next stream" + if (into > 0) " at +$into ms" else "")
+        enterNext(into)
+    }
+
+    /**
+     * Moves the player on to the stream that waits, at [positionMs] of its item. Media3 takes a period it has loaded ahead only
+     * for the start position of its item (`MediaPeriodHolder.canBeUsedForMediaPeriodInfo`), so the player goes there first and
+     * moves to [positionMs] once it has taken that period over, a jump inside a period that keeps what it has loaded.
+     */
+    fun enterNext(positionMs: Long = 0) {
+        if (player.mediaItemCount < 2) return
+        player.seekToNextMediaItem()
+        if (positionMs > 0) afterTakeOver { player.seekTo(positionMs) }
+    }
+
+    /**
+     * Runs [action] once the player has taken over the period it loaded ahead. A seek makes the playback thread drop its
+     * periods and queue the next one up in a work step of its own (`ExoPlayerImplInternal.seekToPeriodPosition`, then
+     * `maybeUpdateLoadingPeriod`), and the listeners hear of the seek while that step is still to come. What the app asks of
+     * the player in that callback is queued before it: a removed item or the end of preloading
+     * (`MediaPeriodQueue.releasePreloadPool`) then dropped the loaded period, which was loaded again. A message of the player
+     * is delivered after the seek has been handled, so what the action asks of the player comes behind that step.
+     */
+    private fun afterTakeOver(action: () -> Unit) {
+        player.createMessage { _, _ -> action() }
+            .setLooper(player.applicationLooper)
+            .setDeleteAfterDelivery(true)
+            .send()
+    }
+
+    /** Media3 has moved on to the stream that was handed over: the old one is let go (see [afterTakeOver]). */
+    fun finishHandOver() {
+        val next = pending ?: return
+        switchMessage?.cancel()
+        switchMessage = null
+        current = next
+        pending = null
+        loadControl?.endPreloading()
+        afterTakeOver {
+            if (player.mediaItemCount > 1) player.removeMediaItem(0)
+            player.setPreloadConfiguration(ExoPlayer.PreloadConfiguration.DEFAULT)
+            Log.i(TAG, "Hand over done, the old stream is released (${player.mediaItemCount} item)")
+        }
+    }
+
+    /** The stream that was handed over to is not wanted after all: the playing one goes on, nothing follows it. */
+    fun cancelHandOver() {
+        if (pending == null) return
+        switchMessage?.cancel()
+        switchMessage = null
+        pending = null
+        if (player.mediaItemCount > 1) player.removeMediaItem(1)
+        loadControl?.endPreloading()
+        player.setPreloadConfiguration(ExoPlayer.PreloadConfiguration.DEFAULT)
+        Log.i(TAG, "Hand over cancelled, the playing stream goes on")
+    }
+
+    private fun stateName(state: Int) = when (state) {
+        Player.STATE_IDLE -> "idle"
+        Player.STATE_BUFFERING -> "buffering"
+        Player.STATE_READY -> "ready"
+        else -> "ended"
+    }
 
     /**
      * Makes the player choose the tier of [bitrate] (bit/s) of a ladder from the next segment on. Media3 switches
@@ -95,6 +255,12 @@ class GlacierPlayback(val player: ExoPlayer, private val ass: AssHandler, privat
      * segment, so the app gives it the estimate that suits the tier it wants. The buffer already loaded plays on.
      */
     fun steer(bitrate: Int) = meter.steer(bitrate)
+
+    /**
+     * Bit/s the player's connections loaded in the last [windowMs] (up to 30 s). Media3's estimate does not move during a
+     * long transfer, see [DownloadRate].
+     */
+    fun downloadRate(windowMs: Long): Long = DownloadRate.shared.bitsPerSecond(windowMs)
 
     /** The most the load control buffers ahead, in ms: the scale of the buffer bar in the info panel. */
     var maxBufferMs: Int = DefaultLoadControl.DEFAULT_MAX_BUFFER_MS
@@ -146,6 +312,22 @@ class GlacierPlayback(val player: ExoPlayer, private val ass: AssHandler, privat
     internal companion object {
         private const val TAG = "Player"
 
+        /** How much of the stream that is handed over to is loaded ahead: more than a new stream needs to start (8 s). */
+        private const val PRELOAD_US = 12_000_000L
+
+        /** The stream that is handed over to has loaded this much when the player moves on to it, else the move waits. */
+        const val READY_MS = 5_000L
+
+        /** The move waits in steps of this, up to the most; the playing stream is loaded as far as the most beyond the plan. */
+        const val POSTPONE_STEP_MS = 2_000L
+        const val POSTPONE_MAX_MS = 10_000L
+
+        /** A wait needs this much of the playing stream's buffer beyond the new point. */
+        private const val KEEP_MS = 500L
+
+        /** Less than this past the plan counts as the plan: no jump inside the stream that is handed over to. */
+        private const val MIN_SKIP_MS = 250L
+
         /** "E-AC-3 bitstream", "PCM 16-bit": whether the receiver gets the bitstream or decoded sound. */
         fun encodingName(encoding: Int): String = when (encoding) {
             C.ENCODING_AC3 -> "AC-3 bitstream"
@@ -161,6 +343,87 @@ class GlacierPlayback(val player: ExoPlayer, private val ass: AssHandler, privat
             C.ENCODING_PCM_FLOAT -> "PCM float"
             else -> "encoding $encoding"
         }
+    }
+}
+
+/**
+ * The load control of a title, set as the builder of [GlacierPlayer.create] does it (min = max buffer, time not over size). Media3
+ * preloads the next item of the playlist only while no player loads, which the stream that plays always does on a link slower
+ * than the stream; during a hand over ([GlacierPlayback.handOver]) it is wanted at once, and the stream that plays stops
+ * loading a little beyond the hand over point, so the connection goes to the one that is loaded ahead.
+ */
+@OptIn(UnstableApi::class)
+class HandoverLoadControl(
+    minBufferMs: Int,
+    maxBufferMs: Int,
+    bufferForPlaybackMs: Int,
+    bufferForPlaybackAfterRebufferMs: Int,
+    targetBufferBytes: Int,
+) : DefaultLoadControl(
+    DefaultAllocator(true, C.DEFAULT_BUFFER_SEGMENT_SIZE),
+    minBufferMs,
+    minBufferMs,
+    maxBufferMs,
+    maxBufferMs,
+    bufferForPlaybackMs,
+    bufferForPlaybackMs,
+    bufferForPlaybackAfterRebufferMs,
+    bufferForPlaybackAfterRebufferMs,
+    targetBufferBytes,
+    false,
+    false,
+    DefaultLoadControl.DEFAULT_BACK_BUFFER_DURATION_MS,
+    DefaultLoadControl.DEFAULT_RETAIN_BACK_BUFFER_FROM_KEYFRAME,
+) {
+    /** Set while a stream waits to take over; read on the playback thread. */
+    @Volatile
+    var preloadNext = false
+        private set
+
+    /** The position in the playing item (ms) beyond which it loads no more while [preloadNext]. */
+    @Volatile
+    private var stopAtMs = Long.MAX_VALUE
+
+    /**
+     * How much of the stream that waits is loaded, in ms from its start. Media3 asks when the stream is between two loads (after
+     * a segment of a ladder, every few hundred KB of a file), which is how often this moves.
+     */
+    @Volatile
+    var preloadedMs = 0L
+        private set
+
+    internal fun beginPreloading(untilPlayingMs: Long) {
+        preloadedMs = 0
+        stopAtMs = untilPlayingMs
+        preloadNext = true
+    }
+
+    internal fun endPreloading() {
+        preloadNext = false
+        stopAtMs = Long.MAX_VALUE
+        preloadedMs = 0
+    }
+
+    override fun shouldContinuePreloading(playerId: PlayerId, timeline: Timeline, mediaPeriodId: MediaPeriodId, bufferedDurationUs: Long): Boolean {
+        if (!preloadNext) return super.shouldContinuePreloading(playerId, timeline, mediaPeriodId, bufferedDurationUs)
+        // What is passed as the buffered duration is the buffered position of the period: its position in its item, once the
+        // start of the item (the clipping start, which is where the period starts) is taken off. Nothing before it is prepared.
+        val period = timeline.getPeriodByUid(mediaPeriodId.periodUid, Timeline.Period())
+        preloadedMs = when (bufferedDurationUs) {
+            C.TIME_END_OF_SOURCE -> Long.MAX_VALUE
+            else -> ((bufferedDurationUs + period.positionInWindowUs) / 1000).coerceAtLeast(0)
+        }
+        return true
+    }
+
+    override fun shouldContinueLoading(parameters: LoadControl.Parameters): Boolean {
+        val loads = super.shouldContinueLoading(parameters)
+        if (!loads || stopAtMs == Long.MAX_VALUE) return loads
+        val period = parameters.timeline.getPeriodByUid(parameters.mediaPeriodId.periodUid, Timeline.Period())
+        // Only the playing item (the first); the one that waits is preloaded, and takes the connection.
+        if (period.windowIndex != 0) return true
+        val bufferedUntilMs = (parameters.playbackPositionUs + period.positionInWindowUs + parameters.bufferedDurationUs) / 1000
+        return bufferedUntilMs < stopAtMs
     }
 }
 
@@ -186,23 +449,66 @@ object GlacierPlayer {
     /** The share of its speed estimate Media3 lets a tier take; [SteeredBandwidthMeter.steer] counts with it. */
     const val STEER_FRACTION = 0.9f
 
+    @OptIn(UnstableApi::class)
+    private fun makePatient(factory: DefaultHttpDataSource.Factory) {
+        factory.setConnectTimeoutMs(HLS_CONNECT_TIMEOUT_MS)
+        factory.setReadTimeoutMs(HLS_READ_TIMEOUT_MS)
+    }
+
+    /**
+     * Gives every item of a title a [ClippingMediaSource] that clips inside the media period: the item of a stream handed over
+     * to starts at the hand over point, and the period itself starts there instead of Media3 seeking after it. Media3 builds a
+     * clipping source only for items that clip something, so the items that play all of the stream are wrapped here too.
+     * [factory] builds the source of the stream.
+     */
+    @OptIn(UnstableApi::class, ExperimentalApi::class)
+    internal class ClippedSources(private val factory: MediaSource.Factory) : ForwardingMediaSourceFactory(factory) {
+        override fun createMediaSource(mediaItem: MediaItem): MediaSource =
+            ClippingMediaSource.Builder(
+                factory.createMediaSource(mediaItem.buildUpon().setClippingConfiguration(MediaItem.ClippingConfiguration.UNSET).build()),
+            )
+                .setClippingConfiguration(mediaItem.clippingConfiguration)
+                .setEnableClippingInMediaPeriod(true)
+                .build()
+    }
+
+    /**
+     * The item of a stream of a title. Its clipping starts at [startMs], where in the title this stream takes over (0 for the
+     * first), and ends where the stream ends: a stream plays the whole title (the playlist or the file spans it), so the
+     * player's positions of the item are relative to [startMs].
+     */
+    internal fun titleItem(request: StreamRequest, id: String, startMs: Long): MediaItem =
+        itemOf(request)
+            .buildUpon()
+            .setMediaId(id)
+            .setClippingConfiguration(
+                MediaItem.ClippingConfiguration.Builder()
+                    .setStartPositionMs(startMs)
+                    // From the start no sample is cut off: no jump at the beginning. Later it starts inside a segment.
+                    .setStartsAtKeyFrame(startMs == 0L)
+                    .build(),
+            )
+            .build()
+
+    private fun itemOf(request: StreamRequest): MediaItem =
+        MediaItem.Builder()
+            .setUri(request.playlist?.let(::playlistUri) ?: Uri.parse(request.url))
+            .apply { if (request.isHls) setMimeType(MimeTypes.APPLICATION_M3U8) }
+            .setSubtitleConfigurations(request.subtitles.map { it.toConfiguration() })
+            .build()
+
     /** A playlist the app wrote, as an address Media3 reads without a request. */
     private fun playlistUri(playlist: String): Uri =
         Uri.parse("data:application/x-mpegURL;base64," + Base64.encodeToString(playlist.toByteArray(), Base64.NO_WRAP))
 
     @OptIn(UnstableApi::class)
     fun create(context: Context, request: StreamRequest): GlacierPlayback {
+        // The server answers a segment of a transcode when it has made it, and a slow transcode takes far longer
+        // than the 8 s Media3 waits by default: that ended the playback with an error.
         val dataSource = DefaultHttpDataSource.Factory()
             .setDefaultRequestProperties(request.headers)
             .setAllowCrossProtocolRedirects(true)
-            .apply {
-                // The server answers a segment of a transcode when it has made it, and a slow transcode takes far longer
-                // than the 8 s Media3 waits by default: that ended the playback with an error.
-                if (request.patient) {
-                    setConnectTimeoutMs(HLS_CONNECT_TIMEOUT_MS)
-                    setReadTimeoutMs(HLS_READ_TIMEOUT_MS)
-                }
-            }
+            .apply { if (request.patient) makePatient(this) }
         // Rendered on its own GL thread above the video, with animation and embedded fonts.
         val ass = AssHandler(AssRenderType.OVERLAY_OPEN_GL)
         val assParsers = AssSubtitleParserFactory(ass)
@@ -232,8 +538,11 @@ object GlacierPlayer {
         // Live has no stock to buffer, previews must start fast: only a title gets the big buffer, which carries a tier
         // switch (a new transcode takes 16 to 29 s) and the high bitrates of direct play.
         val bigBuffer = request.title && !request.live
+        // The stream of a title may be handed over to another one while it plays.
+        val handOverable = bigBuffer
         val bufferMs = if (bigBuffer) VIDEO_BUFFER_MS else DefaultLoadControl.DEFAULT_MAX_BUFFER_MS
         val maxMemory = Runtime.getRuntime().maxMemory()
+        var targetBytes: Int? = null
         val loadControlBuilder = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
                 // Min = max: Media3 keeps loading instead of pausing between the two.
@@ -246,7 +555,7 @@ object GlacierPlayer {
         if (bigBuffer) {
             // Sized by the heap: a high-bitrate remux hits the default byte limit after about 14 s. The byte limit
             // must keep deciding (not the time), or a full heap ends in an OutOfMemoryError.
-            val targetBytes = BufferSizing.targetBytes(
+            targetBytes = BufferSizing.targetBytes(
                 maxMemory,
                 DefaultLoadControl.DEFAULT_VIDEO_BUFFER_SIZE + DefaultLoadControl.DEFAULT_AUDIO_BUFFER_SIZE,
             )
@@ -255,7 +564,19 @@ object GlacierPlayer {
         } else {
             Log.i("Player", "Buffer: ${bufferMs / 1000} s, default byte target, ${maxMemory / MB} MB heap")
         }
-        val loadControl = loadControlBuilder.build()
+        // A title takes a hand over: its load control also loads the next item while the playing one loads.
+        val handOverLoadControl = if (handOverable) {
+            HandoverLoadControl(
+                minBufferMs = bufferMs,
+                maxBufferMs = bufferMs,
+                bufferForPlaybackMs = if (request.patient) RUN_UP_MS else DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
+                bufferForPlaybackAfterRebufferMs = REBUFFER_MS,
+                targetBufferBytes = targetBytes ?: C.LENGTH_UNSET,
+            )
+        } else {
+            null
+        }
+        val loadControl = handOverLoadControl ?: loadControlBuilder.build()
         // Tiers of one transcode: quality comes first, so it moves up as soon as the link allows and down only when
         // the buffer runs low, and uses more of the measured speed than Media3's default 70 %.
         val trackSelector = DefaultTrackSelector(context, AdaptiveTrackSelection.Factory(5_000, DECREASE_ANYTIME_MS, 25_000, STEER_FRACTION))
@@ -269,7 +590,7 @@ object GlacierPlayer {
             .setBandwidthMeter(meter)
             .setTrackSelector(trackSelector)
             .setLoadControl(loadControl)
-            .setMediaSourceFactory(mediaSources)
+            .setMediaSourceFactory(if (handOverable) ClippedSources(mediaSources) else mediaSources)
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(C.USAGE_MEDIA)
@@ -342,17 +663,14 @@ object GlacierPlayer {
                 if (request.playlist != null) Log.i("Player", "Video tier ${format.bitrate / 1000} kbit/s ${format.width}x${format.height}")
             }
         })
-        val item = MediaItem.Builder()
-            .setUri(request.playlist?.let(::playlistUri) ?: Uri.parse(request.url))
-            .apply { if (request.isHls) setMimeType(MimeTypes.APPLICATION_M3U8) }
-            .setSubtitleConfigurations(request.subtitles.map { it.toConfiguration() })
-            .build()
+        val item = if (handOverable) titleItem(request, "title", 0) else itemOf(request)
         player.apply {
             if (request.live) setMediaItem(item) else setMediaItem(item, request.startPositionMs)
             prepare()
         }
         ass.init(player)
-        return GlacierPlayback(player, ass, meter).also { it.maxBufferMs = bufferMs }
+        return GlacierPlayback(player, ass, meter, current = item.takeIf { handOverable }, makePatient = { makePatient(dataSource) }, loadControl = handOverLoadControl)
+            .also { it.maxBufferMs = bufferMs }
     }
 
     /**
@@ -454,6 +772,11 @@ class SteeredBandwidthMeter(private val real: BandwidthMeter) : BandwidthMeter b
     /** The estimate that makes Media3 take the tier of [bitrate]: its share of it just fits, the next tier up does not. */
     fun steer(bitrate: Int) {
         steered = (bitrate * 1.05 / GlacierPlayer.STEER_FRACTION).toLong()
+    }
+
+    /** Back to Media3's own estimate. */
+    fun unsteer() {
+        steered = 0
     }
 
     override fun getBitrateEstimate(): Long = steered.takeIf { it > 0 } ?: real.bitrateEstimate

@@ -244,6 +244,22 @@ class PlayerViewModel @Inject constructor(
     private var recovery: Job? = null
     /** Times this title went back to the file's quality. */
     private var returns = 0
+    /** Title position and length from the player's: the one place that knows where the playing stream starts. */
+    private val time = TitleTime()
+    private val trend = BufferTrend()
+    private val throughput = ThroughputWatch()
+
+    /** A stream opened to take over from the playing one; see [beginHandover]. */
+    private class Handover(val trigger: HandoverTrigger?, val atMs: Long, val source: PlaybackSource, val lowering: Boolean)
+
+    /** Opening the stream for a hand over. */
+    private var handoverJob: Job? = null
+    /** The stream queued in the player, until the player has moved on to it. */
+    private var queued: Handover? = null
+    /** The stream handed over to is not playing yet: no further step to another stream before it does. */
+    private var awaitingStart = false
+
+    private val handoverActive: Boolean get() = handoverJob?.isActive == true || queued != null || awaitingStart
 
     @OptIn(UnstableApi::class)
     private val decoders = object : AnalyticsListener {
@@ -289,6 +305,10 @@ class PlayerViewModel @Inject constructor(
                 Player.STATE_BUFFERING -> onBuffering()
                 Player.STATE_READY -> {
                     stallWatch?.cancel()
+                    if (awaitingStart) {
+                        awaitingStart = false
+                        Log.i(TAG, "The stream handed over to plays")
+                    }
                     _state.update { it.copy(loading = false) }
                     if (!started) {
                         started = true
@@ -306,6 +326,13 @@ class PlayerViewModel @Inject constructor(
                 Player.STATE_ENDED -> onEnded()
                 else -> Unit
             }
+        }
+
+        // The player moved on to the stream queued by a hand over (by playing to its end or by a seek into it).
+        override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+            val handover = queued ?: return
+            if (mediaItem?.mediaId != _state.value.playback?.handOverId) return
+            completeHandover(handover)
         }
 
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
@@ -332,6 +359,18 @@ class PlayerViewModel @Inject constructor(
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            // A stream queued for a hand over that fails does not end the playing one: it goes on to its end, and an error of
+            // its own shows again. Anything else of a hand over is given up, and the error is handled as before.
+            if (queued != null && !awaitingStart) {
+                Log.w(TAG, "The hand over failed, the playing stream goes on", error)
+                dropHandover(restore = true)
+                _state.value.player?.prepare()
+                return
+            }
+            if (handoverActive) {
+                Log.w(TAG, "Playback failed during a hand over, giving it up", error)
+                dropHandover(restore = false)
+            }
             val current = source
             // Some fMP4 segments from the server start at a negative time, which Media3 cannot read.
             if (current != null && current.fmp4Segments && segments == null && error.errorCode in FMP4_ERRORS) {
@@ -439,21 +478,7 @@ class PlayerViewModel @Inject constructor(
                 val opened = playback.open(itemId, start, remembered?.audio ?: audio, remembered?.subtitle ?: subtitle, segments, versionId, reuse = retry)
                 source = opened
                 recordTracks(opened.audioIndex, opened.subtitleIndex)
-                val request = StreamRequest(
-                    url = opened.url,
-                    isHls = opened.isHls,
-                    headers = opened.headers,
-                    startPositionMs = start,
-                    playlist = opened.ladder,
-                    patient = opened.isHls && !opened.live,
-                    title = true,
-                    // The tier the link carries; Media3 takes the one this estimate allows.
-                    startBitrate = opened.streamBitrate?.let { it * 110L / 100 }?.toInt(),
-                    subtitles = opened.subtitles
-                        .filter { it.delivery == SubtitleDelivery.External && it.url != null }
-                        .map { SideloadedSubtitle(it.track.index, it.url!!, it.track.codec, it.track.language) },
-                    setup = playback.device.playbackSetup(settings.current().playback, playback.iec61937),
-                )
+                val request = streamRequest(opened, start)
                 val playback = GlacierPlayer.create(context, request)
                 val player = playback.player
                 player.addListener(listener)
@@ -495,6 +520,23 @@ class PlayerViewModel @Inject constructor(
             }
         }
     }
+
+    /** The player's request for a stream of the title that [opened] describes, to play from [start]. */
+    private suspend fun streamRequest(opened: PlaybackSource, start: Long) = StreamRequest(
+        url = opened.url,
+        isHls = opened.isHls,
+        headers = opened.headers,
+        startPositionMs = start,
+        playlist = opened.ladder,
+        patient = opened.isHls && !opened.live,
+        title = true,
+        // The tier the link carries; Media3 takes the one this estimate allows.
+        startBitrate = opened.streamBitrate?.let { it * 110L / 100 }?.toInt(),
+        subtitles = opened.subtitles
+            .filter { it.delivery == SubtitleDelivery.External && it.url != null }
+            .map { SideloadedSubtitle(it.track.index, it.url!!, it.track.codec, it.track.language) },
+        setup = playback.device.playbackSetup(settings.current().playback, playback.iec61937),
+    )
 
     /** Segments and the neighbouring episodes; playback does without them when they fail. */
     private fun loadExtras(item: ItemDetails) {
@@ -657,6 +699,24 @@ class PlayerViewModel @Inject constructor(
         if (!started || !player.playWhenReady) return
         val now = SystemClock.elapsedRealtime()
         if (now - lastSeekMs < SEEK_BUFFERING_MS) return
+        // A stream is on its way in: waiting for it at the point of the hand over is no stall of the link. It gets the time a
+        // new stream gets at the start, then the title is opened again.
+        queued?.takeIf { !awaitingStart }?.let { handover ->
+            if (currentPositionMs() >= handover.atMs - HANDOVER_EDGE_MS && stallWatch?.isActive != true) {
+                val timeout = if (handover.source.method == PlaybackMethod.DirectPlay) STARTUP_MS else TRANSCODE_STARTUP_MS
+                Log.i(TAG, "Waiting for the stream handed over to, up to ${timeout / 1000} s")
+                stallWatch = viewModelScope.launch {
+                    delay(timeout)
+                    if (queued === handover && _state.value.player === player) {
+                        Log.w(TAG, "The stream handed over to did not start, opening the title again")
+                        dropHandover(restore = false)
+                        reopen(audio = _state.value.audioIndex, subtitle = _state.value.subtitleIndex)
+                    }
+                }
+            }
+            return
+        }
+        if (handoverActive) return
         // Tiers: a stall may be the link or the server. A move costs a new transcode (about 16 s), so only a measurement that
         // says the link does not carry the tier moves it; a new stream is for a title that has none.
         tiers?.let { controller ->
@@ -691,7 +751,40 @@ class PlayerViewModel @Inject constructor(
         val ahead = player.bufferedPosition - player.currentPosition
         // A ladder: the server hands out segments about as fast as they play, so the buffer is small by nature.
         if (tiers != null) return
+        // Near the point of a hand over the playing stream's buffer ends there by design.
+        if (handoverActive) {
+            trend.clear()
+            throughput.clear()
+            lowBufferMs = 0
+            return
+        }
+        // Faster than the trend: the bytes loaded per second against what the stream asks. A file played as it is has no
+        // ladder to follow the link, and Media3's own estimate does not move during its one long transfer.
+        val playback = _state.value.playback
+        val streamBps = (source?.streamBitrate ?: source?.file?.bitrate)?.toLong() ?: 0L
+        if (playback != null && started && player.isPlaying && now - playingSinceMs > THROUGHPUT_SETTLE_MS && now - lastSeekMs > THROUGHPUT_SETTLE_MS) {
+            val rate = playback.downloadRate(ThroughputWatch.WINDOW_MS)
+            val full = ahead >= playback.maxBufferMs - ThroughputWatch.FULL_MARGIN_MS
+            if (throughput.check(now, player.isLoading, rate, streamBps, full)) {
+                Log.w(TAG, "The link loads ${rate / 1000} kbit/s, the stream asks ${streamBps / 1000} kbit/s, ${ahead / 1000} s buffered")
+                lowerQuality(HandoverTrigger.Throughput)
+                return
+            }
+        } else {
+            throughput.clear()
+        }
         val settled = started && now - playingSinceMs > BUFFER_SETTLE_MS && now - lastSeekMs > BUFFER_SETTLE_MS
+        // Loading, and yet the buffer shrinks: the link is slower than the stream. Seen long before a stall, so the way to
+        // the smaller stream can run from the buffer.
+        if (settled && player.isPlaying) {
+            if (trend.record(now, ahead, player.isLoading)) {
+                Log.w(TAG, "The buffer fell while loading, ${ahead / 1000} s left")
+                lowerQuality(HandoverTrigger.Draining)
+                return
+            }
+        } else {
+            trend.clear()
+        }
         when {
             !settled || !player.isPlaying || ahead >= BUFFER_RECOVERED_MS -> lowBufferMs = 0
             ahead < BUFFER_LOW_MS -> {
@@ -726,25 +819,155 @@ class PlayerViewModel @Inject constructor(
             return
         }
         val wanted = current.file?.bitrate ?: return
-        val reduced = current.streamBitrate?.let { it < wanted } == true
-        if (!reduced || current.live || current.ladder != null || returns >= MAX_RETURNS) return
+        val streamBitrate = current.streamBitrate ?: return
+        val reduced = streamBitrate < wanted
+        if (current.live || current.ladder != null) return
+        // The file as it is: only a step down is possible. A reduced stream: only the way back.
+        if (if (reduced) returns >= MAX_RETURNS else qualitySteps >= MAX_QUALITY_STEPS || streamBitrate <= StreamBudget.FLOOR) return
         recovery = viewModelScope.launch {
             while (isActive) {
                 delay(RECOVERY_CHECK_MS)
                 val player = _state.value.player ?: return@launch
                 if (settings.settings.value.playback.maxBitrate != MaxBitrate.Auto) return@launch
                 val ahead = player.bufferedPosition - player.currentPosition
-                if (!player.isPlaying || ahead < RECOVERY_BUFFER_MS) continue
+                if (!player.isPlaying || handoverActive || ahead < if (reduced) HandoverPlanner.RETURN_MIN_BUFFER_MS else RECOVERY_BUFFER_MS) continue
                 val budget = playback.probeBudget() ?: continue
-                if (StreamBudget.returnsTo(wanted, budget)) {
-                    returns++
-                    _events.send(UiEvent.Toast(R.string.player_full_quality))
-                    Log.i(TAG, "The link carries ${budget / 1_000_000} Mbit/s again, back to the file's ${wanted / 1_000_000}")
-                    reopen(audio = _state.value.audioIndex, subtitle = _state.value.subtitleIndex)
-                    return@launch
+                Log.i(TAG, "The link carries ${budget / 1_000_000} Mbit/s, the stream asks ${streamBitrate / 1_000_000}")
+                if (!reduced) {
+                    // The measurement before the start is old by now: a link that carries less than the file is no news at a stall.
+                    if (StreamBudget.exceeds(streamBitrate, budget) && lowerQuality(HandoverTrigger.Link) && qualitySteps >= MAX_QUALITY_STEPS) return@launch
+                } else if (StreamBudget.returnsTo(wanted, budget)) {
+                    val plan = HandoverPlanner.back(ahead, currentPositionMs(), titleDuration())
+                    if (plan is HandoverPlan.At) {
+                        returns++
+                        Log.i(TAG, "The link carries ${budget / 1_000_000} Mbit/s again, back to the file's ${wanted / 1_000_000}")
+                        beginHandover(plan, trigger = null, lowering = false)
+                        return@launch
+                    }
+                    Log.i(TAG, "Back to the file would have to wait: ${ahead / 1000} s buffered")
                 }
             }
         }
+    }
+
+    /** The length of the title, whatever stream plays. */
+    private fun titleDuration(): Long = time.duration(_state.value.player?.duration?.coerceAtLeast(0) ?: 0)
+
+    /**
+     * Opens the stream that takes over from the playing one at [HandoverPlan.At.atMs] and queues it in the player, which
+     * moves on there without a pause: the playing stream goes on from its buffer while the server starts the new one.
+     * [lowering]: a smaller stream, else the file. Nothing is queued when the new stream is not ready in time; the stream
+     * that plays then goes on, and after a stall ([trigger]) the title is opened again as it was before hand overs.
+     */
+    private fun beginHandover(plan: HandoverPlan.At, trigger: HandoverTrigger?, lowering: Boolean) {
+        val player = _state.value.player ?: return
+        val handOver = _state.value.playback ?: return
+        val before = source ?: return
+        val audio = _state.value.audioIndex
+        val subtitle = _state.value.subtitleIndex ?: NO_SUBTITLE
+        val seekMark = lastSeekMs
+        Log.i(
+            TAG,
+            "Hand over (${trigger ?: "link recovered"}): from ${currentPositionMs() / 1000} s to ${plan.atMs / 1000} s, lead ${plan.leadMs / 1000} s, " +
+                "${(player.bufferedPosition - player.currentPosition) / 1000} s buffered",
+        )
+        handoverJob?.cancel()
+        handoverJob = viewModelScope.launch {
+            var opened: PlaybackSource? = null
+            try {
+                opened = playback.open(itemId, plan.atMs, audio, subtitle, segments, versionId)
+                val now = currentPositionMs()
+                val problem = when {
+                    _state.value.player !== player || lastSeekMs != seekMark -> "playback moved on meanwhile"
+                    lowering && (opened.streamBitrate ?: 0) >= (before.streamBitrate ?: Int.MAX_VALUE) -> "the server did not give a smaller stream"
+                    !HandoverPlanner.stillWorks(lowering, plan.atMs, now) -> "the stream took too long to open (${(plan.atMs - now) / 1000} s of the lead left)"
+                    else -> null
+                }
+                if (problem == null && handOver.handOver(plan.atMs, streamRequest(opened, plan.atMs))) {
+                    queued = Handover(trigger, plan.atMs, opened, lowering)
+                    opened = null
+                    return@launch
+                }
+                Log.w(TAG, "Hand over given up: ${problem ?: "the player could not take it"}")
+            } catch (e: CancellationException) {
+                opened?.let(playback::discard)
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Opening the stream for a hand over failed", e)
+            }
+            opened?.let(playback::discard)
+            // A stream that already ran dry has no time to lose: the way it was before hand overs.
+            if (trigger == HandoverTrigger.Stalls && _state.value.player === player) {
+                reopen(audio = _state.value.audioIndex, subtitle = _state.value.subtitleIndex)
+            }
+        }
+    }
+
+    /** The player is on the stream handed over to: its positions count from the hand over, and the server hears of it. */
+    private fun completeHandover(handover: Handover) {
+        val handOver = _state.value.playback ?: return
+        val player = handOver.player
+        val old = source
+        queued = null
+        time.startAt(handover.atMs)
+        handOver.finishHandOver()
+        val opened = handover.source
+        source = opened
+        // Everything that belonged to the old stream: tiers and their server jobs, the stalls, the buffer's history.
+        tiers = null
+        tierHeights = emptyMap()
+        pinnedHeight = null
+        retired.clear()
+        slowLoads = SlowLoads()
+        stalls.clear()
+        trend.clear()
+        lowBufferMs = 0
+        playingSinceMs = SystemClock.elapsedRealtime()
+        _state.update {
+            it.copy(
+                method = opened.method,
+                audioTracks = opened.audioTracks,
+                subtitles = opened.subtitles,
+                audioIndex = opened.audioIndex,
+                subtitleIndex = opened.subtitleIndex,
+                imageHeaders = opened.headers,
+                file = opened.file,
+            )
+        }
+        recordTracks(opened.audioIndex, opened.subtitleIndex)
+        Log.i(TAG, "Handed over at ${handover.atMs / 1000} s to ${opened.method}, ${(opened.streamBitrate ?: 0) / 1_000_000} Mbit/s")
+        if (old != null) playback.reportHandOver(old, opened, position()) else playback.reportStart(opened, position())
+        viewModelScope.launch {
+            _events.send(UiEvent.Toast(if (handover.lowering) R.string.player_lower_quality else R.string.player_full_quality))
+        }
+        tracksPending = true
+        awaitingStart = player.playbackState != Player.STATE_READY
+        if (awaitingStart) {
+            val timeout = if (opened.method == PlaybackMethod.DirectPlay) STARTUP_MS else TRANSCODE_STARTUP_MS
+            stallWatch?.cancel()
+            stallWatch = viewModelScope.launch {
+                delay(timeout)
+                if (awaitingStart && _state.value.player === player) {
+                    Log.w(TAG, "The stream handed over to shows no picture after ${timeout / 1000} s")
+                    awaitingStart = false
+                    if (!lowerQuality()) reopen(audio = _state.value.audioIndex, subtitle = _state.value.subtitleIndex)
+                }
+            }
+        }
+        // The tracks the player knows now are those of the old stream, until the new one is prepared: onTracksChanged brings them.
+        watchRecovery()
+    }
+
+    /** Gives up a hand over: what is being opened is dropped, and what is queued goes out of the player. */
+    private fun dropHandover(restore: Boolean) {
+        handoverJob?.cancel()
+        handoverJob = null
+        queued?.let {
+            playback.discard(it.source)
+            if (restore) _state.value.playback?.cancelHandOver()
+        }
+        queued = null
+        awaitingStart = false
     }
 
     /**
@@ -757,7 +980,7 @@ class PlayerViewModel @Inject constructor(
         val player = _state.value.player ?: return
         val variant = current.ladder?.lines()?.firstOrNull { it.isNotBlank() && !it.startsWith("#") } ?: return
         // The player is read on the main thread, the requests run on another.
-        val ahead = (player.bufferedPosition / PROBE_SEGMENT_MS).toInt()
+        val ahead = (time.position(player.bufferedPosition) / PROBE_SEGMENT_MS).toInt()
         // Old segments exist already: how fast they are handed out tells the server's own delay per request.
         val next = if (DebugOptions.probeOld) maxOf(0, ahead - PROBE_OLD_BEHIND) else ahead
         val buffered = player.bufferedPosition - player.currentPosition
@@ -834,12 +1057,13 @@ class PlayerViewModel @Inject constructor(
             .distinctBy { it.bitrate }
             .sortedBy { it.bitrate }
         if (formats.size < 2) {
-            Log.i(TAG, "Video formats listed so far: ${formats.joinToString { "${it.height}p" }}")
+            // None at all: the tracks are still those of the stream just left; the new stream's come with onTracksChanged.
+            if (formats.isNotEmpty()) Log.i(TAG, "Video formats listed so far: ${formats.joinToString { "${it.height}p" }}")
             return
         }
         val bitrates = formats.map { it.bitrate }
         val start = bitrates.indexOfLast { it <= (current.streamBitrate ?: bitrates.last()) * 105L / 100 }.coerceAtLeast(0)
-        val controller = TierController(bitrates, formats.map { StreamBudget.expectedBitrate(it.height) }, start)
+        val controller = TierController(bitrates, formats.map { current.tierDemand[it.height] ?: StreamBudget.expectedBitrate(it.height) }, start)
         tiers = controller
         tierHeights = formats.associate { it.bitrate to it.height }
         slowLoads = SlowLoads()
@@ -859,8 +1083,13 @@ class PlayerViewModel @Inject constructor(
         _state.value.playback?.steer(bitrate)
     }
 
-    /** Opens the title again at the current position with a stream that asks less of the link. */
-    private fun lowerQuality(): Boolean {
+    /**
+     * A stream that asks less of the link takes over: handed over in the playing player when its buffer carries the new
+     * stream's start (see [HandoverPlanner]), else the title is opened again at the current position. Not while a hand over
+     * is on its way. False when there is nothing to lower; true when it is handled, also when it waits for a better moment.
+     */
+    private fun lowerQuality(trigger: HandoverTrigger = HandoverTrigger.Stalls): Boolean {
+        if (handoverActive) return true
         stallWatch?.cancel()
         val current = source ?: return false
         val streamBitrate = current.streamBitrate
@@ -871,9 +1100,26 @@ class PlayerViewModel @Inject constructor(
         ) {
             return false
         }
+        val player = _state.value.player
+        val canHand = player != null && started && _state.value.playback?.canHandOver == true
+        val plan = if (canHand) {
+            HandoverPlanner.lower(trigger, player.bufferedPosition - player.currentPosition, currentPositionMs(), titleDuration())
+        } else {
+            HandoverPlan.Reopen
+        }
+        if (plan == HandoverPlan.Wait) {
+            Log.i(TAG, "The stream is too much for the link ($trigger), but the title ends soon: leaving it")
+            return true
+        }
         qualitySteps++
         stalls.clear()
+        trend.clear()
         playback.lowerBudget(streamBitrate)
+        if (plan is HandoverPlan.At) {
+            beginHandover(plan, trigger, lowering = true)
+            return true
+        }
+        Log.i(TAG, "Opening the title again with a smaller stream ($trigger)")
         viewModelScope.launch { _events.send(UiEvent.Toast(R.string.player_lower_quality)) }
         reopen(audio = _state.value.audioIndex, subtitle = _state.value.subtitleIndex)
         return true
@@ -891,8 +1137,9 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private fun reopen(audio: Int?, subtitle: Int?) {
-        val position = currentPositionMs()
+    /** Opens the title again, at [at] (a position of the title) or where it plays now. */
+    private fun reopen(audio: Int?, subtitle: Int?, at: Long? = null) {
+        val position = at ?: currentPositionMs()
         source?.let { playback.reportStopped(it, position) }
         source = null
         open(startMs = position, audio = audio, subtitle = subtitle ?: NO_SUBTITLE)
@@ -947,8 +1194,23 @@ class PlayerViewModel @Inject constructor(
 
     fun seekTo(positionMs: Long) {
         val player = _state.value.player ?: return
-        player.seekTo(positionMs.coerceIn(0, player.duration.takeIf { it > 0 } ?: Long.MAX_VALUE))
-        _progress.update { it.copy(positionMs = player.currentPosition) }
+        val target = positionMs.coerceIn(0, titleDuration().takeIf { it > 0 } ?: Long.MAX_VALUE)
+        when (val to = time.seek(target, queued?.atMs)) {
+            // Before where the playing stream begins (after a hand over): it has nothing of that.
+            is SeekTarget.Reopen -> {
+                reopen(audio = _state.value.audioIndex, subtitle = _state.value.subtitleIndex, at = to.atMs)
+                return
+            }
+            is SeekTarget.Here -> {
+                // A stream still being opened for a hand over was planned from where the title played.
+                if (handoverJob?.isActive == true) handoverJob?.cancel()
+                player.seekTo(to.positionMs)
+            }
+            // Into the stream waiting to take over: the playback goes there at its start first, which is how it takes over what that
+            // has loaded (see GlacierPlayback.enterNext).
+            is SeekTarget.Next -> _state.value.playback?.enterNext(to.positionMs) ?: player.seekTo(1, to.positionMs)
+        }
+        _progress.update { it.copy(positionMs = target) }
     }
 
     fun seekBy(deltaMs: Long) = seekTo(currentPositionMs() + deltaMs)
@@ -971,8 +1233,8 @@ class PlayerViewModel @Inject constructor(
             var sinceReport = 0L
             while (isActive) {
                 val player = _state.value.player ?: break
-                val position = player.currentPosition
-                val duration = player.duration.coerceAtLeast(0)
+                val position = time.position(player.currentPosition)
+                val duration = titleDuration()
                 val segment = policy.active(_state.value.segments, position)
                 if (segment != null && policy.action(segment.kind) == SegmentAction.Skip && player.isPlaying) {
                     autoSkip(segment)
@@ -980,9 +1242,9 @@ class PlayerViewModel @Inject constructor(
                 watchBuffer(player)
                 val upNext = upNext(position, duration)
                 _progress.value = PlayerProgress(
-                    positionMs = player.currentPosition,
+                    positionMs = position,
                     durationMs = duration,
-                    bufferedMs = player.bufferedPosition,
+                    bufferedMs = time.position(player.bufferedPosition),
                     // The card takes over the credits button.
                     skip = segment?.takeIf {
                         policy.action(it.kind) == SegmentAction.Ask && !(it.kind == SegmentKind.Outro && upNext != null)
@@ -1015,7 +1277,7 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch { _events.send(UiEvent.Toast(segment.kind.skippedMessage(), emptyList())) }
     }
 
-    private fun currentPositionMs(): Long = _state.value.player?.currentPosition ?: _progress.value.positionMs
+    private fun currentPositionMs(): Long = _state.value.player?.let { time.position(it.currentPosition) } ?: _progress.value.positionMs
 
     private fun position() = PlaybackPosition(currentPositionMs(), paused = _state.value.player?.isPlaying != true)
 
@@ -1029,6 +1291,13 @@ class PlayerViewModel @Inject constructor(
         ticker?.cancel()
         stallWatch?.cancel()
         recovery?.cancel()
+        handoverJob?.cancel()
+        handoverJob = null
+        queued?.let { playback.discard(it.source) }
+        queued = null
+        awaitingStart = false
+        time.reset()
+        trend.clear()
         tiers = null
         pinnedHeight = null
         retired.clear()
@@ -1104,6 +1373,8 @@ class PlayerViewModel @Inject constructor(
         /** Buffering this soon after a jump is the jump, not the link. */
         const val SEEK_BUFFERING_MS = 3_000L
         const val MAX_OPEN_RETRIES = 3
+        /** Playing this close to the point of a hand over, the wait for the new stream is the hand over, not a stall. */
+        const val HANDOVER_EDGE_MS = 2_000L
         /** Media3 tries a segment several times itself before an error reaches here, each with the long timeout. */
         const val MAX_LINK_RETRIES = 3
         /** The segment probe (debug): when it runs after the first picture, how long a segment is, how many it asks for. */
@@ -1130,6 +1401,9 @@ class PlayerViewModel @Inject constructor(
         const val BUFFER_DRAIN_MS = 5_000L
         /** The buffer of a stream that just started, or just jumped, fills first. */
         const val BUFFER_SETTLE_MS = 30_000L
+
+        /** After a start or a seek the throughput is left alone this long: the player loads its first seconds in a burst. */
+        const val THROUGHPUT_SETTLE_MS = 10_000L
         /** A reduced stream checks the link this often, and only with this much buffer ahead. */
         const val RECOVERY_CHECK_MS = 120_000L
         const val RECOVERY_BUFFER_MS = 20_000L

@@ -31,6 +31,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - A slow server no longer ends playback with an error
 - Redesigned playback error dialog
 - When the connection is too slow for a file, only the sound is converted and the picture stays untouched (setting)
+- Switching between the file and a converted stream no longer interrupts the picture
 
 ### Fixed
 - "Subtitles off" picked on the detail page also applies to the next episode

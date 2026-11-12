@@ -14,6 +14,7 @@ android {
 
     // Glacier's Log calls android.util.Log, which the JVM tests only have as stubs.
     testOptions.unitTests.isReturnDefaultValues = true
+    testOptions.unitTests.isIncludeAndroidResources = true
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -34,6 +35,9 @@ dependencies {
     api(libs.libass.media)
 
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.media3.test.utils)
+    testImplementation(libs.media3.test.utils.robolectric)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.junit)
 }

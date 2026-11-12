@@ -36,6 +36,7 @@ internal class ThrottledDataSource(private val upstream: DataSource) : DataSourc
         if (read > 0) bytes += read
         val waitNs = DebugThrottle.waitNs(read)
         if (waitNs > 0) Thread.sleep(TimeUnit.NANOSECONDS.toMillis(waitNs), (waitNs % 1_000_000).toInt())
+        DownloadRate.shared.record(read)
         return read
     }
 

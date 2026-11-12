@@ -127,6 +127,11 @@ data class PlaybackSource(
      */
     val tierSessions: Map<Int, String> = emptyMap(),
     /**
+     * What each tier of [ladder] asks of the link, by picture height (see [StreamBudget.tierDemand]): a tier that copies the
+     * source's picture is far bigger than a transcode of that height.
+     */
+    val tierDemand: Map<Int, Int> = emptyMap(),
+    /**
      * The connection is too slow for the file, so only the audio is converted and the server copies the picture (see
      * [SlowLink.KeepPicture]). Such a stream has no ladder; [streamBitrate] is what it asks of the link.
      */
@@ -439,7 +444,7 @@ class PlaybackRepository @Inject constructor(
         val tiers = resolutions.map { resolution ->
             async {
                 runSuspendCatching {
-                    transcodingUrl(resolution)?.let { fetchTier(session, baseUrl + it, main = resolution == resolutions.first()) }
+                    transcodingUrl(resolution)?.let { fetchTier(session, baseUrl + it, main = resolution == resolutions.first(), label = "${resolution.height}p") }
                 }.onFailure { Log.w(TAG, "Tier of ${resolution.height}p failed", it) }.getOrNull()
             }
         }.awaitAll().filterNotNull()
@@ -459,7 +464,7 @@ class PlaybackRepository @Inject constructor(
     private class BuiltLadder(val playlist: String, val sessions: Map<Int, String>)
 
     /** The one variant of the server's master playlist at [masterUrl], with its address made absolute. */
-    private fun fetchTier(session: Session, masterUrl: String, main: Boolean = false): Tier? {
+    private fun fetchTier(session: Session, masterUrl: String, main: Boolean = false, label: String = "?"): Tier? {
         val connection = (URL(masterUrl).openConnection() as HttpURLConnection).apply {
             setRequestProperty("Authorization", session.authorization())
             connectTimeout = TIER_TIMEOUT_MS
@@ -472,7 +477,10 @@ class PlaybackRepository @Inject constructor(
         }
         val at = lines.indexOfFirst { it.startsWith("#EXT-X-STREAM-INF:") }
         val uri = lines.drop(at + 1).firstOrNull { it.isNotBlank() && !it.startsWith("#") }
-        if (at < 0 || uri == null) return null
+        if (at < 0 || uri == null) {
+            Log.w(TAG, "Tier of $label dropped: master playlist without a variant, first lines: " + lines.take(6).joinToString(" | ").take(400))
+            return null
+        }
         // The subtitle group the line names is not part of the joined playlist.
         val info = lines[at].replace(SUBTITLES_GROUP, "")
         return Tier(
@@ -622,9 +630,10 @@ class PlaybackRepository @Inject constructor(
             }
             // The picture fits the device (the first answer allowed direct play or stream) and the link carries it: ask for
             // a transcode of the audio only. The server copies the picture when its bitrate is within the video share of
-            // the request. Segments of 30 s, since every request waits about 3 s. False: nothing changed, ask as before.
+            // the request. Segments as short as the link allows with room for peaks (every request waits about 3 s). False: nothing changed, ask as before.
             suspend fun keepPicture(first: MediaSourceInfo, fileBitrate: Int, budget: Int): Boolean {
-                if (!(first.supportsDirectPlay || first.supportsDirectStream)) return false
+                val firstReasons = first.transcodingUrl?.let { TRANSCODE_REASONS.find(it)?.groupValues?.get(1) }
+                if (!StreamBudget.pictureFits(first.supportsDirectPlay || first.supportsDirectStream, first.transcodingUrl != null, firstReasons)) return false
                 val streams = first.mediaStreams.orEmpty()
                 // Only the subtitle that shows counts: a burned-in one needs a new picture.
                 val subtitle = (subtitleIndex ?: first.defaultSubtitleStreamIndex)?.takeIf { it >= 0 }
@@ -633,11 +642,11 @@ class PlaybackRepository @Inject constructor(
                 val audio = streams.firstOrNull { it.type == MediaStreamType.AUDIO && it.index == (audioIndex ?: first.defaultAudioStreamIndex) }
                 val channels = minOf(audio?.channels ?: 2, device.maxAudioChannels)
                 val demand = StreamBudget.copyDemand(videoBitrate, channels)
-                if (!StreamBudget.fitsWithSegments(demand, budget)) return false
+                val segmentSeconds = StreamBudget.copySegmentSeconds(demand, budget) ?: return false
                 val request = StreamBudget.copyRequest(videoBitrate, channels)
                 // At or above the file the server would not convert anything.
                 if (request >= fileBitrate) return false
-                val answer = playbackInfo(request, segmentSeconds = StreamBudget.COPY_SEGMENT_SECONDS)
+                val answer = playbackInfo(request, segmentSeconds = segmentSeconds)
                 val source = answer.mediaSources.firstOrNull()
                 val url = source?.transcodingUrl
                 val asked = url?.let { VIDEO_BITRATE.find(it)?.groupValues?.get(1)?.toIntOrNull() }
@@ -655,7 +664,7 @@ class PlaybackRepository @Inject constructor(
                 Log.i(
                     TAG,
                     "The file takes ${fileBitrate / 100_000 / 10.0} Mbit/s, the link carries ${budget / 100_000 / 10.0}: " +
-                        "converting only the audio, video ${videoBitrate / 100_000 / 10.0} Mbit/s copied",
+                        "converting only the audio, video ${videoBitrate / 100_000 / 10.0} Mbit/s copied, segments of $segmentSeconds s",
                 )
                 return true
             }
@@ -748,17 +757,43 @@ class PlaybackRepository @Inject constructor(
             } else {
                 emptyList()
             }
-            // The biggest picture the link carries: its measured speed against what a stream of that size takes.
-            val linkBudget = currentBudget()
-            val startTier = resolutions.indexOfFirst { linkBudget == null || StreamBudget.expectedBitrate(it.height) <= linkBudget }
-                .takeIf { it >= 0 } ?: resolutions.lastIndex
+            // The reasons of each tier's own answer: a tier of the source's height whose reasons all leave the picture alone is a copy.
+            val tierPictureFits = java.util.concurrent.ConcurrentHashMap<Int, Boolean>()
+            val mainReasons = source.transcodingUrl?.takeIf { method != PlaybackMethod.DirectPlay }?.let { TRANSCODE_REASONS.find(it)?.groupValues?.get(1) }
             val ladder = if (resolutions.size >= 2) {
                 buildLadder(session, resolutions, baseUrl) { tier ->
-                    playbackInfo(tier.bitrate, forLadder = true, maxHeight = tier.height).mediaSources.firstOrNull()?.transcodingUrl
+                    val answer = playbackInfo(tier.bitrate, forLadder = true, maxHeight = tier.height)
+                    val tierSource = answer.mediaSources.firstOrNull()
+                    if (tierSource?.transcodingUrl == null) {
+                        Log.w(
+                            TAG,
+                            "Tier of ${tier.height}p dropped: no transcoding URL (asked ${tier.bitrate / 1_000_000} Mbit/s, error ${answer.errorCode}, " +
+                                "sources ${answer.mediaSources.size}, direct play ${tierSource?.supportsDirectPlay}, direct stream ${tierSource?.supportsDirectStream})",
+                        )
+                    } else {
+                        val tierReasons = TRANSCODE_REASONS.find(tierSource.transcodingUrl!!)?.groupValues?.get(1) ?: mainReasons
+                        tierPictureFits[tier.height] =
+                            StreamBudget.pictureFits(tierSource.supportsDirectPlay || tierSource.supportsDirectStream, true, tierReasons)
+                    }
+                    tierSource?.transcodingUrl
                 }
             } else {
                 null
             }
+            // What each tier asks of the link; a copy of the source's picture is as big as that picture.
+            val sourceVideo = streams.firstOrNull { it.type == MediaStreamType.VIDEO }
+            val tierAudioChannels = minOf(
+                streams.firstOrNull { it.type == MediaStreamType.AUDIO && it.index == (audioIndex ?: source.defaultAudioStreamIndex) }?.channels ?: 2,
+                device.maxAudioChannels,
+            )
+            val tierDemand = resolutions.associate { tier ->
+                tier.height to StreamBudget.tierDemand(tier.height, sourceVideo?.height, tierPictureFits[tier.height] == true, sourceVideo?.bitRate, tierAudioChannels)
+            }
+            if (ladder != null) Log.i(TAG, "Demand of the tiers: " + resolutions.joinToString { "${it.height}p ${tierDemand.getValue(it.height) / 100_000 / 10.0} Mbit/s" })
+            // The biggest picture the link carries: its measured speed against what a stream of that size takes.
+            val linkBudget = currentBudget()
+            val startTier = resolutions.indexOfFirst { linkBudget == null || tierDemand.getValue(it.height) <= linkBudget }
+                .takeIf { it >= 0 } ?: resolutions.lastIndex
             val reasons = source.transcodingUrl?.takeIf { method != PlaybackMethod.DirectPlay }?.let { TRANSCODE_REASONS.find(it)?.groupValues?.get(1) }
             // The tracks asked for, and for a stream the server builds the audio it was told to put in.
             val streamAudio = source.transcodingUrl?.takeIf { method != PlaybackMethod.DirectPlay }?.let { AUDIO_STREAM_INDEX.find(it)?.groupValues?.get(1) }
@@ -784,6 +819,7 @@ class PlaybackRepository @Inject constructor(
                 liveStreamId = source.liveStreamId,
                 ladder = ladder?.playlist,
                 tierSessions = ladder?.sessions.orEmpty(),
+                tierDemand = if (ladder != null) tierDemand else emptyMap(),
                 // A ladder starts at what it was built for; the file's bitrate is no guide for a transcode to the display.
                 streamBitrate = when {
                     // The picture as it is, plus the converted audio.
@@ -931,7 +967,9 @@ class PlaybackRepository @Inject constructor(
             .let(::mergeOverlapping)
     }
 
-    fun reportStart(source: PlaybackSource, position: PlaybackPosition) = report("start") {
+    fun reportStart(source: PlaybackSource, position: PlaybackPosition) = report("start") { sendStart(source, position) }
+
+    private suspend fun ApiClient.sendStart(source: PlaybackSource, position: PlaybackPosition) {
         sessionApi.reportPlaybackStart(
             PlaybackStartInfo(
                 canSeek = !source.live,
@@ -949,6 +987,27 @@ class PlaybackRepository @Inject constructor(
                 playbackOrder = PlaybackOrder.DEFAULT,
             ),
         )
+    }
+
+    /**
+     * The player moved on from [old] to [new] without stopping: the old session ends at [position], the new one starts there.
+     * Both go out one after the other, since the server would take a start that arrives before the stop for the end of it.
+     */
+    fun reportHandOver(old: PlaybackSource, new: PlaybackSource, position: PlaybackPosition) {
+        report("hand over") {
+            sendStopped(old, position.positionMs, failed = false, watched = false)
+            sendStart(new, position)
+        }
+        endTierJobs(old)
+    }
+
+    /**
+     * A stream that was opened for a hand over and will not play: its transcoding jobs end. No stop report, which would
+     * move the resume point of the title.
+     */
+    fun discard(source: PlaybackSource) {
+        if (source.method == PlaybackMethod.DirectPlay) return
+        (source.tierSessions.values + listOfNotNull(source.playSessionId)).toSet().forEach { id -> reportScope.launch { stopTierJob(id) } }
     }
 
     fun reportProgress(source: PlaybackSource, position: PlaybackPosition) = report("progress") {
@@ -977,21 +1036,27 @@ class PlaybackRepository @Inject constructor(
      */
     fun reportStopped(source: PlaybackSource, positionMs: Long, failed: Boolean = false, watched: Boolean = false) =
         report("stopped", onDone = { if (!source.live) _stopped.tryEmit(source.itemId) }) {
-            sessionApi.reportPlaybackStopped(
-                PlaybackStopInfo(
-                    itemId = source.itemId,
-                    mediaSourceId = source.mediaSourceId,
-                    playSessionId = source.playSessionId,
-                    liveStreamId = source.liveStreamId,
-                    positionTicks = positionMs * TICKS_PER_MS,
-                    failed = failed,
-                ),
-            )
-            if (watched) userDataApi.markPlayedItem(itemId = source.itemId)
-        }.also {
-            // The stop report ends the job of its own PlaySessionId only; the other tiers' jobs would run until the idle timeout.
-            source.tierSessions.values.filter { it != source.playSessionId }.forEach { id -> reportScope.launch { stopTierJob(id) } }
-        }
+            sendStopped(source, positionMs, failed, watched)
+        }.also { endTierJobs(source) }
+
+    private suspend fun ApiClient.sendStopped(source: PlaybackSource, positionMs: Long, failed: Boolean, watched: Boolean) {
+        sessionApi.reportPlaybackStopped(
+            PlaybackStopInfo(
+                itemId = source.itemId,
+                mediaSourceId = source.mediaSourceId,
+                playSessionId = source.playSessionId,
+                liveStreamId = source.liveStreamId,
+                positionTicks = positionMs * TICKS_PER_MS,
+                failed = failed,
+            ),
+        )
+        if (watched) userDataApi.markPlayedItem(itemId = source.itemId)
+    }
+
+    /** The stop report ends the job of its own PlaySessionId only; the other tiers' jobs would run until the idle timeout. */
+    private fun endTierJobs(source: PlaybackSource) {
+        source.tierSessions.values.filter { it != source.playSessionId }.forEach { id -> reportScope.launch { stopTierJob(id) } }
+    }
 
     private fun report(what: String, onDone: () -> Unit = {}, call: suspend ApiClient.() -> Unit) {
         val api = sessions.session.value?.api ?: return
