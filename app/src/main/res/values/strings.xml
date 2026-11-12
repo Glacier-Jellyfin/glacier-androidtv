@@ -652,6 +652,10 @@
         <item quantity="one">Played %1$d time</item>
         <item quantity="other">Played %1$d times</item>
     </plurals>
+    <plurals name="music_info_watched">
+        <item quantity="one">Watched %1$d time</item>
+        <item quantity="other">Watched %1$d times</item>
+    </plurals>
     <string name="music_info_last_played">last on %1$s</string>
     <string name="music_info_file">File</string>
     <string name="music_info_not_lossless">No longer lossless.</string>

@@ -75,6 +75,8 @@ object GlacierIcons {
     val Heart = icon(HEART, strokeWidth = 1.8f)
     val HeartFilled = filled(HEART, strokeWidth = 1.8f)
     val Play = filled("M6 3 20 12 6 21z")
+    /** Outline play, how often a music video was watched (Lucide play). */
+    val PlayOutline = icon("M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z")
     val Pause = filled("M7 4h2a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM15 4h2a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z")
     val Replay = icon("M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8", "M3 3v5h5")
     val Forward = icon("M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8", "M21 3v5h-5")

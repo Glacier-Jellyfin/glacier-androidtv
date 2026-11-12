@@ -24,7 +24,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Das Infofeld zeigt einen bevorstehenden Wechsel zwischen Strömen und seinen Grund
 - Der Countdown für Überspringen und die nächste Folge läuft flüssig
 - Das Infofeld eines Films oder einer Folge zeigt die Besetzung mit Fotos und Rollen statt Kapitel und nächster Folge, die der Player schon anzeigt
-- Das Infofeld eines Songs stellt den Song in den Mittelpunkt: Album, Jahr, Titelnummer und Genre, wie oft und wann er zuletzt gehört wurde, dazu der Künstler mit Foto und Biografie. „Als Nächstes“ und die Warteschlange, die der Player schon zeigt, entfallen
+- Das Infofeld eines Songs stellt den Song in den Mittelpunkt: Album, Jahr, Titelnummer und Genre, wie oft und wann er zuletzt gehört wurde, dazu der Künstler mit Foto und Biografie. „Als Nächstes“ und die Warteschlange, die der Player schon zeigt, entfallen. Ein Musikvideo zeigt sein Standbild, seine Länge und wie oft es gesehen wurde
 
 ### Behoben
 - „Untertitel aus“ auf der Detailseite gilt auch für die nächste Folge

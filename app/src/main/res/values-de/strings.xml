@@ -646,6 +646,10 @@
         <item quantity="one">%1$d-mal gehört</item>
         <item quantity="other">%1$d-mal gehört</item>
     </plurals>
+    <plurals name="music_info_watched">
+        <item quantity="one">%1$d-mal gesehen</item>
+        <item quantity="other">%1$d-mal gesehen</item>
+    </plurals>
     <string name="music_info_last_played">zuletzt am %1$s</string>
     <string name="music_info_file">Datei</string>
     <string name="music_info_not_lossless">Nicht mehr verlustfrei.</string>

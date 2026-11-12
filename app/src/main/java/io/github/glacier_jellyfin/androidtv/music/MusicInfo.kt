@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -56,6 +57,7 @@ import io.github.glacier_jellyfin.androidtv.player.StreamRow
 import io.github.glacier_jellyfin.androidtv.player.StreamRowsTable
 import io.github.glacier_jellyfin.androidtv.player.Tone
 import io.github.glacier_jellyfin.androidtv.player.TranscodeCard
+import io.github.glacier_jellyfin.androidtv.player.formatTime
 import io.github.glacier_jellyfin.androidtv.player.audioDetails
 import io.github.glacier_jellyfin.androidtv.player.audioHeadline
 import io.github.glacier_jellyfin.androidtv.player.bitrateText
@@ -92,7 +94,7 @@ internal fun MusicInfoPanel(
     }
     InfoPanelFrame(
         tabs = listOf(
-            stringResource(R.string.music_info_song),
+            stringResource(if (track.isVideo) R.string.music_video else R.string.music_info_song),
             stringResource(R.string.player_info_technical),
             stringResource(R.string.player_info_server),
         ),
@@ -117,9 +119,13 @@ private fun SongTab(track: MusicTrack, lossless: Boolean, songDetails: suspend (
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(32.dp)) {
         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(52.dp)) {
             val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
-            Artwork(track.largeCoverUrl, Modifier.size(COVER.dp).clip(shape).border(1.dp, GlacierColors.GlassBorder, shape))
-            // At least as tall as the cover, so the pill at the bottom ends level with it.
-            Column(Modifier.weight(1f).heightIn(min = COVER.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            // A music video shows its 16:9 still (the player's source, the cover when it has none), a song its square cover.
+            val isVideo = track.isVideo
+            val pictureWidth = if (isVideo) VIDEO_STILL_WIDTH else COVER
+            val pictureHeight = if (isVideo) VIDEO_STILL_HEIGHT else COVER
+            Artwork(track.largeCoverUrl, Modifier.size(pictureWidth.dp, pictureHeight.dp).clip(shape).border(1.dp, GlacierColors.GlassBorder, shape))
+            // At least as tall as the picture, so the pill at the bottom ends level with it.
+            Column(Modifier.weight(1f).heightIn(min = pictureHeight.dp), verticalArrangement = Arrangement.SpaceBetween) {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text(track.title, style = GlacierText.display(44), color = GlacierColors.Ice, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     track.artist?.let { Text(it, style = GlacierText.body(24), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis) }
@@ -135,8 +141,9 @@ private fun SongTab(track: MusicTrack, lossless: Boolean, songDetails: suspend (
                     val facts = listOfNotNull(
                         track.album?.takeIf { it.isNotBlank() }?.let { stringResource(R.string.music_album) to it },
                         track.year?.let { stringResource(R.string.music_info_year) to it.toString() },
-                        trackValue?.let { stringResource(R.string.music_info_track) to it },
+                        trackValue?.takeIf { !isVideo }?.let { stringResource(R.string.music_info_track) to it },
                         genres?.let { stringResource(R.string.music_info_genre) to it },
+                        track.durationMs.takeIf { isVideo && it > 0 }?.let { stringResource(R.string.sort_runtime) to formatTime(it) },
                     )
                     if (facts.isNotEmpty()) {
                         Column(Modifier.padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -148,10 +155,10 @@ private fun SongTab(track: MusicTrack, lossless: Boolean, songDetails: suspend (
                 if (plays != null) {
                     val last = details?.lastPlayed?.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))
                     val text = listOfNotNull(
-                        pluralStringResource(R.plurals.music_info_played, plays, plays),
+                        pluralStringResource(if (isVideo) R.plurals.music_info_watched else R.plurals.music_info_played, plays, plays),
                         last?.let { stringResource(R.string.music_info_last_played, it) },
                     ).joinToString(" · ")
-                    PlayCountPill(text, Modifier.padding(top = 14.dp))
+                    PlayCountPill(text, if (isVideo) GlacierIcons.PlayOutline else GlacierIcons.Headphones, Modifier.padding(top = 14.dp))
                 }
             }
         }
@@ -160,10 +167,12 @@ private fun SongTab(track: MusicTrack, lossless: Boolean, songDetails: suspend (
 }
 
 private const val COVER = 340
+private const val VIDEO_STILL_WIDTH = 480
+private const val VIDEO_STILL_HEIGHT = 270
 
-/** How often and when the song was last played: one quiet pill, level with the cover's bottom edge. */
+/** How often and when the song was last played: one quiet pill, level with the picture's bottom edge. */
 @Composable
-private fun PlayCountPill(text: String, modifier: Modifier = Modifier) {
+private fun PlayCountPill(text: String, icon: ImageVector, modifier: Modifier = Modifier) {
     Row(
         modifier
             .clip(PillShape)
@@ -172,7 +181,7 @@ private fun PlayCountPill(text: String, modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(GlacierIcons.Headphones, contentDescription = null, tint = GlacierColors.Mist, modifier = Modifier.size(20.dp))
+        Icon(icon, contentDescription = null, tint = GlacierColors.Mist, modifier = Modifier.size(20.dp))
         Text(text, style = GlacierText.body(18), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

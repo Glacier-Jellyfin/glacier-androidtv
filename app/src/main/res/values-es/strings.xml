@@ -666,6 +666,11 @@
         <item quantity="many">Reproducida %1$d veces</item>
         <item quantity="other">Reproducida %1$d veces</item>
     </plurals>
+    <plurals name="music_info_watched">
+        <item quantity="one">Vista %1$d vez</item>
+        <item quantity="many">Vista %1$d veces</item>
+        <item quantity="other">Vista %1$d veces</item>
+    </plurals>
     <string name="music_info_last_played">última vez el %1$s</string>
     <string name="music_info_file">Archivo</string>
     <string name="music_info_not_lossless">Ya no es sin pérdida.</string>
