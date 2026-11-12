@@ -117,8 +117,6 @@
     <string name="livetv_series_cancel">Stop recording the series</string>
     <string name="livetv_favorite_add">Add to favorites</string>
     <string name="livetv_favorite_remove">Remove from favorites</string>
-    <string name="livetv_program_body">The server records it for you. You find it under Recordings afterwards.</string>
-    <string name="livetv_program_body_airing">Watch it now, or let the server record it for you.</string>
     <string name="livetv_record_added">%1$s will be recorded</string>
     <string name="livetv_series_added">Every new episode of %1$s will be recorded</string>
     <string name="livetv_record_removed">%1$s will not be recorded</string>
@@ -135,7 +133,6 @@
     <string name="livetv_recordings_empty">No recordings yet</string>
     <string name="livetv_recordings_empty_body">Pick a programme in the guide and press OK to record it.</string>
     <string name="livetv_recordings_error">Recordings could not be loaded</string>
-    <string name="livetv_recording_body">Watch it, or delete it from the server.</string>
     <string name="livetv_timer_body">The server records this programme.</string>
     <string name="livetv_series_timer_body">The server records every new episode of this series.</string>
     <string name="livetv_delete">Delete</string>
@@ -311,6 +308,8 @@
     <string name="action_mark_unwatched">Mark unwatched</string>
     <string name="marked_watched">Marked watched</string>
     <string name="marked_unwatched">Marked unwatched</string>
+    <string name="season_mark_watched">Mark season as watched</string>
+    <string name="season_mark_unwatched">Mark season as unwatched</string>
     <string name="season_number">Season %1$d</string>
     <string name="season_specials">Specials</string>
     <plurals name="count_seasons">
@@ -668,7 +667,7 @@
     <string name="music_choose_playlist">Add to playlist</string>
     <string name="music_new_playlist">New playlist</string>
     <string name="music_no_playlists">No playlists yet</string>
-    <string name="music_menu_body">Choose what should happen with it.</string>
+    <string name="options_body">Choose what should happen with it.</string>
     <string name="music_choose_playlist_body">The songs are added to the end of the playlist you choose.</string>
     <string name="music_new_playlist_body">Give the new playlist a name. The songs go into it right away.</string>
     <string name="music_playlist_name">Name</string>

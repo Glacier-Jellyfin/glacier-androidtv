@@ -113,8 +113,6 @@
     <string name="livetv_series_cancel">Dejar de grabar la serie</string>
     <string name="livetv_favorite_add">Añadir a favoritos</string>
     <string name="livetv_favorite_remove">Quitar de favoritos</string>
-    <string name="livetv_program_body">El servidor lo graba por ti. Después lo encontrarás en Grabaciones.</string>
-    <string name="livetv_program_body_airing">Míralo ahora o deja que el servidor lo grabe por ti.</string>
     <string name="livetv_record_added">Se grabará %1$s</string>
     <string name="livetv_series_added">Se grabará cada episodio nuevo de %1$s</string>
     <string name="livetv_record_removed">No se grabará %1$s</string>
@@ -131,7 +129,6 @@
     <string name="livetv_recordings_empty">Aún no hay grabaciones</string>
     <string name="livetv_recordings_empty_body">Elige un programa en la guía y pulsa OK para grabarlo.</string>
     <string name="livetv_recordings_error">No se pudieron cargar las grabaciones</string>
-    <string name="livetv_recording_body">Míralo o bórralo del servidor.</string>
     <string name="livetv_timer_body">El servidor graba este programa.</string>
     <string name="livetv_series_timer_body">El servidor graba cada episodio nuevo de esta serie.</string>
     <string name="livetv_delete">Borrar</string>
@@ -316,6 +313,8 @@
     <string name="action_mark_unwatched">Marcar como no visto</string>
     <string name="marked_watched">Marcado como visto</string>
     <string name="marked_unwatched">Marcado como no visto</string>
+    <string name="season_mark_watched">Marcar temporada como vista</string>
+    <string name="season_mark_unwatched">Marcar temporada como no vista</string>
     <string name="season_number">Temporada %1$d</string>
     <string name="season_specials">Especiales</string>
     <plurals name="count_seasons">
@@ -681,7 +680,7 @@
     <string name="music_choose_playlist">Añadir a una lista</string>
     <string name="music_new_playlist">Nueva lista</string>
     <string name="music_no_playlists">Aún no hay listas</string>
-    <string name="music_menu_body">Elige qué hacer con ello.</string>
+    <string name="options_body">Elige qué hacer con ello.</string>
     <string name="music_choose_playlist_body">Las canciones se añaden al final de la lista que elijas.</string>
     <string name="music_new_playlist_body">Ponle un nombre a la nueva lista. Las canciones entran en ella al momento.</string>
     <string name="music_playlist_name">Nombre</string>

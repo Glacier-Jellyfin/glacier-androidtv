@@ -68,6 +68,8 @@ data class DetailState(
     val episodes: List<MediaItem> = emptyList(),
     /** Episode to focus in the episode row: the first unwatched one. */
     val focusEpisode: Int = 0,
+    /** The season whose options sheet is open (holding OK on its chip). */
+    val seasonSheet: Season? = null,
     val similar: List<MediaItem> = emptyList(),
     /** Movies of a collection, in release order. */
     val collectionItems: List<MediaItem> = emptyList(),
@@ -652,6 +654,38 @@ class DetailViewModel @Inject constructor(
         _state.update { it.copy(seasons = seasons ?: it.seasons, nextEpisode = next) }
         val listed = _state.value.season ?: return
         selectSeason(seasons?.firstOrNull { it.id == listed.id } ?: listed, seriesId)
+    }
+
+    fun openSeasonOptions(season: Season) = _state.update { it.copy(seasonSheet = season) }
+
+    fun closeSeasonOptions() = _state.update { it.copy(seasonSheet = null) }
+
+    /** Marks one season of the show watched or unwatched (the server marks its episodes). */
+    fun toggleSeasonPlayed(season: Season) {
+        val show = _state.value.item ?: return
+        if (show.kind != ItemKind.Series) return
+        val before = _state.value
+        // The sheet's copy of the season may be older than the page's.
+        val played = !(before.seasons.firstOrNull { it.id == season.id } ?: season).played
+        _state.update { it.copy(seasonSheet = null) }
+        markSeasonsAndEpisodes(played, season.id)
+        // A show with a season left to watch is not seen.
+        if (!played) updateItem { it.copy(played = false) }
+        viewModelScope.launch {
+            runSuspendCatching { repository.setPlayed(season.id, played) }
+                .onSuccess {
+                    toast(if (played) R.string.marked_watched else R.string.marked_unwatched)
+                    // The show's own seen state follows from its seasons.
+                    runSuspendCatching { repository.details(show.id).item.played }
+                        .onSuccess { shown -> updateItem { it.copy(played = shown) } }
+                    reloadShowState(show.id)
+                }
+                .onFailure {
+                    Log.w(TAG, "Marking the season failed", it)
+                    updateItem { show }
+                    restoreSeasonsAndEpisodes(before)
+                }
+        }
     }
 
     /**

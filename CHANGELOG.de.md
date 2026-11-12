@@ -7,6 +7,9 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ## [Unreleased]
 
+### Neu
+- Eine einzelne Staffel lässt sich als gesehen oder ungesehen markieren (OK auf der Staffel gedrückt halten), gesehene Staffeln zeigen einen Haken
+
 ### Verbessert
 - Die App lässt sich auf Geräten, die es unterstützen, auf externen Speicher verschieben
 - Die Wiedergabe misst die Verbindung und passt einen Transcode daran an, damit es bei einer langsameren Leitung nicht ruckelt

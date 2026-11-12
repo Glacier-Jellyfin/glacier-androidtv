@@ -28,9 +28,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -58,6 +60,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -70,6 +73,7 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
+import io.github.glacier_jellyfin.androidtv.core.data.media.Season
 import io.github.glacier_jellyfin.androidtv.core.data.media.versionLabels
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
@@ -78,6 +82,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
+import io.github.glacier_jellyfin.androidtv.core.designsystem.ignoreHeldOk
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 import io.github.glacier_jellyfin.androidtv.ui.seasonLabel
@@ -95,6 +100,7 @@ import io.github.glacier_jellyfin.androidtv.ui.FactsRow
 import io.github.glacier_jellyfin.androidtv.ui.FilterChip
 import io.github.glacier_jellyfin.androidtv.ui.GridCard
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
+import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 import io.github.glacier_jellyfin.androidtv.ui.PinDialog
@@ -174,6 +180,15 @@ fun DetailScreen(
         }
         val panel = state.trackPanel
         if (panel != null && details != null) TrackSheet(panel, state, details, viewModel)
+        val seasonSheet = state.seasonSheet
+        if (seasonSheet != null && details != null) {
+            SeasonSheet(
+                season = state.seasons.firstOrNull { it.id == seasonSheet.id } ?: seasonSheet,
+                showTitle = details.item.title,
+                onToggle = { viewModel.toggleSeasonPlayed(seasonSheet) },
+                onDismiss = viewModel::closeSeasonOptions,
+            )
+        }
         // A show and its episode pages share one theme song, so moving between them keeps it going.
         val themeArea = details?.let { d -> ((if (d.item.kind == ItemKind.Episode) d.seriesId else null) ?: d.item.id).toString() }
             ?: viewModel.routeThemeArea
@@ -614,7 +629,8 @@ private fun VersionSheet(state: DetailState, details: ItemDetails, viewModel: De
 @OptIn(ExperimentalFoundationApi::class) // LocalBringIntoViewSpec
 @Composable
 private fun SeasonChips(state: DetailState, viewModel: DetailViewModel) {
-    val active = remember { FocusRequester() }
+    // One requester per chip: Right/Left entering the row lands on the selected one, and closing the options sheet on the one it was for.
+    val chips = remember { mutableMapOf<UUID, FocusRequester>() }
     val scroll = rememberScrollState()
     var activeBounds by remember { mutableStateOf<IntRange?>(null) }
     val edge = with(LocalDensity.current) { PageEdge.dp.roundToPx() }
@@ -626,35 +642,109 @@ private fun SeasonChips(state: DetailState, viewModel: DetailViewModel) {
             scroll.scrollTo((bounds.first + bounds.last) / 2 - viewport / 2)
         }
     }
+    val sheetId = state.seasonSheet?.id
+    var sheetWas by remember { mutableStateOf<UUID?>(null) }
+    var restoreTarget by remember { mutableStateOf<UUID?>(null) }
+    LaunchedEffect(sheetId) {
+        if (sheetId != null) {
+            sheetWas = sheetId
+        } else {
+            // Back from the sheet: the chip it was opened on takes the focus again.
+            val chip = sheetWas?.let { chips[it] } ?: return@LaunchedEffect
+            // Entering the row redirects to the selected chip (onEnter) unless a restore target is pending.
+            restoreTarget = sheetWas
+            sheetWas = null
+            withFrameNanos { }
+            runCatching { chip.requestFocus() }
+            restoreTarget = null
+        }
+    }
     CompositionLocalProvider(LocalBringIntoViewSpec provides rememberEdgeSpec(PageEdge)) {
         Row(
             Modifier
                 .padding(top = 54.dp, bottom = 20.dp)
-                .focusProperties { onEnter = { active.requestFocus() } }
+                .focusProperties { onEnter = { (restoreTarget ?: state.season?.id)?.let { id -> chips[id]?.requestFocus() } } }
                 .focusGroup()
                 .horizontalScroll(scroll)
                 .padding(horizontal = PageEdge.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             state.seasons.forEach { season ->
-                val selected = season.id == state.season?.id
-                FilterChip(
-                    label = season.number?.let { seasonLabel(it) } ?: season.name,
-                    active = selected,
-                    onClick = { viewModel.selectSeason(season) },
-                    height = 50,
-                    fontSize = 18,
-                    modifier = if (selected) {
-                        Modifier
-                            .focusRequester(active)
-                            // Relative to the row's padded content; add the padding for scroll offsets.
-                            .onPlaced { activeBounds = (it.positionInParent().x.toInt() + edge).let { x -> x..x + it.size.width } }
-                    } else {
-                        Modifier
-                    },
-                )
+                key(season.id) {
+                    val selected = season.id == state.season?.id
+                    val requester = remember { FocusRequester() }
+                    DisposableEffect(season.id, requester) {
+                        chips[season.id] = requester
+                        onDispose { chips.remove(season.id) }
+                    }
+                    FilterChip(
+                        label = season.number?.let { seasonLabel(it) } ?: season.name,
+                        active = selected,
+                        onClick = { viewModel.selectSeason(season) },
+                        height = 50,
+                        fontSize = 18,
+                        onLongClick = { viewModel.openSeasonOptions(season) },
+                        checked = season.played,
+                        modifier = Modifier
+                            .focusRequester(requester)
+                            .then(
+                                if (selected) {
+                                    // Relative to the row's padded content; add the padding for scroll offsets.
+                                    Modifier.onPlaced { activeBounds = (it.positionInParent().x.toInt() + edge).let { x -> x..x + it.size.width } }
+                                } else {
+                                    Modifier
+                                },
+                            ),
+                    )
+                }
             }
         }
+    }
+}
+
+/** A season's options (holding OK on its chip): for now marking it watched or unwatched. */
+@Composable
+private fun SeasonSheet(season: Season, showTitle: String, onToggle: () -> Unit, onDismiss: () -> Unit) {
+    val first = remember(season.id) { FocusRequester() }
+    ModalSheet(onDismiss = onDismiss, width = 680) {
+        Column(
+            // Focus stays in the sheet. Holding OK may have opened it: the held key must not pick the option.
+            Modifier
+                .ignoreHeldOk()
+                .focusProperties { onExit = { cancelFocusChange() } }
+                .focusGroup(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(28.dp),
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    season.number?.let { seasonLabel(it) } ?: season.name,
+                    style = GlacierText.display(30),
+                    color = GlacierColors.Ice,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                )
+                Text(showTitle, style = GlacierText.body(19), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Text(
+                stringResource(R.string.options_body),
+                style = GlacierText.body(19),
+                color = GlacierColors.Mist,
+                textAlign = TextAlign.Center,
+            )
+            PillButton(
+                stringResource(if (season.played) R.string.season_mark_unwatched else R.string.season_mark_watched),
+                onClick = onToggle,
+                icon = GlacierIcons.Seen,
+                fillWidth = true,
+                modifier = Modifier.focusRequester(first),
+            )
+        }
+    }
+    LaunchedEffect(first) {
+        withFrameNanos { }
+        runCatching { first.requestFocus() }
     }
 }
 

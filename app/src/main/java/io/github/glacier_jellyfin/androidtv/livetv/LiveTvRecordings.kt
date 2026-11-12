@@ -453,7 +453,7 @@ private fun ProgramChoices(
     Header(
         title = program.title,
         subtitle = listOfNotNull(channel.name, dayAndTime(program.startMs, program.endMs)).joinToString(" · "),
-        body = stringResource(if (airing) R.string.livetv_program_body_airing else R.string.livetv_program_body),
+        body = stringResource(R.string.options_body),
     )
     Options {
         if (watch != null) Option(R.string.livetv_watch, GlacierIcons.Play, first, watch)
@@ -519,7 +519,7 @@ fun LiveTvSheetHost(sheet: LiveTvSheet, nowMs: Long, channels: List<LiveChannel>
                 Header(
                     title = recording.title,
                     subtitle = listOfNotNull(recording.channelName, dayAndTime(recording.startMs, recording.endMs)).joinToString(" · "),
-                    body = stringResource(R.string.livetv_recording_body),
+                    body = stringResource(R.string.options_body),
                 )
                 Options {
                     Option(R.string.livetv_watch, GlacierIcons.Play, first) { viewModel.playRecording(recording) }

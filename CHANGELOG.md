@@ -22,6 +22,9 @@ collapsed block, and the app shows it when its language is German or Spanish.
 
 ## [Unreleased]
 
+### New
+- A single season can be marked watched or unwatched (hold OK on the season), and watched seasons show a check
+
 ### Improved
 - The app can be moved to external storage on devices that support it
 - Playback measures the connection and fits a transcode to it, so it does not stutter on a slower link

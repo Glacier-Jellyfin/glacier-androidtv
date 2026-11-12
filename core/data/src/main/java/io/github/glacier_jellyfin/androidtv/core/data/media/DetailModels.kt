@@ -16,7 +16,10 @@ data class Season(
     val number: Int?,
     val name: String,
     val unwatchedCount: Int?,
-)
+) {
+    /** Seen when the server counts nothing left to watch. */
+    val played: Boolean get() = unwatchedCount == 0
+}
 
 /** A title with everything its detail page shows. */
 data class ItemDetails(

@@ -80,7 +80,7 @@ private fun Header(sheet: MusicSheet) {
         subtitle?.let { Text(it, style = GlacierText.body(19), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         // Every step says what it is for, so the sheet is never just a title over buttons.
         val body = when (sheet) {
-            is MusicSheet.Menu -> R.string.music_menu_body
+            is MusicSheet.Menu -> R.string.options_body
             is MusicSheet.Playlists -> R.string.music_choose_playlist_body
             is MusicSheet.NewPlaylist -> R.string.music_new_playlist_body
         }
