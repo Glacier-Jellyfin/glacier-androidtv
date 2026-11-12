@@ -12,12 +12,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -131,6 +133,7 @@ fun InfoPanel(
             stringResource(R.string.player_info_server),
         ),
         onDismiss = onDismiss,
+        growsWithContent = { it == TAB_TECHNICAL },
     ) { tab ->
         when (tab) {
             TAB_TITLE -> TitleTab(state, details, progress)
@@ -143,9 +146,18 @@ fun InfoPanel(
 /**
  * The info panel's frame, also the music player's: a dimmed screen, a card with
  * [tabs] on top and the chosen tab's [content]. Left/Right switch tabs, OK or Back closes.
+ *
+ * The card sits on the bottom of the screen area (where it sat when centred) with a standard height. A tab for which
+ * [growsWithContent] is true wraps its content instead: it keeps the standard height as a minimum and grows upward
+ * (the bottom edge stays) when its content needs more. The other tabs keep the standard height.
  */
 @Composable
-internal fun InfoPanelFrame(tabs: List<String>, onDismiss: () -> Unit, content: @Composable (tab: Int) -> Unit) {
+internal fun InfoPanelFrame(
+    tabs: List<String>,
+    onDismiss: () -> Unit,
+    growsWithContent: (tab: Int) -> Boolean = { false },
+    content: @Composable (tab: Int) -> Unit,
+) {
     val direction = LocalLayoutDirection.current
     BackHandler(onBack = onDismiss)
     val focus = remember { FocusRequester() }
@@ -158,13 +170,15 @@ internal fun InfoPanelFrame(tabs: List<String>, onDismiss: () -> Unit, content: 
             .fillMaxSize()
             .background(Color(0xA805090F))
             .focusProperties { onExit = { cancelFocusChange() } }
-            .focusGroup(),
-        contentAlignment = Alignment.Center,
+            .focusGroup()
+            .padding(top = 60.dp, bottom = 150.dp),
+        contentAlignment = Alignment.BottomCenter,
     ) {
+        val grows = growsWithContent(tab)
         Column(
             Modifier
                 .width(1440.dp)
-                .height(780.dp)
+                .then(if (grows) Modifier.heightIn(min = 780.dp) else Modifier.height(780.dp))
                 .clip(shape)
                 .background(GlacierColors.Deep)
                 .border(1.dp, GlacierColors.GlassBorder2, shape)
@@ -189,7 +203,7 @@ internal fun InfoPanelFrame(tabs: List<String>, onDismiss: () -> Unit, content: 
             verticalArrangement = Arrangement.spacedBy(30.dp),
         ) {
             GlacierTabs(labels = tabs, selected = tab, modifier = Modifier.fillMaxWidth())
-            Box(Modifier.fillMaxWidth().weight(1f)) { content(tab) }
+            Box(Modifier.fillMaxWidth().then(if (grows) Modifier else Modifier.weight(1f))) { content(tab) }
         }
     }
     LaunchedEffect(Unit) {
@@ -332,8 +346,9 @@ internal fun MiniCard(
 private fun TechnicalTab(state: PlayerUiState, stats: StreamStats?) {
     val context = LocalContext.current
     val display = remember(context) { displayInfo(context) }
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+    // Wraps its content (see InfoPanelFrame): the cards are as tall as their rows need, the two of a row alike.
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             VideoCard(state.videoDecoder, stats, Modifier.weight(1f).fillMaxHeight())
             AudioCard(
                 language = state.audioTracks.firstOrNull { it.index == state.audioIndex }?.language,
@@ -343,7 +358,7 @@ private fun TechnicalTab(state: PlayerUiState, stats: StreamStats?) {
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             )
         }
-        Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             SubtitleCard(state, Modifier.weight(1f).fillMaxHeight())
             DisplayCard(state, stats, display, Modifier.weight(1f).fillMaxHeight())
         }
@@ -459,12 +474,13 @@ private val BufferLabelWidth = 120.dp
 
 /**
  * How much of the stream waits on this device, and how fast it comes in. While a hand over to another stream is pending
- * ([switch]) the bar shows both streams' share and a line tells of the change.
+ * ([switch]) the bar shows both streams' share and lines tell of the change; without one the row stays compact.
  */
 @Composable
 internal fun BufferRow(stats: StreamStats?, switch: StreamSwitch? = null) {
     val handOver = stats?.handOver.takeIf { switch != null }
-    val labelModifier = if (switch != null) Modifier.width(BufferLabelWidth) else Modifier
+    val slots = switch != null
+    val labelModifier = if (slots) Modifier.width(BufferLabelWidth) else Modifier
     val maxSeconds = stats?.maxBufferSeconds ?: DEFAULT_MAX_BUFFER_SECONDS
     val accent = LocalAccent.current
     InfoSurface(Modifier.fillMaxWidth(), padding = 20) {
@@ -484,9 +500,6 @@ internal fun BufferRow(stats: StreamStats?, switch: StreamSwitch? = null) {
                             accent.main.copy(alpha = 0.4f),
                             thickness = 8,
                         )
-                        val until = stringResource(R.string.player_info_buffer_until, switch.from.labelText(), formatTime(switch.atMs + handOver.postponedMs))
-                        val loaded = stringResource(R.string.player_info_buffer_loaded, switch.to.labelText(), handOver.nextLoadedMs / 1000)
-                        Text("$until │ $loaded", style = GlacierText.body(16), color = OsdSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     } else {
                         InfoBar(seconds.toFloat() / maxSeconds, accent.main, thickness = 8)
                     }
@@ -502,11 +515,21 @@ internal fun BufferRow(stats: StreamStats?, switch: StreamSwitch? = null) {
                 }
             }
             if (switch != null) {
+                if (handOver != null) {
+                    val until = stringResource(R.string.player_info_buffer_until, switch.from.labelText(), formatTime(switch.atMs + handOver.postponedMs))
+                    val loaded = stringResource(R.string.player_info_buffer_loaded, switch.to.labelText(), handOver.nextLoadedMs / 1000)
+                    // Under the bar, in the column of the bar.
+                    Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+                        Spacer(labelModifier)
+                        Text("$until │ $loaded", style = GlacierText.body(16), color = OsdSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    }
+                }
                 val from = switch.from.labelText()
                 val to = switch.to.labelText()
                 Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
-                    SectionLabel(stringResource(R.string.player_info_switch), labelModifier)
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    // The label sits on the baseline of the headline.
+                    SectionLabel(stringResource(R.string.player_info_switch), labelModifier.alignByBaseline())
+                    Column(Modifier.alignByBaseline(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         val headline = if (handOver != null && handOver.postponedMs > 0) {
                             stringResource(R.string.player_info_switch_waiting, from, to)
                         } else {
