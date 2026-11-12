@@ -16,7 +16,7 @@ only in English.
 - La transcodificación se genera para el tamaño de la pantalla
 - Un servidor lento ya no termina la reproducción con un error
 - Nuevo diseño del diálogo de errores de reproducción
-- Si la conexión es demasiado lenta para un archivo, solo se convierte el sonido y la imagen queda intacta (ajuste)
+- Con una conexión demasiado lenta para un archivo, el servidor convierte solo el sonido y mantiene la imagen donde cabe
 - El cambio entre el archivo y una transmisión convertida ya no interrumpe la imagen
 
 ### Correcciones

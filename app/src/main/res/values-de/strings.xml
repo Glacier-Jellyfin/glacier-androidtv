@@ -804,10 +804,6 @@
     <string name="settings_bitrate">Maximale Bitrate</string>
     <string name="settings_bitrate_sub">In Mbit/s · Auto misst die Verbindung und transkodiert nur, wenn die Datei dafür zu groß ist</string>
     <string name="settings_bitrate_low">1,5</string>
-    <string name="settings_slow_link">Bei zu langsamer Leitung</string>
-    <string name="settings_slow_link_sub">Bild behalten wandelt nur den Ton um und lässt das Bild unverändert, aber ohne verlustfreien Ton und Atmos. Ton behalten rechnet stattdessen das Bild um</string>
-    <string name="settings_slow_link_picture">Bild behalten</string>
-    <string name="settings_slow_link_sound">Ton behalten</string>
     <string name="settings_segment_none">Keine Aktion</string>
     <string name="settings_segment_ask">Nachfragen</string>
     <string name="settings_segment_skip">Überspringen</string>

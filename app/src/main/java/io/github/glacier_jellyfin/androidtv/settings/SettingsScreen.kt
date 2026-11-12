@@ -80,7 +80,6 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeRow
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeRowChoice
 import io.github.glacier_jellyfin.androidtv.core.data.settings.Language
 import io.github.glacier_jellyfin.androidtv.core.data.settings.MaxBitrate
-import io.github.glacier_jellyfin.androidtv.core.data.settings.SlowLink
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SeekStep
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SkipButtonHide
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightCount
@@ -1021,14 +1020,6 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
                     playback.maxBitrate.ordinal,
                     onSelect = { i -> viewModel.updatePlayback { it.copy(maxBitrate = MaxBitrate.entries[i]) } },
                 ),
-                // Only "Auto" measures the link and decides by itself.
-                SettingRow.Choice(
-                    stringResource(R.string.settings_slow_link),
-                    stringResource(R.string.settings_slow_link_sub),
-                    listOf(stringResource(R.string.settings_slow_link_picture), stringResource(R.string.settings_slow_link_sound)),
-                    playback.slowLink.ordinal,
-                    onSelect = { i -> viewModel.updatePlayback { it.copy(slowLink = SlowLink.entries[i]) } },
-                ).takeIf { playback.maxBitrate == MaxBitrate.Auto },
             ),
         ),
         SettingGroup(stringResource(R.string.settings_group_segments), segments),

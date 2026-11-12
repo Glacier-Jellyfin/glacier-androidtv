@@ -30,7 +30,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - A transcode is made for the size of the display
 - A slow server no longer ends playback with an error
 - Redesigned playback error dialog
-- When the connection is too slow for a file, only the sound is converted and the picture stays untouched (setting)
+- On a link too slow for a file, the server converts only the sound and keeps the picture where it fits
 - Switching between the file and a converted stream no longer interrupts the picture
 
 ### Fixed

@@ -15,7 +15,6 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.HdAudioOutput
 import io.github.glacier_jellyfin.androidtv.core.data.settings.PlaybackSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
-import io.github.glacier_jellyfin.androidtv.core.data.settings.SlowLink
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleMode
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.DeviceCapabilities
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.VideoCodecSupport
@@ -133,7 +132,7 @@ data class PlaybackSource(
     val tierDemand: Map<Int, Int> = emptyMap(),
     /**
      * The connection is too slow for the file, so only the audio is converted and the server copies the picture (see
-     * [SlowLink.KeepPicture]). Such a stream has no ladder; [streamBitrate] is what it asks of the link.
+     * [keepPicture]). Such a stream has no ladder; [streamBitrate] is what it asks of the link.
      */
     val videoCopied: Boolean = false,
 ) {
@@ -682,7 +681,7 @@ class PlaybackRepository @Inject constructor(
                     val budget = if (verifying) measuring?.await() ?: currentBudget() else currentBudget() ?: measuring?.await()
                     if (budget != null && StreamBudget.exceeds(first.bitrate, budget)) {
                         Log.i(TAG, "The file takes ${first.bitrate!! / 1_000_000} Mbit/s, the link carries ${budget / 1_000_000}: asking for a stream that fits")
-                        if (playback.slowLink != SlowLink.KeepPicture || !keepPicture(first, first.bitrate!!, budget)) askAgain(budget)
+                        if (!keepPicture(first, first.bitrate!!, budget)) askAgain(budget)
                     }
                 }
             }

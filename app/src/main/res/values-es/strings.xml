@@ -827,10 +827,6 @@
     <string name="settings_bitrate">Tasa de bits máxima</string>
     <string name="settings_bitrate_sub">En Mbit/s · solo se aplica cuando el servidor tiene que transcodificar</string>
     <string name="settings_bitrate_low">1,5</string>
-    <string name="settings_slow_link">Con una conexión demasiado lenta</string>
-    <string name="settings_slow_link_sub">Mantener imagen convierte solo el sonido y deja la imagen intacta, pero sin sonido sin pérdida ni Atmos. Mantener sonido convierte la imagen</string>
-    <string name="settings_slow_link_picture">Mantener imagen</string>
-    <string name="settings_slow_link_sound">Mantener sonido</string>
     <string name="settings_segment_none">Nada</string>
     <string name="settings_segment_ask">Preguntar</string>
     <string name="settings_segment_skip">Saltar</string>

@@ -810,10 +810,6 @@
     <string name="settings_bitrate">Maximum bitrate</string>
     <string name="settings_bitrate_sub">In Mbit/s · Auto measures the connection and transcodes only when the file is too big for it</string>
     <string name="settings_bitrate_low">1.5</string>
-    <string name="settings_slow_link">When the link is too slow</string>
-    <string name="settings_slow_link_sub">Keep picture converts only the sound and sends the picture untouched, but no lossless sound or Atmos. Keep sound converts the picture instead</string>
-    <string name="settings_slow_link_picture">Keep picture</string>
-    <string name="settings_slow_link_sound">Keep sound</string>
     <string name="settings_segment_none">No action</string>
     <string name="settings_segment_ask">Ask</string>
     <string name="settings_segment_skip">Skip</string>
