@@ -135,6 +135,13 @@ data class PlaybackSource(
      * [keepPicture]). Such a stream has no ladder; [streamBitrate] is what it asks of the link.
      */
     val videoCopied: Boolean = false,
+    /**
+     * Asked without a limit, the server would play the title as the file (direct play or direct stream); the stream is only a
+     * transcode because the link was too slow for the file (a ladder from the budget, or [videoCopied]). Such a title can go
+     * back to the file when the link recovers. False for a title that needs a transcode anyway (codec, container, burned-in
+     * subtitle), where a way back would only end in another transcode, and for the file itself.
+     */
+    val fileFitsDevice: Boolean = false,
 ) {
     /** A Live TV channel: no end, no resume point. */
     val live: Boolean get() = liveStreamId != null
@@ -616,6 +623,8 @@ class PlaybackRepository @Inject constructor(
         var limit: Int? = null
         // Only the audio is converted, the picture is copied: what that stream asks of the link, null otherwise.
         var copyDemand: Int? = null
+        // The unlimited answer allowed the file, and only the link made this a transcode (see PlaybackSource.fileFitsDevice).
+        var fileFits = false
         // Whatever goes wrong from here on, the live stream an answer opened is given back.
         var handedOn = false
         try {
@@ -681,6 +690,12 @@ class PlaybackRepository @Inject constructor(
                     val budget = if (verifying) measuring?.await() ?: currentBudget() else currentBudget() ?: measuring?.await()
                     if (budget != null && StreamBudget.exceeds(first.bitrate, budget)) {
                         Log.i(TAG, "The file takes ${first.bitrate!! / 1_000_000} Mbit/s, the link carries ${budget / 1_000_000}: asking for a stream that fits")
+                        // Judged on the unlimited answer, before it is replaced. A burned-in subtitle needs a new picture whatever the link.
+                        val subtitle = (subtitleIndex ?: first.defaultSubtitleStreamIndex)?.takeIf { it >= 0 }
+                        val burnedIn = first.mediaStreams.orEmpty().any {
+                            it.type == MediaStreamType.SUBTITLE && it.index == subtitle && it.deliveryMethod == SubtitleDeliveryMethod.ENCODE
+                        }
+                        fileFits = (first.supportsDirectPlay || first.supportsDirectStream) && !burnedIn
                         if (!keepPicture(first, first.bitrate!!, budget)) askAgain(budget)
                     }
                 }
@@ -827,6 +842,8 @@ class PlaybackRepository @Inject constructor(
                     else -> listOfNotNull(source.bitrate, limit.takeIf { method != PlaybackMethod.DirectPlay }).minOrNull()
                 },
                 videoCopied = copyDemand != null,
+                // Only a stream the budget reduced: the file itself (direct play) has nothing to go back to.
+                fileFitsDevice = fileFits && method != PlaybackMethod.DirectPlay,
                 method = method,
                 headers = mapOf("Authorization" to session.authorization()),
                 // A stream carries the audio the server put in it, whatever was asked for.

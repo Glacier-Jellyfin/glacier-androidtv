@@ -813,7 +813,7 @@ class PlayerViewModel @Inject constructor(
                     val player = _state.value.player ?: return@launch
                     if (settings.settings.value.playback.maxBitrate != MaxBitrate.Auto) return@launch
                     if (!player.isPlaying) continue
-                    tiers?.let { checkLink(it) }
+                    tiers?.let { checkLink(it, current) }
                 }
             }
             return
@@ -1017,20 +1017,38 @@ class PlayerViewModel @Inject constructor(
     }
 
     /**
-     * Measures the link and moves the tier down when the link does not carry it, or up when the buffer is full and the link has
-     * room: with up to two minutes loaded, the run-up of the new transcode does not show.
+     * Measures the link once. A title that plays as a ladder only because the link was too slow for the file goes back to the
+     * file when the link carries it again (the tier is not raised then: the hand over replaces the ladder). Otherwise the tier
+     * moves down when the link does not carry it, or up when the buffer is full and the link has room: with up to two minutes
+     * loaded, the run-up of the new transcode does not show.
      */
-    private suspend fun checkLink(controller: TierController) {
+    private suspend fun checkLink(controller: TierController, current: PlaybackSource? = null) {
         val budget = playback.probeBudget() ?: return
         Log.i(TAG, "The link carries ${budget / 1_000_000} Mbit/s")
         // The measurement took a while: the stream may have been replaced meanwhile.
         if (tiers !== controller) return
         val now = SystemClock.elapsedRealtime()
+        val player = _state.value.player ?: return
+        val ahead = player.bufferedPosition - player.currentPosition
+        // Only the periodic check goes back to the file ([current] given); a check after a stall or a slow load never does.
+        val wanted = current?.file?.bitrate
+        if (current != null && wanted != null && HandoverPlanner.backToFile(
+                current.fileFitsDevice, wanted, budget, ahead, handoverActive, returns, MAX_RETURNS,
+            )
+        ) {
+            val plan = HandoverPlanner.back(ahead, currentPositionMs(), titleDuration())
+            if (plan is HandoverPlan.At) {
+                returns++
+                Log.i(TAG, "The link carries ${budget / 1_000_000} Mbit/s again, back to the file's ${wanted / 1_000_000}")
+                beginHandover(plan, trigger = null, lowering = false)
+                return
+            }
+            Log.i(TAG, "Back to the file would have to wait: ${ahead / 1000} s buffered")
+        }
         controller.limitTo(budget, now)?.let {
             pinTier(it)
             return
         }
-        val player = _state.value.player ?: return
         controller.raiseTo(budget, player.totalBufferedDuration, now)?.let { pinTier(it) }
     }
 

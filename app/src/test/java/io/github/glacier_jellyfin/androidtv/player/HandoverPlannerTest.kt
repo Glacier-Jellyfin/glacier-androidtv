@@ -70,6 +70,42 @@ class HandoverPlannerTest {
         assertEquals(HandoverPlan.Wait, HandoverPlanner.back(60_000, 7_180_000, 7_200_000))
     }
 
+    private fun backToFile(
+        fileFits: Boolean = true,
+        fileBitrate: Int? = 37_000_000,
+        budget: Int = 120_000_000,
+        aheadMs: Long = 60_000,
+        handoverActive: Boolean = false,
+        returns: Int = 0,
+    ) = HandoverPlanner.backToFile(fileFits, fileBitrate, budget, aheadMs, handoverActive, returns, maxReturns = 2)
+
+    @Test
+    fun `a ladder goes back to the file when the link carries it`() {
+        assertTrue(backToFile())
+    }
+
+    @Test
+    fun `a title that needs a transcode anyway never goes back`() {
+        assertFalse(backToFile(fileFits = false))
+        assertFalse(backToFile(fileBitrate = null))
+    }
+
+    @Test
+    fun `a link without room to spare keeps the ladder`() {
+        // The file needs 37 Mbit/s; the return asks for 15 % more.
+        assertFalse(backToFile(budget = 42_000_000))
+        assertTrue(backToFile(budget = 43_000_000))
+    }
+
+    @Test
+    fun `a ladder waits for the buffer, a running hand over and the returns left`() {
+        assertFalse(backToFile(aheadMs = 29_999))
+        assertTrue(backToFile(aheadMs = 30_000))
+        assertFalse(backToFile(handoverActive = true))
+        assertTrue(backToFile(returns = 1))
+        assertFalse(backToFile(returns = 2))
+    }
+
     @Test
     fun `an opened stream must leave enough of the lead`() {
         assertTrue(HandoverPlanner.stillWorks(lowering = true, atMs = 150_000, positionMs = 147_000))

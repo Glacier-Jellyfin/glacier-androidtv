@@ -1,5 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.player
 
+import io.github.glacier_jellyfin.androidtv.core.data.playback.StreamBudget
+
 /** What set off a step to another stream. */
 internal enum class HandoverTrigger {
     /** A measurement says the link does not carry the stream. */
@@ -78,6 +80,23 @@ internal object HandoverPlanner {
         if (nearEnd(positionMs + lead, durationMs)) return HandoverPlan.Wait
         return HandoverPlan.At(positionMs + lead, lead)
     }
+
+    /**
+     * Whether a ladder, moved down for the link, goes back to the file rather than up a tier. Only a title that plays as the
+     * file without a limit ([fileFits]) has a file to go back to, and only when the link carries [fileBitrate] with room to
+     * spare ([budget]), the buffer is worth the hand over, no other hand over runs and the returns are not used up. A ladder
+     * that merely raised its tier would stay a transcode however fast the link is.
+     */
+    fun backToFile(
+        fileFits: Boolean,
+        fileBitrate: Int?,
+        budget: Int,
+        aheadMs: Long,
+        handoverActive: Boolean,
+        returns: Int,
+        maxReturns: Int,
+    ): Boolean = fileFits && fileBitrate != null && !handoverActive && returns < maxReturns &&
+        aheadMs >= RETURN_MIN_BUFFER_MS && StreamBudget.returnsTo(fileBitrate, budget)
 
     /** True when the new stream is open and enough of the lead is left for it to start before the hand over. */
     fun stillWorks(lowering: Boolean, atMs: Long, positionMs: Long): Boolean =
