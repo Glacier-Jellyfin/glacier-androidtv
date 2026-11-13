@@ -5,7 +5,7 @@ import java.security.MessageDigest
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** The bursts must match ffmpeg's spdif muxer byte for byte (scripts/make-playback-samples.py). */
+/** The bursts must match ffmpeg's spdif muxer byte for byte (scripts/media/make-playback-samples.py). */
 class Iec61937PackerTest {
 
     @Test

@@ -6,12 +6,12 @@
 # which the Amazon upload reads as well. Fails if one is missing or too long,
 # so the release workflow stops before anything is published.
 #
-# Usage: scripts/store-notes.sh 1.4.0 <out-dir>
+# Usage: scripts/release/store-notes.sh 1.4.0 <out-dir>
 set -euo pipefail
 
 version="${1:?usage: store-notes.sh <version> <out-dir>}"
 out="${2:?usage: store-notes.sh <version> <out-dir>}"
-root="$(dirname "$0")/.."
+root="$(dirname "$0")/../.."
 
 if [[ ! "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
   echo "Only stable versions go to the stores, not '$version'" >&2

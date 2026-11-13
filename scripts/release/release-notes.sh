@@ -6,11 +6,11 @@
 # section. The translations are HTML so that app versions before 0.6.3, which
 # only read the Markdown, leave them out.
 #
-# Usage: scripts/release-notes.sh 1.4.0-beta.2
+# Usage: scripts/release/release-notes.sh 1.4.0-beta.2
 set -euo pipefail
 
 version="${1:?usage: release-notes.sh <version>}"
-root="$(dirname "$0")/.."
+root="$(dirname "$0")/../.."
 
 section() {
   [ -f "$1" ] || return 0

@@ -25,7 +25,7 @@ object ReleaseNotes {
 
     /**
      * The notes of a release in [language]: release notes carry a translation
-     * as `<details lang="de">` with `<h3>` and `<li>` lines (scripts/release-notes.sh),
+     * as `<details lang="de">` with `<h3>` and `<li>` lines (scripts/release/release-notes.sh),
      * which turns back into Markdown here. Without one, the English notes, never both.
      */
     fun localized(body: String, language: String): String {

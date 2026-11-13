@@ -20,7 +20,7 @@ captures/
 .externalNativeBuild/
 .cxx/
 
-# FFmpeg build output (scripts/build-ffmpeg.sh)
+# FFmpeg build output (scripts/ffmpeg/build-ffmpeg.sh)
 /core/ffmpeg/src/main/jni/ffmpeg/
 
 # Signing material never enters the repository

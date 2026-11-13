@@ -7,14 +7,14 @@
 # yet and removes screenshots that no longer exist here. Builds and release notes are uploaded separately, so this
 # runs after the bundle of <version> is in <track>. See docs/RELEASING.md.
 #
-# Usage: scripts/play-listing.sh <version> <track>
+# Usage: scripts/release/play-listing.sh <version> <track>
 # Needs fastlane and PLAY_SERVICE_ACCOUNT_JSON.
 set -euo pipefail
 
 version="${1:?usage: play-listing.sh <version> <track>}"
 track="${2:?usage: play-listing.sh <version> <track>}"
 : "${PLAY_SERVICE_ACCOUNT_JSON:?}"
-root="$(dirname "$0")/.."
+root="$(dirname "$0")/../.."
 
 if [[ ! "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
   echo "Only stable versions go to the stores, not '$version'" >&2

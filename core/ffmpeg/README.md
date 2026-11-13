@@ -17,7 +17,7 @@ the package name must stay `androidx.media3.decoder.ffmpeg` so that
 
 ## Building FFmpeg
 
-`scripts/build-ffmpeg.sh` downloads FFmpeg, builds its audio decoders for
+`scripts/ffmpeg/build-ffmpeg.sh` downloads FFmpeg, builds its audio decoders for
 `armeabi-v7a`, `arm64-v8a`, `x86` and `x86_64`, and installs headers and static
 libraries into `src/main/jni/ffmpeg/` (not committed). Gradle then builds the
 JNI wrapper `libffmpegJNI.so` with the NDK and CMake versions set in
@@ -47,4 +47,4 @@ FFmpeg is built with LGPL components only (no `--enable-gpl` or
 `--enable-nonfree`) and linked statically into `libffmpegJNI.so`. FFmpeg is
 licensed under the LGPL 2.1 or later; see https://ffmpeg.org/legal.html. Its
 source for the version used is at https://ffmpeg.org/releases/ (version in
-`scripts/build-ffmpeg.sh`).
+`scripts/ffmpeg/build-ffmpeg.sh`).

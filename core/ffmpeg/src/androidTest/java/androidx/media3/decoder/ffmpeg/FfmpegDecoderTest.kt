@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Plays one second of each format TV platforms commonly lack through FFmpeg
- * alone. Needs FFmpeg built into the module (scripts/build-ffmpeg.sh, or the
+ * alone. Needs FFmpeg built into the module (scripts/ffmpeg/build-ffmpeg.sh, or the
  * ffmpeg-android artifact of a CI run) and a device or emulator:
  * `./gradlew :core:ffmpeg:connectedDebugAndroidTest`.
  */
@@ -93,7 +93,7 @@ class FfmpegDecoderTest {
 
     @Test
     fun libavcodecMatchesTheBuildScript() {
-        // FFmpeg 8.x ships libavcodec 62. Raise together with FFMPEG_VERSION in scripts/build-ffmpeg.sh.
+        // FFmpeg 8.x ships libavcodec 62. Raise together with FFMPEG_VERSION in scripts/ffmpeg/build-ffmpeg.sh.
         val version = FfmpegLibrary.getVersion().orEmpty()
         assertTrue("Built with $version", version.startsWith("Lavc62."))
     }

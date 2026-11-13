@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Renders the promo video for the stores and the website from recorded takes.
 
-Takes come from scripts/capture-website-media.py --takes DIR. Every frame is
+Takes come from scripts/media/capture-website-media.py --takes DIR. Every frame is
 composed here and piped to ffmpeg: the app runs in a rounded frame on Glacier's
 dark background, a camera eases into the part of the screen a caption talks
 about, captions slide in and out, scenes push into each other on the beat of
@@ -28,7 +28,7 @@ website/assets/promo/ (render the full film first). With --only store it
 writes the same pictures at 1080p as the Google Play screenshots into
 fastlane/metadata/android/<locale>/images/tvScreenshots/.
 
-Usage: scripts/make-promo-video.py --takes DIR [--lang en,de] [--only full,short,website,store]
+Usage: scripts/media/make-promo-video.py --takes DIR [--lang en,de] [--only full,short,website,store]
 """
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "build" / "promo"
 CACHE = OUT / "cache"
 FONT = ("https://raw.githubusercontent.com/google/fonts/5412d702cdfe09da921cb24f0824fe398cace6d2/ofl/googlesans/"

@@ -49,7 +49,7 @@ jobs:
         if: steps.tag.outputs.prerelease == 'false'
         env:
           VERSION: ${{ steps.tag.outputs.version }}
-        run: scripts/store-notes.sh "$VERSION" "$RUNNER_TEMP/whatsnew"
+        run: scripts/release/store-notes.sh "$VERSION" "$RUNNER_TEMP/whatsnew"
 
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:
@@ -68,7 +68,7 @@ jobs:
       - name: Extract release notes
         env:
           VERSION: ${{ steps.tag.outputs.version }}
-        run: scripts/release-notes.sh "$VERSION" > "$RUNNER_TEMP/notes.md"
+        run: scripts/release/release-notes.sh "$VERSION" > "$RUNNER_TEMP/notes.md"
 
       - name: Build signed APK
         env:
@@ -96,7 +96,7 @@ jobs:
           apk="app/build/outputs/apk/release/app-release.apk"
           apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
           "$apksigner" verify --print-certs "$apk"
-          scripts/check-ffmpeg-apk.sh "$apk"
+          scripts/ffmpeg/check-ffmpeg-apk.sh "$apk"
           # Same name in every release for releases/latest/download links and the updater
           mv "$apk" glacier-androidtv.apk
 
@@ -125,7 +125,7 @@ jobs:
           mv app/build/outputs/mapping/play/mapping.txt stores/play-mapping.txt
           apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
           "$apksigner" verify --print-certs "stores/glacier-$VERSION-amazon.apk"
-          scripts/check-ffmpeg-apk.sh "stores/glacier-$VERSION-amazon.apk"
+          scripts/ffmpeg/check-ffmpeg-apk.sh "stores/glacier-$VERSION-amazon.apk"
           jarsigner -verify "stores/glacier-$VERSION-play.aab" | grep -q "jar verified."
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

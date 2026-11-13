@@ -1,11 +1,11 @@
 """Writes the README's wordmark, buttons and Downloader note as SVGs in the website's look,
 light and dark in one file each.
 
-Usage: scripts/make-readme-badges.py (writes docs/badges/*.svg)
+Usage: scripts/media/make-readme-badges.py (writes docs/badges/*.svg)
 """
 from pathlib import Path
 
-OUT = Path(__file__).resolve().parent.parent / "docs" / "badges"
+OUT = Path(__file__).resolve().parents[2] / "docs" / "badges"
 FONT = "'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif"
 HAND = "'Segoe Print', 'Bradley Hand', 'Comic Sans MS', cursive"
 

@@ -4,7 +4,7 @@
 Drives a debug build on an Android TV emulator over adb, against the Glacier demo
 server (github.com/Glacier-Jellyfin/glacier-demo), and keeps each take as a
 1080p recording in the --takes folder, <take>[-de|-es].mp4 per language.
-scripts/make-promo-video.py turns them into the promo film and the website's
+scripts/media/make-promo-video.py turns them into the promo film and the website's
 media.
 
 The demo library is made up and licensed for advertising (see the demo repo's
@@ -24,7 +24,7 @@ Before running:
 Needs Python 3.9+, adb and ffmpeg on PATH (or ADB / FFMPEG set). The script sets
 resume points of the demo profile Nora before each take.
 
-Usage: scripts/capture-website-media.py --takes DIR [--serial emulator-5560] [--lang en,de]
+Usage: scripts/media/capture-website-media.py --takes DIR [--serial emulator-5560] [--lang en,de]
                                         [--only library,detail,...]
 """
 from __future__ import annotations
@@ -43,7 +43,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "io.github.glacier_jellyfin.androidtv.debug"
 ACTIVITY = "io.github.glacier_jellyfin.androidtv.MainActivity"
 # The server as this machine sees it; the emulator reaches it on 10.0.2.2.

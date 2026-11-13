@@ -18,7 +18,7 @@ To add a language:
   - add its link to the footer of every page,
   - mention the language in the privacy policy only if its storage text changes.
 
-Usage: scripts/website-languages.py [--check]   (--check changes nothing and fails if a page is out of date)
+Usage: scripts/website/website-languages.py [--check]   (--check changes nothing and fails if a page is out of date)
 """
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ import sys
 import unicodedata
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 SITE = ROOT / "website"
 
 # code, own name, folder (empty for the root), script, the word "Language" in that language

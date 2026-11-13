@@ -21,7 +21,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    // The JNI wrapper is built only when FFmpeg has been built (scripts/build-ffmpeg.sh, done in CI).
+    // The JNI wrapper is built only when FFmpeg has been built (scripts/ffmpeg/build-ffmpeg.sh, done in CI).
     // Without it the app still builds and plays; FfmpegLibrary.isAvailable() is then false.
     if (file("src/main/jni/ffmpeg/include").exists()) {
         externalNativeBuild {

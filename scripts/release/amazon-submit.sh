@@ -7,7 +7,7 @@
 # promo film. Committing the edit sends it to Amazon's review. See
 # docs/RELEASING.md.
 #
-# Usage: scripts/amazon-submit.sh <apk> <notes-dir>
+# Usage: scripts/release/amazon-submit.sh <apk> <notes-dir>
 # Needs AMAZON_CLIENT_ID, AMAZON_CLIENT_SECRET and AMAZON_APP_ID.
 set -euo pipefail
 shopt -s inherit_errexit
@@ -16,7 +16,7 @@ apk="${1:?usage: amazon-submit.sh <apk> <notes-dir>}"
 notes="${2:?usage: amazon-submit.sh <apk> <notes-dir>}"
 : "${AMAZON_CLIENT_ID:?}" "${AMAZON_CLIENT_SECRET:?}" "${AMAZON_APP_ID:?AMAZON_APP_ID is not set, see docs/RELEASING.md}"
 api="https://developer.amazon.com/api/appstore/v1/applications/$AMAZON_APP_ID"
-metadata="$(dirname "$0")/../fastlane/metadata"
+metadata="$(dirname "$0")/../../fastlane/metadata"
 
 # Amazon takes only single words as keywords and refuses the whole listing otherwise,
 # after the APK is already replaced. Check before anything is sent.
@@ -201,7 +201,7 @@ for file in "$notes"/whatsnew-*; do
   # API reference lists them, so a failed one only warns: add the video in the console.
   # A video already there stays, so one added by hand is never removed.
   code="${language%%-*}"
-  video="$(dirname "$0")/../website/assets/promo/glacier-promo$([ "$code" = en ] || echo "-$code").mp4"
+  video="$(dirname "$0")/../../website/assets/promo/glacier-promo$([ "$code" = en ] || echo "-$code").mp4"
   if [ "$(call GET "$path/videos" | count)" -gt 0 ]; then
     echo "Kept the video for $language"
   elif [ -f "$video" ]; then

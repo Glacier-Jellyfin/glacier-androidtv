@@ -75,7 +75,7 @@ jobs:
         id: notes
         env:
           VERSION: ${{ inputs.version }}
-        run: scripts/store-notes.sh "$VERSION" whatsnew
+        run: scripts/release/store-notes.sh "$VERSION" whatsnew
 
       # Closed testing (alpha) until the app is out of testing, then the variable
       # PLAY_TRACK says production. A Play app never published takes only drafts.
@@ -101,7 +101,7 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           sudo gem install fastlane -v 2.241.1 --no-document
-          scripts/play-listing.sh "$VERSION" "$TRACK"
+          scripts/release/play-listing.sh "$VERSION" "$TRACK"
 
       # Also when Google Play failed: the two stores do not depend on each other.
       - name: Submit to the Amazon Appstore
@@ -111,4 +111,4 @@ jobs:
           AMAZON_CLIENT_SECRET: ${{ secrets.AMAZON_CLIENT_SECRET }}
           AMAZON_APP_ID: ${{ vars.AMAZON_APP_ID }}
           VERSION: ${{ inputs.version }}
-        run: scripts/amazon-submit.sh "stores/glacier-$VERSION-amazon.apk" whatsnew
+        run: scripts/release/amazon-submit.sh "stores/glacier-$VERSION-amazon.apk" whatsnew

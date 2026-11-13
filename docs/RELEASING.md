@@ -81,7 +81,7 @@ adb shell "run-as $pkg mkdir -p files/updtest && run-as $pkg cp /data/local/tmp/
 1. Move the `[Unreleased]` entries in `CHANGELOG.md`, `CHANGELOG.de.md` and
    `CHANGELOG.es.md` into a new section `## [0.1.1] - 2026-10-03` in all
    three. The English section becomes the release notes and the text of the
-   in-app update dialog (`scripts/release-notes.sh` extracts it). The German
+   in-app update dialog (`scripts/release/release-notes.sh` extracts it). The German
    and Spanish ones follow in collapsed `<details lang="de">` and
    `<details lang="es">` blocks, which the app shows when its language is
    German or Spanish. App versions before 0.6.3 ignore those blocks.
@@ -157,7 +157,7 @@ GitHub environment `stores` (Actions › the run › Review deployments). Then i
 uploads the bundle to Google Play and submits the APK to the Amazon Appstore
 for review. The store notes come from
 `fastlane/metadata/android/<language>/changelogs/<versionCode>.txt`
-(`scripts/store-notes.sh`). The workflow checks them before it builds
+(`scripts/release/store-notes.sh`). The workflow checks them before it builds
 anything, so a missing or too long one stops the release early. If one store
 fails, the other is still tried.
 
@@ -182,7 +182,7 @@ The environment holds the secrets and variables:
 - Google Play: the upload uses the Play Developer API
   (`r0adkll/upload-google-play`) and sends the R8 mapping along for readable
   crash reports.
-- Amazon: `scripts/amazon-submit.sh` first checks that every keyword is a
+- Amazon: `scripts/release/amazon-submit.sh` first checks that every keyword is a
   single word, which Amazon requires. Then it opens an edit (or takes the one
   already open), replaces the APK, updates each listing (see below) and commits the
   edit, which starts Amazon's review. While a version is still in review,
@@ -198,7 +198,7 @@ update each other.
 
 Texts and graphics of the listings live in `fastlane/metadata/`. After the
 bundle, the workflow `stores.yml` updates the Google Play listing of each language
-from `fastlane/metadata/android` (`scripts/play-listing.sh`, fastlane
+from `fastlane/metadata/android` (`scripts/release/play-listing.sh`, fastlane
 supply): title, descriptions, video, feature graphic, icon, TV banner and TV
 screenshots. The TV screenshots also go in as phone screenshots, which Google
 Play requires even for a TV app. Only images Google Play does not have yet are uploaded, and
@@ -218,7 +218,7 @@ is kept.
 
 - Screenshots (1920×1080, one set per language in
   `fastlane/metadata/android/{en-US,de-DE}/images/tvScreenshots/`) come from
-  the takes of the promo video: `scripts/make-promo-video.py --takes DIR
+  the takes of the promo video: `scripts/media/make-promo-video.py --takes DIR
   --only store`. They show the same moments as the website's section
   pictures. A language without its own images, such as `es-ES` for now,
   shows the English ones in both stores.

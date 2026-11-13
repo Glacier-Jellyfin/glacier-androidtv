@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fails unless the APK carries the FFmpeg decoder for every ABI, so no build
 # from CI ships without it by accident.
-# Usage: scripts/check-ffmpeg-apk.sh <apk>
+# Usage: scripts/ffmpeg/check-ffmpeg-apk.sh <apk>
 set -euo pipefail
 apk="$1"
 listing=$(unzip -l "$apk")

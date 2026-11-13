@@ -16,7 +16,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** A short file the playback check plays, from assets/playback-check (scripts/make-playback-samples.py). */
+/** A short file the playback check plays, from assets/playback-check (scripts/media/make-playback-samples.py). */
 data class CheckSample(
     val file: String,
     val label: String,

@@ -15,7 +15,7 @@ themselves are test patterns. The samples of DolbyVisionProfile7Test only
 declare their profile through the configuration record (dvcC), as Media3 and
 Jellyfin read it.
 
-    python3 scripts/make-playback-samples.py
+    python3 scripts/media/make-playback-samples.py
 """
 import hashlib
 import os
@@ -23,7 +23,7 @@ import struct
 import subprocess
 import tempfile
 
-ROOT = os.path.join(os.path.dirname(__file__), "..", "core", "player", "src")
+ROOT = os.path.join(os.path.dirname(__file__), "..", "..", "core", "player", "src")
 CHECK = os.path.join(ROOT, "main", "assets", "playback-check")
 TEST = os.path.join(ROOT, "androidTest", "assets")
 IEC = os.path.join(ROOT, "test", "resources", "iec61937")

@@ -99,9 +99,9 @@ jobs:
         run: ./gradlew :app:assembleStaging
 
       - name: FFmpeg decoder in the APK
-        run: scripts/check-ffmpeg-apk.sh app/build/outputs/apk/staging/app-staging.apk
+        run: scripts/ffmpeg/check-ffmpeg-apk.sh app/build/outputs/apk/staging/app-staging.apk
 
-      # For local builds on machines that cannot run scripts/build-ffmpeg.sh (see core/ffmpeg/README.md).
+      # For local builds on machines that cannot run scripts/ffmpeg/build-ffmpeg.sh (see core/ffmpeg/README.md).
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ffmpeg-android

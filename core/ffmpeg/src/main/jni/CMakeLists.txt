@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 # Modified for Glacier: FFmpeg's headers come from an installed include
-# directory (scripts/build-ffmpeg.sh) instead of the FFmpeg source tree.
+# directory (scripts/ffmpeg/build-ffmpeg.sh) instead of the FFmpeg source tree.
 
 cmake_minimum_required(VERSION 3.21.0 FATAL_ERROR)
 

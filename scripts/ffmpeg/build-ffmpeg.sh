@@ -10,7 +10,7 @@
 # it needs Linux or macOS (or WSL) with make. Without its output the app still
 # builds, just without the FFmpeg audio decoder.
 #
-# Usage: scripts/build-ffmpeg.sh [path to Android NDK]
+# Usage: scripts/ffmpeg/build-ffmpeg.sh [path to Android NDK]
 #        (defaults to $ANDROID_NDK_HOME, then $ANDROID_NDK_ROOT)
 #
 # Based on build_ffmpeg.sh from androidx/media (Apache License 2.0),
@@ -33,7 +33,7 @@ API_LEVEL=28
 DECODERS=(aac ac3 eac3 truehd dca flac alac vorbis opus mp3 pcm_mulaw pcm_alaw)
 ABIS=(armeabi-v7a arm64-v8a x86 x86_64)
 
-root="$(cd "$(dirname "$0")/.." && pwd)"
+root="$(cd "$(dirname "$0")/../.." && pwd)"
 out="$root/core/ffmpeg/src/main/jni/ffmpeg"
 
 ndk="${1:-${ANDROID_NDK_HOME:-${ANDROID_NDK_ROOT:-}}}"

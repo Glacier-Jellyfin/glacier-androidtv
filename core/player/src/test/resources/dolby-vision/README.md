@@ -8,7 +8,7 @@ RPU converted by dovi_tool 2.3.1 itself in mode 2 (`dovi_tool editor -j` with
 a profile 5 RPU. Each file is a start code followed by the RPU from its prefix
 byte 0x19 on, with emulation prevention bytes.
 
-`profile7_fel.hevc` is a test pattern made by scripts/make-playback-samples.py:
+`profile7_fel.hevc` is a test pattern made by scripts/media/make-playback-samples.py:
 a base layer, an enhancement layer and `fel_orig.bin` in every frame, muxed
 into one track by dovi_tool. `profile7_fel_to_81.hevc` is what
 `dovi_tool -m 2 convert --discard` makes of it.
