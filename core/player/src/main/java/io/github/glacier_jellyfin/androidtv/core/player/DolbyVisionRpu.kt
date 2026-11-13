@@ -103,8 +103,10 @@ internal object DolbyVisionRpu {
             val pieces = IntArray(3)
             val pivots = Array(3) { LongArray(0) }
             for (component in 0 until 3) {
-                val count = r.ue().toInt() + 2
-                if (count > 9) return null
+                // Up to 8 pieces; the Exp-Golomb value can be far beyond Int, so it is checked as it is.
+                val countMinus2 = r.ue()
+                if (countMinus2 > 7) return null
+                val count = countMinus2.toInt() + 2
                 pieces[component] = count - 1
                 pivots[component] = LongArray(count) { r.bits(blBitDepth) }
             }

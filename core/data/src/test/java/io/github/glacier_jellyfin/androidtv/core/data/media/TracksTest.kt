@@ -29,6 +29,18 @@ class TracksTest {
     }
 
     @Test
+    fun `two-letter codes Java has no three-letter code for are unknown`() {
+        assertNull(Languages.iso3("xx"))
+        assertNull(Languages.iso3("dt"))
+        assertNull(Languages.iso3("pc"))
+        assertNull(Languages.iso2("dt"))
+        assertNull(Languages.flag("dt"))
+        assertNull(Languages.name("dt", Locale.ENGLISH))
+        // The fuzzer's find: a Chinese track with "DT" as its region.
+        assertEquals("cn", Languages.flag("chi", "DT"))
+    }
+
+    @Test
     fun `names follow the display language`() {
         assertEquals("Deutsch", Languages.name("ger", Locale.GERMAN))
         assertEquals("German", Languages.name("ger", Locale.ENGLISH))

@@ -22,6 +22,10 @@ collapsed block, and the app shows it when its language is German or Spanish.
 
 ## [Unreleased]
 
+### Fixed
+- The detail page and the player no longer crash on a track with an unknown language code
+- A damaged DTS stream no longer stops playback with audio passthrough
+
 ## [0.10.0] - 2026-11-13
 
 ### New

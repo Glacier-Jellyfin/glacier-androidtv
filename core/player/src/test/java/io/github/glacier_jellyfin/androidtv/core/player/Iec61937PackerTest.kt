@@ -69,6 +69,32 @@ class Iec61937PackerTest {
         assertEquals(listOf(0x00, 0x00, 0x11, 0x97), end)
     }
 
+    @Test
+    fun `drops a DTS frame whose core does not fit the burst`() {
+        // The fuzzer's find: too large for the 2048-byte burst, and a core of 2049 bytes for the fallback.
+        val bursts = Iec61937Bursts()
+        Iec61937Packer.DtsHd().pack(ByteBuffer.wrap(dtsFrame(coreSize = 2049, size = 2788)), bursts)
+        assertEquals(0, bursts.size)
+    }
+
+    @Test
+    fun `drops a DTS frame whose core is larger than the frame`() {
+        val bursts = Iec61937Bursts()
+        val packer = Iec61937Packer.DtsHd()
+        // Too large for the burst: only cores go from here on.
+        packer.pack(ByteBuffer.wrap(dtsFrame(coreSize = 1000, size = 2788)), bursts)
+        assertEquals(2048, bursts.size)
+        packer.pack(ByteBuffer.wrap(dtsFrame(coreSize = 1000, size = 100)), bursts)
+        assertEquals(2048, bursts.size)
+    }
+
+    /** A DTS frame of [size] bytes: a core header of one block at 48 kHz (bursts of 2048 bytes) giving [coreSize]. */
+    private fun dtsFrame(coreSize: Int, size: Int): ByteArray {
+        val field = (coreSize - 1) shl 4
+        val header = intArrayOf(0x7f, 0xfe, 0x80, 0x01, 0x08, field shr 16, field shr 8, field, 0xf4)
+        return ByteArray(size).also { frame -> header.forEachIndexed { i, byte -> frame[i] = byte.toByte() } }
+    }
+
     private fun resource(name: String): ByteArray =
         checkNotNull(javaClass.classLoader?.getResourceAsStream("iec61937/$name")).use { it.readBytes() }
 

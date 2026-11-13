@@ -7,6 +7,10 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ## [Unreleased]
 
+### Behoben
+- Detailseite und Player stürzen bei einer Spur mit unbekannter Sprachangabe nicht mehr ab
+- Ein beschädigter DTS-Stream bricht die Wiedergabe mit Audio-Passthrough nicht mehr ab
+
 ## [0.10.0] - 2026-11-13
 
 ### Neu

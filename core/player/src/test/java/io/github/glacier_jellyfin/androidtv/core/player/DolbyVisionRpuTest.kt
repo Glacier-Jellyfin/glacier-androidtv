@@ -33,6 +33,19 @@ class DolbyVisionRpuTest {
     }
 
     @Test
+    fun `refuses an RPU whose pivot count overflows`() {
+        // The fuzzer's find, with a matching checksum: a pivot count past Int.MAX_VALUE.
+        val rpu = (
+            "190809004061b650001b0000020000036000000020000000c200000000ffffffffc2c2c2c2c2c2c2c2c2c2c238c2c2c2" +
+                "c2c2c2c2c2c2c2c2c2c2fc000000000000000303600000002000e7fa8ffa8ffa8d0ae7fffc00000000000000019081f7" +
+                "380546300803180169b9997b41282180088ffa8fb6854100020200000008050000fdf900420300006400000000120c1f" +
+                "400064000000008ebc2bc480"
+            ).chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+        assertNull(DolbyVisionRpu.convert(rpu, removeFelMapping = true))
+        assertNull(DolbyVisionRpu.convert(rpu, removeFelMapping = false))
+    }
+
+    @Test
     fun `rewrites the NAL unit with its header and emulation prevention`() {
         val file = resource("mel_orig.bin")
         val nal = byteArrayOf(0x7C, 0x01) + file.copyOfRange(4, file.size)

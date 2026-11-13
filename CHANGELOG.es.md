@@ -8,6 +8,10 @@ only in English.
 
 ## [Unreleased]
 
+### Correcciones
+- La página de detalles y el reproductor ya no se cierran con una pista de idioma desconocido
+- Un flujo DTS dañado ya no detiene la reproducción con audio passthrough
+
 ## [0.10.0] - 2026-11-13
 
 ### Novedades

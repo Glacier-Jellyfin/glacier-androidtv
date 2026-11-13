@@ -189,6 +189,8 @@ internal sealed class Iec61937Packer {
                 size = coreSize
                 coreOnly--
             }
+            // A core size from a broken header that does not fit the frame or the burst: the frame goes.
+            if (size > frame.size || START_CODE.size + 2 + size > burstSize - BURST_HEADER_SIZE) return
 
             val length = START_CODE.size + 2 + size
             if (payload.size < length) payload = ByteArray(length)

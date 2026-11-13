@@ -2,6 +2,7 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import java.text.Normalizer
 import java.util.Locale
+import java.util.MissingResourceException
 import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaStreamType
 
@@ -294,7 +295,14 @@ object Languages {
         // A tag's region ("pt-BR") does not change the language.
         val value = code?.trim()?.lowercase()?.replace('_', '-')
             ?.substringBefore('-')?.takeIf { it.isNotEmpty() && it != "und" } ?: return null
-        if (value.length == 2) return Locale.forLanguageTag(value).isO3Language.takeIf { it.isNotEmpty() }
+        if (value.length == 2) {
+            // Java throws for two letters it has no three-letter code for ("xx").
+            return try {
+                Locale.forLanguageTag(value).isO3Language.takeIf { it.isNotEmpty() }
+            } catch (_: MissingResourceException) {
+                null
+            }
+        }
         val normal = bibliographic[value] ?: value
         return normal.takeIf { byIso3.containsKey(it) || it in withoutIso2 }
     }
