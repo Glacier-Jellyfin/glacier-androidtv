@@ -26,7 +26,12 @@
 </p>
 
 <p align="center">
-  <a href="https://scorecard.dev/viewer/?uri=github.com/Glacier-Jellyfin/glacier-androidtv"><img src="https://api.scorecard.dev/projects/github.com/Glacier-Jellyfin/glacier-androidtv/badge" alt="OpenSSF Scorecard"></a>
+  <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest"><img src="https://img.shields.io/github/v/release/Glacier-Jellyfin/glacier-androidtv?sort=semver&amp;style=flat&amp;label=release" alt="Latest release"></a>
+  <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases"><img src="https://img.shields.io/github/downloads/Glacier-Jellyfin/glacier-androidtv/total?style=flat&amp;label=downloads" alt="Total downloads"></a>
+  <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Glacier-Jellyfin/glacier-androidtv/ci.yml?branch=main&amp;style=flat&amp;label=CI" alt="CI status"></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/Glacier-Jellyfin/glacier-androidtv"><img src="https://img.shields.io/ossf-scorecard/github.com/Glacier-Jellyfin/glacier-androidtv?style=flat&amp;label=openssf%20scorecard" alt="OpenSSF Scorecard"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Glacier-Jellyfin/glacier-androidtv?style=flat" alt="License"></a>
+  <img src="https://img.shields.io/badge/platform-Android%20TV%20%C2%B7%20Google%20TV%20%C2%B7%20Fire%20TV-7DC7D9?style=flat" alt="Platforms: Android TV, Google TV and Fire TV">
 </p>
 
 <p align="center">
