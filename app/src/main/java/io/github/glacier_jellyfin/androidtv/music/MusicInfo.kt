@@ -129,10 +129,10 @@ private fun SongTab(
             val pictureHeight = if (isVideo) VIDEO_STILL_HEIGHT else COVER
             Artwork(
                 track.largeCoverUrl,
-                Modifier.size(
-                    pictureWidth.dp,
-                    pictureHeight.dp,
-                ).clip(shape).border(1.dp, GlacierColors.GlassBorder, shape),
+                Modifier
+                    .size(pictureWidth.dp, pictureHeight.dp)
+                    .clip(shape)
+                    .border(1.dp, GlacierColors.GlassBorder, shape),
             )
             // At least as tall as the picture, so the pill at the bottom ends level with it.
             Column(
@@ -297,10 +297,8 @@ private fun TechnicalTab(
                 status = format?.takeIf { it.lossless }?.let { stringResource(R.string.music_lossless) to Tone.Ok },
                 headline = audioFormatText(format),
                 details = format?.let {
-                    listOfNotNull(
-                        containerText(it),
-                        it.bitrate?.let(::bitrateText),
-                    ).joinToString(" · ").ifEmpty { null }
+                    listOfNotNull(containerText(it), it.bitrate?.let(::bitrateText))
+                        .joinToString(" · ").ifEmpty { null }
                 },
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             )
@@ -360,10 +358,7 @@ private fun ServerTab(
                     audioCopied -> stringResource(R.string.player_info_unchanged)
 
                     else -> streamed?.let {
-                        listOfNotNull(
-                            audioHeadline(it),
-                            bitrateText(it.bitrate),
-                        ).joinToString(" · ")
+                        listOfNotNull(audioHeadline(it), bitrateText(it.bitrate)).joinToString(" · ")
                     }
                 },
             ),

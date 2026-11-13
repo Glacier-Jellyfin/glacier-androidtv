@@ -74,9 +74,7 @@ class LogServer(
             if (found) {
                 "Log downloaded by ${client.inetAddress.hostAddress}"
             } else {
-                "Refused ${parts.getOrNull(
-                    0,
-                )} from ${client.inetAddress.hostAddress}"
+                "Refused ${parts.getOrNull(0)} from ${client.inetAddress.hostAddress}"
             },
         )
         val body = if (found) content else "Not found\n".toByteArray()

@@ -238,10 +238,10 @@ fun PersonScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: PersonViewMo
 
     // A loader covers the page: the remote must not reach the navigation or anything else behind it.
     Box(
-        Modifier.fillMaxSize().blockKeysWhile(
-            person == null && !state.failed,
-            takeFocus = true,
-        ).background(ImagePageGround),
+        Modifier
+            .fillMaxSize()
+            .blockKeysWhile(person == null && !state.failed, takeFocus = true)
+            .background(ImagePageGround),
     ) {
         when {
             person == null && state.failed -> ErrorState(onRetry = viewModel::load)
@@ -294,9 +294,7 @@ fun PersonScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: PersonViewMo
                                     }
                                     Text(
                                         person.name,
-                                        style = GlacierText.display(
-                                            76,
-                                        ).copy(
+                                        style = GlacierText.display(76).copy(
                                             lineHeight = 79.sp,
                                             shadow = Shadow(Color(0x99000000), blurRadius = 30f),
                                         ),
@@ -366,10 +364,8 @@ fun PersonScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: PersonViewMo
                                             GridCard(
                                                 imageUrl = credit.item.posterUrl,
                                                 title = credit.item.title,
-                                                caption = listOfNotNull(
-                                                    credit.role,
-                                                    yearText(credit.item),
-                                                ).joinToString(" · "),
+                                                caption = listOfNotNull(credit.role, yearText(credit.item))
+                                                    .joinToString(" · "),
                                                 onClick = {
                                                     lastOpened = credit.item.id.toString()
                                                     viewModel.open(credit)
@@ -393,10 +389,8 @@ fun PersonScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: PersonViewMo
                                         Box {
                                             PosterCard(
                                                 imageUrl = credit.item.posterUrl,
-                                                caption = listOfNotNull(
-                                                    credit.role,
-                                                    credit.item.year?.toString(),
-                                                ).joinToString(" · "),
+                                                caption = listOfNotNull(credit.role, credit.item.year?.toString())
+                                                    .joinToString(" · "),
                                                 onClick = {
                                                     lastOpened = credit.key
                                                     viewModel.open(credit)

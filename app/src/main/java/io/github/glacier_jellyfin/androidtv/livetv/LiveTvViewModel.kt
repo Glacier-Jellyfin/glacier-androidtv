@@ -242,9 +242,8 @@ class LiveTvViewModel @Inject constructor(
             runSuspendCatching { repository.channels() }
                 .onSuccess { channels ->
                     _state.update { state ->
-                        val loaded = state.withChannels(
-                            channels,
-                        ).copy(loading = false, nowMs = System.currentTimeMillis())
+                        val loaded = state.withChannels(channels)
+                            .copy(loading = false, nowMs = System.currentTimeMillis())
                         // A server with radio only opens on it.
                         if (loaded.channels.isNullOrEmpty() && loaded.stations.isNotEmpty() &&
                             state.channels == null
@@ -294,10 +293,7 @@ class LiveTvViewModel @Inject constructor(
     fun setSort(sort: ChannelSort) {
         val descending = sort == _state.value.sort && !_state.value.descending
         _state.update {
-            it.copy(
-                sort = sort,
-                descending = descending,
-            ).withChannels(sortedChannels(it.all, sort, descending))
+            it.copy(sort = sort, descending = descending).withChannels(sortedChannels(it.all, sort, descending))
         }
         viewModelScope.launch {
             runSuspendCatching {

@@ -728,11 +728,7 @@ fun LiveTvSheetHost(
                 onWatch = if (sheet.more) ({ viewModel.play(sheet.channel) }) else null,
                 // The sheet holds the channel as it was when it opened.
                 favorite = if (sheet.more) {
-                    (
-                        channels?.firstOrNull {
-                            it.id == sheet.channel.id
-                        } ?: sheet.channel
-                        ).favorite
+                    (channels?.firstOrNull { it.id == sheet.channel.id } ?: sheet.channel).favorite
                 } else {
                     null
                 },

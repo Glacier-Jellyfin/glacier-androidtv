@@ -28,9 +28,8 @@ object Changelog {
             val heading = VERSION.matchEntire(line.trim())
             if (heading != null) {
                 close()
-                current = AppVersion.parse(
-                    heading.groupValues[1],
-                )?.let { it to heading.groupValues[2].ifEmpty { null } }
+                current = AppVersion.parse(heading.groupValues[1])
+                    ?.let { it to heading.groupValues[2].ifEmpty { null } }
             } else if (current != null) {
                 body.appendLine(line)
             }

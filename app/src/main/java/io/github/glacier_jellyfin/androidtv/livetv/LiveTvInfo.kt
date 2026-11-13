@@ -304,19 +304,15 @@ private fun ProgramTimeline(
         Box(Modifier.fillMaxWidth()) {
             val lane = if (withPictures) LaneHeight + ThumbSpace else LaneHeight
             val centre = lane + RailArea / 2
-            val nowX = (
-                TIMELINE_INSET + (total - 2 * TIMELINE_INSET) * (
-                    (nowMs - start).coerceIn(
-                        0L,
-                        windowMs,
-                    ).toFloat() / windowMs
-                    )
-                ).dp
+            val nowFraction = (nowMs - start).coerceIn(0L, windowMs).toFloat() / windowMs
+            val nowX = (TIMELINE_INSET + (total - 2 * TIMELINE_INSET) * nowFraction).dp
             Box(Modifier.fillMaxWidth().height(lane * 2 + RailArea)) {
                 Box(
-                    Modifier.offset(
-                        y = centre - 1.dp,
-                    ).fillMaxWidth().height(2.dp).background(GlacierColors.GlassBorder2),
+                    Modifier
+                        .offset(y = centre - 1.dp)
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .background(GlacierColors.GlassBorder2),
                 )
                 val currentIndex = visible.indexOfFirst { it.airsAt(nowMs) }
                 if (currentIndex >= 0) {
@@ -340,20 +336,22 @@ private fun ProgramTimeline(
                         12.dp
                     }
                     Box(
-                        Modifier.offset(
-                            x = station.x.dp - dot / 2,
-                            y = centre - dot / 2,
-                        ).size(dot).clip(CircleShape).then(
-                            when {
-                                airing -> Modifier.background(accent)
+                        Modifier
+                            .offset(x = station.x.dp - dot / 2, y = centre - dot / 2)
+                            .size(dot)
+                            .clip(CircleShape)
+                            .then(
+                                when {
+                                    airing -> Modifier.background(accent)
 
-                                past -> Modifier.background(GlacierColors.Mist.copy(alpha = 0.6f))
+                                    past -> Modifier.background(GlacierColors.Mist.copy(alpha = 0.6f))
 
-                                else -> Modifier.background(
-                                    GlacierColors.Deep,
-                                ).border(2.dp, GlacierColors.Mist, CircleShape)
-                            },
-                        ),
+                                    else ->
+                                        Modifier
+                                            .background(GlacierColors.Deep)
+                                            .border(2.dp, GlacierColors.Mist, CircleShape)
+                                },
+                            ),
                     )
                     StationLabel(
                         program = program,
@@ -370,10 +368,11 @@ private fun ProgramTimeline(
                     )
                 }
                 Box(
-                    Modifier.offset(
-                        x = nowX - 1.dp,
-                        y = centre - 9.dp,
-                    ).width(2.dp).height(18.dp).background(GlacierColors.Ice),
+                    Modifier
+                        .offset(x = nowX - 1.dp, y = centre - 9.dp)
+                        .width(2.dp)
+                        .height(18.dp)
+                        .background(GlacierColors.Ice),
                 )
             }
         }
@@ -410,9 +409,11 @@ private fun StationLabel(
             val shape = RoundedCornerShape(GlacierShapes.RadiusSm)
             Artwork(
                 program.imageUrl,
-                Modifier.width(
-                    ThumbWidth,
-                ).height(ThumbHeight).clip(shape).border(1.dp, GlacierColors.GlassBorder, shape)
+                Modifier
+                    .width(ThumbWidth)
+                    .height(ThumbHeight)
+                    .clip(shape)
+                    .border(1.dp, GlacierColors.GlassBorder, shape)
                     .alpha(if (past) 0.6f else 1f),
             )
         }

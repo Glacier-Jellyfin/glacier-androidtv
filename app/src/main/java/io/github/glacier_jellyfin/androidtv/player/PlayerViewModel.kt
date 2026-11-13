@@ -1478,15 +1478,12 @@ class PlayerViewModel @Inject constructor(
         if (player.currentTracks.isEmpty) return false
         val audio = _state.value.audioIndex
         if (audio != null && current.allAudioInStream) {
-            current.audioOrdinal(
-                audio,
-            )?.let { TrackControl.selectAudio(player, it) }
+            current.audioOrdinal(audio)?.let { TrackControl.selectAudio(player, it) }
         }
         val subtitle = current.subtitles.firstOrNull { it.track.index == _state.value.subtitleIndex }
         when (subtitle?.delivery) {
-            SubtitleDelivery.Embedded -> current.subtitleOrdinal(
-                subtitle.track.index,
-            )?.let { TrackControl.selectEmbeddedText(player, it) }
+            SubtitleDelivery.Embedded -> current.subtitleOrdinal(subtitle.track.index)
+                ?.let { TrackControl.selectEmbeddedText(player, it) }
 
             SubtitleDelivery.External -> TrackControl.selectExternalText(player, subtitle.track.index)
 

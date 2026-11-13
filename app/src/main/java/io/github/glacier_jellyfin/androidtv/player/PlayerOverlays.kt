@@ -263,11 +263,9 @@ fun TrickplayThumb(
     headers: Map<String, String>,
     modifier: Modifier = Modifier,
 ) {
-    val thumb = (
-        positionMs / trickplay.intervalMs.coerceAtLeast(
-            1,
-        )
-        ).toInt().coerceIn(0, (trickplay.count - 1).coerceAtLeast(0))
+    val thumb = (positionMs / trickplay.intervalMs.coerceAtLeast(1))
+        .toInt()
+        .coerceIn(0, (trickplay.count - 1).coerceAtLeast(0))
     val perTile = (trickplay.columns * trickplay.rows).coerceAtLeast(1)
     val tile = thumb / perTile
     val cell = thumb % perTile

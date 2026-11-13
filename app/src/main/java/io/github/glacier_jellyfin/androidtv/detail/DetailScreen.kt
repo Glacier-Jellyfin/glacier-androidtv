@@ -506,9 +506,8 @@ internal fun Title(
 ) {
     Text(
         text,
-        style = GlacierText.display(
-            size,
-        ).copy(lineHeight = (size * 1.03).sp, shadow = Shadow(Color(0x99000000), blurRadius = 30f)),
+        style = GlacierText.display(size)
+            .copy(lineHeight = (size * 1.03).sp, shadow = Shadow(Color(0x99000000), blurRadius = 30f)),
         color = GlacierColors.Ice,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
@@ -943,9 +942,12 @@ private fun EpisodeStill(episode: MediaItem) {
         }
         if (episode.played) {
             Box(
-                Modifier.align(
-                    Alignment.TopEnd,
-                ).padding(end = 20.dp, top = 18.dp).size(36.dp).clip(PillShape).background(accent),
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(end = 20.dp, top = 18.dp)
+                    .size(36.dp)
+                    .clip(PillShape)
+                    .background(accent),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -960,9 +962,10 @@ private fun EpisodeStill(episode: MediaItem) {
             ProgressBar(
                 it,
                 track = Color(0x42E8F4F7),
-                modifier = Modifier.align(
-                    Alignment.BottomCenter,
-                ).padding(start = 20.dp, end = 20.dp, bottom = 20.dp).height(6.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(start = 20.dp, end = 20.dp, bottom = 20.dp)
+                    .height(6.dp),
             )
         }
     }

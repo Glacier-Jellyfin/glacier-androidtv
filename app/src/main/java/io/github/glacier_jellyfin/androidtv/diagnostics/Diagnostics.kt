@@ -104,10 +104,10 @@ class Diagnostics @Inject constructor(
     private fun header(serverVersion: String?): String = buildString {
         appendLine("Glacier ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}, ${BuildConfig.BUILD_TYPE})")
         appendLine("Created: ${ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)}")
+        val platform = TvPlatform.of(context).name
         appendLine(
-            "Device: ${Build.MANUFACTURER} ${Build.MODEL}, ${TvPlatform.of(
-                context,
-            ).name}, Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
+            "Device: ${Build.MANUFACTURER} ${Build.MODEL}, $platform, " +
+                "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
         )
         appendLine("ABIs: ${Build.SUPPORTED_ABIS.joinToString()}")
         appendLine("Display: ${display()}")
@@ -126,9 +126,8 @@ class Diagnostics @Inject constructor(
     }
 
     private fun display(): String {
-        val display = context.getSystemService(
-            DisplayManager::class.java,
-        )?.getDisplay(Display.DEFAULT_DISPLAY) ?: return "unknown"
+        val display = context.getSystemService(DisplayManager::class.java)
+            ?.getDisplay(Display.DEFAULT_DISPLAY) ?: return "unknown"
         val mode = display.mode
         val hdr = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             mode.supportedHdrTypes

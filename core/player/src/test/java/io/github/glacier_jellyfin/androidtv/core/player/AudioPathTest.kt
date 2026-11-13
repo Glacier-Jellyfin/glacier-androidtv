@@ -93,9 +93,11 @@ class AudioPathTest {
         return GuardedAudioSink(inner, onStall = {}, decoders = decoders)
     }
 
-    private fun format(mime: String) = Format.Builder().setSampleMimeType(
-        mime,
-    ).setChannelCount(6).setSampleRate(48_000).build()
+    private fun format(mime: String) = Format.Builder()
+        .setSampleMimeType(mime)
+        .setChannelCount(6)
+        .setSampleRate(48_000)
+        .build()
 
     @Test
     fun `the sink reports compressed formats as not supported while it decodes`() {

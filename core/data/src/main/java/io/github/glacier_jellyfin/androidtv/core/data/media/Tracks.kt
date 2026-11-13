@@ -223,13 +223,8 @@ fun mainInsteadOfExtra(pick: Int?, audio: List<Track>): Int? {
     if (!picked.extra) return pick
     val main = audio.filter { !it.extra }
     val language = Languages.iso3(picked.language)
-    return (
-        main.firstOrNull {
-            language != null && Languages.iso3(
-                it.language,
-            ) == language
-        } ?: main.firstOrNull()
-        )?.index ?: pick
+    val chosen = main.firstOrNull { language != null && Languages.iso3(it.language) == language } ?: main.firstOrNull()
+    return chosen?.index ?: pick
 }
 
 /**
@@ -251,12 +246,8 @@ fun fullInsteadOfForced(
     val language = Languages.iso3(picked.language) ?: return pick
     if (Languages.iso3(audio?.language) == language) return pick
     val full = subtitles.filter { !it.forced && Languages.iso3(it.language) == language }
-    return (
-        full.firstOrNull {
-            !it.hearingImpaired && !it.closedCaptions && !it.singAlong
-        } ?: full.firstOrNull()
-        )?.index
-        ?: pick
+    val chosen = full.firstOrNull { !it.hearingImpaired && !it.closedCaptions && !it.singAlong } ?: full.firstOrNull()
+    return chosen?.index ?: pick
 }
 
 /** Audio and subtitle choices of a title, with the server's defaults for this user. */
@@ -301,10 +292,8 @@ object Languages {
     /** Normalises "ger" / "deu" / "de" to the ISO 639-2/T code, or null if unknown. */
     fun iso3(code: String?): String? {
         // A tag's region ("pt-BR") does not change the language.
-        val value = code?.trim()?.lowercase()?.replace(
-            '_',
-            '-',
-        )?.substringBefore('-')?.takeIf { it.isNotEmpty() && it != "und" } ?: return null
+        val value = code?.trim()?.lowercase()?.replace('_', '-')
+            ?.substringBefore('-')?.takeIf { it.isNotEmpty() && it != "und" } ?: return null
         if (value.length == 2) return Locale.forLanguageTag(value).isO3Language.takeIf { it.isNotEmpty() }
         val normal = bibliographic[value] ?: value
         return normal.takeIf { byIso3.containsKey(it) || it in withoutIso2 }
@@ -474,10 +463,8 @@ fun describeTrack(
             (if (track.commentary) COMMENTARY_WORDS else emptyList()) +
             if (track.audioDescription) DESCRIPTION_WORDS else emptyList()
         // Names like "DTS 5.1 @ 768 kbps" only repeat the format.
-        title = cleanTrackTitle(
-            track.title,
-            known,
-        )?.takeIf { name -> name.none { it.isDigit() } && name.count { it.isLetter() } >= 3 }
+        title = cleanTrackTitle(track.title, known)
+            ?.takeIf { name -> name.none { it.isDigit() } && name.count { it.isLetter() } >= 3 }
         format = audioFormat(track.codec, track.profile, track.channels)
     }
     var name = Languages.name(track.language, locales.firstOrNull() ?: Locale.getDefault(), track.region)
@@ -600,9 +587,7 @@ private fun fold(c: Char): Char {
     if (c.code < 128) return c.lowercaseChar()
     val base = Normalizer.normalize(c.toString(), Normalizer.Form.NFD)
     val plain = base.takeIf {
-        it.length > 1 && it.drop(
-            1,
-        ).all { m -> Character.getType(m) == Character.NON_SPACING_MARK.toInt() }
+        it.length > 1 && it.drop(1).all { m -> Character.getType(m) == Character.NON_SPACING_MARK.toInt() }
     }?.first() ?: c
     return plain.lowercaseChar()
 }

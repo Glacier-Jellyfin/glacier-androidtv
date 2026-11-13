@@ -111,9 +111,11 @@ fun FavoritesScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: Favorites
             else -> {
                 val songsTitle = stringResource(R.string.favorites_songs)
                 LazyColumn(
-                    Modifier.fillMaxSize().onFocusChanged { inList = it.hasFocus }.focusRequester(
-                        listFocus,
-                    ).focusRestorer(),
+                    Modifier
+                        .fillMaxSize()
+                        .onFocusChanged { inList = it.hasFocus }
+                        .focusRequester(listFocus)
+                        .focusRestorer(),
                 ) {
                     item(key = "title") {
                         Text(
@@ -194,9 +196,7 @@ private fun Favorites.titles(row: FavoriteRow): List<MediaItem> = when (row) {
 private fun Favorites.has(row: FavoriteRow): Boolean = if (row == FavoriteRow.Songs) {
     songs.isNotEmpty()
 } else {
-    titles(
-        row,
-    ).isNotEmpty()
+    titles(row).isNotEmpty()
 }
 
 @Composable

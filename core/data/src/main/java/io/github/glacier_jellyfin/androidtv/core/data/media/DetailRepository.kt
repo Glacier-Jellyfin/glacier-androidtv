@@ -62,9 +62,7 @@ class DetailRepository @Inject constructor(
                 localCount = dto.localTrailerCount ?: 0,
                 youTube = dto.remoteTrailers.orEmpty()
                     .mapNotNull { link ->
-                        link.url?.let(
-                            ::youTubeId,
-                        )?.let { YouTubeTrailer(it, link.name?.takeIf(String::isNotBlank)) }
+                        link.url?.let(::youTubeId)?.let { YouTubeTrailer(it, link.name?.takeIf(String::isNotBlank)) }
                     }
                     // Metadata providers often list the same video twice.
                     .distinctBy { it.videoId },
@@ -181,18 +179,15 @@ class DetailRepository @Inject constructor(
 
     suspend fun seasons(seriesId: UUID): List<Season> = withContext(Dispatchers.IO) {
         val session = requireSession()
-        session.api.showApi.getSeasons(
-            seriesId = seriesId,
-            userId = session.userId,
-            enableUserData = true,
-        ).content.items.map {
-            Season(
-                id = it.id,
-                number = it.indexNumber,
-                name = it.name.orEmpty(),
-                unwatchedCount = it.userData?.unplayedItemCount,
-            )
-        }
+        session.api.showApi.getSeasons(seriesId = seriesId, userId = session.userId, enableUserData = true)
+            .content.items.map {
+                Season(
+                    id = it.id,
+                    number = it.indexNumber,
+                    name = it.name.orEmpty(),
+                    unwatchedCount = it.userData?.unplayedItemCount,
+                )
+            }
     }
 
     suspend fun episodes(seriesId: UUID, seasonId: UUID): List<MediaItem> = withContext(Dispatchers.IO) {

@@ -414,9 +414,11 @@ class MusicController @Inject constructor(
         }
         // Another profile does not inherit the music.
         scope.launch {
-            sessions.session.map { it?.server?.id to it?.user?.userId }.distinctUntilChanged().drop(
-                1,
-            ).collect { stop() }
+            sessions.session
+                .map { it?.server?.id to it?.user?.userId }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { stop() }
         }
     }
 

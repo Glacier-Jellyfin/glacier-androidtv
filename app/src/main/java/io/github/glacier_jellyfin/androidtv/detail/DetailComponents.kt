@@ -442,9 +442,10 @@ fun EpisodeCard(
                 episode.progress != null -> ProgressBar(
                     episode.progress ?: 0f,
                     track = Color(0x42E8F4F7),
-                    modifier = Modifier.align(
-                        Alignment.BottomCenter,
-                    ).padding(start = 16.dp, end = 16.dp, bottom = 16.dp).height(5.dp),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                        .height(5.dp),
                 )
             }
         }

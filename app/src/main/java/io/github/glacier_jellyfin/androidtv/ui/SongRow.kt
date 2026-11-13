@@ -82,9 +82,10 @@ fun SongRow(
         ) {
             if (showCover) {
                 Box(
-                    Modifier.size(
-                        48.dp,
-                    ).clip(RoundedCornerShape(GlacierShapes.RadiusSm)).background(GlacierColors.GlassFill2),
+                    Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(GlacierShapes.RadiusSm))
+                        .background(GlacierColors.GlassFill2),
                 ) {
                     if (coverUrl != null) {
                         AsyncImage(

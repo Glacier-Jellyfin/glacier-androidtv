@@ -386,9 +386,11 @@ private fun NotesPanel(
                         section.items.forEach { item ->
                             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                                 Box(
-                                    Modifier.padding(
-                                        top = 12.dp,
-                                    ).size(6.dp).clip(CircleShape).background(GlacierColors.Ice),
+                                    Modifier
+                                        .padding(top = 12.dp)
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(GlacierColors.Ice),
                                 )
                                 Text(
                                     item.text,
@@ -458,9 +460,7 @@ private fun VersionChip(text: String, highlight: Boolean) {
         Text(
             text,
             style = if (highlight) {
-                GlacierText.mono(
-                    19,
-                ).copy(fontWeight = FontWeight.SemiBold)
+                GlacierText.mono(19).copy(fontWeight = FontWeight.SemiBold)
             } else {
                 GlacierText.mono(19)
             },
@@ -625,9 +625,8 @@ fun changelogNotes(
 private fun changelogDate(date: String?): String? = date
     ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
     ?.let {
-        DateFormat.getDateInstance(
-            DateFormat.LONG,
-        ).format(Date.from(it.atStartOfDay(ZoneId.systemDefault()).toInstant()))
+        DateFormat.getDateInstance(DateFormat.LONG)
+            .format(Date.from(it.atStartOfDay(ZoneId.systemDefault()).toInstant()))
     }
 
 /** Glacier's page in [store] ("amazon", "play"), where a store build gets its updates; the web page if the store app is missing. */

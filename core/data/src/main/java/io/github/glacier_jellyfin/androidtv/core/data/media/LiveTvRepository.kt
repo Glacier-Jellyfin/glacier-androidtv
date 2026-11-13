@@ -164,9 +164,9 @@ fun channelAfter(
 /** The channel a typed number picks: the exact number, else none. */
 fun channelByNumber(channels: List<LiveChannel>, number: String): LiveChannel? =
     channels.firstOrNull { it.number == number }
-        ?: number.trimStart(
-            '0',
-        ).takeIf { it.isNotEmpty() }?.let { trimmed -> channels.firstOrNull { it.number?.trimStart('0') == trimmed } }
+        ?: number.trimStart('0')
+            .takeIf { it.isNotEmpty() }
+            ?.let { trimmed -> channels.firstOrNull { it.number?.trimStart('0') == trimmed } }
 
 /**
  * [channels] in [sort] order. By number: numbered channels first, a number like "5.1" after "5"

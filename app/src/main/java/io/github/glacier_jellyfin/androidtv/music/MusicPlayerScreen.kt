@@ -610,9 +610,10 @@ private fun FullscreenView(
                     if (withCover) {
                         val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
                         Box(
-                            Modifier.size(
-                                FULLSCREEN_COVER.dp,
-                            ).clip(shape).border(1.dp, GlacierColors.GlassBorder2, shape),
+                            Modifier
+                                .size(FULLSCREEN_COVER.dp)
+                                .clip(shape)
+                                .border(1.dp, GlacierColors.GlassBorder2, shape),
                         ) {
                             Artwork(track.coverUrl, Modifier.fillMaxSize())
                         }
@@ -648,9 +649,12 @@ private fun FullscreenView(
                 }
                 LeftToRight {
                     Box(
-                        Modifier.padding(
-                            top = 12.dp,
-                        ).fillMaxWidth().height(7.dp).clip(PillShape).background(GlacierColors.GlassFill2),
+                        Modifier
+                            .padding(top = 12.dp)
+                            .fillMaxWidth()
+                            .height(7.dp)
+                            .clip(PillShape)
+                            .background(GlacierColors.GlassFill2),
                     ) {
                         Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(LocalAccent.current.main))
                     }

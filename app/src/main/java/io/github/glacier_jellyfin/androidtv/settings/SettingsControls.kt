@@ -531,9 +531,11 @@ internal fun ChoicePills(
                     }
                     dots?.getOrNull(index)?.let { dot ->
                         Box(
-                            Modifier.size(
-                                20.dp,
-                            ).clip(CircleShape).background(dot).border(1.dp, Color(0x66000000), CircleShape),
+                            Modifier
+                                .size(20.dp)
+                                .clip(CircleShape)
+                                .background(dot)
+                                .border(1.dp, Color(0x66000000), CircleShape),
                         )
                     }
                     val font = fonts?.getOrNull(index)
@@ -897,9 +899,7 @@ internal fun SubtitlePreview(style: SubtitleStyle, image: String?) {
                 )
                 .then(
                     if (native) {
-                        Modifier.background(
-                            Color(0x99000000),
-                        ).padding(horizontal = 8.dp, vertical = 2.dp)
+                        Modifier.background(Color(0x99000000)).padding(horizontal = 8.dp, vertical = 2.dp)
                     } else {
                         Modifier
                     },

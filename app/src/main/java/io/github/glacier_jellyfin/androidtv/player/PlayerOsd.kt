@@ -154,9 +154,9 @@ fun PlayerOsd(
                                 ),
                                 onClick = onTogglePlay,
                                 big = true,
-                                modifier = Modifier.focusRequester(
-                                    playFocus,
-                                ).onFocusChanged { onPlayFocused(it.isFocused) },
+                                modifier = Modifier
+                                    .focusRequester(playFocus)
+                                    .onFocusChanged { onPlayFocused(it.isFocused) },
                             )
                             ControlButton(
                                 GlacierIcons.Forward,
@@ -325,9 +325,10 @@ private fun Timeline(
                     .background(OsdGlass),
             ) {
                 Box(
-                    Modifier.fillMaxHeight().fillMaxWidth(
-                        fraction(progress.bufferedMs, duration),
-                    ).background(GlacierColors.GlassBorder2),
+                    Modifier
+                        .fillMaxHeight()
+                        .fillMaxWidth(fraction(progress.bufferedMs, duration))
+                        .background(GlacierColors.GlassBorder2),
                 )
                 Box(Modifier.fillMaxHeight().fillMaxWidth(fraction(progress.positionMs, duration)).background(accent))
                 // Known segments (intro, credits …) as hatched stretches (design).
@@ -337,12 +338,8 @@ private fun Timeline(
                             Modifier
                                 .offset(x = trackWidth * fraction(segment.startMs, duration))
                                 .width(
-                                    trackWidth * (
-                                        fraction(
-                                            segment.endMs,
-                                            duration,
-                                        ) - fraction(segment.startMs, duration)
-                                        ),
+                                    trackWidth *
+                                        (fraction(segment.endMs, duration) - fraction(segment.startMs, duration)),
                                 )
                                 .fillMaxHeight()
                                 .clip(PillShape)

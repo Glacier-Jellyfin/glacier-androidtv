@@ -33,10 +33,8 @@ class AccountStateTest {
     @Test
     fun `a new server at a saved address replaces the old one and its profiles`() {
         val reset = server.copy(id = "s2", address = "http://HOME:8096/")
-        val state = AccountState().withServer(
-            server,
-            now = 1,
-        ).withSignIn(signIn(anna, "Anna"), now = 2).withServer(reset, now = 3)
+        val state = AccountState().withServer(server, now = 1)
+            .withSignIn(signIn(anna, "Anna"), now = 2).withServer(reset, now = 3)
         assertEquals(listOf("s2"), state.servers.map { it.id })
         assertTrue(state.users.isEmpty())
         assertEquals("s2", state.lastServerId)
@@ -122,10 +120,8 @@ class AccountStateTest {
 
     @Test
     fun `removing a server drops its users`() {
-        val state = AccountState().withServer(
-            server,
-            now = 1,
-        ).withSignIn(signIn(anna, "Anna"), now = 2).withoutServer("s1")
+        val state = AccountState().withServer(server, now = 1)
+            .withSignIn(signIn(anna, "Anna"), now = 2).withoutServer("s1")
         assertTrue(state.servers.isEmpty())
         assertTrue(state.users.isEmpty())
         assertNull(state.lastServerId)

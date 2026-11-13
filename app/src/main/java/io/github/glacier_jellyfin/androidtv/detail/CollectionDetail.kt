@@ -190,9 +190,8 @@ fun CollectionDetail(
                             }
                             Text(
                                 collection.title,
-                                style = GlacierText.display(
-                                    70,
-                                ).copy(lineHeight = 73.sp, shadow = Shadow(Color(0x99000000), blurRadius = 30f)),
+                                style = GlacierText.display(70)
+                                    .copy(lineHeight = 73.sp, shadow = Shadow(Color(0x99000000), blurRadius = 30f)),
                                 color = GlacierColors.Ice,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
@@ -234,9 +233,7 @@ fun CollectionDetail(
                                 if (playable) {
                                     val title = next?.title?.let {
                                         if (it.length > TITLE_CLAMP) {
-                                            it.take(
-                                                TITLE_CLAMP - 1,
-                                            ).trimEnd() + "…"
+                                            it.take(TITLE_CLAMP - 1).trimEnd() + "…"
                                         } else {
                                             it
                                         }

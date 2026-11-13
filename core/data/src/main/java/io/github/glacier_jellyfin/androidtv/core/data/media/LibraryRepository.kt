@@ -374,10 +374,7 @@ class LibraryRepository @Inject constructor(
                 if (cached != null && now - cached.at < WHOLE_FRESH_MS) {
                     cached.value
                 } else {
-                    fetchIndex(
-                        session,
-                        query,
-                    ).also { indexCache = Cached(key, now, it) }
+                    fetchIndex(session, query).also { indexCache = Cached(key, now, it) }
                 }
 
             else -> {

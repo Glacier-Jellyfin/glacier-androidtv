@@ -94,11 +94,7 @@ internal fun audioHeadline(format: Format): String = listOfNotNull(
 @OptIn(UnstableApi::class)
 internal fun audioDetails(format: Format): String = listOfNotNull(
     format.sampleRate.takeIf { it > 0 }?.let {
-        String.format(
-            Locale.ROOT,
-            "%.1f",
-            it / 1000.0,
-        ).removeSuffix(".0") + " kHz"
+        String.format(Locale.ROOT, "%.1f", it / 1000.0).removeSuffix(".0") + " kHz"
     },
     bitrateText(format.bitrate),
 ).joinToString(" · ")

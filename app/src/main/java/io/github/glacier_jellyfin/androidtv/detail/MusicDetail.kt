@@ -559,9 +559,11 @@ private fun musicFacts(state: DetailState, item: MediaItem): List<String> {
                     titles.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.count_titles, it, it) },
                     minutes.takeIf { it > 0 }?.let { runtimeText(it) },
                 ).joinToString(" · ").ifEmpty { null },
-                (item.genres.ifEmpty { albums.flatMap { it.genres } }).distinct().take(
-                    2,
-                ).joinToString(" · ").ifEmpty { null },
+                (item.genres.ifEmpty { albums.flatMap { it.genres } })
+                    .distinct()
+                    .take(2)
+                    .joinToString(" · ")
+                    .ifEmpty { null },
             )
         }
 

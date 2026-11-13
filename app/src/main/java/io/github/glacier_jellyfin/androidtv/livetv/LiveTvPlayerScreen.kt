@@ -979,9 +979,9 @@ private fun ProgramTimeline(
                     .clip(PillShape)
                     .background(OsdGlass),
             ) {
-                fun Modifier.stretch(start: Long, end: Long) = offset(
-                    x = width * at(start),
-                ).width(width * (at(end) - at(start))).fillMaxHeight()
+                fun Modifier.stretch(start: Long, end: Long) = offset(x = width * at(start))
+                    .width(width * (at(end) - at(start)))
+                    .fillMaxHeight()
                 val kept = keptFrom ?: nowMs
                 if (kept > from) Box(Modifier.stretch(from, kept).background(accent.copy(alpha = 0.4f)))
                 Box(Modifier.stretch(kept, playingAt).background(accent))
@@ -1008,9 +1008,11 @@ private fun ProgramTimeline(
                     contentAlignment = Alignment.Center,
                 ) {
                     Box(
-                        Modifier.size(
-                            size,
-                        ).shadow(if (focused) 0.dp else 8.dp, CircleShape).clip(CircleShape).background(accent),
+                        Modifier
+                            .size(size)
+                            .shadow(if (focused) 0.dp else 8.dp, CircleShape)
+                            .clip(CircleShape)
+                            .background(accent),
                     )
                 }
             }
@@ -1089,9 +1091,9 @@ private fun TimeLabelButton(
 private val SecondsClock: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
 
 /** 18:58:40: a step of a few seconds still shows. */
-private fun secondsClockText(timeMs: Long): String = Instant.ofEpochMilli(
-    timeMs,
-).atZone(ZoneId.systemDefault()).format(SecondsClock)
+private fun secondsClockText(timeMs: Long): String = Instant.ofEpochMilli(timeMs)
+    .atZone(ZoneId.systemDefault())
+    .format(SecondsClock)
 
 /** Where the keys are while the time bar is open. */
 private enum class TimeControl { Bar, Back, Play, Forward, Live, Info }

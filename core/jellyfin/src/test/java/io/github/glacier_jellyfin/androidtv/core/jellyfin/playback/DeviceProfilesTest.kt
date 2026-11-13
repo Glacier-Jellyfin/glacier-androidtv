@@ -96,11 +96,8 @@ class DeviceProfilesTest {
         val video = DeviceProfiles.build(tv, MAX).transcodingProfiles.single { it.type == DlnaProfileType.VIDEO }
         assertEquals("mp4", video.container)
         assertEquals("aac,eac3,flac", video.audioCodec)
-        val retry = DeviceProfiles.build(
-            tv,
-            MAX,
-            segments = HlsSegments.Ts,
-        ).transcodingProfiles.single { it.type == DlnaProfileType.VIDEO }
+        val retry = DeviceProfiles.build(tv, MAX, segments = HlsSegments.Ts)
+            .transcodingProfiles.single { it.type == DlnaProfileType.VIDEO }
         assertEquals("ts", retry.container)
     }
 
@@ -183,11 +180,8 @@ class DeviceProfilesTest {
 
     @Test
     fun `burn-in modes only offer burning for the chosen formats`() {
-        fun methods(mode: SubtitleBurnIn, format: String) = DeviceProfiles.build(
-            fullHdTv,
-            MAX,
-            mode,
-        ).subtitleProfiles.filter { it.format == format }.map { it.method }.toSet()
+        fun methods(mode: SubtitleBurnIn, format: String) = DeviceProfiles.build(fullHdTv, MAX, mode)
+            .subtitleProfiles.filter { it.format == format }.map { it.method }.toSet()
 
         assertEquals(setOf(SubtitleDeliveryMethod.ENCODE), methods(SubtitleBurnIn.PictureFormats, "pgssub"))
         assertEquals(

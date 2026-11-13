@@ -132,9 +132,8 @@ class MediaCapabilityDetector @Inject constructor(
         codecs.flatMapTo(HashSet()) { info -> info.getCapabilitiesForType(mime).profileLevels.map { it.profile } }
 
     private fun displayHdrTypes(): Set<Int> {
-        val display = context.getSystemService(
-            DisplayManager::class.java,
-        )?.getDisplay(Display.DEFAULT_DISPLAY) ?: return emptySet()
+        val display = context.getSystemService(DisplayManager::class.java)
+            ?.getDisplay(Display.DEFAULT_DISPLAY) ?: return emptySet()
         val types = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             display.mode.supportedHdrTypes
         } else {
@@ -151,9 +150,9 @@ class MediaCapabilityDetector @Inject constructor(
     /** Formats the connected receiver or TV accepts as a bitstream. */
     private fun passthroughCodecs(): List<String> {
         val audioManager = context.getSystemService(AudioManager::class.java) ?: return emptyList()
-        val encodings = audioManager.getDevices(
-            AudioManager.GET_DEVICES_OUTPUTS,
-        ).flatMap { it.encodings.toList() }.toSet()
+        val encodings = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            .flatMap { it.encodings.toList() }
+            .toSet()
         return buildList {
             if (AudioFormat.ENCODING_AC3 in encodings) add("ac3")
             if (AudioFormat.ENCODING_E_AC3 in encodings || AudioFormat.ENCODING_E_AC3_JOC in encodings) add("eac3")
@@ -202,9 +201,10 @@ class MediaCapabilityDetector @Inject constructor(
         .build()
 
     private val movieAttributes: AudioAttributes
-        get() = AudioAttributes.Builder().setUsage(
-            AudioAttributes.USAGE_MEDIA,
-        ).setContentType(AudioAttributes.CONTENT_TYPE_MOVIE).build()
+        get() = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_MEDIA)
+            .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
+            .build()
 
     /** The platform's own answer, where it gives one (Android 10 and later). */
     private fun iecTrackSupported(): Boolean = runCatching {

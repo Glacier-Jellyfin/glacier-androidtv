@@ -94,10 +94,8 @@ fun LogShareScreen(share: LogShare, onClose: () -> Unit) {
                             Text(
                                 stringResource(
                                     R.string.diag_crash_intro,
-                                    DateFormat.getDateTimeInstance(
-                                        DateFormat.MEDIUM,
-                                        DateFormat.SHORT,
-                                    ).format(Date(it)),
+                                    DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+                                        .format(Date(it)),
                                 ),
                                 style = GlacierText.body(21),
                                 color = GlacierColors.Mist,

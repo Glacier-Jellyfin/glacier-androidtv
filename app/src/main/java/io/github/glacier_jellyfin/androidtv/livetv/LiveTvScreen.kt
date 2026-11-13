@@ -257,13 +257,13 @@ fun LiveTvScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: LiveTvViewMo
 
     // A loader covers the page: the remote must not reach the navigation or anything else behind it.
     Box(
-        Modifier.fillMaxSize().blockKeysWhile(
-            state.loading && state.channels == null,
-            takeFocus = true,
-        ).onPreviewKeyEvent {
-            if (it.type == KeyEventType.KeyDown) keyPressed = true
-            false
-        },
+        Modifier
+            .fillMaxSize()
+            .blockKeysWhile(state.loading && state.channels == null, takeFocus = true)
+            .onPreviewKeyEvent {
+                if (it.type == KeyEventType.KeyDown) keyPressed = true
+                false
+            },
     ) {
         val channels = state.channels
         when {
@@ -366,9 +366,8 @@ fun LiveTvScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: LiveTvViewMo
                             down = when {
                                 state.view == LiveTvView.Guide -> gridFocus
 
-                                else -> shown?.getOrNull(
-                                    listState.firstVisibleItemIndex,
-                                )?.let { requesters[it.id.toString()] } ?: FocusRequester.Default
+                                else -> shown?.getOrNull(listState.firstVisibleItemIndex)
+                                    ?.let { requesters[it.id.toString()] } ?: FocusRequester.Default
                             }
                         }
                         ToggleChip(
@@ -387,9 +386,9 @@ fun LiveTvScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: LiveTvViewMo
                             open = sortMenuOpen,
                             descending = state.descending,
                             onClick = { sortMenuOpen = !sortMenuOpen },
-                            modifier = downIntoList.focusRequester(
-                                sortButtonFocus,
-                            ).onGloballyPositioned { sortAnchor = it.boundsInRoot() },
+                            modifier = downIntoList
+                                .focusRequester(sortButtonFocus)
+                                .onGloballyPositioned { sortAnchor = it.boundsInRoot() },
                         )
                     }
                 }

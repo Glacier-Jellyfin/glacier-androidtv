@@ -419,9 +419,8 @@ fun HomeScreen(
                                                     PosterFor(
                                                         item,
                                                         onClick = { viewModel.openDetails(item) },
-                                                        modifier = Modifier.remembered(
-                                                            "latest-${library.id}-${item.id}",
-                                                        ),
+                                                        modifier = Modifier
+                                                            .remembered("latest-${library.id}-${item.id}"),
                                                     )
                                                 }
                                             }

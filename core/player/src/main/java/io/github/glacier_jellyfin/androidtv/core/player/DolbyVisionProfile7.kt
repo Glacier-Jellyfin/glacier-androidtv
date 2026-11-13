@@ -88,10 +88,8 @@ internal class DolbyVisionProfile7Extractors(
     private inner class Profile7Output(private val inner: ExtractorOutput) : ExtractorOutput by inner {
         val byId = mutableMapOf<Int, Profile7Track>()
 
-        override fun track(id: Int, type: Int): TrackOutput = Profile7Track(
-            inner.track(id, type),
-            mode,
-        ).also { byId[id] = it }
+        override fun track(id: Int, type: Int): TrackOutput = Profile7Track(inner.track(id, type), mode)
+            .also { byId[id] = it }
     }
 
     /** RPUs met by a converted track, for the log. */

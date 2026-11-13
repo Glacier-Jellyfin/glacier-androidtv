@@ -269,9 +269,8 @@ class GlacierPlayback(
         scheduleMove(nextItem, inItemMs)
         Log.i(
             TAG,
-            "Hand over at $atMs ms: the playing stream goes on, the next is queued and loads ahead (${stateName(
-                player.playbackState,
-            )} at ${player.currentPosition} ms, ${player.mediaItemCount} items)",
+            "Hand over at $atMs ms: the playing stream goes on, the next is queued and loads ahead " +
+                "(${stateName(player.playbackState)} at ${player.currentPosition} ms, ${player.mediaItemCount} items)",
         )
         return true
     }
@@ -538,13 +537,11 @@ class GlacierPlayback(
                 if (titleAudio != null && startsAsFile && fileAudioDecoded == null) {
                     setFileDecoded(AudioPath.isDecoded(audioTrackConfig.encoding))
                 }
+                val channels = Integer.bitCount(audioTrackConfig.channelConfig)
                 Log.i(
                     TAG,
-                    "Audio output: ${encodingName(
-                        audioTrackConfig.encoding,
-                    )}, ${Integer.bitCount(
-                        audioTrackConfig.channelConfig,
-                    )} channels, ${audioTrackConfig.sampleRate} Hz",
+                    "Audio output: ${encodingName(audioTrackConfig.encoding)}, " +
+                        "$channels channels, ${audioTrackConfig.sampleRate} Hz",
                 )
                 audioStart("track ${encodingName(audioTrackConfig.encoding)} ${audioTrackConfig.sampleRate} Hz")
             }

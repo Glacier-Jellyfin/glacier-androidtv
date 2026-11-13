@@ -211,9 +211,10 @@ private fun DeviceCard(
             horizontalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             Box(
-                Modifier.size(
-                    60.dp,
-                ).clip(RoundedCornerShape(GlacierShapes.RadiusSm)).background(accent.copy(alpha = 0.16f)),
+                Modifier
+                    .size(60.dp)
+                    .clip(RoundedCornerShape(GlacierShapes.RadiusSm))
+                    .background(accent.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(GlacierIcons.Settings, contentDescription = null, tint = accent, modifier = Modifier.size(28.dp))

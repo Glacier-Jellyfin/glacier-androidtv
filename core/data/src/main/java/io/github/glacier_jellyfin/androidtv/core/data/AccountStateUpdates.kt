@@ -24,9 +24,7 @@ internal fun AccountState.withServer(server: ServerInfo, now: Long): AccountStat
 
 /** Saved servers at [server]'s address under another id: it was set up again there. */
 fun AccountState.serversReplacedBy(server: ServerInfo): List<StoredServer> = servers.filter {
-    it.id != server.id && it.address.trimEnd(
-        '/',
-    ).equals(server.address.trimEnd('/'), ignoreCase = true)
+    it.id != server.id && it.address.trimEnd('/').equals(server.address.trimEnd('/'), ignoreCase = true)
 }
 
 /**

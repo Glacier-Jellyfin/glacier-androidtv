@@ -30,12 +30,8 @@ internal fun timelineStations(
 ): List<TimelineStation> {
     val railWidth = (totalWidth - 2 * TIMELINE_INSET).coerceAtLeast(0f)
     val xs = startsMs.map {
-        TIMELINE_INSET + railWidth * (
-            (it - windowStartMs).coerceIn(
-                0L,
-                windowMs,
-            ).toFloat() / windowMs
-            )
+        val fraction = (it - windowStartMs).coerceIn(0L, windowMs).toFloat() / windowMs
+        TIMELINE_INSET + railWidth * fraction
     }
     return xs.indices.map { i ->
         val left = xs[i] - TIMELINE_DOT_SHIFT

@@ -156,10 +156,8 @@ class Authenticator @Inject constructor(private val jellyfin: Jellyfin) {
      */
     suspend fun tokenUserId(address: String, accessToken: String): String? = withContext(Dispatchers.IO) {
         try {
-            jellyfin.createApi(
-                baseUrl = address,
-                accessToken = accessToken,
-            ).userApi.getCurrentUser().content.id.toString()
+            jellyfin.createApi(baseUrl = address, accessToken = accessToken)
+                .userApi.getCurrentUser().content.id.toString()
         } catch (e: InvalidStatusException) {
             if (e.status == HTTP_UNAUTHORIZED) null else throw e
         }

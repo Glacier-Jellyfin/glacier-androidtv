@@ -364,9 +364,8 @@ fun LibraryScreen(
         jumpTarget = state.items.getOrNull(index)?.id?.toString()
         focusedId = jumpTarget
         // A group's first title: its heading comes into view with it.
-        val position = positions.getOrNull(
-            index,
-        )?.let { if (startsGroup(state.items, index)) it - 1 else it } ?: return@LaunchedEffect
+        val position = positions.getOrNull(index)
+            ?.let { if (startsGroup(state.items, index)) it - 1 else it } ?: return@LaunchedEffect
         gridState.scrollToItem(position)
         withFrameNanos { }
         // Settle the row where focused rows sit, not under the nav.
@@ -877,10 +876,8 @@ private fun SectionHeading(text: String) {
 private fun groupLabel(group: ListGroup, sort: LibrarySort): String = when (group) {
     is ListGroup.Month -> {
         val locale = LocalLocale.current.platformLocale
-        YearMonth.of(
-            group.year,
-            group.month,
-        ).format(DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "LLLLyyyy"), locale))
+        YearMonth.of(group.year, group.month)
+            .format(DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "LLLLyyyy"), locale))
     }
 
     is ListGroup.Year -> group.year.toString()
@@ -922,11 +919,9 @@ private fun Header(state: LibraryState) {
         // In the folder view, the way down to the folder shown instead.
         Text(
             when {
-                state.inFolders -> (
-                    listOf(
-                        stringResource(R.string.scope_music_videos),
-                    ) + state.folderPath.map { it.name }
-                    ).joinToString(" › ")
+                state.inFolders ->
+                    (listOf(stringResource(R.string.scope_music_videos)) + state.folderPath.map { it.name })
+                        .joinToString(" › ")
 
                 total != null -> countText(state.query.scope, state.query.kind, total)
 
@@ -994,9 +989,9 @@ private fun Toolbar(
                     open = state.viewMenuOpen,
                     onClick = { onViewMenu(!state.viewMenuOpen) },
                     icon = GlacierIcons.Grid,
-                    modifier = Modifier.focusRequester(
-                        viewButtonFocus,
-                    ).onGloballyPositioned { onViewAnchor(it.boundsInRoot()) },
+                    modifier = Modifier
+                        .focusRequester(viewButtonFocus)
+                        .onGloballyPositioned { onViewAnchor(it.boundsInRoot()) },
                 )
             }
         } else if (state.query.filterable) {
@@ -1024,9 +1019,9 @@ private fun Toolbar(
                 open = state.sortMenuOpen,
                 descending = state.query.descending,
                 onClick = { onSortMenu(!state.sortMenuOpen) },
-                modifier = Modifier.focusRequester(
-                    sortButtonFocus,
-                ).onGloballyPositioned { onSortAnchor(it.boundsInRoot()) },
+                modifier = Modifier
+                    .focusRequester(sortButtonFocus)
+                    .onGloballyPositioned { onSortAnchor(it.boundsInRoot()) },
             )
         }
     }

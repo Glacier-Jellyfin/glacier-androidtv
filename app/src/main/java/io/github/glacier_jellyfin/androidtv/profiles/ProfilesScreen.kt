@@ -214,9 +214,8 @@ private fun ProfileTile(
                     if (!imageLoaded) {
                         Text(
                             card.profile.name.take(1).uppercase(),
-                            style = GlacierText.display(
-                                64,
-                            ).copy(shadow = Shadow(Color.Black.copy(alpha = 0.5f), blurRadius = 18f)),
+                            style = GlacierText.display(64)
+                                .copy(shadow = Shadow(Color.Black.copy(alpha = 0.5f), blurRadius = 18f)),
                             color = GlacierColors.Ice,
                         )
                     }

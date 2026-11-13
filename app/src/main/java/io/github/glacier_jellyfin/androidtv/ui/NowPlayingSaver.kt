@@ -311,9 +311,11 @@ private fun SaverProgress(progress: StateFlow<MusicProgress>) {
         )
         Box(Modifier.weight(1f).height(6.dp).clip(PillShape).background(GlacierColors.GlassFill2)) {
             Box(
-                Modifier.fillMaxWidth(
-                    fraction.coerceIn(0f, 1f),
-                ).fillMaxHeight().clip(PillShape).background(LocalAccent.current.main),
+                Modifier
+                    .fillMaxWidth(fraction.coerceIn(0f, 1f))
+                    .fillMaxHeight()
+                    .clip(PillShape)
+                    .background(LocalAccent.current.main),
             )
         }
         Text(

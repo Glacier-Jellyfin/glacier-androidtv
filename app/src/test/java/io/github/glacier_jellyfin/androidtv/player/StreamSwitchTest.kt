@@ -80,11 +80,8 @@ class StreamSwitchTest {
 
     @Test
     fun `the progress of the player is counted from the position`() {
-        val stats = HandOverProgress(
-            pointInItemMs = 80_000,
-            postponedMs = 5_000,
-            nextLoadedMs = 14_000,
-        ).toStats(positionMs = 62_000, bufferedPositionMs = 100_000)
+        val stats = HandOverProgress(pointInItemMs = 80_000, postponedMs = 5_000, nextLoadedMs = 14_000)
+            .toStats(positionMs = 62_000, bufferedPositionMs = 100_000)
         assertEquals(18_000L, stats.pointInMs)
         assertEquals(5_000L, stats.postponedMs)
         assertEquals(14_000L, stats.nextLoadedMs)
@@ -93,11 +90,8 @@ class StreamSwitchTest {
 
     @Test
     fun `a point that is passed counts as now`() {
-        val stats = HandOverProgress(
-            pointInItemMs = 80_000,
-            postponedMs = 0,
-            nextLoadedMs = 0,
-        ).toStats(positionMs = 81_000, bufferedPositionMs = 80_500)
+        val stats = HandOverProgress(pointInItemMs = 80_000, postponedMs = 0, nextLoadedMs = 0)
+            .toStats(positionMs = 81_000, bufferedPositionMs = 80_500)
         assertEquals(0L, stats.pointInMs)
         assertEquals(0L, stats.bufferedMs)
     }

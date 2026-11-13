@@ -84,10 +84,8 @@ class HandoverBufferTest {
         second = File(dir, "second.mkv").apply { writeBytes(source) }
         hlsDir = File(dir, "hls").apply { mkdirs() }
         for (name in listOf("index.m3u8") + (0..9).map { "seg$it.ts" }) {
-            File(
-                hlsDir,
-                name,
-            ).writeBytes(javaClass.classLoader!!.getResourceAsStream("handover-hls/$name")!!.readBytes())
+            File(hlsDir, name)
+                .writeBytes(javaClass.classLoader!!.getResourceAsStream("handover-hls/$name")!!.readBytes())
         }
         build()
     }
@@ -258,9 +256,8 @@ class HandoverBufferTest {
      * work and ends a wait for loading on a busy machine as a player that is stuck).
      */
     private fun awaitReady() {
-        TestPlayerRunHelper.advance(
-            player,
-        ).untilBackgroundThreadCondition { player.playbackState == Player.STATE_READY }
+        TestPlayerRunHelper.advance(player)
+            .untilBackgroundThreadCondition { player.playbackState == Player.STATE_READY }
     }
 
     /** Plays to 10 s and lets the link fill the buffer until about 35 s: more than the 25 s where the hand over is to be. */
@@ -317,9 +314,8 @@ class HandoverBufferTest {
 
         // The preloaded file has 12 s: the move is not postponed.
         player.play()
-        TestPlayerRunHelper.advance(
-            player,
-        ).untilBackgroundThreadCondition { transitions.any { it.startsWith("handover-1") } }
+        TestPlayerRunHelper.advance(player)
+            .untilBackgroundThreadCondition { transitions.any { it.startsWith("handover-1") } }
         TestPlayerRunHelper.runUntilPendingCommandsAreFullyHandled(player)
 
         assertEquals("handover-1", player.currentMediaItem?.mediaId)
@@ -402,9 +398,8 @@ class HandoverBufferTest {
         assertEquals("the segment is being loaded", 1, opened("seg4").size)
 
         player.play()
-        TestPlayerRunHelper.advance(
-            player,
-        ).untilBackgroundThreadCondition { transitions.any { it.startsWith("handover-1") } }
+        TestPlayerRunHelper.advance(player)
+            .untilBackgroundThreadCondition { transitions.any { it.startsWith("handover-1") } }
         TestPlayerRunHelper.runUntilPendingCommandsAreFullyHandled(player)
         settle()
         holdSegments = false

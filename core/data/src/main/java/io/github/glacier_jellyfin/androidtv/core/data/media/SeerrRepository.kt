@@ -369,9 +369,8 @@ internal fun parseJellyfinId(raw: String): UUID? {
     if (hex.length != 32) return null
     return runCatching {
         UUID.fromString(
-            "${hex.take(
-                8,
-            )}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}",
+            "${hex.take(8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-" +
+                "${hex.substring(16, 20)}-${hex.substring(20)}",
         )
     }.getOrNull()
 }

@@ -1031,11 +1031,8 @@ private fun homeRows(
                 SettingRow.Choice(
                     stringResource(R.string.settings_spot_type),
                     stringResource(R.string.settings_spot_type_sub),
-                    listOf(
-                        R.string.settings_spot_all,
-                        R.string.settings_spot_movies,
-                        R.string.settings_spot_shows,
-                    ).map { stringResource(it) },
+                    listOf(R.string.settings_spot_all, R.string.settings_spot_movies, R.string.settings_spot_shows)
+                        .map { stringResource(it) },
                     home.spotlightType.ordinal,
                     onSelect = { i -> viewModel.updateHome { it.copy(spotlightType = SpotlightType.entries[i]) } },
                     enabled = on,
@@ -1675,9 +1672,8 @@ private fun accountRows(
                             R.string.settings_ui_lang_profile_sub
                         },
                     ),
-                    value = UiLanguages.firstOrNull { it.code == state.profile.uiLanguage.tag }?.name ?: stringResource(
-                        R.string.settings_ui_lang_system,
-                    ),
+                    value = UiLanguages.firstOrNull { it.code == state.profile.uiLanguage.tag }?.name
+                        ?: stringResource(R.string.settings_ui_lang_system),
                     onClick = { viewModel.openLanguages(LanguageTarget.Ui) },
                     focus = languageFocus,
                 ),
@@ -2255,10 +2251,8 @@ private data class DeviceSummary(
 
 /** The name the device has in the Android settings, and its current display mode. */
 private fun deviceSummary(context: Context): DeviceSummary {
-    val name = Settings.Global.getString(
-        context.contentResolver,
-        Settings.Global.DEVICE_NAME,
-    )?.takeIf { it.isNotBlank() }
+    val name = Settings.Global.getString(context.contentResolver, Settings.Global.DEVICE_NAME)
+        ?.takeIf { it.isNotBlank() }
         ?: "${Build.MANUFACTURER} ${Build.MODEL}"
     val display = context.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY)
     // Sony and others report the 1080p UI mode in Display.mode; DisplayCompat knows the panel's real size.

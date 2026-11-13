@@ -96,8 +96,7 @@ class PlaybackCheckActivity : ComponentActivity() {
         /** True in the check's own process, where the app's background work stays off. */
         fun isCheckProcess(processName: String): Boolean = processName.endsWith(PROCESS_SUFFIX)
 
-        private fun running(context: Context): Boolean = context.getSystemService(
-            ActivityManager::class.java,
-        )?.runningAppProcesses.orEmpty().any { isCheckProcess(it.processName) }
+        private fun running(context: Context): Boolean = context.getSystemService(ActivityManager::class.java)
+            ?.runningAppProcesses.orEmpty().any { isCheckProcess(it.processName) }
     }
 }

@@ -477,9 +477,7 @@ class PlaybackRepository @Inject constructor(
         val tiers = resolutions.map { resolution ->
             async {
                 runSuspendCatching {
-                    transcodingUrl(
-                        resolution,
-                    )?.let {
+                    transcodingUrl(resolution)?.let {
                         fetchTier(
                             session,
                             baseUrl + it,
@@ -499,9 +497,7 @@ class PlaybackRepository @Inject constructor(
         Log.i(
             TAG,
             "Tiers: " + fitting.joinToString {
-                "${RESOLUTION.find(
-                    it.info,
-                )?.groupValues?.get(1) ?: "?"} (${it.bandwidth / 1_000_000} Mbit/s)"
+                "${RESOLUTION.find(it.info)?.groupValues?.get(1) ?: "?"} (${it.bandwidth / 1_000_000} Mbit/s)"
             },
         )
         // Segments start on a keyframe (the server forces one at every segment), which Media3 only assumes with this tag:
@@ -537,9 +533,8 @@ class PlaybackRepository @Inject constructor(
         if (at < 0 || uri == null) {
             Log.w(
                 TAG,
-                "Tier of $label dropped: master playlist without a variant, first lines: " + lines.take(
-                    6,
-                ).joinToString(" | ").take(400),
+                "Tier of $label dropped: master playlist without a variant, first lines: " +
+                    lines.take(6).joinToString(" | ").take(400),
             )
             return null
         }
@@ -576,15 +571,9 @@ class PlaybackRepository @Inject constructor(
         runSuspendCatching {
             val base = checkNotNull(session.api.baseUrl).trimEnd('/')
             val deviceId = URLEncoder.encode(session.api.deviceInfo.id, "UTF-8")
-            val connection = (
-                URL(
-                    "$base/Videos/ActiveEncodings?deviceId=$deviceId&playSessionId=${URLEncoder.encode(
-                        playSessionId,
-                        "UTF-8",
-                    )}",
-                )
-                    .openConnection() as HttpURLConnection
-                ).apply {
+            val encodedSession = URLEncoder.encode(playSessionId, "UTF-8")
+            val url = URL("$base/Videos/ActiveEncodings?deviceId=$deviceId&playSessionId=$encodedSession")
+            val connection = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "DELETE"
                 setRequestProperty("Authorization", session.authorization())
                 connectTimeout = TIER_TIMEOUT_MS
@@ -646,10 +635,8 @@ class PlaybackRepository @Inject constructor(
         // The server only takes the streams asked for when the source is named too
         // (MediaInfoHelper.SetDeviceSpecificData); otherwise a transcode carries its own default
         // audio. A title's main source has the item's id.
-        var sourceId = versionId ?: itemId.toString().replace(
-            "-",
-            "",
-        ).takeIf { audioIndex != null || subtitleIndex != null }
+        var sourceId = versionId ?: itemId.toString().replace("-", "")
+            .takeIf { audioIndex != null || subtitleIndex != null }
 
         // forLadder: for the tiers of a ladder the transcode is no bigger than the display shows, so the server spends the
         // bitrate on the detail of that picture, not on pixels the display throws away.
@@ -906,9 +893,7 @@ class PlaybackRepository @Inject constructor(
             val mainReasons = source.transcodingUrl?.takeIf {
                 method != PlaybackMethod.DirectPlay
             }?.let {
-                TRANSCODE_REASONS.find(
-                    it,
-                )?.groupValues?.get(1)
+                TRANSCODE_REASONS.find(it)?.groupValues?.get(1)
             }
             val ladder = if (resolutions.size >= 2) {
                 buildLadder(session, resolutions, baseUrl) { tier ->
@@ -921,9 +906,8 @@ class PlaybackRepository @Inject constructor(
                                 "sources ${answer.mediaSources.size}, direct play ${tierSource?.supportsDirectPlay}, direct stream ${tierSource?.supportsDirectStream})",
                         )
                     } else {
-                        val tierReasons = TRANSCODE_REASONS.find(
-                            tierSource.transcodingUrl!!,
-                        )?.groupValues?.get(1) ?: mainReasons
+                        val tierReasons = TRANSCODE_REASONS.find(tierSource.transcodingUrl!!)?.groupValues?.get(1)
+                            ?: mainReasons
                         tierPictureFits[tier.height] =
                             StreamBudget.pictureFits(
                                 tierSource.supportsDirectPlay || tierSource.supportsDirectStream,
@@ -976,17 +960,13 @@ class PlaybackRepository @Inject constructor(
             val reasons = source.transcodingUrl?.takeIf {
                 method != PlaybackMethod.DirectPlay
             }?.let {
-                TRANSCODE_REASONS.find(
-                    it,
-                )?.groupValues?.get(1)
+                TRANSCODE_REASONS.find(it)?.groupValues?.get(1)
             }
             // The tracks asked for, and for a stream the server builds the audio it was told to put in.
             val streamAudio = source.transcodingUrl?.takeIf {
                 method != PlaybackMethod.DirectPlay
             }?.let {
-                AUDIO_STREAM_INDEX.find(
-                    it,
-                )?.groupValues?.get(1)
+                AUDIO_STREAM_INDEX.find(it)?.groupValues?.get(1)
             }
             // What the file holds, so a bug report shows the formats without detailed logging.
             val video = streams.firstOrNull { it.type == MediaStreamType.VIDEO }
@@ -1192,11 +1172,8 @@ class PlaybackRepository @Inject constructor(
                     MediaSegmentType.OUTRO -> SegmentKind.Outro
                     else -> return@mapNotNull null
                 }
-                MediaSegment(
-                    kind,
-                    dto.startTicks / TICKS_PER_MS,
-                    dto.endTicks / TICKS_PER_MS,
-                ).takeIf { it.endMs > it.startMs }
+                MediaSegment(kind, dto.startTicks / TICKS_PER_MS, dto.endTicks / TICKS_PER_MS)
+                    .takeIf { it.endMs > it.startMs }
             }
             .let(::mergeOverlapping)
     }
@@ -1247,11 +1224,9 @@ class PlaybackRepository @Inject constructor(
      */
     fun discard(source: PlaybackSource) {
         if (source.method == PlaybackMethod.DirectPlay) return
-        (
-            source.tierSessions.values + listOfNotNull(
-                source.playSessionId,
-            )
-            ).toSet().forEach { id -> reportScope.launch { stopTierJob(id) } }
+        (source.tierSessions.values + listOfNotNull(source.playSessionId))
+            .toSet()
+            .forEach { id -> reportScope.launch { stopTierJob(id) } }
     }
 
     fun reportProgress(source: PlaybackSource, position: PlaybackPosition) = report("progress") {

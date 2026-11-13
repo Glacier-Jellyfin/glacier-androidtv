@@ -10,9 +10,8 @@ class HomeRowsTest {
 
     private val libraries = listOf("movies", "shows")
 
-    private fun HomeSettings.order(libraries: List<String> = this@HomeRowsTest.libraries) = homeRows(
-        libraries,
-    ).map { it.id }
+    private fun HomeSettings.order(libraries: List<String> = this@HomeRowsTest.libraries) = homeRows(libraries)
+        .map { it.id }
 
     @Test
     fun `new in is one row per library, at the place of the general entry`() {
@@ -59,11 +58,8 @@ class HomeRowsTest {
 
     @Test
     fun `a library added later joins the other new in rows`() {
-        val moved = HomeSettings().withRowMoved(
-            "Latest:shows",
-            -1,
-            libraries,
-        ).withRowShown("Latest:movies", false, libraries)
+        val moved = HomeSettings().withRowMoved("Latest:shows", -1, libraries)
+            .withRowShown("Latest:movies", false, libraries)
         val withMusic = moved.homeRows(libraries + "music")
         assertEquals(
             listOf("ContinueWatching", "Favorites", "Latest:shows", "Latest:movies", "Latest:music", "RecentAlbums", "FavoriteSongs", "Libraries", "LiveTvOnNow", "LiveTvChannels"),

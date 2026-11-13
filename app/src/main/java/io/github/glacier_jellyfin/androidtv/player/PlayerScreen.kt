@@ -373,11 +373,7 @@ fun PlayerScreen(onBack: () -> Unit, viewModel: PlayerViewModel = hiltViewModel(
                         targetState = upNextCollapsed,
                         contentAlignment = Alignment.BottomEnd,
                         transitionSpec = {
-                            (
-                                fadeIn(
-                                    tween(300),
-                                ) togetherWith fadeOut(tween(300))
-                                ).using(SizeTransform(clip = false))
+                            (fadeIn(tween(300)) togetherWith fadeOut(tween(300))).using(SizeTransform(clip = false))
                         },
                         label = "upNext",
                     ) { collapsed ->

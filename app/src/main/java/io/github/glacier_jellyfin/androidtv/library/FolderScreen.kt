@@ -266,11 +266,8 @@ fun FolderScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: FolderViewMo
                         // In a folder: the way down to it, from the kind's name. Too long, it loses its start.
                         if (!viewModel.inNavBar) {
                             Crumb(
-                                (
-                                    listOf(
-                                        stringResource(LibraryKind.HomeVideos.title),
-                                    ) + content.trail
-                                    ).joinToString(" › "),
+                                (listOf(stringResource(LibraryKind.HomeVideos.title)) + content.trail)
+                                    .joinToString(" › "),
                                 overflow = TextOverflow.StartEllipsis,
                             )
                         }
@@ -433,9 +430,9 @@ private fun GridLayout(
                 item(span = { GridItemSpan(maxLineSpan) }, key = "toolbar") {
                     // Coming up from the cards, the page scrolls back to its top with the title.
                     Box(
-                        Modifier.padding(
-                            bottom = 34.dp,
-                        ).onFocusChanged { if (it.hasFocus) scope.launch { gridState.animateScrollToItem(0) } },
+                        Modifier
+                            .padding(bottom = 34.dp)
+                            .onFocusChanged { if (it.hasFocus) scope.launch { gridState.animateScrollToItem(0) } },
                     ) { toolbar() }
                 }
                 if (foldersHeaded) {
@@ -513,9 +510,7 @@ private fun GridLayout(
                 onLeft = {
                     jumpTarget?.let {
                         runCatching {
-                            requester(
-                                it,
-                            ).requestFocus()
+                            requester(it).requestFocus()
                         }.getOrDefault(false)
                     } == true
                 },
@@ -690,9 +685,7 @@ private fun GalleryLayout(
                             onEnter = {
                                 if (requestedFocusDirection != FocusDirection.Enter) {
                                     preview?.let {
-                                        requester(
-                                            it.id.toString(),
-                                        ).requestFocus()
+                                        requester(it.id.toString()).requestFocus()
                                     }
                                 }
                             }

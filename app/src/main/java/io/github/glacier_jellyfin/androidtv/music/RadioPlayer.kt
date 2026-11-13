@@ -309,9 +309,9 @@ private fun StationsPanel(
                         menuFrom = key
                         onMenu(station)
                     },
-                    modifier = Modifier.focusRequester(
-                        rowFocus,
-                    ).then(if (i == index) Modifier.focusRequester(currentFocus) else Modifier),
+                    modifier = Modifier
+                        .focusRequester(rowFocus)
+                        .then(if (i == index) Modifier.focusRequester(currentFocus) else Modifier),
                 )
             }
         }

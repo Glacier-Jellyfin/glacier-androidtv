@@ -38,8 +38,12 @@ internal fun videoQuality(streams: List<MediaStream>?): VideoQuality? {
 
         VideoRangeType.HLG -> HdrFormat.Hlg
 
-        VideoRangeType.DOVI, VideoRangeType.DOVI_WITH_HDR10, VideoRangeType.DOVI_WITH_HLG,
-        VideoRangeType.DOVI_WITH_SDR, VideoRangeType.DOVI_WITH_EL, VideoRangeType.DOVI_WITH_HDR10_PLUS,
+        VideoRangeType.DOVI,
+        VideoRangeType.DOVI_WITH_HDR10,
+        VideoRangeType.DOVI_WITH_HLG,
+        VideoRangeType.DOVI_WITH_SDR,
+        VideoRangeType.DOVI_WITH_EL,
+        VideoRangeType.DOVI_WITH_HDR10_PLUS,
         VideoRangeType.DOVI_WITH_ELHDR10_PLUS,
         -> HdrFormat.DolbyVision
 
@@ -182,9 +186,8 @@ internal class MediaMapper(private val api: ApiClient) {
         name = dto.name.orEmpty(),
         kind = kind,
         itemCount = itemCount,
-        imageUrl = dto.imageTags?.get(
-            ImageType.PRIMARY,
-        )?.let { image(dto.id, ImageType.PRIMARY, it, ImageWidth.LIBRARY) },
+        imageUrl = dto.imageTags?.get(ImageType.PRIMARY)
+            ?.let { image(dto.id, ImageType.PRIMARY, it, ImageWidth.LIBRARY) },
     )
 
     private fun quality(dto: BaseItemDto): VideoQuality? = videoQuality(dto.mediaStreams)

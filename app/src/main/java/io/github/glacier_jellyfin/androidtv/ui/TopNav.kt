@@ -278,9 +278,8 @@ fun TopNav(
         val miniEnd = width - MINI_PLAYER_END.dp.roundToPx()
         val toast = TOAST_WIDTH.dp.roundToPx()
         val pill = measurables[0].measure(loose.copy(maxWidth = (miniEnd - toast - gap - edge).coerceAtLeast(0)))
-        val mini = measurables.getOrNull(
-            1,
-        )?.measure(loose.copy(maxWidth = (miniEnd - edge - pill.width - gap).coerceAtLeast(0)))
+        val mini = measurables.getOrNull(1)
+            ?.measure(loose.copy(maxWidth = (miniEnd - edge - pill.width - gap).coerceAtLeast(0)))
         val centred = (width - pill.width) / 2
         val corner = maxOf(toast, mini?.width ?: 0)
         val pillX = minOf(centred, miniEnd - corner - gap - pill.width).coerceAtLeast(edge)

@@ -56,9 +56,10 @@ class FavoritesViewModel @Inject constructor(
         .map { profile -> shownRows(profile.navigation) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, shownRows(settings.settings.value.navigation))
 
-    private fun shownRows(navigation: NavigationSettings): List<FavoriteRow> = navigation.favoriteRows.arranged(
-        FavoriteRow.entries.map { it.name },
-    ).filter { it.shown }.map { FavoriteRow.valueOf(it.id) }
+    private fun shownRows(navigation: NavigationSettings): List<FavoriteRow> = navigation.favoriteRows
+        .arranged(FavoriteRow.entries.map { it.name })
+        .filter { it.shown }
+        .map { FavoriteRow.valueOf(it.id) }
 
     private val _state = MutableStateFlow(FavoritesState(userName = sessions.session.value?.user?.name.orEmpty()))
     val state: StateFlow<FavoritesState> = _state.asStateFlow()

@@ -48,9 +48,7 @@ class ServerFinder @Inject constructor(private val jellyfin: Jellyfin) {
     /** The server answering at a known address, without the extras of [probe]; null when none does. */
     suspend fun identify(address: String): ServerInfo? = withContext(Dispatchers.IO) {
         runSuspendCatching {
-            jellyfin.createApi(
-                baseUrl = address,
-            ).systemApi.getPublicSystemInfo().content
+            jellyfin.createApi(baseUrl = address).systemApi.getPublicSystemInfo().content
         }.getOrNull()?.toServerInfo(address)
     }
 

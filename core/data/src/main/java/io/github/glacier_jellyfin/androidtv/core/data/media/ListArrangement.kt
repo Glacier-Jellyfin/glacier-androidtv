@@ -83,10 +83,8 @@ object ListArrangement {
         val keys = HashMap<UUID, String>(entries.size * 2)
         entries.forEach { keys[it.id] = NameOrder.key(it.name) }
         val byName = Comparator<IndexEntry> { a, b ->
-            NameOrder.compareKeys(
-                keys.getValue(a.id),
-                keys.getValue(b.id),
-            ).takeIf { it != 0 } ?: a.name.compareTo(b.name)
+            NameOrder.compareKeys(keys.getValue(a.id), keys.getValue(b.id))
+                .takeIf { it != 0 } ?: a.name.compareTo(b.name)
         }
         if (!query.grouped) {
             val sorted = entries.sortedWith(byName).let { if (query.orderDescending) it.asReversed() else it }
@@ -108,10 +106,10 @@ object ListArrangement {
                         a is ListGroup.Name && b is ListGroup.Name -> {
                             val ka = nameKeys.getOrPut(a) { NameOrder.key(a.name) }
                             val kb = nameKeys.getOrPut(b) { NameOrder.key(b.name) }
-                            NameOrder.compareKeys(
-                                ka,
-                                kb,
-                            ).takeIf { it != 0 } ?: a.name.compareTo(b.name).takeIf { it != 0 } ?: a.id.compareTo(b.id)
+                            NameOrder.compareKeys(ka, kb)
+                                .takeIf { it != 0 }
+                                ?: a.name.compareTo(b.name).takeIf { it != 0 }
+                                ?: a.id.compareTo(b.id)
                         }
 
                         else -> rank(a).compareTo(rank(b))

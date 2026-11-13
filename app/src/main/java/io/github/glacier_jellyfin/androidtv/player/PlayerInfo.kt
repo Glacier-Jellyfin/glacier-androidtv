@@ -425,10 +425,8 @@ internal fun AudioCard(
     InfoCard(
         label = stringResource(R.string.player_audio),
         status = output?.passthrough?.let { stringResource(R.string.player_info_passthrough) to Tone.Ok },
-        headline = listOfNotNull(
-            Languages.name(language, locale),
-            format?.let(::audioHeadline),
-        ).joinToString(" · ").ifEmpty { null },
+        headline = listOfNotNull(Languages.name(language, locale), format?.let(::audioHeadline))
+            .joinToString(" · ").ifEmpty { null },
         details = format?.let(::audioDetails)?.ifEmpty { null },
         modifier = modifier,
     ) {
@@ -799,10 +797,7 @@ internal fun StreamTable(
                         videoCopied -> unchanged
 
                         else -> stats?.video?.let {
-                            listOfNotNull(
-                                videoHeadline(it),
-                                bitrateText(it.bitrate),
-                            ).joinToString(" · ")
+                            listOfNotNull(videoHeadline(it), bitrateText(it.bitrate)).joinToString(" · ")
                         }
                     },
                 ),
@@ -830,10 +825,7 @@ internal fun StreamTable(
                         audioCopied -> unchanged
 
                         else -> stats?.audio?.let {
-                            listOfNotNull(
-                                audioHeadline(it),
-                                bitrateText(it.bitrate),
-                            ).joinToString(" · ")
+                            listOfNotNull(audioHeadline(it), bitrateText(it.bitrate)).joinToString(" · ")
                         }
                     },
                 ),

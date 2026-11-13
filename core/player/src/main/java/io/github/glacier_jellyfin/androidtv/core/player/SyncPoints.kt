@@ -112,10 +112,8 @@ object SyncPoints {
         maxShiftMs: Long,
     ): Long? {
         val points = seekMap.getSeekPoints(atMs * 1000)
-        val pointMs = listOf(
-            points.first,
-            points.second,
-        ).map { it.timeUs / 1000 }.firstOrNull { it >= atMs } ?: return null
+        val pointMs = listOf(points.first, points.second)
+            .map { it.timeUs / 1000 }.firstOrNull { it >= atMs } ?: return null
         return pointMs.takeIf { it - atMs <= maxShiftMs }
     }
 
@@ -126,10 +124,8 @@ object SyncPoints {
         maxShiftMs: Long,
     ): Long? {
         val points = seekMap.getSeekPoints(atMs * 1000)
-        val pointMs = listOf(
-            points.second,
-            points.first,
-        ).map { it.timeUs / 1000 }.firstOrNull { it <= atMs } ?: return null
+        val pointMs = listOf(points.second, points.first)
+            .map { it.timeUs / 1000 }.firstOrNull { it <= atMs } ?: return null
         return pointMs.takeIf { atMs - it <= maxShiftMs }
     }
 

@@ -49,9 +49,8 @@ class SettingsSerializerTest {
     @Test
     fun `unknown options fall back to their defaults`() = runTest {
         val json = """{"profiles":{"s/u":{"playback":{"upNext":"S90","seekBack":"S5"},"future":1}}}"""
-        val playback = SettingsSerializer.readFrom(
-            ByteArrayInputStream(json.toByteArray()),
-        ).profiles.getValue("s/u").playback
+        val playback = SettingsSerializer.readFrom(ByteArrayInputStream(json.toByteArray()))
+            .profiles.getValue("s/u").playback
         assertEquals(UpNextChoice.WithCredits, playback.upNext)
         assertEquals(SeekStep.S5, playback.seekBack)
     }
@@ -74,9 +73,8 @@ class SettingsSerializerTest {
     @Test
     fun `the bold switch of earlier versions becomes the bold weight`() = runTest {
         val json = """{"profiles":{"s/u":{"subtitleStyle":{"bold":true}}}}"""
-        val style = SettingsSerializer.readFrom(
-            ByteArrayInputStream(json.toByteArray()),
-        ).profiles.getValue("s/u").subtitleStyle
+        val style = SettingsSerializer.readFrom(ByteArrayInputStream(json.toByteArray()))
+            .profiles.getValue("s/u").subtitleStyle
         assertEquals(SubtitleWeight.Bold, style.weight)
     }
 
@@ -93,9 +91,8 @@ class SettingsSerializerTest {
         SettingsSerializer.writeTo(state, out)
         assertEquals(
             SubtitleWeight.Regular,
-            SettingsSerializer.readFrom(
-                ByteArrayInputStream(out.toByteArray()),
-            ).profiles.getValue("s/u").subtitleStyle.weight,
+            SettingsSerializer.readFrom(ByteArrayInputStream(out.toByteArray()))
+                .profiles.getValue("s/u").subtitleStyle.weight,
         )
     }
 
@@ -112,9 +109,8 @@ class SettingsSerializerTest {
         SettingsSerializer.writeTo(state, out)
         assertEquals(
             emptySet<SpotlightSource>(),
-            SettingsSerializer.readFrom(
-                ByteArrayInputStream(out.toByteArray()),
-            ).profiles.getValue("s/u").home.spotlightSources,
+            SettingsSerializer.readFrom(ByteArrayInputStream(out.toByteArray()))
+                .profiles.getValue("s/u").home.spotlightSources,
         )
     }
 

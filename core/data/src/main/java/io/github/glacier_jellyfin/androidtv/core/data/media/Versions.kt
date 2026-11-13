@@ -188,11 +188,7 @@ fun ItemDetails.forVersion(id: String?): ItemDetails {
             runtimeMinutes = runtimeMs?.let { (it / MS_PER_MINUTE).toInt() } ?: item.runtimeMinutes,
             // Jellyfin keeps one resume point for all files; how much is left depends on the file.
             remainingMinutes = if (runtimeMs != null && position > 0) {
-                (
-                    (runtimeMs - position).coerceAtLeast(
-                        0,
-                    ) / MS_PER_MINUTE
-                    ).toInt()
+                ((runtimeMs - position).coerceAtLeast(0) / MS_PER_MINUTE).toInt()
             } else {
                 item.remainingMinutes
             },

@@ -92,10 +92,7 @@ internal class Iec61937OutputProvider private constructor(
     private fun encodingOf(formatConfig: FormatConfig): Int? {
         val format = formatConfig.format
         if (format.sampleMimeType !in BITSTREAMS || format.sampleRate <= 0) return null
-        if (inner.getFormatSupport(
-                formatConfig,
-            ).supportLevel != AudioOutputProvider.FORMAT_SUPPORTED_DIRECTLY
-        ) {
+        if (inner.getFormatSupport(formatConfig).supportLevel != AudioOutputProvider.FORMAT_SUPPORTED_DIRECTLY) {
             return null
         }
         val encoding = runCatching { inner.getOutputConfig(formatConfig).encoding }.getOrNull()

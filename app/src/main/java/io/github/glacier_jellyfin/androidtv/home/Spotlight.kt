@@ -170,9 +170,8 @@ private fun SpotlightInfo(
         if (resuming) ResumeChip()
         Text(
             if (isEpisode) item.parentTitle ?: item.title else item.title,
-            style = GlacierText.display(
-                76,
-            ).copy(lineHeight = 78.sp, shadow = Shadow(Color(0x99000000), blurRadius = 30f)),
+            style = GlacierText.display(76)
+                .copy(lineHeight = 78.sp, shadow = Shadow(Color(0x99000000), blurRadius = 30f)),
             color = GlacierColors.Ice,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,

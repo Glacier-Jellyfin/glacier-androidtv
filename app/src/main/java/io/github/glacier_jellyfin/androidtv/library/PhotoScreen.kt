@@ -127,12 +127,10 @@ fun PhotoScreen(
     val context = LocalContext.current
     LaunchedEffect(state.media, state.index) {
         val loader = SingletonImageLoader.get(context)
-        listOf(
-            state.index + 1,
-            state.index - 1,
-        ).mapNotNull { state.media.getOrNull(it) as? FolderMedia.Photo }.forEach {
-            loader.enqueue(ImageRequest.Builder(context).data(it.photo.fullUrl).build())
-        }
+        listOf(state.index + 1, state.index - 1)
+            .mapNotNull { state.media.getOrNull(it) as? FolderMedia.Photo }.forEach {
+                loader.enqueue(ImageRequest.Builder(context).data(it.photo.fullUrl).build())
+            }
     }
 
     Box(
@@ -188,22 +186,19 @@ fun PhotoScreen(
                         reduceMotion -> fadeIn(tween(FADE_MS)) togetherWith fadeOut(tween(FADE_MS))
 
                         // The slideshow blends slowly, the new picture settling from a little larger.
-                        state.slideshow -> (
-                            fadeIn(
-                                tween(SLIDESHOW_MS),
-                            ) + scaleIn(tween(SLIDESHOW_MS), initialScale = 1.06f)
-                            ) togetherWith
-                            fadeOut(tween(SLIDESHOW_MS))
+                        state.slideshow -> {
+                            val enter = fadeIn(tween(SLIDESHOW_MS)) + scaleIn(tween(SLIDESHOW_MS), initialScale = 1.06f)
+                            enter togetherWith fadeOut(tween(SLIDESHOW_MS))
+                        }
 
                         // Browsing slides the picture in from the side it comes from.
                         else -> {
                             val side = if (state.forward) 1 else -1
-                            (
-                                slideInHorizontally(
-                                    tween(BROWSE_MS),
-                                ) { it / 5 * side } + fadeIn(tween(BROWSE_MS))
-                                ) togetherWith
-                                (slideOutHorizontally(tween(BROWSE_MS)) { -it / 5 * side } + fadeOut(tween(BROWSE_MS)))
+                            val enter = slideInHorizontally(tween(BROWSE_MS)) { it / 5 * side } +
+                                fadeIn(tween(BROWSE_MS))
+                            val exit = slideOutHorizontally(tween(BROWSE_MS)) { -it / 5 * side } +
+                                fadeOut(tween(BROWSE_MS))
+                            enter togetherWith exit
                         }
                     }
                 },

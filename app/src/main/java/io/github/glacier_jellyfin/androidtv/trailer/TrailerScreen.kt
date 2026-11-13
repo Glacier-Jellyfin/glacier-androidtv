@@ -816,9 +816,8 @@ private fun EndScreen(
                 overflow = TextOverflow.Ellipsis,
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ageRatingText(
-                    item.officialRating,
-                )?.let { FactBadge(it, GlacierColors.GlassBorder2, 17, GlacierColors.Ice) }
+                ageRatingText(item.officialRating)
+                    ?.let { FactBadge(it, GlacierColors.GlassBorder2, 17, GlacierColors.Ice) }
                 val length = when (item.kind) {
                     ItemKind.Series -> state.details?.seasonCount?.let {
                         pluralStringResource(

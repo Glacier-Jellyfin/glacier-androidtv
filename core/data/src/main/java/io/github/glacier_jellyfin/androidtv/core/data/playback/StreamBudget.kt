@@ -63,11 +63,9 @@ object StreamBudget {
         videoBitrate: Int?,
         audioChannels: Int,
     ): Int = if (videoCopied && videoBitrate != null && videoBitrate > 0 && height == sourceHeight) {
-        (
-            videoBitrate.toLong() * COPY_PEAK_PERCENT / 100 + audioBitrate(
-                audioChannels,
-            )
-            ).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        (videoBitrate.toLong() * COPY_PEAK_PERCENT / 100 + audioBitrate(audioChannels))
+            .coerceAtMost(Int.MAX_VALUE.toLong())
+            .toInt()
     } else {
         expectedBitrate(height)
     }
@@ -111,11 +109,10 @@ object StreamBudget {
      * The maximum bitrate to ask for so the server copies the picture: its video share (the request minus its own audio
      * guess) must reach [videoBitrate], else it transcodes the picture.
      */
-    fun copyRequest(videoBitrate: Int, audioChannels: Int): Int = (
-        videoBitrate.toLong() * 102 / 100 + audioBitrate(
-            audioChannels,
-        ) + 64_000
-        ).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    fun copyRequest(videoBitrate: Int, audioChannels: Int): Int =
+        (videoBitrate.toLong() * 102 / 100 + audioBitrate(audioChannels) + 64_000)
+            .coerceAtMost(Int.MAX_VALUE.toLong())
+            .toInt()
 
     /** Transcode reasons that leave the picture alone; every other reason (also an unknown one) concerns the video. */
     private val NON_VIDEO_REASONS = setOf(

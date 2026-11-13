@@ -40,14 +40,10 @@ class Iec61937PackerTest {
         var position = 0
         while (position + 9 <= stream.size) {
             // The core's frame size: the whole frame of a stream without extensions.
-            val size =
-                (
-                    (
-                        ((stream[position + 5].toInt() and 0xff) shl 16) or
-                            ((stream[position + 6].toInt() and 0xff) shl 8) or
-                            (stream[position + 7].toInt() and 0xff)
-                        ) shr 4 and 0x3fff
-                    ) + 1
+            val frameHeader = ((stream[position + 5].toInt() and 0xff) shl 16) or
+                ((stream[position + 6].toInt() and 0xff) shl 8) or
+                (stream[position + 7].toInt() and 0xff)
+            val size = (frameHeader shr 4 and 0x3fff) + 1
             packer.pack(ByteBuffer.wrap(stream, position, size), bursts)
             position += size
         }
