@@ -25,13 +25,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,11 +61,11 @@ import io.github.glacier_jellyfin.androidtv.music.MusicProgress
 import io.github.glacier_jellyfin.androidtv.music.MusicUiState
 import io.github.glacier_jellyfin.androidtv.music.NowPlaying
 import io.github.glacier_jellyfin.androidtv.player.formatTime
-import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.min
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Whether the [NowPlayingSaver] covers the screen. The mini player gives it the picture of a music
@@ -105,8 +105,17 @@ private const val SWAY_MS = 90_000
  * (which does nothing else).
  */
 @Composable
-fun NowPlayingSaver(visible: Boolean, nowPlaying: NowPlaying?, music: StateFlow<MusicUiState>, progress: StateFlow<MusicProgress>) {
-    AnimatedVisibility(visible = visible && nowPlaying != null, enter = fadeIn(tween(1200)), exit = fadeOut(tween(300))) {
+fun NowPlayingSaver(
+    visible: Boolean,
+    nowPlaying: NowPlaying?,
+    music: StateFlow<MusicUiState>,
+    progress: StateFlow<MusicProgress>,
+) {
+    AnimatedVisibility(
+        visible = visible && nowPlaying != null,
+        enter = fadeIn(tween(1200)),
+        exit = fadeOut(tween(300)),
+    ) {
         val playing = nowPlaying ?: return@AnimatedVisibility
         val state by music.collectAsState()
         DisposableEffect(Unit) {
@@ -145,7 +154,12 @@ fun NowPlayingSaver(visible: Boolean, nowPlaying: NowPlaying?, music: StateFlow<
                 MusicClock(Modifier.align(Alignment.TopEnd).padding(end = 80.dp, top = 60.dp))
                 Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                     if (playing.live) {
-                        StationLogo(playing.largeCoverUrl, playing.title, Modifier.coverShape(CENTER_COVER), textSize = 72)
+                        StationLogo(
+                            playing.largeCoverUrl,
+                            playing.title,
+                            Modifier.coverShape(CENTER_COVER),
+                            textSize = 72,
+                        )
                     } else {
                         CoverRow(state, playing, player)
                     }
@@ -162,13 +176,20 @@ fun NowPlayingSaver(visible: Boolean, nowPlaying: NowPlaying?, music: StateFlow<
  * plays stands wide in the middle and shows its picture; the covers beside it move out to make room.
  */
 @Composable
-private fun CoverRow(state: MusicUiState, playing: NowPlaying, player: ExoPlayer?) {
+private fun CoverRow(
+    state: MusicUiState,
+    playing: NowPlaying,
+    player: ExoPlayer?,
+) {
     val queue = state.queue
     val place = remember { Animatable(state.index.toFloat()) }
     LaunchedEffect(state.index) {
         // A jump across the queue lands at once, a step to the song beside slides.
-        if (abs(state.index - place.value) > 2f) place.snapTo(state.index.toFloat())
-        else place.animateTo(state.index.toFloat(), tween(900, easing = FastOutSlowInEasing))
+        if (abs(state.index - place.value) > 2f) {
+            place.snapTo(state.index.toFloat())
+        } else {
+            place.animateTo(state.index.toFloat(), tween(900, easing = FastOutSlowInEasing))
+        }
     }
     Box(Modifier.fillMaxWidth().height(CENTER_COVER.dp), contentAlignment = Alignment.Center) {
         if (queue.isEmpty()) {
@@ -199,7 +220,12 @@ private fun CoverRow(state: MusicUiState, playing: NowPlaying, player: ExoPlayer
                     alpha = 1f - near * 0.45f
                 }
                 if (i == videoAt) {
-                    SaverVideo(entry.track.largeCoverUrl ?: entry.track.coverUrl, player, CENTER_COVER + (CENTER_VIDEO_WIDTH - CENTER_COVER) * (1f - videoNear), layer)
+                    SaverVideo(
+                        entry.track.largeCoverUrl ?: entry.track.coverUrl,
+                        player,
+                        CENTER_COVER + (CENTER_VIDEO_WIDTH - CENTER_COVER) * (1f - videoNear),
+                        layer,
+                    )
                 } else {
                     Artwork(entry.track.largeCoverUrl ?: entry.track.coverUrl, layer.coverShape(CENTER_COVER))
                 }
@@ -244,9 +270,24 @@ private fun Modifier.coverShape(size: Int) = this
 @Composable
 private fun SongText(playing: NowPlaying) {
     Column(Modifier.width(1100.dp).padding(top = 44.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(playing.title, style = GlacierText.display(44), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+        Text(
+            playing.title,
+            style = GlacierText.display(44),
+            color = GlacierColors.Ice,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
         playing.subtitle?.let {
-            Text(it, style = GlacierText.body(26, FontWeight.Medium), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 8.dp))
+            Text(
+                it,
+                style = GlacierText.body(26, FontWeight.Medium),
+                color = GlacierColors.Mist,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 8.dp),
+            )
         }
     }
 }
@@ -256,11 +297,30 @@ private fun SongText(playing: NowPlaying) {
 private fun SaverProgress(progress: StateFlow<MusicProgress>) {
     val position by progress.collectAsState()
     val fraction = if (position.durationMs > 0) position.positionMs.toFloat() / position.durationMs else 0f
-    Row(Modifier.width(1100.dp).padding(top = 36.dp), horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(formatTime(position.positionMs), style = GlacierText.mono(20), color = GlacierColors.Ice, textAlign = TextAlign.End, modifier = Modifier.width(90.dp))
+    Row(
+        Modifier.width(1100.dp).padding(top = 36.dp),
+        horizontalArrangement = Arrangement.spacedBy(24.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            formatTime(position.positionMs),
+            style = GlacierText.mono(20),
+            color = GlacierColors.Ice,
+            textAlign = TextAlign.End,
+            modifier = Modifier.width(90.dp),
+        )
         Box(Modifier.weight(1f).height(6.dp).clip(PillShape).background(GlacierColors.GlassFill2)) {
-            Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).fillMaxHeight().clip(PillShape).background(LocalAccent.current.main))
+            Box(
+                Modifier.fillMaxWidth(
+                    fraction.coerceIn(0f, 1f),
+                ).fillMaxHeight().clip(PillShape).background(LocalAccent.current.main),
+            )
         }
-        Text(formatTime(position.durationMs), style = GlacierText.mono(20), color = GlacierColors.Mist, modifier = Modifier.width(90.dp))
+        Text(
+            formatTime(position.durationMs),
+            style = GlacierText.mono(20),
+            color = GlacierColors.Mist,
+            modifier = Modifier.width(90.dp),
+        )
     }
 }

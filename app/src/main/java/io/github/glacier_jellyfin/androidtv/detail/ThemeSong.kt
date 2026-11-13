@@ -81,7 +81,11 @@ private object ThemeSongs {
         }
     }
 
-    fun play(context: Context, key: String, source: PlaybackSource) {
+    fun play(
+        context: Context,
+        key: String,
+        source: PlaybackSource,
+    ) {
         if (key != area || finished || player != null) return
         val created = GlacierPlayer.createAudio(context, source.headers).apply {
             volume = 0f

@@ -1,6 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.detail
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -8,16 +9,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.animation.Crossfade
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -30,15 +32,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
+import coil3.compose.AsyncImage
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
@@ -46,6 +53,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.music.MusicActionsSheet
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
@@ -53,26 +61,17 @@ import io.github.glacier_jellyfin.androidtv.ui.CardShape
 import io.github.glacier_jellyfin.androidtv.ui.ContinueCard
 import io.github.glacier_jellyfin.androidtv.ui.FactsRow
 import io.github.glacier_jellyfin.androidtv.ui.GridCard
-import io.github.glacier_jellyfin.androidtv.ui.SONG_ROW_GAP
-import io.github.glacier_jellyfin.androidtv.ui.SongRow
+import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
+import io.github.glacier_jellyfin.androidtv.ui.RowPivot
+import io.github.glacier_jellyfin.androidtv.ui.SONG_ROW_GAP
+import io.github.glacier_jellyfin.androidtv.ui.SONG_ROW_HEIGHT
+import io.github.glacier_jellyfin.androidtv.ui.SongRow
 import io.github.glacier_jellyfin.androidtv.ui.audioFormatText
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
-import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.layout
-import coil3.compose.AsyncImage
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
-import io.github.glacier_jellyfin.androidtv.ui.RowPivot
-import io.github.glacier_jellyfin.androidtv.ui.SONG_ROW_HEIGHT
 import java.util.UUID
 import kotlinx.coroutines.launch
 
@@ -91,7 +90,11 @@ private const val MORE_KEY = "more"
 /** Album, artist and playlist pages (design: `det.isAlbum`, `isArtist`, `isPlaylist`). */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewModel) {
+fun MusicDetail(
+    state: DetailState,
+    details: ItemDetails,
+    viewModel: DetailViewModel,
+) {
     val item = details.item
     val listState = rememberLazyListState()
     val playFocus = remember { FocusRequester() }
@@ -100,6 +103,7 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
     // What had focus, to land there again when the user comes back (from the player, say).
     var focusKey by rememberSaveable(item.id) { mutableStateOf<String?>(null) }
     val tracks = state.musicTracks
+
     /** A playlist with videos and neither songs nor music videos: Play starts the videos in the video player. */
     val videosOnly = item.kind == ItemKind.Playlist && tracks.isEmpty() && state.playlistVideos.isNotEmpty() &&
         state.playlistVideos.none { it.kind == ItemKind.MusicVideo }
@@ -157,7 +161,10 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
     Box(Modifier.fillMaxSize().background(ImagePageGround)) {
         ScrollingBackdrop(item.backdropUrl ?: item.posterUrl, MUSIC_BACKDROP, listState)
         CompositionLocalProvider(LocalBringIntoViewSpec provides rememberRowPivotSpec(listState, HEADER_REGION)) {
-            LazyColumn(state = listState, modifier = Modifier.fillMaxSize().onFocusChanged { listFocused = it.hasFocus }) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize().onFocusChanged { listFocused = it.hasFocus },
+            ) {
                 item(key = "header") {
                     Column(
                         Modifier
@@ -177,10 +184,22 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                         // Age ratings are a film thing: the design leaves them off music.
                         FactsRow(item.copy(officialRating = null), musicFacts(state, item), tech = musicTech(tracks))
                         item.overview?.takeIf { it.isNotBlank() }?.let { Overview(it, maxWidth = 900) }
-                        Row(Modifier.padding(top = 10.dp).upTo(LocalMiniPlayerFocus.current), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Row(
+                            Modifier.padding(top = 10.dp).upTo(LocalMiniPlayerFocus.current),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
                             ActionButton(
                                 // A playlist of other videos only plays them in the video player.
-                                onClick = { if (videosOnly) viewModel.playVideo(state.playlistVideos.first()) else viewModel.playMusic() },
+                                onClick = {
+                                    if (videosOnly) {
+                                        viewModel.playVideo(
+                                            state.playlistVideos.first(),
+                                        )
+                                    } else {
+                                        viewModel.playMusic()
+                                    }
+                                },
                                 label = stringResource(
                                     when (item.kind) {
                                         ItemKind.Artist -> R.string.music_play_discography
@@ -221,7 +240,9 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                 onClick = viewModel::toggleFavorite,
                                 icon = if (item.isFavorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
                                 on = item.isFavorite,
-                                contentDescription = stringResource(if (item.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
+                                contentDescription = stringResource(
+                                    if (item.isFavorite) R.string.action_unfavorite else R.string.action_favorite,
+                                ),
                             )
                             // The song options are about songs.
                             if (!videosOnly) {
@@ -254,7 +275,12 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                             stringResource(R.string.music_tracks),
                             style = GlacierText.display(28),
                             color = GlacierColors.Ice,
-                            modifier = Modifier.padding(start = PageEdge.dp + songIndent, end = PageEdge.dp, top = 34.dp, bottom = 20.dp),
+                            modifier = Modifier.padding(
+                                start = PageEdge.dp + songIndent,
+                                end = PageEdge.dp,
+                                top = 34.dp,
+                                bottom = 20.dp,
+                            ),
                         )
                     }
                     // One column: Up and Down go song by song. Holding OK opens a song's options.
@@ -268,7 +294,11 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                     stringResource(R.string.music_disc, disc),
                                     style = GlacierText.body(17, FontWeight.SemiBold),
                                     color = GlacierColors.Mist,
-                                    modifier = Modifier.padding(start = PageEdge.dp + songIndent + 24.dp, top = if (index == 0) 0.dp else 18.dp, bottom = 10.dp),
+                                    modifier = Modifier.padding(
+                                        start = PageEdge.dp + songIndent + 24.dp,
+                                        top = if (index == 0) 0.dp else 18.dp,
+                                        bottom = 10.dp,
+                                    ),
                                 )
                             }
                         }
@@ -278,7 +308,13 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                 title = track.title,
                                 durationMs = track.durationMs,
                                 number = if (playlist) index + 1 else track.number,
-                                artist = if (playlist) track.artist else track.artist?.takeIf { it != item.parentTitle },
+                                artist = if (playlist) {
+                                    track.artist
+                                } else {
+                                    track.artist?.takeIf {
+                                        it != item.parentTitle
+                                    }
+                                },
                                 album = track.album,
                                 showArtist = withArtist,
                                 // The cover beside the list names the album of the focused song.
@@ -287,7 +323,11 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                 onOptions = { viewModel.trackOptions(track) },
                                 video = track.isVideo,
                                 modifier = Modifier
-                                    .padding(start = PageEdge.dp + songIndent, end = PageEdge.dp, bottom = SONG_ROW_GAP.dp)
+                                    .padding(
+                                        start = PageEdge.dp + songIndent,
+                                        end = PageEdge.dp,
+                                        bottom = SONG_ROW_GAP.dp,
+                                    )
                                     .focusRequester(focus)
                                     .onFocusChanged { if (it.isFocused) focusKey = track.id.toString() },
                             )
@@ -295,7 +335,15 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                     }
                     item(key = "tracks-end") {
                         // A short album still leaves room for the whole cover before the next row.
-                        val coverRest = if (coverUrl != null) (coverHeight - tracks.size * (SONG_ROW_HEIGHT + SONG_ROW_GAP)).coerceAtLeast(0) else 0
+                        val coverRest = if (coverUrl !=
+                            null
+                        ) {
+                            (coverHeight - tracks.size * (SONG_ROW_HEIGHT + SONG_ROW_GAP)).coerceAtLeast(
+                                0,
+                            )
+                        } else {
+                            0
+                        }
                         Box(Modifier.height(coverRest.dp + if (state.similar.isEmpty()) 98.dp else 20.dp))
                     }
                 }
@@ -329,14 +377,28 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                     item(key = "videos") {
                         MediaRow(
                             // A playlist lists its music videos with its songs; this row holds its other videos.
-                            title = stringResource(if (item.kind == ItemKind.Artist) R.string.library_music_videos else R.string.music_videos),
+                            title = stringResource(
+                                if (item.kind ==
+                                    ItemKind.Artist
+                                ) {
+                                    R.string.library_music_videos
+                                } else {
+                                    R.string.music_videos
+                                },
+                            ),
                             bottomPadding = LAST_ROW_BOTTOM.takeIf { state.similar.isEmpty() },
-                            modifier = Modifier.padding(top = if (tracks.isEmpty() && state.artistAlbums.isEmpty()) FIRST_ROW_TOP.dp else 0.dp),
+                            modifier = Modifier.padding(
+                                top = if (tracks.isEmpty() && state.artistAlbums.isEmpty()) FIRST_ROW_TOP.dp else 0.dp,
+                            ),
                         ) {
                             items(videos, key = { it.id }) { video ->
                                 ContinueCard(
                                     title = video.title,
-                                    subtitle = listOfNotNull(video.parentTitle.takeIf { item.kind != ItemKind.Artist }, video.year?.toString(), video.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) })
+                                    subtitle = listOfNotNull(
+                                        video.parentTitle.takeIf { item.kind != ItemKind.Artist },
+                                        video.year?.toString(),
+                                        video.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) },
+                                    )
                                         .joinToString(" · "),
                                     imageUrl = video.thumbUrl ?: video.posterUrl,
                                     progress = video.progress,
@@ -345,7 +407,9 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                                     locked = video.showsLock(),
                                     // Back from its options, the focus lands on it again.
                                     modifier = Modifier
-                                        .focusRequester(remember(video.id) { FocusRequester() }.also { trackFocus[video.id] = it })
+                                        .focusRequester(
+                                            remember(video.id) { FocusRequester() }.also { trackFocus[video.id] = it },
+                                        )
                                         .onFocusChanged { if (it.isFocused) focusKey = video.id.toString() },
                                 )
                             }
@@ -357,7 +421,15 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
                         MediaRow(
                             title = stringResource(R.string.detail_similar),
                             bottomPadding = LAST_ROW_BOTTOM,
-                            modifier = Modifier.padding(top = if (tracks.isEmpty() && state.artistAlbums.isEmpty() && videos.isEmpty()) FIRST_ROW_TOP.dp else 0.dp),
+                            modifier = Modifier.padding(
+                                top = if (tracks.isEmpty() && state.artistAlbums.isEmpty() &&
+                                    videos.isEmpty()
+                                ) {
+                                    FIRST_ROW_TOP.dp
+                                } else {
+                                    0.dp
+                                },
+                            ),
                         ) {
                             items(state.similar, key = { it.id }) { similar ->
                                 GridCard(
@@ -390,7 +462,13 @@ fun MusicDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewM
  * that starts the songs, [endIndex] the spacer after them.
  */
 @Composable
-private fun StickyCover(listState: LazyListState, firstIndex: Int, endIndex: Int, height: Int, content: @Composable ColumnScope.() -> Unit) {
+private fun StickyCover(
+    listState: LazyListState,
+    firstIndex: Int,
+    endIndex: Int,
+    height: Int,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     Column(
         Modifier
             .padding(start = PageEdge.dp)
@@ -407,7 +485,9 @@ private fun StickyCover(listState: LazyListState, firstIndex: Int, endIndex: Int
                     val viewport = info.viewportEndOffset
                     // Where the songs begin and end on screen, beyond either edge when scrolled away.
                     val top = first?.offset ?: if (firstIndex < firstVisible) Int.MIN_VALUE / 2 else viewport
-                    val bottom = (end?.offset ?: if (endIndex > lastVisible) Int.MAX_VALUE / 2 else Int.MIN_VALUE / 2) - SONG_ROW_GAP.dp.roundToPx()
+                    val bottom =
+                        (end?.offset ?: if (endIndex > lastVisible) Int.MAX_VALUE / 2 else Int.MIN_VALUE / 2) -
+                            SONG_ROW_GAP.dp.roundToPx()
                     val y = maxOf(RowPivot.dp.roundToPx(), top)
                         .coerceAtMost(maxOf(top, bottom - placeable.height))
                         .coerceIn(-placeable.height, viewport)
@@ -423,8 +503,17 @@ private fun StickyCover(listState: LazyListState, firstIndex: Int, endIndex: Int
 @Composable
 private fun Cover(url: String?) {
     Crossfade(url, label = "cover", modifier = Modifier.size(COVER_SIZE.dp)) { shown ->
-        Box(Modifier.fillMaxSize().clip(RoundedCornerShape(GlacierShapes.RadiusLg)).background(GlacierColors.GlassFill)) {
-            if (shown != null) AsyncImage(model = shown, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        Box(
+            Modifier.fillMaxSize().clip(RoundedCornerShape(GlacierShapes.RadiusLg)).background(GlacierColors.GlassFill),
+        ) {
+            if (shown != null) {
+                AsyncImage(
+                    model = shown,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
     }
 }
@@ -434,10 +523,22 @@ private fun Cover(url: String?) {
 private fun TrackCaption(track: MusicTrack) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         track.album?.let {
-            Text(it, style = GlacierText.body(20, FontWeight.SemiBold), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                it,
+                style = GlacierText.body(20, FontWeight.SemiBold),
+                color = GlacierColors.Ice,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
         listOfNotNull(track.artist, track.year?.toString()).joinToString(" · ").takeIf { it.isNotEmpty() }?.let {
-            Text(it, style = GlacierText.body(18), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                it,
+                style = GlacierText.body(18),
+                color = GlacierColors.Mist,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -458,15 +559,24 @@ private fun musicFacts(state: DetailState, item: MediaItem): List<String> {
                     titles.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.count_titles, it, it) },
                     minutes.takeIf { it > 0 }?.let { runtimeText(it) },
                 ).joinToString(" · ").ifEmpty { null },
-                (item.genres.ifEmpty { albums.flatMap { it.genres } }).distinct().take(2).joinToString(" · ").ifEmpty { null },
+                (item.genres.ifEmpty { albums.flatMap { it.genres } }).distinct().take(
+                    2,
+                ).joinToString(" · ").ifEmpty { null },
             )
         }
+
         else -> {
             val minutes = (tracks.sumOf { it.durationMs } / 60_000).toInt().takeIf { it > 0 } ?: item.runtimeMinutes
             listOfNotNull(
                 item.year?.toString(),
                 listOfNotNull(
-                    (tracks.size + state.playlistVideos.size).takeIf { it > 0 }?.let { pluralStringResource(R.plurals.count_titles, it, it) },
+                    (tracks.size + state.playlistVideos.size).takeIf { it > 0 }?.let {
+                        pluralStringResource(
+                            R.plurals.count_titles,
+                            it,
+                            it,
+                        )
+                    },
                     minutes?.takeIf { it > 0 }?.let { runtimeText(it) },
                 ).joinToString(" · ").ifEmpty { null },
                 item.genres.firstOrNull(),

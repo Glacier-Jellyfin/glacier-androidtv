@@ -11,9 +11,11 @@ import java.util.Locale
 
 /** "2 h 8 min" / "2 Std. 8 Min.", or minutes only below an hour. */
 @Composable
-fun runtimeText(minutes: Int): String =
-    if (minutes >= 60) stringResource(R.string.runtime_hours, minutes / 60, minutes % 60)
-    else stringResource(R.string.runtime_minutes, minutes)
+fun runtimeText(minutes: Int): String = if (minutes >= 60) {
+    stringResource(R.string.runtime_hours, minutes / 60, minutes % 60)
+} else {
+    stringResource(R.string.runtime_minutes, minutes)
+}
 
 /**
  * Age ratings as the design shows them ("12+"). German ratings arrive in

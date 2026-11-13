@@ -1,10 +1,10 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
+import java.util.UUID
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.util.UUID
 
 class ContinueWatchingTest {
 
@@ -33,7 +33,10 @@ class ContinueWatchingTest {
 
     @Test
     fun `the same item is never listed twice`() {
-        val merged = mergeContinueWatching(resume = listOf(episode(2, series = 1)), nextUp = listOf(episode(2, series = 1)))
+        val merged = mergeContinueWatching(
+            resume = listOf(episode(2, series = 1)),
+            nextUp = listOf(episode(2, series = 1)),
+        )
         assertEquals(listOf("ep2"), merged.map { it.name })
     }
 

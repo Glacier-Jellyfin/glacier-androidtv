@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
+import java.util.UUID
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.model.api.BaseItemDto
@@ -9,7 +10,6 @@ import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaStreamType
 import org.jellyfin.sdk.model.api.VideoRangeType
-import java.util.UUID
 
 private const val TICKS_PER_MS = 10_000L
 private const val TICKS_PER_MINUTE = 600_000_000L
@@ -33,11 +33,16 @@ internal fun videoQuality(streams: List<MediaStream>?): VideoQuality? {
     val video = streams?.firstOrNull { it.type == MediaStreamType.VIDEO } ?: return null
     val hdr = when (video.videoRangeType) {
         VideoRangeType.HDR10 -> HdrFormat.Hdr10
+
         VideoRangeType.HDR10_PLUS -> HdrFormat.Hdr10Plus
+
         VideoRangeType.HLG -> HdrFormat.Hlg
+
         VideoRangeType.DOVI, VideoRangeType.DOVI_WITH_HDR10, VideoRangeType.DOVI_WITH_HLG,
         VideoRangeType.DOVI_WITH_SDR, VideoRangeType.DOVI_WITH_EL, VideoRangeType.DOVI_WITH_HDR10_PLUS,
-        VideoRangeType.DOVI_WITH_ELHDR10_PLUS -> HdrFormat.DolbyVision
+        VideoRangeType.DOVI_WITH_ELHDR10_PLUS,
+        -> HdrFormat.DolbyVision
+
         else -> null
     }
     val uhd = (video.width ?: 0) >= UHD_MIN_WIDTH
@@ -73,7 +78,13 @@ internal class MediaMapper(private val api: ApiClient) {
         }
         val runtimeTicks = dto.runTimeTicks
         val position = dto.userData?.playbackPositionTicks ?: 0
-        val remaining = if (runtimeTicks != null && position > 0) ((runtimeTicks - position) / TICKS_PER_MINUTE).toInt() else null
+        val remaining = if (runtimeTicks != null &&
+            position > 0
+        ) {
+            ((runtimeTicks - position) / TICKS_PER_MINUTE).toInt()
+        } else {
+            null
+        }
         return MediaItem(
             id = dto.id,
             kind = kind,
@@ -104,7 +115,8 @@ internal class MediaMapper(private val api: ApiClient) {
             // Collections count their unwatched titles like a show its episodes; all seen, they are played.
             unwatchedCount = dto.userData?.unplayedItemCount?.takeIf { kind in UnwatchedCounted && it > 0 },
             isFavorite = dto.userData?.isFavorite ?: false,
-            played = dto.userData?.played == true || (kind == ItemKind.Collection && dto.userData?.unplayedItemCount == 0),
+            played =
+                dto.userData?.played == true || (kind == ItemKind.Collection && dto.userData?.unplayedItemCount == 0),
             childCount = when (kind) {
                 ItemKind.Genre -> listOfNotNull(dto.movieCount, dto.seriesCount).sum().takeIf { it > 0 }
                 ItemKind.Artist -> dto.albumCount
@@ -134,7 +146,16 @@ internal class MediaMapper(private val api: ApiClient) {
             // A video's own 16:9 picture, not the cover of the album it may name.
             coverUrl = if (video) thumb(dto) ?: poster(dto) else cover(dto, ImageWidth.COVER_SMALL),
             largeCoverUrl = if (video) thumb(dto) ?: poster(dto) else cover(dto, ImageWidth.COVER_LARGE),
-            format = audio?.let { AudioFormat(it.codec, it.sampleRate, it.bitDepth, it.channels, it.bitRate, dto.container) },
+            format = audio?.let {
+                AudioFormat(
+                    it.codec,
+                    it.sampleRate,
+                    it.bitDepth,
+                    it.channels,
+                    it.bitRate,
+                    dto.container,
+                )
+            },
             isFavorite = dto.userData?.isFavorite ?: false,
             playlistItemId = dto.playlistItemId,
             isVideo = video,
@@ -152,12 +173,18 @@ internal class MediaMapper(private val api: ApiClient) {
         return dto.imageTags?.get(ImageType.PRIMARY)?.let { image(dto.id, ImageType.PRIMARY, it, width) }
     }
 
-    fun library(dto: BaseItemDto, kind: LibraryKind, itemCount: Int?) = Library(
+    fun library(
+        dto: BaseItemDto,
+        kind: LibraryKind,
+        itemCount: Int?,
+    ) = Library(
         id = dto.id,
         name = dto.name.orEmpty(),
         kind = kind,
         itemCount = itemCount,
-        imageUrl = dto.imageTags?.get(ImageType.PRIMARY)?.let { image(dto.id, ImageType.PRIMARY, it, ImageWidth.LIBRARY) },
+        imageUrl = dto.imageTags?.get(
+            ImageType.PRIMARY,
+        )?.let { image(dto.id, ImageType.PRIMARY, it, ImageWidth.LIBRARY) },
     )
 
     private fun quality(dto: BaseItemDto): VideoQuality? = videoQuality(dto.mediaStreams)
@@ -169,7 +196,16 @@ internal class MediaMapper(private val api: ApiClient) {
         // Episodes without their own poster fall back to the series poster.
         val seriesId = dto.seriesId
         val seriesTag = dto.seriesPrimaryImageTag
-        return if (seriesId != null && seriesTag != null) image(seriesId, ImageType.PRIMARY, seriesTag, ImageWidth.POSTER) else null
+        return if (seriesId != null && seriesTag != null) {
+            image(
+                seriesId,
+                ImageType.PRIMARY,
+                seriesTag,
+                ImageWidth.POSTER,
+            )
+        } else {
+            null
+        }
     }
 
     private fun thumb(dto: BaseItemDto): String? {
@@ -182,7 +218,14 @@ internal class MediaMapper(private val api: ApiClient) {
         dto.backdropImageTags?.firstOrNull()?.let { return image(dto.id, ImageType.BACKDROP, it, ImageWidth.THUMB) }
         val parentThumb = dto.parentThumbItemId
         val parentThumbTag = dto.parentThumbImageTag
-        if (parentThumb != null && parentThumbTag != null) return image(parentThumb, ImageType.THUMB, parentThumbTag, ImageWidth.THUMB)
+        if (parentThumb != null && parentThumbTag != null) {
+            return image(
+                parentThumb,
+                ImageType.THUMB,
+                parentThumbTag,
+                ImageWidth.THUMB,
+            )
+        }
         return parentBackdrop(dto, ImageWidth.THUMB)
     }
 
@@ -191,10 +234,24 @@ internal class MediaMapper(private val api: ApiClient) {
         if (dto.type != BaseItemKind.EPISODE) return null
         val seriesId = dto.seriesId
         val seriesThumb = dto.seriesThumbImageTag
-        if (seriesId != null && seriesThumb != null) return image(seriesId, ImageType.THUMB, seriesThumb, ImageWidth.THUMB)
+        if (seriesId != null && seriesThumb != null) {
+            return image(
+                seriesId,
+                ImageType.THUMB,
+                seriesThumb,
+                ImageWidth.THUMB,
+            )
+        }
         val parentThumb = dto.parentThumbItemId
         val parentThumbTag = dto.parentThumbImageTag
-        if (parentThumb != null && parentThumbTag != null) return image(parentThumb, ImageType.THUMB, parentThumbTag, ImageWidth.THUMB)
+        if (parentThumb != null && parentThumbTag != null) {
+            return image(
+                parentThumb,
+                ImageType.THUMB,
+                parentThumbTag,
+                ImageWidth.THUMB,
+            )
+        }
         return parentBackdrop(dto, ImageWidth.THUMB)
     }
 
@@ -220,6 +277,10 @@ internal class MediaMapper(private val api: ApiClient) {
         )
     }
 
-    private fun image(id: UUID, type: ImageType, tag: String, maxWidth: Int) =
-        api.imageApi.getItemImageUrl(itemId = id, imageType = type, tag = tag, maxWidth = maxWidth)
+    private fun image(
+        id: UUID,
+        type: ImageType,
+        tag: String,
+        maxWidth: Int,
+    ) = api.imageApi.getItemImageUrl(itemId = id, imageType = type, tag = tag, maxWidth = maxWidth)
 }

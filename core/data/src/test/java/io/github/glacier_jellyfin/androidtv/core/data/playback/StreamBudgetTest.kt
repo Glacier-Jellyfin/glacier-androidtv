@@ -135,14 +135,23 @@ class StreamBudgetTest {
     @Test
     fun `a tier that copies the source picture asks for the picture with reserve plus the audio`() {
         // The measured case: 1080p copy of a 24 Mbit/s remux, 6 channels converted to 640 kbit/s.
-        assertEquals(29_440_000, StreamBudget.tierDemand(1080, 1080, videoCopied = true, videoBitrate = 24_000_000, audioChannels = 6))
+        assertEquals(
+            29_440_000,
+            StreamBudget.tierDemand(1080, 1080, videoCopied = true, videoBitrate = 24_000_000, audioChannels = 6),
+        )
         assertEquals(24_000_000 * 12 / 10 + 384_000, StreamBudget.tierDemand(1080, 1080, true, 24_000_000, 2))
     }
 
     @Test
     fun `a transcoded tier asks what a transcode of its size takes`() {
-        assertEquals(StreamBudget.expectedBitrate(1080), StreamBudget.tierDemand(1080, 1080, videoCopied = false, videoBitrate = 24_000_000, audioChannels = 6))
-        assertEquals(StreamBudget.expectedBitrate(720), StreamBudget.tierDemand(720, 1080, videoCopied = true, videoBitrate = 24_000_000, audioChannels = 6))
+        assertEquals(
+            StreamBudget.expectedBitrate(1080),
+            StreamBudget.tierDemand(1080, 1080, videoCopied = false, videoBitrate = 24_000_000, audioChannels = 6),
+        )
+        assertEquals(
+            StreamBudget.expectedBitrate(720),
+            StreamBudget.tierDemand(720, 1080, videoCopied = true, videoBitrate = 24_000_000, audioChannels = 6),
+        )
     }
 
     @Test

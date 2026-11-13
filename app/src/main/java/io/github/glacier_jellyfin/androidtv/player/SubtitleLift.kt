@@ -35,28 +35,42 @@ internal fun Cue.lifted(lift: SubtitleLift): Cue {
             val moved = liftedLine(line, cueBottom(line, lineAnchor, height), lift.fraction, lift.covered)
             if (moved == line) this else buildUpon().setLine(moved, Cue.LINE_TYPE_FRACTION).build()
         }
+
         // Negative line numbers count up from the bottom (WebVTT): put them above the covered area.
         Cue.LINE_TYPE_NUMBER -> if (line < 0) {
-            buildUpon().setLine(bottomLineAsFraction(line, lift.fraction), Cue.LINE_TYPE_FRACTION).setLineAnchor(Cue.ANCHOR_TYPE_END).build()
+            buildUpon().setLine(
+                bottomLineAsFraction(line, lift.fraction),
+                Cue.LINE_TYPE_FRACTION,
+            ).setLineAnchor(Cue.ANCHOR_TYPE_END).build()
         } else {
             this
         }
+
         else -> this
     }
 }
 
 /** Space below cues without a position: [BOTTOM_MARGIN], or above the covered area. */
-internal fun liftedPadding(lift: Float): Float =
-    if (lift <= 0f) BOTTOM_MARGIN else lift + LIFT_MARGIN
+internal fun liftedPadding(lift: Float): Float = if (lift <= 0f) BOTTOM_MARGIN else lift + LIFT_MARGIN
 
 /** A positioned cue moves up by [lift] when its lower edge reaches below [covered] from the bottom, else it stays. */
-internal fun liftedLine(line: Float, bottom: Float, lift: Float, covered: Float): Float =
-    if (lift > 0f && bottom > 1f - covered) line - lift else line
+internal fun liftedLine(
+    line: Float,
+    bottom: Float,
+    lift: Float,
+    covered: Float,
+): Float = if (lift > 0f && bottom > 1f - covered) line - lift else line
 
 /** Lower edge of a cue whose [line] is a fraction of the height; [height] is its own height, also as a fraction. */
-internal fun cueBottom(line: Float, anchor: Int, height: Float): Float = when (anchor) {
+internal fun cueBottom(
+    line: Float,
+    anchor: Int,
+    height: Float,
+): Float = when (anchor) {
     Cue.ANCHOR_TYPE_END -> line
+
     Cue.ANCHOR_TYPE_MIDDLE -> line + height / 2
+
     // Start, or not set: the line is the top edge.
     else -> line + height
 }

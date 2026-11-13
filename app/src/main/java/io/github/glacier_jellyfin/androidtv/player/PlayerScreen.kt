@@ -14,9 +14,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -83,10 +81,7 @@ private val SKIP_LAYER_BOTTOM = 64.dp
 
 @OptIn(UnstableApi::class)
 @Composable
-fun PlayerScreen(
-    onBack: () -> Unit,
-    viewModel: PlayerViewModel = hiltViewModel(),
-) {
+fun PlayerScreen(onBack: () -> Unit, viewModel: PlayerViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val progress by viewModel.progress.collectAsStateWithLifecycle()
 
@@ -112,13 +107,16 @@ fun PlayerScreen(
     // Back's release only counts when its press came here too, not to an overlay that closed on it.
     var backDown by remember { mutableStateOf(false) }
     val upNext = progress.upNext?.let { countdown -> state.next?.let { it to countdown } }
+
     /** Faded away over the bare picture; Up or the OSD brings it back. */
     var skipHidden by remember { mutableStateOf(false) }
     val skip = progress.skip?.takeUnless { skipHidden }
+
     /** Shrunk to its countdown over the bare picture; Up or the OSD brings the card back. */
     var upNextCollapsed by remember { mutableStateOf(false) }
     var upNextWake by remember { mutableIntStateOf(0) }
     val promptsAllowed = !overlayOpen && !state.loading && !state.failed
+
     /** Skip button or "Up next" card on screen; with the OSD hidden, it holds the focus. The shrunk card does not. */
     val prompt = when {
         !promptsAllowed -> null
@@ -130,6 +128,7 @@ fun PlayerScreen(
     var playFocused by remember { mutableStateOf(false) }
     val currentPrompt by rememberUpdatedState(prompt)
     var osdVisible by remember { mutableStateOf(true) }
+
     /** Which control gets focus when the OSD appears. */
     var osdTarget by remember { mutableStateOf(playFocus) }
     var interaction by remember { mutableIntStateOf(0) }
@@ -256,16 +255,28 @@ fun PlayerScreen(
                         togglePlay()
                         true
                     }
-                    Key.MediaRewind -> { viewModel.seekBy(-state.seekBackMs); true }
-                    Key.MediaFastForward -> { viewModel.seekBy(state.seekForwardMs); true }
+
+                    Key.MediaRewind -> {
+                        viewModel.seekBy(-state.seekBackMs)
+                        true
+                    }
+
+                    Key.MediaFastForward -> {
+                        viewModel.seekBy(state.seekForwardMs)
+                        true
+                    }
+
                     // With the OSD hidden, Left/Right scrub straight away by the seek steps, except between the card's buttons.
-                    Key.DirectionLeft, Key.DirectionRight -> if (!osdVisible && !state.loading && prompt != upNextFocus) {
+                    Key.DirectionLeft, Key.DirectionRight -> if (!osdVisible && !state.loading &&
+                        prompt != upNextFocus
+                    ) {
                         showOsd(seekFocus)
                         scrub(if (event.key == Key.DirectionLeft) -state.seekBackMs else state.seekForwardMs)
                         true
                     } else {
                         false
                     }
+
                     // OK presses a focused prompt; otherwise, with the OSD hidden, it pauses like a click on the picture.
                     Key.DirectionCenter, Key.Enter -> if (!osdVisible && prompt == null) {
                         togglePlay()
@@ -273,6 +284,7 @@ fun PlayerScreen(
                     } else {
                         false
                     }
+
                     // Up first brings back a shrunk "Up next" card or a skip button that faded away; the OSD comes with the next press.
                     Key.DirectionUp, Key.DirectionDown -> if (!osdVisible) {
                         val up = event.key == Key.DirectionUp
@@ -285,6 +297,7 @@ fun PlayerScreen(
                     } else {
                         false
                     }
+
                     else -> false
                 }
             }
@@ -311,7 +324,11 @@ fun PlayerScreen(
         }
 
         // The chapter sheet takes the OSD's place at the bottom (design); it would show through otherwise.
-        AnimatedVisibility(visible = osdVisible && !state.failed && !state.chaptersOpen, enter = fadeIn(), exit = fadeOut()) {
+        AnimatedVisibility(
+            visible = osdVisible && !state.failed && !state.chaptersOpen,
+            enter = fadeIn(),
+            exit = fadeOut(),
+        ) {
             PlayerOsd(
                 state = state,
                 progress = progress,
@@ -355,7 +372,13 @@ fun PlayerScreen(
                     AnimatedContent(
                         targetState = upNextCollapsed,
                         contentAlignment = Alignment.BottomEnd,
-                        transitionSpec = { (fadeIn(tween(300)) togetherWith fadeOut(tween(300))).using(SizeTransform(clip = false)) },
+                        transitionSpec = {
+                            (
+                                fadeIn(
+                                    tween(300),
+                                ) togetherWith fadeOut(tween(300))
+                                ).using(SizeTransform(clip = false))
+                        },
                         label = "upNext",
                     ) { collapsed ->
                         if (collapsed) {
@@ -382,7 +405,12 @@ fun PlayerScreen(
                                 alpha = skipAlpha.value
                                 compositingStrategy = CompositingStrategy.Offscreen
                             }
-                            .padding(start = SKIP_LAYER_SIDE, top = SKIP_LAYER_SIDE, end = SKIP_LAYER_SIDE, bottom = SKIP_LAYER_BOTTOM),
+                            .padding(
+                                start = SKIP_LAYER_SIDE,
+                                top = SKIP_LAYER_SIDE,
+                                end = SKIP_LAYER_SIDE,
+                                bottom = SKIP_LAYER_BOTTOM,
+                            ),
                     ) {
                         SkipButton(
                             skip,
@@ -397,7 +425,14 @@ fun PlayerScreen(
         }
 
         state.trackPanel?.let { PlayerTrackPanel(state, it, viewModel) }
-        if (state.infoOpen) InfoPanel(state, progress, transcodeStatus = viewModel::transcodeStatus, onDismiss = viewModel::closeInfo)
+        if (state.infoOpen) {
+            InfoPanel(
+                state,
+                progress,
+                transcodeStatus = viewModel::transcodeStatus,
+                onDismiss = viewModel::closeInfo,
+            )
+        }
         if (state.chaptersOpen) {
             ChapterSheet(
                 chapters = state.chapters,

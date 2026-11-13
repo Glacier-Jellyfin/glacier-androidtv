@@ -20,19 +20,17 @@ object DataModule {
 
     @Provides
     @Singleton
-    fun provideAccountStore(@ApplicationContext context: Context): DataStore<AccountState> =
-        DataStoreFactory.create(
-            serializer = EncryptedJsonSerializer(KeystoreCipher(alias = "glacier.accounts")),
-            corruptionHandler = ReplaceFileCorruptionHandler { AccountState() },
-            produceFile = { File(context.filesDir, "datastore/accounts.bin") },
-        )
+    fun provideAccountStore(@ApplicationContext context: Context): DataStore<AccountState> = DataStoreFactory.create(
+        serializer = EncryptedJsonSerializer(KeystoreCipher(alias = "glacier.accounts")),
+        corruptionHandler = ReplaceFileCorruptionHandler { AccountState() },
+        produceFile = { File(context.filesDir, "datastore/accounts.bin") },
+    )
 
     @Provides
     @Singleton
-    fun provideSettingsStore(@ApplicationContext context: Context): DataStore<SettingsState> =
-        DataStoreFactory.create(
-            serializer = SettingsSerializer,
-            corruptionHandler = ReplaceFileCorruptionHandler { SettingsState() },
-            produceFile = { File(context.filesDir, "datastore/settings.json") },
-        )
+    fun provideSettingsStore(@ApplicationContext context: Context): DataStore<SettingsState> = DataStoreFactory.create(
+        serializer = SettingsSerializer,
+        corruptionHandler = ReplaceFileCorruptionHandler { SettingsState() },
+        produceFile = { File(context.filesDir, "datastore/settings.json") },
+    )
 }

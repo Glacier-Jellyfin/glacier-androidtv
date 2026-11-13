@@ -1,12 +1,13 @@
 package io.github.glacier_jellyfin.androidtv.music
 
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +15,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 /**
  * What the options are for: one song or video, or all songs of an album, artist or
@@ -50,7 +50,11 @@ sealed interface MusicSheet {
     data class Playlists(override val target: MusicTarget, val playlists: List<MediaItem>? = null) : MusicSheet
 
     /** Naming a new playlist for the songs. */
-    data class NewPlaylist(override val target: MusicTarget, val name: String = "", val busy: Boolean = false) : MusicSheet
+    data class NewPlaylist(
+        override val target: MusicTarget,
+        val name: String = "",
+        val busy: Boolean = false,
+    ) : MusicSheet
 }
 
 /**
@@ -115,7 +119,10 @@ class MusicActions(
     fun addToQueue() = withTracks(R.string.music_added_to_queue) { controller.addToQueue(it) }
 
     /** The artist's music videos at the end of the queue. */
-    fun addVideosToQueue() = withTracks(R.string.music_added_to_queue, load = { it.videos?.invoke().orEmpty() }) { controller.addToQueue(it) }
+    fun addVideosToQueue() = withTracks(
+        R.string.music_added_to_queue,
+        load = { it.videos?.invoke().orEmpty() },
+    ) { controller.addToQueue(it) }
 
     /** Songs like the target, from the server, in place of the queue. */
     fun playMix() {
@@ -170,7 +177,15 @@ class MusicActions(
                 Log.w(TAG, "Loading playlists failed", e)
                 emptyList()
             }
-            _sheet.update { if (it is MusicSheet.Playlists && it.target === target) it.copy(playlists = playlists) else it }
+            _sheet.update {
+                if (it is MusicSheet.Playlists && it.target === target) {
+                    it.copy(
+                        playlists = playlists,
+                    )
+                } else {
+                    it
+                }
+            }
         }
     }
 
@@ -222,7 +237,13 @@ class MusicActions(
         }
     }
 
-    private fun withTracks(message: Int, load: suspend (MusicTarget) -> List<MusicTrack> = { it.tracks() }, action: (List<MusicTrack>) -> Unit) {
+    private fun withTracks(
+        message: Int,
+        load: suspend (MusicTarget) -> List<MusicTrack> = {
+            it.tracks()
+        },
+        action: (List<MusicTrack>) -> Unit,
+    ) {
         val target = _sheet.value?.target ?: return
         dismiss()
         scope.launch {

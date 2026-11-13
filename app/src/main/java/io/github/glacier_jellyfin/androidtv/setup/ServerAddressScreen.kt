@@ -29,9 +29,9 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SystemTextInput
-import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 
 @Composable
 fun ServerAddressScreen(
@@ -66,7 +66,12 @@ fun ServerAddressScreen(
         )
         AddressHint(Modifier.padding(start = 4.dp, top = 22.dp))
         Row(Modifier.padding(top = 36.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            SetupButton(stringResource(R.string.address_connect), onClick = viewModel::connect, primary = true, modifier = Modifier.focusRequester(connectFocus))
+            SetupButton(
+                stringResource(R.string.address_connect),
+                onClick = viewModel::connect,
+                primary = true,
+                modifier = Modifier.focusRequester(connectFocus),
+            )
             SetupButton(stringResource(R.string.action_back), onClick = onBack)
         }
         Row(Modifier.padding(top = 22.dp)) { KeyboardStatus(keyboardOpen) }

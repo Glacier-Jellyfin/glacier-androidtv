@@ -54,11 +54,11 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
-import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
+import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.onMenuKey
-import io.github.glacier_jellyfin.androidtv.livetv.ChannelSheet
 import io.github.glacier_jellyfin.androidtv.livetv.ChannelLogo
+import io.github.glacier_jellyfin.androidtv.livetv.ChannelSheet
 import io.github.glacier_jellyfin.androidtv.livetv.ProgramProgress
 import io.github.glacier_jellyfin.androidtv.livetv.RowIconButton
 import io.github.glacier_jellyfin.androidtv.livetv.clockText
@@ -74,7 +74,12 @@ import kotlinx.coroutines.delay
  * and its channel keys switch stations.
  */
 @Composable
-internal fun BoxScope.RadioPlayer(state: MusicUiState, radio: RadioState, playFocus: FocusRequester, viewModel: MusicPlayerViewModel) {
+internal fun BoxScope.RadioPlayer(
+    state: MusicUiState,
+    radio: RadioState,
+    playFocus: FocusRequester,
+    viewModel: MusicPlayerViewModel,
+) {
     val nowMs by produceState(System.currentTimeMillis()) {
         while (true) {
             delay(CLOCK_TICK_MS)
@@ -106,7 +111,11 @@ internal fun BoxScope.RadioPlayer(state: MusicUiState, radio: RadioState, playFo
         horizontalArrangement = Arrangement.spacedBy(56.dp),
     ) {
         val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
-        ChannelLogo(station, Modifier.size(420.dp).clip(shape).border(1.dp, GlacierColors.GlassBorder2, shape), textSize = 90)
+        ChannelLogo(
+            station,
+            Modifier.size(420.dp).clip(shape).border(1.dp, GlacierColors.GlassBorder2, shape),
+            textSize = 90,
+        )
         Column(Modifier.weight(1f).padding(bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             val accent = LocalAccent.current.main
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -135,7 +144,13 @@ internal fun BoxScope.RadioPlayer(state: MusicUiState, radio: RadioState, playFo
             } else if (now == null) {
                 Text(stringResource(R.string.livetv_no_guide), style = GlacierText.body(22), color = GlacierColors.Mist)
             } else {
-                Text(now.title, style = GlacierText.body(26), color = GlacierColors.Ice, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    now.title,
+                    style = GlacierText.body(26),
+                    color = GlacierColors.Ice,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(
                     listOf(timeRange(now), minutesLeft(now, nowMs)).joinToString(" · "),
                     style = GlacierText.body(20),
@@ -150,9 +165,19 @@ internal fun BoxScope.RadioPlayer(state: MusicUiState, radio: RadioState, playFo
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    Text(stringResource(R.string.livetv_next).uppercase(), style = GlacierText.label(15), color = GlacierColors.Mist)
+                    Text(
+                        stringResource(R.string.livetv_next).uppercase(),
+                        style = GlacierText.label(15),
+                        color = GlacierColors.Mist,
+                    )
                     Text(clockText(next.startMs), style = GlacierText.mono(19), color = GlacierColors.Mist)
-                    Text(next.title, style = GlacierText.body(19), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        next.title,
+                        style = GlacierText.body(19),
+                        color = GlacierColors.Ice,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
         }
@@ -249,7 +274,10 @@ private fun StationsPanel(
             .background(GlacierColors.GlassFill2)
             .border(1.dp, GlacierColors.GlassBorder2, shape),
     ) {
-        Column(Modifier.padding(start = 32.dp, end = 32.dp, top = 28.dp, bottom = 18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(
+            Modifier.padding(start = 32.dp, end = 32.dp, top = 28.dp, bottom = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
             Text(stringResource(R.string.radio_stations), style = GlacierText.display(28), color = GlacierColors.Ice)
             Text(
                 pluralStringResource(R.plurals.radio_station_count, radio.stations.size, radio.stations.size),
@@ -281,7 +309,9 @@ private fun StationsPanel(
                         menuFrom = key
                         onMenu(station)
                     },
-                    modifier = Modifier.focusRequester(rowFocus).then(if (i == index) Modifier.focusRequester(currentFocus) else Modifier),
+                    modifier = Modifier.focusRequester(
+                        rowFocus,
+                    ).then(if (i == index) Modifier.focusRequester(currentFocus) else Modifier),
                 )
             }
         }
@@ -354,13 +384,31 @@ private fun StationMain(
             .fillMaxWidth()
             .height(76.dp)
             .onMenuKey(onMenu)
-            .combinedClickable(interactionSource = interaction, indication = null, onLongClick = onMenu, onClick = onClick)
+            .combinedClickable(
+                interactionSource = interaction,
+                indication = null,
+                onLongClick = onMenu,
+                onClick = onClick,
+            )
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Box(Modifier.width(30.dp), contentAlignment = Alignment.Center) {
-            if (current) Equalizer(playing) else station.number?.let { Text(it, style = GlacierText.mono(17), color = GlacierColors.Mist, maxLines = 1) }
+            if (current) {
+                Equalizer(
+                    playing,
+                )
+            } else {
+                station.number?.let {
+                    Text(
+                        it,
+                        style = GlacierText.mono(17),
+                        color = GlacierColors.Mist,
+                        maxLines = 1,
+                    )
+                }
+            }
         }
         ChannelLogo(station, Modifier.width(96.dp).height(54.dp), textSize = 17)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -371,7 +419,15 @@ private fun StationMain(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            nowTitle?.let { Text(it, style = GlacierText.body(16), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            nowTitle?.let {
+                Text(
+                    it,
+                    style = GlacierText.body(16),
+                    color = GlacierColors.Mist,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         HoldOkMark(focused, accent, size = 26)
     }

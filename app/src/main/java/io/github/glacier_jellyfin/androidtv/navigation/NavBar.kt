@@ -14,12 +14,21 @@ fun SessionManager.navEvent(target: NavTarget, current: NavTarget?): UiEvent.Nav
     if (target == current) return null
     return when (target) {
         NavTarget.Home -> UiEvent.Navigate(HomeRoute, clearBackStack = true, focusNav = true)
+
         NavTarget.Search -> UiEvent.Navigate(SearchRoute())
+
         NavTarget.Settings -> UiEvent.Navigate(SettingsRoute)
-        is NavTarget.Library -> UiEvent.Navigate(if (target.kind == LibraryKind.HomeVideos) FolderRoute() else LibraryRoute(target.kind.name))
+
+        is NavTarget.Library -> UiEvent.Navigate(
+            if (target.kind == LibraryKind.HomeVideos) FolderRoute() else LibraryRoute(target.kind.name),
+        )
+
         NavTarget.Favorites -> UiEvent.Navigate(FavoritesRoute)
+
         NavTarget.NowPlaying -> UiEvent.Navigate(MusicRoute())
+
         NavTarget.LiveTv -> UiEvent.Navigate(LiveTvRoute)
+
         NavTarget.Profile -> {
             val serverId = session.value?.server?.id ?: return null
             leave()

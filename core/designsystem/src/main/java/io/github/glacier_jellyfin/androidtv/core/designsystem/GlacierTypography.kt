@@ -44,7 +44,13 @@ private val OwnDirection = TextDirection.Content
  */
 @Composable
 @ReadOnlyComposable
-private fun layoutAlign(): TextAlign = if (LocalLayoutDirection.current == LayoutDirection.Rtl) TextAlign.Right else TextAlign.Left
+private fun layoutAlign(): TextAlign = if (LocalLayoutDirection.current ==
+    LayoutDirection.Rtl
+) {
+    TextAlign.Right
+} else {
+    TextAlign.Left
+}
 
 object GlacierText {
     /** Display headings, e.g. "Willkommen" (60) or screen titles (44). */
@@ -61,8 +67,13 @@ object GlacierText {
 
     @Composable
     @ReadOnlyComposable
-    fun body(size: Int, weight: FontWeight = FontWeight.Normal) =
-        TextStyle(fontFamily = GoogleSans, fontWeight = weight, fontSize = size.sp, textDirection = OwnDirection, textAlign = layoutAlign())
+    fun body(size: Int, weight: FontWeight = FontWeight.Normal) = TextStyle(
+        fontFamily = GoogleSans,
+        fontWeight = weight,
+        fontSize = size.sp,
+        textDirection = OwnDirection,
+        textAlign = layoutAlign(),
+    )
 
     /** Small uppercase labels ("Server address", step chips). */
     @Composable
@@ -78,7 +89,12 @@ object GlacierText {
 
     @Composable
     @ReadOnlyComposable
-    fun mono(size: Int) = TextStyle(fontFamily = GlacierMono, fontSize = size.sp, textDirection = OwnDirection, textAlign = layoutAlign())
+    fun mono(size: Int) = TextStyle(
+        fontFamily = GlacierMono,
+        fontSize = size.sp,
+        textDirection = OwnDirection,
+        textAlign = layoutAlign(),
+    )
 }
 
 internal val GlacierTypography = Typography().let { base ->

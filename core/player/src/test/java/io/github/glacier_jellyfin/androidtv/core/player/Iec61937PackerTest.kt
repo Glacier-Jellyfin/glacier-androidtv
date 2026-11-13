@@ -1,9 +1,9 @@
 package io.github.glacier_jellyfin.androidtv.core.player
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
 import java.nio.ByteBuffer
 import java.security.MessageDigest
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 /** The bursts must match ffmpeg's spdif muxer byte for byte (scripts/make-playback-samples.py). */
 class Iec61937PackerTest {
@@ -17,7 +17,15 @@ class Iec61937PackerTest {
         var position = 0
         while (position < stream.size) {
             var end = position
-            repeat(16) { if (end + 2 <= stream.size) end += (((stream[end].toInt() and 0x0f) shl 8) or (stream[end + 1].toInt() and 0xff)) * 2 }
+            repeat(
+                16,
+            ) {
+                if (end + 2 <=
+                    stream.size
+                ) {
+                    end += (((stream[end].toInt() and 0x0f) shl 8) or (stream[end + 1].toInt() and 0xff)) * 2
+                }
+            }
             packer.pack(ByteBuffer.wrap(stream, position, minOf(end, stream.size) - position), bursts)
             position = end
         }
@@ -32,8 +40,14 @@ class Iec61937PackerTest {
         var position = 0
         while (position + 9 <= stream.size) {
             // The core's frame size: the whole frame of a stream without extensions.
-            val size = ((((stream[position + 5].toInt() and 0xff) shl 16) or ((stream[position + 6].toInt() and 0xff) shl 8) or
-                (stream[position + 7].toInt() and 0xff)) shr 4 and 0x3fff) + 1
+            val size =
+                (
+                    (
+                        ((stream[position + 5].toInt() and 0xff) shl 16) or
+                            ((stream[position + 6].toInt() and 0xff) shl 8) or
+                            (stream[position + 7].toInt() and 0xff)
+                        ) shr 4 and 0x3fff
+                    ) + 1
             packer.pack(ByteBuffer.wrap(stream, position, size), bursts)
             position += size
         }

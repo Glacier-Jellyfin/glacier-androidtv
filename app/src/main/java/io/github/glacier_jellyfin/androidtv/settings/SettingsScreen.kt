@@ -1,9 +1,16 @@
 package io.github.glacier_jellyfin.androidtv.settings
 
+import android.content.Context
+import android.hardware.display.DisplayManager
+import android.os.Build
+import android.provider.Settings
+import android.view.Display
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,50 +24,41 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.foundation.gestures.scrollBy
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.withFrameNanos
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.view.DisplayCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
+import io.github.glacier_jellyfin.androidtv.BuildConfig
 import io.github.glacier_jellyfin.androidtv.R
-import io.github.glacier_jellyfin.androidtv.favorites.title
-import io.github.glacier_jellyfin.androidtv.ui.navTitle
-import io.github.glacier_jellyfin.androidtv.ui.navTargetOf
-import io.github.glacier_jellyfin.androidtv.ui.navEntryIds
-import io.github.glacier_jellyfin.androidtv.ui.LocalLiveTv
-import io.github.glacier_jellyfin.androidtv.core.data.settings.withShown
-import io.github.glacier_jellyfin.androidtv.core.data.settings.withMoved
-import io.github.glacier_jellyfin.androidtv.core.data.settings.arranged
-import io.github.glacier_jellyfin.androidtv.core.data.settings.FavoriteRow
-import io.github.glacier_jellyfin.androidtv.ui.libraryTitle
 import io.github.glacier_jellyfin.androidtv.UiLocale
 import io.github.glacier_jellyfin.androidtv.core.data.AgeLimit
 import io.github.glacier_jellyfin.androidtv.core.data.Protection
@@ -71,10 +69,11 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentAction
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.UpNextMode
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AccentColor
-import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderAspect
-import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AudioChannels
 import io.github.glacier_jellyfin.androidtv.core.data.settings.DolbyVisionProfile7Choice
+import io.github.glacier_jellyfin.androidtv.core.data.settings.FavoriteRow
+import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderAspect
+import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HdAudioOutput
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeRow
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeRowChoice
@@ -98,44 +97,45 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleWeight
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UpNextChoice
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UpNextCollapse
+import io.github.glacier_jellyfin.androidtv.core.data.settings.arranged
+import io.github.glacier_jellyfin.androidtv.core.data.settings.withMoved
+import io.github.glacier_jellyfin.androidtv.core.data.settings.withShown
 import io.github.glacier_jellyfin.androidtv.core.designsystem.Accent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
+import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
+import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
+import io.github.glacier_jellyfin.androidtv.core.designsystem.endKey
+import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.SubtitleBurnIn
+import io.github.glacier_jellyfin.androidtv.core.updater.UpdateChannel
+import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
+import io.github.glacier_jellyfin.androidtv.core.updater.pending
+import io.github.glacier_jellyfin.androidtv.diagnostics.LogShareScreen
+import io.github.glacier_jellyfin.androidtv.diagnostics.PlaybackCheckActivity
+import io.github.glacier_jellyfin.androidtv.favorites.title
 import io.github.glacier_jellyfin.androidtv.player.subtitleTypeface
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
-import io.github.glacier_jellyfin.androidtv.diagnostics.LogShareScreen
-import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
-import io.github.glacier_jellyfin.androidtv.diagnostics.PlaybackCheckActivity
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
+import io.github.glacier_jellyfin.androidtv.ui.LocalLiveTv
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PinDialog
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.TvPlatform
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
-import android.content.Context
-import android.hardware.display.DisplayManager
-import android.os.Build
-import android.provider.Settings
-import android.view.Display
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.unit.LayoutDirection
-import io.github.glacier_jellyfin.androidtv.BuildConfig
-import io.github.glacier_jellyfin.androidtv.core.designsystem.endKey
-import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
-import io.github.glacier_jellyfin.androidtv.core.updater.UpdateChannel
-import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
-import io.github.glacier_jellyfin.androidtv.core.updater.pending
+import io.github.glacier_jellyfin.androidtv.ui.libraryTitle
+import io.github.glacier_jellyfin.androidtv.ui.navEntryIds
+import io.github.glacier_jellyfin.androidtv.ui.navTargetOf
+import io.github.glacier_jellyfin.androidtv.ui.navTitle
 import io.github.glacier_jellyfin.androidtv.update.UpdateDialog
 import io.github.glacier_jellyfin.androidtv.update.megabytes
 import io.github.glacier_jellyfin.androidtv.update.message
 import io.github.glacier_jellyfin.androidtv.update.openStorePage
 import io.github.glacier_jellyfin.androidtv.update.publishedDate
 import java.text.DateFormat
-import kotlin.math.roundToInt
 import java.util.Date
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 /** One card of the settings list; built per category by [rows]. */
@@ -261,16 +261,17 @@ private sealed interface SettingRow {
 private data class SettingGroup(val title: String, val rows: List<SettingRow>)
 
 @Composable
-fun SettingsScreen(
-    onNavigate: (UiEvent.Navigate) -> Unit,
-    viewModel: SettingsViewModel = hiltViewModel(),
-) {
+fun SettingsScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
     val categoryFocus = remember { SettingsCategory.entries.associateWith { FocusRequester() } }
     val focusManager = LocalFocusManager.current
     // Read right after a focus move, so a plain holder rather than state.
-    val cardsFocus = remember { object { var value = false } }
+    val cardsFocus = remember {
+        object {
+            var value = false
+        }
+    }
     // Back among the cards first goes to the open category, from there to the navigation bar.
     val navFocus = remember { FocusRequester() }
     var inCards by remember { mutableStateOf(false) }
@@ -290,7 +291,12 @@ fun SettingsScreen(
             withFrameNanos { }
             // The unlock button is gone once the account is open: its first row takes over.
             val restored = pinOrigins.restore() ||
-                (state.category == SettingsCategory.Account && runCatching { languageFocus.requestFocus() }.getOrDefault(false))
+                (
+                    state.category == SettingsCategory.Account &&
+                        runCatching { languageFocus.requestFocus() }.getOrDefault(
+                            false,
+                        )
+                    )
             if (!restored) runCatching { categoryFocus.getValue(state.category).requestFocus() }
         }
         pinWasOpen = pinPrompt != null
@@ -402,7 +408,11 @@ fun SettingsScreen(
                     // Left out of the cards always lands on the open category, not the nearest one. Focus
                     // properties cannot redirect it reliably here, so the move is made by hand and corrected.
                     .onKeyEvent { event ->
-                        if (event.type != KeyEventType.KeyDown || event.key != direction.startKey) return@onKeyEvent false
+                        if (event.type != KeyEventType.KeyDown ||
+                            event.key != direction.startKey
+                        ) {
+                            return@onKeyEvent false
+                        }
                         val start = if (direction == LayoutDirection.Rtl) FocusDirection.Right else FocusDirection.Left
                         if (focusManager.moveFocus(start) && !cardsFocus.value) {
                             runCatching { categoryFocus.getValue(state.category).requestFocus() }
@@ -414,13 +424,29 @@ fun SettingsScreen(
                     SubtitlePreview(state.profile.subtitleStyle, state.previewImage)
                     Spacer(Modifier.height(18.dp))
                 }
-                val groups = rows(state, viewModel, languageFocus, pinOrigins, movingRow, { movingRow = it }, listFocus) { openList = it }
+                val groups = rows(
+                    state,
+                    viewModel,
+                    languageFocus,
+                    pinOrigins,
+                    movingRow,
+                    { movingRow = it },
+                    listFocus,
+                ) { openList = it }
                 // A lifted home row stays in sight while it moves, with a neighbour above and below it.
                 val homeOrder = state.profile.home.rows to state.profile.navigation.entries
                 LaunchedEffect(homeOrder) {
                     val row = movingRow ?: return@LaunchedEffect
-                    val keys = groups.flatMap { group -> listOf(group.title) + group.rows.map { "${group.title}/${it.key}" } }
-                    val index = keys.indexOfFirst { it.endsWith("/row-$row") }.takeIf { it >= 0 } ?: return@LaunchedEffect
+                    val keys = groups.flatMap { group ->
+                        listOf(
+                            group.title,
+                        ) + group.rows.map { "${group.title}/${it.key}" }
+                    }
+                    val index = keys.indexOfFirst {
+                        it.endsWith(
+                            "/row-$row",
+                        )
+                    }.takeIf { it >= 0 } ?: return@LaunchedEffect
                     withFrameNanos { }
                     val info = listState.layoutInfo
                     val item = info.visibleItemsInfo.firstOrNull { it.index == index }
@@ -444,12 +470,30 @@ fun SettingsScreen(
                     contentPadding = PaddingValues(bottom = 60.dp),
                 ) {
                     groups.forEachIndexed { groupIndex, group ->
-                        item(key = "${state.category}/${group.title}") { GroupHeading(group.title, first = groupIndex == 0) }
-                        itemsIndexed(group.rows, key = { _, row -> "${state.category}/${group.title}/${row.key}" }) { rowIndex, row ->
+                        item(
+                            key = "${state.category}/${group.title}",
+                        ) { GroupHeading(group.title, first = groupIndex == 0) }
+                        itemsIndexed(
+                            group.rows,
+                            key = { _, row -> "${state.category}/${group.title}/${row.key}" },
+                        ) { rowIndex, row ->
                             // Home rows glide to their new place while one is moved.
-                            val glide = if (row is SettingRow.Movable && !reduceMotion) Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null) else Modifier
+                            val glide = if (row is SettingRow.Movable && !reduceMotion) {
+                                Modifier.animateItem(
+                                    fadeInSpec = null,
+                                    fadeOutSpec = null,
+                                )
+                            } else {
+                                Modifier
+                            }
                             // Every card has the same frame, so one moved onto or off the first place keeps its focus.
-                            val first = if (groupIndex == 0 && rowIndex == 0) Modifier.focusRequester(firstCard) else Modifier
+                            val first = if (groupIndex == 0 && rowIndex == 0) {
+                                Modifier.focusRequester(
+                                    firstCard,
+                                )
+                            } else {
+                                Modifier
+                            }
                             Box(glide.then(first).focusGroup()) { SettingCard(row) }
                         }
                     }
@@ -477,17 +521,36 @@ fun SettingsScreen(
                     sub = stringResource(R.string.settings_card_library_sub),
                     movingSub = stringResource(R.string.settings_card_moving_sub),
                     cards = state.profile.home.libraryCards.arranged(ids).mapNotNull { card ->
-                        allLibraries.firstOrNull { it.id.toString() == card.id }?.let { Triple(libraryTitle(it, allLibraries), card.shown, card.id) }
+                        allLibraries.firstOrNull { it.id.toString() == card.id }?.let {
+                            Triple(
+                                libraryTitle(it, allLibraries),
+                                card.shown,
+                                card.id,
+                            )
+                        }
                     },
                     onToggle = { id ->
                         viewModel.updateHome { home ->
-                            home.copy(libraryCards = home.libraryCards.withShown(id, !home.libraryCards.arranged(ids).first { it.id == id }.shown, ids))
+                            home.copy(
+                                libraryCards = home.libraryCards.withShown(
+                                    id,
+                                    !home.libraryCards.arranged(ids).first { it.id == id }.shown,
+                                    ids,
+                                ),
+                            )
                         }
                     },
-                    onMove = { id, by -> viewModel.updateHome { it.copy(libraryCards = it.libraryCards.withMoved(id, by, ids)) } },
+                    onMove = { id, by ->
+                        viewModel.updateHome {
+                            it.copy(
+                                libraryCards = it.libraryCards.withMoved(id, by, ids),
+                            )
+                        }
+                    },
                     onDismiss = { openList = null },
                 )
             }
+
             ListDialog.FavoriteRows -> {
                 val ids = FavoriteRow.entries.map { it.name }
                 ChoicesDialog(
@@ -500,13 +563,26 @@ fun SettingsScreen(
                     },
                     onToggle = { id ->
                         viewModel.updateNavigation { nav ->
-                            nav.copy(favoriteRows = nav.favoriteRows.withShown(id, !nav.favoriteRows.arranged(ids).first { it.id == id }.shown, ids))
+                            nav.copy(
+                                favoriteRows = nav.favoriteRows.withShown(
+                                    id,
+                                    !nav.favoriteRows.arranged(ids).first { it.id == id }.shown,
+                                    ids,
+                                ),
+                            )
                         }
                     },
-                    onMove = { id, by -> viewModel.updateNavigation { it.copy(favoriteRows = it.favoriteRows.withMoved(id, by, ids)) } },
+                    onMove = { id, by ->
+                        viewModel.updateNavigation {
+                            it.copy(
+                                favoriteRows = it.favoriteRows.withMoved(id, by, ids),
+                            )
+                        }
+                    },
                     onDismiss = { openList = null },
                 )
             }
+
             null -> Unit
         }
 
@@ -515,18 +591,39 @@ fun SettingsScreen(
             when (target) {
                 LanguageTarget.Ui -> LanguagePicker(
                     title = stringResource(R.string.settings_ui_lang),
-                    top = LanguageEntry(null, stringResource(R.string.settings_ui_lang_system), stringResource(R.string.settings_ui_lang_system_hint)),
+                    top = LanguageEntry(
+                        null,
+                        stringResource(R.string.settings_ui_lang_system),
+                        stringResource(R.string.settings_ui_lang_system_hint),
+                    ),
                     languages = UiLanguages,
                     selected = state.profile.uiLanguage.tag,
                     onPick = viewModel::pickLanguage,
                     onDismiss = viewModel::closeLanguages,
                 )
+
                 else -> LanguagePicker(
-                    title = stringResource(if (target == LanguageTarget.Audio) R.string.settings_audio_lang else R.string.settings_sub_lang_title),
+                    title = stringResource(
+                        if (target ==
+                            LanguageTarget.Audio
+                        ) {
+                            R.string.settings_audio_lang
+                        } else {
+                            R.string.settings_sub_lang_title
+                        },
+                    ),
                     top = if (target == LanguageTarget.Audio) {
-                        LanguageEntry(null, stringResource(R.string.settings_audio_original), stringResource(R.string.settings_audio_original_hint))
+                        LanguageEntry(
+                            null,
+                            stringResource(R.string.settings_audio_original),
+                            stringResource(R.string.settings_audio_original_hint),
+                        )
                     } else {
-                        LanguageEntry(null, stringResource(R.string.settings_lang_none), stringResource(R.string.settings_lang_none_hint))
+                        LanguageEntry(
+                            null,
+                            stringResource(R.string.settings_lang_none),
+                            stringResource(R.string.settings_lang_none_hint),
+                        )
                     },
                     languages = state.languages,
                     selected = if (target == LanguageTarget.Audio) server?.audioLanguage else server?.subtitleLanguage,
@@ -567,7 +664,12 @@ fun SettingsScreen(
             )
         }
         if (state.removeAsked) {
-            RemoveProfileDialog(state.userName, hasCopy = state.hasOwnCopy, onRemove = viewModel::removeProfile, onDismiss = viewModel::dismissRemove)
+            RemoveProfileDialog(
+                state.userName,
+                hasCopy = state.hasOwnCopy,
+                onRemove = viewModel::removeProfile,
+                onDismiss = viewModel::dismissRemove,
+            )
         }
         val updateCandidate = (state.update as? UpdateState.Available)?.candidate
         val installedVersion = viewModel.updates.installed
@@ -584,7 +686,6 @@ fun SettingsScreen(
         }
         pinPrompt?.let { PinDialog(it, onKey = viewModel.pin::key, onDismiss = viewModel.pin::dismiss) }
         state.diagnostics.share?.let { LogShareScreen(it, onClose = viewModel::closeShare) }
-
     }
 }
 
@@ -592,31 +693,73 @@ fun SettingsScreen(
 private fun SettingCard(row: SettingRow) {
     when (row) {
         is SettingRow.Toggle -> OptionCard(row.label, row.sub, row.enabled, trailing = {
-            ToggleSwitch(row.checked, row.onToggle, row.focus?.let { Modifier.focusRequester(it) } ?: Modifier, row.enabled)
+            ToggleSwitch(
+                row.checked,
+                row.onToggle,
+                row.focus?.let { Modifier.focusRequester(it) } ?: Modifier,
+                row.enabled,
+            )
         })
-        is SettingRow.Choice -> OptionCard(row.label, row.sub, row.enabled, below = { ChoicePills(row.options, { it == row.selected }, row.onSelect, row.enabled, dots = row.dots, fonts = row.fonts) })
-        is SettingRow.MultiChoice -> OptionCard(row.label, row.sub, row.enabled, below = { ChoicePills(row.options, { it in row.selected }, row.onToggle, row.enabled, check = true) })
-        is SettingRow.Swatches -> OptionCard(row.label, row.sub, row.enabled, below = { SwatchPicker(row.swatches, row.selected, row.onSelect) })
+
+        is SettingRow.Choice -> OptionCard(
+            row.label,
+            row.sub,
+            row.enabled,
+            below = {
+                ChoicePills(
+                    row.options,
+                    { it == row.selected },
+                    row.onSelect,
+                    row.enabled,
+                    dots = row.dots,
+                    fonts = row.fonts,
+                )
+            },
+        )
+
+        is SettingRow.MultiChoice -> OptionCard(
+            row.label,
+            row.sub,
+            row.enabled,
+            below = { ChoicePills(row.options, { it in row.selected }, row.onToggle, row.enabled, check = true) },
+        )
+
+        is SettingRow.Swatches -> OptionCard(
+            row.label,
+            row.sub,
+            row.enabled,
+            below = { SwatchPicker(row.swatches, row.selected, row.onSelect) },
+        )
+
         is SettingRow.Update -> UpdateCard(row)
+
         is SettingRow.Value -> OptionCard(
             row.label,
             row.sub,
             row.enabled,
-            trailing = { ValueButton(
+            trailing = {
+                ValueButton(
                     row.value,
                     onClick = row.onClick,
                     enabled = row.enabled,
                     modifier = row.focus?.let { Modifier.focusRequester(it) } ?: Modifier,
-                ) },
+                )
+            },
         )
+
         is SettingRow.Info -> InfoCard(row.label, row.sub, row.value)
+
         is SettingRow.Movable -> MovableCard(row.label, row.sub, row.checked, row.onToggle, row.moving, row.onMoving, row.onMove, row.dimmed, row.onConfigure, row.configureValue, row.configureFocus)
+
         is SettingRow.Action -> OptionCard(
             row.label,
             row.sub,
             row.enabled,
             trailing = {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     row.secondButton?.let { label ->
                         ActionButton(
                             onClick = row.onSecondClick,
@@ -649,12 +792,30 @@ private fun rows(
     listFocus: Map<ListDialog, FocusRequester>,
     onOpenList: (ListDialog) -> Unit,
 ): List<SettingGroup> = when (state.category) {
-    SettingsCategory.Appearance -> appearanceRows(state, viewModel, movingRow, onMovingRow, listFocus.getValue(ListDialog.FavoriteRows)) { onOpenList(ListDialog.FavoriteRows) }
-    SettingsCategory.Home -> homeRows(state, viewModel, movingRow, onMovingRow, listFocus.getValue(ListDialog.LibraryCards)) { onOpenList(ListDialog.LibraryCards) }
+    SettingsCategory.Appearance -> appearanceRows(
+        state,
+        viewModel,
+        movingRow,
+        onMovingRow,
+        listFocus.getValue(ListDialog.FavoriteRows),
+    ) { onOpenList(ListDialog.FavoriteRows) }
+
+    SettingsCategory.Home -> homeRows(
+        state,
+        viewModel,
+        movingRow,
+        onMovingRow,
+        listFocus.getValue(ListDialog.LibraryCards),
+    ) { onOpenList(ListDialog.LibraryCards) }
+
     SettingsCategory.Playback -> playbackRows(state, viewModel)
+
     SettingsCategory.Audio -> audioRows(state, viewModel, languageFocus)
+
     SettingsCategory.Subtitles -> subtitleRows(state, viewModel, languageFocus)
+
     SettingsCategory.Account -> accountRows(state, viewModel, languageFocus, pinOrigins)
+
     SettingsCategory.System -> systemRows(state, viewModel)
 }
 
@@ -704,10 +865,22 @@ private fun appearanceRows(
                     },
                 ),
                 entry.shown,
-                onToggle = { viewModel.updateNavigation { it.copy(entries = it.entries.withShown(entry.id, !entry.shown, navIds)) } },
+                onToggle = {
+                    viewModel.updateNavigation {
+                        it.copy(
+                            entries = it.entries.withShown(entry.id, !entry.shown, navIds),
+                        )
+                    }
+                },
                 moving = moving == id,
                 onMoving = { lifted -> onMoving(if (lifted) id else null) },
-                onMove = { by -> viewModel.updateNavigation { it.copy(entries = it.entries.withMoved(entry.id, by, navIds)) } },
+                onMove = { by ->
+                    viewModel.updateNavigation {
+                        it.copy(
+                            entries = it.entries.withMoved(entry.id, by, navIds),
+                        )
+                    }
+                },
                 dimmed = moving != null && moving != id,
                 key = "row-$id",
                 onConfigure = onFavoriteRows.takeIf { target == NavTarget.Favorites },
@@ -741,7 +914,10 @@ private fun appearanceRows(
                 SettingRow.Choice(
                     stringResource(R.string.settings_density),
                     stringResource(R.string.settings_density_sub),
-                    listOf(stringResource(R.string.settings_density_comfortable), stringResource(R.string.settings_density_compact)),
+                    listOf(
+                        stringResource(R.string.settings_density_comfortable),
+                        stringResource(R.string.settings_density_compact),
+                    ),
                     if (appearance.compact) 1 else 0,
                     onSelect = { i -> viewModel.updateAppearance { it.copy(compact = i == 1) } },
                 ),
@@ -766,7 +942,13 @@ private fun appearanceRows(
                     stringResource(R.string.settings_collection_together),
                     stringResource(R.string.settings_collection_together_sub),
                     appearance.collectionMoviesWithShows,
-                    onToggle = { viewModel.updateAppearance { it.copy(collectionMoviesWithShows = !it.collectionMoviesWithShows) } },
+                    onToggle = {
+                        viewModel.updateAppearance {
+                            it.copy(
+                                collectionMoviesWithShows = !it.collectionMoviesWithShows,
+                            )
+                        }
+                    },
                 ),
             ) + listOfNotNull(
                 // Only with a home video library.
@@ -833,13 +1015,27 @@ private fun homeRows(
                     sources.indices.filterTo(HashSet()) { sources[it].first in home.spotlightSources },
                     onToggle = { i ->
                         val source = sources[i].first
-                        viewModel.updateHome { it.copy(spotlightSources = if (source in it.spotlightSources) it.spotlightSources - source else it.spotlightSources + source) }
+                        viewModel.updateHome {
+                            it.copy(
+                                spotlightSources = if (source in
+                                    it.spotlightSources
+                                ) {
+                                    it.spotlightSources - source
+                                } else {
+                                    it.spotlightSources + source
+                                },
+                            )
+                        }
                     },
                 ),
                 SettingRow.Choice(
                     stringResource(R.string.settings_spot_type),
                     stringResource(R.string.settings_spot_type_sub),
-                    listOf(R.string.settings_spot_all, R.string.settings_spot_movies, R.string.settings_spot_shows).map { stringResource(it) },
+                    listOf(
+                        R.string.settings_spot_all,
+                        R.string.settings_spot_movies,
+                        R.string.settings_spot_shows,
+                    ).map { stringResource(it) },
                     home.spotlightType.ordinal,
                     onSelect = { i -> viewModel.updateHome { it.copy(spotlightType = SpotlightType.entries[i]) } },
                     enabled = on,
@@ -855,9 +1051,23 @@ private fun homeRows(
                 SettingRow.Choice(
                     stringResource(R.string.settings_spot_rotation),
                     stringResource(R.string.settings_spot_rotation_sub),
-                    SpotlightRotation.entries.map { if (it == SpotlightRotation.Off) stringResource(R.string.settings_off) else stringResource(R.string.settings_seconds, it.seconds) },
+                    SpotlightRotation.entries.map {
+                        if (it == SpotlightRotation.Off) {
+                            stringResource(
+                                R.string.settings_off,
+                            )
+                        } else {
+                            stringResource(R.string.settings_seconds, it.seconds)
+                        }
+                    },
                     home.spotlightRotation.ordinal,
-                    onSelect = { i -> viewModel.updateHome { it.copy(spotlightRotation = SpotlightRotation.entries[i]) } },
+                    onSelect = { i ->
+                        viewModel.updateHome {
+                            it.copy(
+                                spotlightRotation = SpotlightRotation.entries[i],
+                            )
+                        }
+                    },
                     enabled = on,
                 ),
                 SettingRow.Toggle(
@@ -877,7 +1087,15 @@ private fun homeRows(
                 val (label, sub) = rowTexts.getValue(row)
                 SettingRow.Movable(
                     if (row == HomeRow.Latest) {
-                        stringResource(R.string.home_new_in, libraries.firstOrNull { it.id.toString() == choice.library }?.let { libraryTitle(it, allLibraries) }.orEmpty())
+                        stringResource(
+                            R.string.home_new_in,
+                            libraries.firstOrNull { it.id.toString() == choice.library }?.let {
+                                libraryTitle(
+                                    it,
+                                    allLibraries,
+                                )
+                            }.orEmpty(),
+                        )
                     } else {
                         stringResource(label)
                     },
@@ -929,12 +1147,26 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
             stringResource(sub),
             segmentOptions,
             segmentActions.indexOf(policy.action(kind)),
-            onSelect = { i -> viewModel.updatePlayback { it.copy(segments = policy.actions + (kind to segmentActions[i])) } },
+            onSelect = { i ->
+                viewModel.updatePlayback {
+                    it.copy(
+                        segments = policy.actions + (kind to segmentActions[i]),
+                    )
+                }
+            },
         )
     } + SettingRow.Choice(
         stringResource(R.string.settings_skip_hide),
         stringResource(R.string.settings_skip_hide_sub),
-        SkipButtonHide.entries.map { if (it == SkipButtonHide.Off) stringResource(R.string.settings_off) else seconds(it.ms) },
+        SkipButtonHide.entries.map {
+            if (it == SkipButtonHide.Off) {
+                stringResource(
+                    R.string.settings_off,
+                )
+            } else {
+                seconds(it.ms)
+            }
+        },
         playback.skipButtonHide.ordinal,
         onSelect = { i -> viewModel.updatePlayback { it.copy(skipButtonHide = SkipButtonHide.entries[i]) } },
     )
@@ -959,9 +1191,23 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
                 SettingRow.Choice(
                     stringResource(R.string.settings_up_next_collapse),
                     stringResource(R.string.settings_up_next_collapse_sub),
-                    UpNextCollapse.entries.map { if (it == UpNextCollapse.Off) stringResource(R.string.settings_off) else seconds(it.ms) },
+                    UpNextCollapse.entries.map {
+                        if (it == UpNextCollapse.Off) {
+                            stringResource(
+                                R.string.settings_off,
+                            )
+                        } else {
+                            seconds(it.ms)
+                        }
+                    },
                     playback.upNextCollapse.ordinal,
-                    onSelect = { i -> viewModel.updatePlayback { it.copy(upNextCollapse = UpNextCollapse.entries[i]) } },
+                    onSelect = { i ->
+                        viewModel.updatePlayback {
+                            it.copy(
+                                upNextCollapse = UpNextCollapse.entries[i],
+                            )
+                        }
+                    },
                 ),
                 SettingRow.Toggle(
                     stringResource(R.string.settings_trailer_auto),
@@ -971,7 +1217,15 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
                 ),
                 SettingRow.Toggle(
                     stringResource(R.string.settings_match_frame_rate),
-                    stringResource(if (platform == TvPlatform.FireTv) R.string.settings_match_frame_rate_sub_fire_tv else R.string.settings_match_frame_rate_sub),
+                    stringResource(
+                        if (platform ==
+                            TvPlatform.FireTv
+                        ) {
+                            R.string.settings_match_frame_rate_sub_fire_tv
+                        } else {
+                            R.string.settings_match_frame_rate_sub
+                        },
+                    ),
                     playback.matchFrameRate,
                     onToggle = { viewModel.updatePlayback { it.copy(matchFrameRate = !it.matchFrameRate) } },
                 ),
@@ -982,7 +1236,13 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
                     stringResource(R.string.settings_dv_profile7_sub),
                     listOf("Dolby Vision", "HDR10"),
                     playback.dolbyVisionProfile7.ordinal,
-                    onSelect = { i -> viewModel.updatePlayback { it.copy(dolbyVisionProfile7 = DolbyVisionProfile7Choice.entries[i]) } },
+                    onSelect = { i ->
+                        viewModel.updatePlayback {
+                            it.copy(
+                                dolbyVisionProfile7 = DolbyVisionProfile7Choice.entries[i],
+                            )
+                        }
+                    },
                 ).takeIf { viewModel.choosesDolbyVisionProfile7 },
             ),
         ),
@@ -1034,7 +1294,13 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
                     stringResource(R.string.settings_slide_time_sub),
                     FolderSettings.SlideSeconds.map { stringResource(R.string.settings_slide_seconds, it) },
                     FolderSettings.SlideSeconds.indexOf(state.profile.folders.slideSeconds).coerceAtLeast(0),
-                    onSelect = { i -> viewModel.updateFolders { it.copy(slideSeconds = FolderSettings.SlideSeconds[i]) } },
+                    onSelect = { i ->
+                        viewModel.updateFolders {
+                            it.copy(
+                                slideSeconds = FolderSettings.SlideSeconds[i],
+                            )
+                        }
+                    },
                 ),
             ),
         ).takeIf { LibraryKind.HomeVideos in LocalLibraryKinds.current },
@@ -1048,7 +1314,9 @@ private fun hdAudioRow(current: HdAudioOutput, viewModel: SettingsViewModel): Se
     val shown = if (current in choices) current else HdAudioOutput.Android
     return SettingRow.Choice(
         stringResource(R.string.settings_hd_audio),
-        stringResource(if (viewModel.iec61937Available) R.string.settings_hd_audio_sub else R.string.settings_hd_audio_sub_no_iec),
+        stringResource(
+            if (viewModel.iec61937Available) R.string.settings_hd_audio_sub else R.string.settings_hd_audio_sub_no_iec,
+        ),
         choices.map {
             stringResource(
                 when (it) {
@@ -1064,7 +1332,11 @@ private fun hdAudioRow(current: HdAudioOutput, viewModel: SettingsViewModel): Se
 }
 
 @Composable
-private fun audioRows(state: SettingsUiState, viewModel: SettingsViewModel, languageFocus: FocusRequester): List<SettingGroup> {
+private fun audioRows(
+    state: SettingsUiState,
+    viewModel: SettingsViewModel,
+    languageFocus: FocusRequester,
+): List<SettingGroup> {
     val playback = state.profile.playback
     val server = state.server
     val unavailable = stringResource(R.string.settings_server_unavailable).takeIf { state.serverFailed }
@@ -1075,7 +1347,12 @@ private fun audioRows(state: SettingsUiState, viewModel: SettingsViewModel, lang
                 SettingRow.Choice(
                     stringResource(R.string.settings_audio_channels),
                     stringResource(R.string.settings_audio_channels_sub),
-                    listOf(stringResource(R.string.settings_auto), stringResource(R.string.settings_audio_stereo), "5.1", "7.1"),
+                    listOf(
+                        stringResource(R.string.settings_auto),
+                        stringResource(R.string.settings_audio_stereo),
+                        "5.1",
+                        "7.1",
+                    ),
                     playback.audioChannels.ordinal,
                     onSelect = { i -> viewModel.updatePlayback { it.copy(audioChannels = AudioChannels.entries[i]) } },
                 ),
@@ -1088,7 +1365,12 @@ private fun audioRows(state: SettingsUiState, viewModel: SettingsViewModel, lang
                 SettingRow.Value(
                     stringResource(R.string.settings_audio_lang),
                     unavailable ?: stringResource(R.string.settings_audio_lang_sub),
-                    value = server?.audioLanguage?.let { languageName(state, it) } ?: stringResource(R.string.settings_audio_original),
+                    value = server?.audioLanguage?.let {
+                        languageName(
+                            state,
+                            it,
+                        )
+                    } ?: stringResource(R.string.settings_audio_original),
                     onClick = { viewModel.openLanguages(LanguageTarget.Audio) },
                     enabled = server != null,
                     focus = languageFocus,
@@ -1097,7 +1379,13 @@ private fun audioRows(state: SettingsUiState, viewModel: SettingsViewModel, lang
                     stringResource(R.string.settings_default_track),
                     unavailable ?: stringResource(R.string.settings_default_track_sub),
                     server?.playDefaultAudioTrack == true,
-                    onToggle = { viewModel.updateServer { it.copy(playDefaultAudioTrack = !it.playDefaultAudioTrack) } },
+                    onToggle = {
+                        viewModel.updateServer {
+                            it.copy(
+                                playDefaultAudioTrack = !it.playDefaultAudioTrack,
+                            )
+                        }
+                    },
                     enabled = server != null,
                 ),
                 SettingRow.Toggle(
@@ -1113,10 +1401,20 @@ private fun audioRows(state: SettingsUiState, viewModel: SettingsViewModel, lang
 }
 
 @Composable
-private fun subtitleRows(state: SettingsUiState, viewModel: SettingsViewModel, languageFocus: FocusRequester): List<SettingGroup> {
+private fun subtitleRows(
+    state: SettingsUiState,
+    viewModel: SettingsViewModel,
+    languageFocus: FocusRequester,
+): List<SettingGroup> {
     val style = state.profile.subtitleStyle
     val context = LocalContext.current
-    val fonts = remember { SubtitleFont.entries.map { FontFamily(subtitleTypeface(context, it, SubtitleWeight.Regular)) } }
+    val fonts = remember {
+        SubtitleFont.entries.map {
+            FontFamily(
+                subtitleTypeface(context, it, SubtitleWeight.Regular),
+            )
+        }
+    }
     val server = state.server
     val unavailable = stringResource(R.string.settings_server_unavailable).takeIf { state.serverFailed }
     val modes = listOf(
@@ -1135,7 +1433,12 @@ private fun subtitleRows(state: SettingsUiState, viewModel: SettingsViewModel, l
                 SettingRow.Value(
                     stringResource(R.string.settings_sub_lang),
                     unavailable ?: stringResource(R.string.settings_sub_lang_sub),
-                    value = server?.subtitleLanguage?.let { languageName(state, it) } ?: stringResource(R.string.settings_lang_none),
+                    value = server?.subtitleLanguage?.let {
+                        languageName(
+                            state,
+                            it,
+                        )
+                    } ?: stringResource(R.string.settings_lang_none),
                     onClick = { viewModel.openLanguages(LanguageTarget.Subtitles) },
                     enabled = server != null,
                     focus = languageFocus,
@@ -1158,7 +1461,13 @@ private fun subtitleRows(state: SettingsUiState, viewModel: SettingsViewModel, l
                         stringResource(R.string.settings_burn_always),
                     ),
                     burnIn.ordinal,
-                    onSelect = { i -> viewModel.updatePlayback { it.copy(subtitleBurnIn = SubtitleBurnIn.entries[i]) } },
+                    onSelect = { i ->
+                        viewModel.updatePlayback {
+                            it.copy(
+                                subtitleBurnIn = SubtitleBurnIn.entries[i],
+                            )
+                        }
+                    },
                 ),
                 SettingRow.Toggle(
                     stringResource(R.string.settings_remember_subs),
@@ -1181,14 +1490,24 @@ private fun subtitleRows(state: SettingsUiState, viewModel: SettingsViewModel, l
                             SubtitleStyleMode.Native -> R.string.settings_sub_style_native_sub
                         },
                     ),
-                    listOf(stringResource(R.string.settings_auto), stringResource(R.string.settings_sub_style_custom), stringResource(R.string.settings_sub_style_native)),
+                    listOf(
+                        stringResource(R.string.settings_auto),
+                        stringResource(R.string.settings_sub_style_custom),
+                        stringResource(R.string.settings_sub_style_native),
+                    ),
                     style.mode.ordinal,
                     onSelect = { i -> viewModel.updateSubtitleStyle { it.copy(mode = SubtitleStyleMode.entries[i]) } },
                 ),
                 SettingRow.Choice(
                     stringResource(R.string.settings_sub_size),
                     stringResource(R.string.settings_sub_size_sub),
-                    listOf(R.string.settings_sub_size_xs, R.string.settings_sub_size_s, R.string.settings_sub_size_m, R.string.settings_sub_size_l, R.string.settings_sub_size_xl).map { stringResource(it) },
+                    listOf(
+                        R.string.settings_sub_size_xs,
+                        R.string.settings_sub_size_s,
+                        R.string.settings_sub_size_m,
+                        R.string.settings_sub_size_l,
+                        R.string.settings_sub_size_xl,
+                    ).map { stringResource(it) },
                     style.size.ordinal,
                     onSelect = { i -> viewModel.updateSubtitleStyle { it.copy(size = SubtitleSize.entries[i]) } },
                 ),
@@ -1248,7 +1567,13 @@ private fun subtitleRows(state: SettingsUiState, viewModel: SettingsViewModel, l
                         R.string.settings_sub_background_solid,
                     ).map { stringResource(it) },
                     style.background.ordinal,
-                    onSelect = { i -> viewModel.updateSubtitleStyle { it.copy(background = SubtitleBackground.entries[i]) } },
+                    onSelect = { i ->
+                        viewModel.updateSubtitleStyle {
+                            it.copy(
+                                background = SubtitleBackground.entries[i],
+                            )
+                        }
+                    },
                 ),
                 SettingRow.Choice(
                     stringResource(R.string.settings_sub_edge),
@@ -1266,9 +1591,20 @@ private fun subtitleRows(state: SettingsUiState, viewModel: SettingsViewModel, l
                 SettingRow.Choice(
                     stringResource(R.string.settings_sub_position),
                     stringResource(R.string.settings_sub_position_sub),
-                    SubtitlePosition.entries.map { stringResource(R.string.settings_sub_line, if (it.line < 0) "−${-it.line}" else it.line.toString()) },
+                    SubtitlePosition.entries.map {
+                        stringResource(
+                            R.string.settings_sub_line,
+                            if (it.line < 0) "−${-it.line}" else it.line.toString(),
+                        )
+                    },
                     style.position.ordinal,
-                    onSelect = { i -> viewModel.updateSubtitleStyle { it.copy(position = SubtitlePosition.entries[i]) } },
+                    onSelect = { i ->
+                        viewModel.updateSubtitleStyle {
+                            it.copy(
+                                position = SubtitlePosition.entries[i],
+                            )
+                        }
+                    },
                 ),
             ),
         ),
@@ -1308,15 +1644,21 @@ private fun accountRows(
     }
     val ages = AgeLimit.entries
     val ageLabel = ageLabel(protection.maxAge)
+
     @Composable
-    fun pinToggle(key: String, label: Int, sub: Int, checked: Boolean, transform: (Protection, Boolean) -> Protection) =
-        SettingRow.Toggle(
-            stringResource(label),
-            stringResource(sub),
-            checked = checked,
-            onToggle = pinOrigins.tap(key) { viewModel.setPinOption(!checked, transform) },
-            focus = pinOrigins.of(key),
-        )
+    fun pinToggle(
+        key: String,
+        label: Int,
+        sub: Int,
+        checked: Boolean,
+        transform: (Protection, Boolean) -> Protection,
+    ) = SettingRow.Toggle(
+        stringResource(label),
+        stringResource(sub),
+        checked = checked,
+        onToggle = pinOrigins.tap(key) { viewModel.setPinOption(!checked, transform) },
+        focus = pinOrigins.of(key),
+    )
     return listOf(
         SettingGroup(
             stringResource(R.string.settings_group_profile),
@@ -1324,8 +1666,18 @@ private fun accountRows(
                 signedInAs,
                 SettingRow.Value(
                     stringResource(R.string.settings_ui_lang),
-                    stringResource(if (state.profile.uiLanguage == UiLanguage.System) R.string.settings_ui_lang_system_sub else R.string.settings_ui_lang_profile_sub),
-                    value = UiLanguages.firstOrNull { it.code == state.profile.uiLanguage.tag }?.name ?: stringResource(R.string.settings_ui_lang_system),
+                    stringResource(
+                        if (state.profile.uiLanguage ==
+                            UiLanguage.System
+                        ) {
+                            R.string.settings_ui_lang_system_sub
+                        } else {
+                            R.string.settings_ui_lang_profile_sub
+                        },
+                    ),
+                    value = UiLanguages.firstOrNull { it.code == state.profile.uiLanguage.tag }?.name ?: stringResource(
+                        R.string.settings_ui_lang_system,
+                    ),
                     onClick = { viewModel.openLanguages(LanguageTarget.Ui) },
                     focus = languageFocus,
                 ),
@@ -1368,20 +1720,40 @@ private fun accountRows(
         SettingGroup(
             stringResource(R.string.settings_group_pin),
             listOf(
-                pinToggle("profile", R.string.settings_pin_profile, R.string.settings_pin_profile_sub, protection.pinOnProfileSwitch) { p, on ->
+                pinToggle(
+                    "profile",
+                    R.string.settings_pin_profile,
+                    R.string.settings_pin_profile_sub,
+                    protection.pinOnProfileSwitch,
+                ) { p, on ->
                     p.copy(pinOnProfileSwitch = on)
                 },
-                pinToggle("locked", R.string.settings_pin_locked, R.string.settings_pin_locked_sub, protection.pinForLocked) { p, on ->
+                pinToggle(
+                    "locked",
+                    R.string.settings_pin_locked,
+                    R.string.settings_pin_locked_sub,
+                    protection.pinForLocked,
+                ) { p, on ->
                     p.copy(pinForLocked = on)
                 },
-                pinToggle("settings", R.string.settings_pin_settings, R.string.settings_pin_settings_sub, protection.pinForSettings) { p, on ->
+                pinToggle(
+                    "settings",
+                    R.string.settings_pin_settings,
+                    R.string.settings_pin_settings_sub,
+                    protection.pinForSettings,
+                ) { p, on ->
                     p.copy(pinForSettings = on)
                 },
                 if (lock.hasPin) {
                     SettingRow.Action(
                         stringResource(R.string.settings_pin_change),
                         lock.pinChangedAt
-                            ?.let { stringResource(R.string.settings_pin_change_sub, DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(it))) }
+                            ?.let {
+                                stringResource(
+                                    R.string.settings_pin_change_sub,
+                                    DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(it)),
+                                )
+                            }
                             .orEmpty(),
                         button = stringResource(R.string.settings_pin_change_value),
                         onClick = pinOrigins.tap("change", viewModel::changePin),
@@ -1423,8 +1795,7 @@ private fun accountRows(
 }
 
 @Composable
-private fun ageLabel(limit: AgeLimit): String =
-    limit.age?.let { "$it+" } ?: stringResource(R.string.settings_age_all)
+private fun ageLabel(limit: AgeLimit): String = limit.age?.let { "$it+" } ?: stringResource(R.string.settings_age_all)
 
 /** Buttons that open a dialog (the PIN, the device copies, removing the profile); focus goes back to the one used once it closes. */
 private class PinOrigins {
@@ -1466,50 +1837,77 @@ private fun languageName(state: SettingsUiState, code: String): String =
         ?: code
 
 @Composable
-private fun seconds(ms: Long): String =
-    if (ms >= 60_000) stringResource(R.string.settings_minute) else stringResource(R.string.settings_seconds, (ms / 1000).toInt())
+private fun seconds(ms: Long): String = if (ms >= 60_000) {
+    stringResource(
+        R.string.settings_minute,
+    )
+} else {
+    stringResource(R.string.settings_seconds, (ms / 1000).toInt())
+}
 
 @Composable
 private fun systemRows(state: SettingsUiState, viewModel: SettingsViewModel): List<SettingGroup> {
     val context = LocalContext.current
     val device = remember { deviceSummary(context) }
     val server = state.serverSummary
-    fun info(label: String, sub: String, value: String) = SettingRow.Info(label, sub, value)
+    fun info(
+        label: String,
+        sub: String,
+        value: String,
+    ) = SettingRow.Info(label, sub, value)
     return listOf(
         // A store build gets its updates from the store.
-        if (BuildConfig.STORE.isNotEmpty()) storeUpdateGroup(state, viewModel) else SettingGroup(
-            stringResource(R.string.settings_group_update),
-            listOf(
-                updateRow(state, viewModel),
-                SettingRow.Choice(
-                    stringResource(R.string.update_channel),
-                    stringResource(if (state.updateChannel == UpdateChannel.Beta) R.string.update_channel_beta_sub else R.string.update_channel_stable_sub),
-                    UpdateChannel.entries.map { it.name },
-                    state.updateChannel.ordinal,
-                    onSelect = { viewModel.updates.setChannel(UpdateChannel.entries[it]) },
+        if (BuildConfig.STORE.isNotEmpty()) {
+            storeUpdateGroup(state, viewModel)
+        } else {
+            SettingGroup(
+                stringResource(R.string.settings_group_update),
+                listOf(
+                    updateRow(state, viewModel),
+                    SettingRow.Choice(
+                        stringResource(R.string.update_channel),
+                        stringResource(
+                            if (state.updateChannel ==
+                                UpdateChannel.Beta
+                            ) {
+                                R.string.update_channel_beta_sub
+                            } else {
+                                R.string.update_channel_stable_sub
+                            },
+                        ),
+                        UpdateChannel.entries.map { it.name },
+                        state.updateChannel.ordinal,
+                        onSelect = { viewModel.updates.setChannel(UpdateChannel.entries[it]) },
+                    ),
+                    SettingRow.Toggle(
+                        stringResource(R.string.update_auto),
+                        stringResource(R.string.update_auto_sub),
+                        state.autoUpdate,
+                        onToggle = { viewModel.updates.setAutoCheck(!state.autoUpdate) },
+                    ),
+                    SettingRow.Toggle(
+                        stringResource(R.string.update_prompt),
+                        stringResource(R.string.update_prompt_sub),
+                        state.updatePrompt,
+                        onToggle = { viewModel.updates.setShowPrompt(!state.updatePrompt) },
+                        enabled = state.autoUpdate,
+                    ),
                 ),
-                SettingRow.Toggle(
-                    stringResource(R.string.update_auto),
-                    stringResource(R.string.update_auto_sub),
-                    state.autoUpdate,
-                    onToggle = { viewModel.updates.setAutoCheck(!state.autoUpdate) },
-                ),
-                SettingRow.Toggle(
-                    stringResource(R.string.update_prompt),
-                    stringResource(R.string.update_prompt_sub),
-                    state.updatePrompt,
-                    onToggle = { viewModel.updates.setShowPrompt(!state.updatePrompt) },
-                    enabled = state.autoUpdate,
-                ),
-            ),
-        ),
+            )
+        },
         startGroup(state, viewModel),
         SettingGroup(
             stringResource(R.string.settings_group_device),
             listOf(
                 info(
                     stringResource(R.string.settings_device_name),
-                    stringResource(R.string.settings_device_sub, Build.VERSION.RELEASE, device.width, device.height, device.refreshRate),
+                    stringResource(
+                        R.string.settings_device_sub,
+                        Build.VERSION.RELEASE,
+                        device.width,
+                        device.height,
+                        device.refreshRate,
+                    ),
                     device.name,
                 ),
             ),
@@ -1517,7 +1915,11 @@ private fun systemRows(state: SettingsUiState, viewModel: SettingsViewModel): Li
         SettingGroup(
             stringResource(R.string.settings_group_server),
             listOf(
-                info(stringResource(R.string.settings_server_address), server?.name.orEmpty(), server?.address?.let(::hostOf).orEmpty()),
+                info(
+                    stringResource(R.string.settings_server_address),
+                    server?.name.orEmpty(),
+                    server?.address?.let(::hostOf).orEmpty(),
+                ),
                 info(
                     stringResource(R.string.settings_server_version),
                     stringResource(R.string.settings_server_version_sub),
@@ -1529,8 +1931,16 @@ private fun systemRows(state: SettingsUiState, viewModel: SettingsViewModel): Li
         SettingGroup(
             stringResource(R.string.settings_group_about),
             listOf(
-                info(stringResource(R.string.app_name), stringResource(R.string.settings_about_sub), BuildConfig.VERSION_NAME),
-                info(stringResource(R.string.settings_source), stringResource(R.string.settings_source_sub), SOURCE_URL),
+                info(
+                    stringResource(R.string.app_name),
+                    stringResource(R.string.settings_about_sub),
+                    BuildConfig.VERSION_NAME,
+                ),
+                info(
+                    stringResource(R.string.settings_source),
+                    stringResource(R.string.settings_source_sub),
+                    SOURCE_URL,
+                ),
                 info(
                     stringResource(R.string.settings_ffmpeg),
                     stringResource(R.string.settings_ffmpeg_sub),
@@ -1602,10 +2012,12 @@ private fun diagnosticsGroup(diagnostics: DiagnosticsState, viewModel: SettingsV
     }
     val sub = when {
         diagnostics.sentAs != null -> stringResource(R.string.diag_send_done_sub, diagnostics.sentAs)
+
         diagnostics.lastCrash != null -> stringResource(
             R.string.diag_send_crash_sub,
             DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(diagnostics.lastCrash)),
         )
+
         else -> stringResource(R.string.diag_send_sub)
     }
     return SettingGroup(
@@ -1635,7 +2047,10 @@ private fun diagnosticsGroup(diagnostics: DiagnosticsState, viewModel: SettingsV
             SettingRow.Toggle(
                 stringResource(R.string.diag_verbose),
                 diagnostics.verboseUntil?.let {
-                    stringResource(R.string.diag_verbose_on_sub, DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(it)))
+                    stringResource(
+                        R.string.diag_verbose_on_sub,
+                        DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(it)),
+                    )
                 } ?: stringResource(R.string.diag_verbose_sub),
                 diagnostics.verboseUntil != null,
                 onToggle = viewModel::toggleVerbose,
@@ -1660,8 +2075,13 @@ private fun storeUpdateGroup(state: SettingsUiState, viewModel: SettingsViewMode
         listOf(
             SettingRow.Update(
                 stringResource(if (play) R.string.update_store_play else R.string.update_store_amazon),
-                stringResource(if (play) R.string.update_store_play_sub else R.string.update_store_amazon_sub, BuildConfig.VERSION_NAME),
-                value = stringResource(if (play) R.string.update_store_play_open else R.string.update_store_amazon_open),
+                stringResource(
+                    if (play) R.string.update_store_play_sub else R.string.update_store_amazon_sub,
+                    BuildConfig.VERSION_NAME,
+                ),
+                value = stringResource(
+                    if (play) R.string.update_store_play_open else R.string.update_store_amazon_open,
+                ),
                 primary = false,
                 onClick = { openStorePage(context, BuildConfig.STORE) },
             ),
@@ -1714,6 +2134,7 @@ private fun updateRow(state: SettingsUiState, viewModel: SettingsViewModel): Set
             primary = false,
             onClick = updates::check,
         )
+
         UpdateState.Checking -> SettingRow.Update(
             stringResource(R.string.update_checking),
             stringResource(R.string.update_checking_sub),
@@ -1721,6 +2142,7 @@ private fun updateRow(state: SettingsUiState, viewModel: SettingsViewModel): Set
             primary = false,
             onClick = none,
         )
+
         is UpdateState.Current -> SettingRow.Update(
             stringResource(R.string.update_current),
             stringResource(
@@ -1733,10 +2155,14 @@ private fun updateRow(state: SettingsUiState, viewModel: SettingsViewModel): Set
             primary = false,
             onClick = updates::check,
         )
+
         is UpdateState.Available -> {
             val candidate = update.candidate
             SettingRow.Update(
-                stringResource(if (candidate.version.isBeta) R.string.update_available_beta else R.string.update_available, candidate.version.displayName),
+                stringResource(
+                    if (candidate.version.isBeta) R.string.update_available_beta else R.string.update_available,
+                    candidate.version.displayName,
+                ),
                 stringResource(
                     R.string.update_available_sub,
                     installed.toString(),
@@ -1750,6 +2176,7 @@ private fun updateRow(state: SettingsUiState, viewModel: SettingsViewModel): Set
                 focus = showFocus,
             )
         }
+
         is UpdateState.Downloading -> {
             val total = update.candidate.apk.sizeBytes.coerceAtLeast(1)
             val share = (update.bytes.toFloat() / total).coerceIn(0f, 1f)
@@ -1761,9 +2188,14 @@ private fun updateRow(state: SettingsUiState, viewModel: SettingsViewModel): Set
                 onClick = none,
                 progress = share,
                 progressStart = stringResource(R.string.update_bar_version, update.candidate.version.toString()),
-                progressEnd = stringResource(R.string.update_bar_size, megabytes(resources, update.bytes), megabytes(resources, total)),
+                progressEnd = stringResource(
+                    R.string.update_bar_size,
+                    megabytes(resources, update.bytes),
+                    megabytes(resources, total),
+                ),
             )
         }
+
         is UpdateState.Ready -> SettingRow.Update(
             stringResource(R.string.update_ready, update.candidate.version.displayName),
             stringResource(R.string.update_ready_sub),
@@ -1771,6 +2203,7 @@ private fun updateRow(state: SettingsUiState, viewModel: SettingsViewModel): Set
             primary = true,
             onClick = updates::install,
         )
+
         is UpdateState.Installing -> SettingRow.Update(
             stringResource(R.string.update_installing),
             stringResource(R.string.update_installing_sub),
@@ -1778,8 +2211,14 @@ private fun updateRow(state: SettingsUiState, viewModel: SettingsViewModel): Set
             primary = false,
             onClick = none,
         )
+
         is UpdateState.Failed -> SettingRow.Update(
-            update.candidate?.let { stringResource(R.string.update_failed, it.version.displayName) } ?: stringResource(R.string.update_check_failed),
+            update.candidate?.let {
+                stringResource(
+                    R.string.update_failed,
+                    it.version.displayName,
+                )
+            } ?: stringResource(R.string.update_check_failed),
             stringResource(update.error.message()),
             stringResource(R.string.update_retry),
             primary = false,
@@ -1807,16 +2246,29 @@ private fun UpdateCard(row: SettingRow.Update) {
     )
 }
 
-private data class DeviceSummary(val name: String, val width: Int, val height: Int, val refreshRate: Int)
+private data class DeviceSummary(
+    val name: String,
+    val width: Int,
+    val height: Int,
+    val refreshRate: Int,
+)
 
 /** The name the device has in the Android settings, and its current display mode. */
 private fun deviceSummary(context: Context): DeviceSummary {
-    val name = Settings.Global.getString(context.contentResolver, Settings.Global.DEVICE_NAME)?.takeIf { it.isNotBlank() }
+    val name = Settings.Global.getString(
+        context.contentResolver,
+        Settings.Global.DEVICE_NAME,
+    )?.takeIf { it.isNotBlank() }
         ?: "${Build.MANUFACTURER} ${Build.MODEL}"
     val display = context.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY)
     // Sony and others report the 1080p UI mode in Display.mode; DisplayCompat knows the panel's real size.
     val panel = display?.let { DisplayCompat.getMode(context, it) }
-    return DeviceSummary(name, panel?.physicalWidth ?: 0, panel?.physicalHeight ?: 0, display?.mode?.refreshRate?.roundToInt() ?: 0)
+    return DeviceSummary(
+        name,
+        panel?.physicalWidth ?: 0,
+        panel?.physicalHeight ?: 0,
+        display?.mode?.refreshRate?.roundToInt() ?: 0,
+    )
 }
 
 /** "https://jellyfin.example.org:8920" -> "jellyfin.example.org:8920". */

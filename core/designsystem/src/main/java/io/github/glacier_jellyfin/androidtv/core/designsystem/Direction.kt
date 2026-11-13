@@ -50,5 +50,10 @@ fun Modifier.startGradient(vararg colorStops: Pair<Float, Color>): Modifier = dr
 }
 
 /** [startGradient] with evenly spread [colors]. */
-fun Modifier.startGradient(colors: List<Color>): Modifier =
-    startGradient(*colors.mapIndexed { index, color -> index.toFloat() / (colors.size - 1).coerceAtLeast(1) to color }.toTypedArray())
+fun Modifier.startGradient(colors: List<Color>): Modifier = startGradient(
+    *colors.mapIndexed { index, color ->
+        index.toFloat() / (colors.size - 1).coerceAtLeast(
+            1,
+        ) to color
+    }.toTypedArray(),
+)

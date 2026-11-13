@@ -3,12 +3,12 @@ package io.github.glacier_jellyfin.androidtv.core.player
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.audio.AudioOutput
+import java.lang.reflect.Proxy
+import java.nio.ByteBuffer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.lang.reflect.Proxy
-import java.nio.ByteBuffer
 
 @OptIn(UnstableApi::class)
 class Iec61937OutputTest {
@@ -16,7 +16,10 @@ class Iec61937OutputTest {
     /** A track that takes at most [chunk] bytes per write, like a full AudioTrack. */
     private class SlowTrack(var chunk: Int) {
         var written = 0
-        val output: AudioOutput = Proxy.newProxyInstance(AudioOutput::class.java.classLoader, arrayOf(AudioOutput::class.java)) { _, method, args ->
+        val output: AudioOutput = Proxy.newProxyInstance(
+            AudioOutput::class.java.classLoader,
+            arrayOf(AudioOutput::class.java),
+        ) { _, method, args ->
             when (method.name) {
                 "write" -> {
                     val buffer = args[0] as ByteBuffer
@@ -25,7 +28,9 @@ class Iec61937OutputTest {
                     written += count
                     !buffer.hasRemaining()
                 }
+
                 "getSampleRate" -> 192_000
+
                 else -> when (method.returnType) {
                     java.lang.Boolean.TYPE -> false
                     Integer.TYPE -> 0
@@ -76,8 +81,14 @@ class Iec61937OutputTest {
         val frames = mutableListOf<ByteArray>()
         var position = 0
         while (position + 9 <= stream.size) {
-            val size = ((((stream[position + 5].toInt() and 0xff) shl 16) or ((stream[position + 6].toInt() and 0xff) shl 8) or
-                (stream[position + 7].toInt() and 0xff)) shr 4 and 0x3fff) + 1
+            val size =
+                (
+                    (
+                        ((stream[position + 5].toInt() and 0xff) shl 16) or
+                            ((stream[position + 6].toInt() and 0xff) shl 8) or
+                            (stream[position + 7].toInt() and 0xff)
+                        ) shr 4 and 0x3fff
+                    ) + 1
             frames += stream.copyOfRange(position, minOf(position + size, stream.size))
             position += size
         }

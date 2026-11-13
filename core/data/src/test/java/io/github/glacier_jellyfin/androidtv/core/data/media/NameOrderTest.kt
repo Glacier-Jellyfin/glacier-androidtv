@@ -17,12 +17,18 @@ class NameOrderTest {
 
     @Test
     fun `numbers go by value`() {
-        assertEquals(listOf("2 Two", "10 Ten", "Song 2", "Song 10"), listOf("Song 10", "10 Ten", "Song 2", "2 Two").sortedWith(NameOrder))
+        assertEquals(
+            listOf("2 Two", "10 Ten", "Song 2", "Song 10"),
+            listOf("Song 10", "10 Ten", "Song 2", "2 Two").sortedWith(NameOrder),
+        )
     }
 
     @Test
     fun `letters ignore case and accents`() {
-        assertEquals(listOf("Apfel", "Äpfel", "apple", "Éclair", "eclipse"), listOf("eclipse", "apple", "Äpfel", "Éclair", "Apfel").sortedWith(NameOrder))
+        assertEquals(
+            listOf("Apfel", "Äpfel", "apple", "Éclair", "eclipse"),
+            listOf("eclipse", "apple", "Äpfel", "Éclair", "Apfel").sortedWith(NameOrder),
+        )
         assertTrue(NameOrder.compare("Straße", "Strasse") != 0)
         assertTrue(NameOrder.compare("Straße", "Strassf") < 0)
     }
@@ -47,7 +53,10 @@ class NameOrderTest {
         assertEquals("&", NameOrder.title("&", ""))
         assertEquals("...Dots Album", NameOrder.title("...Dots Album", "   dots album"))
         assertEquals("!Bang!", NameOrder.title("!Bang!", "!bang!"))
-        assertEquals("Glacier Versions (2026)", NameOrder.title("Glacier Versions (2026)", "glacier versions (0000002026)"))
+        assertEquals(
+            "Glacier Versions (2026)",
+            NameOrder.title("Glacier Versions (2026)", "glacier versions (0000002026)"),
+        )
         assertEquals("Test", NameOrder.title("The Test", "test"))
         assertEquals("Movie", NameOrder.title("Movie", null))
     }

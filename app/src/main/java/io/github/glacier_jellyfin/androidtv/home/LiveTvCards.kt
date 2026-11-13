@@ -59,7 +59,12 @@ fun rememberLiveClock(): Long {
  * the guide has none), how far it got, and the channel below its title.
  */
 @Composable
-fun OnNowCard(channel: LiveChannel, nowMs: Long, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun OnNowCard(
+    channel: LiveChannel,
+    nowMs: Long,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val program = channel.now ?: return
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
@@ -95,7 +100,12 @@ fun OnNowCard(channel: LiveChannel, nowMs: Long, onClick: () -> Unit, modifier: 
             )
         }
         Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            MarqueeText(program.title, style = GlacierText.body(19, FontWeight.SemiBold), color = if (focused) accent else GlacierColors.Ice, active = focused)
+            MarqueeText(
+                program.title,
+                style = GlacierText.body(19, FontWeight.SemiBold),
+                color = if (focused) accent else GlacierColors.Ice,
+                active = focused,
+            )
             Text(
                 channel.name + " · " + minutesLeft(program, nowMs),
                 style = GlacierText.body(16),
@@ -109,7 +119,11 @@ fun OnNowCard(channel: LiveChannel, nowMs: Long, onClick: () -> Unit, modifier: 
 
 /** A channel: its logo on a glass tile and its name. What runs on it is the other row's. */
 @Composable
-fun ChannelCard(channel: LiveChannel, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun ChannelCard(
+    channel: LiveChannel,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     val width = LocalCardSizes.current.posterWidth

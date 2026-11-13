@@ -4,6 +4,10 @@ import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.Serializer
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import java.io.InputStream
+import java.io.OutputStream
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -14,13 +18,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import java.io.InputStream
-import java.io.OutputStream
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** Settings of every profile on this device, keyed by [profileKey]. */
 @Serializable
@@ -85,7 +85,11 @@ class SettingsRepository @Inject constructor(
      * A server set up again under a new id: the settings of the profiles in [users]
      * (old user id to new one) move from [fromServer] to [toServer], the others go.
      */
-    suspend fun moveServer(fromServer: String, toServer: String, users: Map<String, String>) {
+    suspend fun moveServer(
+        fromServer: String,
+        toServer: String,
+        users: Map<String, String>,
+    ) {
         fun move(key: String): String? {
             val userId = key.removePrefix("$fromServer/").takeIf { it != key } ?: return key
             return users[userId]?.let { profileKey(toServer, it) }
@@ -112,13 +116,29 @@ class SettingsRepository @Inject constructor(
         }
     }
 
-    suspend fun updatePlayback(transform: (PlaybackSettings) -> PlaybackSettings) = update { it.copy(playback = transform(it.playback)) }
+    suspend fun updatePlayback(transform: (PlaybackSettings) -> PlaybackSettings) = update {
+        it.copy(
+            playback = transform(it.playback),
+        )
+    }
 
-    suspend fun updateAppearance(transform: (AppearanceSettings) -> AppearanceSettings) = update { it.copy(appearance = transform(it.appearance)) }
+    suspend fun updateAppearance(transform: (AppearanceSettings) -> AppearanceSettings) = update {
+        it.copy(
+            appearance = transform(it.appearance),
+        )
+    }
 
     suspend fun updateHome(transform: (HomeSettings) -> HomeSettings) = update { it.copy(home = transform(it.home)) }
 
-    suspend fun updateNavigation(transform: (NavigationSettings) -> NavigationSettings) = update { it.copy(navigation = transform(it.navigation)) }
+    suspend fun updateNavigation(transform: (NavigationSettings) -> NavigationSettings) = update {
+        it.copy(
+            navigation = transform(it.navigation),
+        )
+    }
 
-    suspend fun updateSubtitleStyle(transform: (SubtitleStyle) -> SubtitleStyle) = update { it.copy(subtitleStyle = transform(it.subtitleStyle)) }
+    suspend fun updateSubtitleStyle(transform: (SubtitleStyle) -> SubtitleStyle) = update {
+        it.copy(
+            subtitleStyle = transform(it.subtitleStyle),
+        )
+    }
 }

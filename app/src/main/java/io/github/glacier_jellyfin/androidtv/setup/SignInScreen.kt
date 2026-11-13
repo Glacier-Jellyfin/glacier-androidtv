@@ -38,15 +38,12 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SystemTextInput
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.ServerInfo
-import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 
 @Composable
-fun SignInScreen(
-    onNavigate: (UiEvent.Navigate) -> Unit,
-    viewModel: SignInViewModel = hiltViewModel(),
-) {
+fun SignInScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SignInViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
 
@@ -94,9 +91,18 @@ fun SignInScreen(
             )
         }
         Row(Modifier.padding(top = 36.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            SetupButton(stringResource(R.string.signin_title), onClick = viewModel::signIn, primary = true, modifier = Modifier.focusRequester(signInFocus))
+            SetupButton(
+                stringResource(R.string.signin_title),
+                onClick = viewModel::signIn,
+                primary = true,
+                modifier = Modifier.focusRequester(signInFocus),
+            )
             if (state.quickConnectAvailable) {
-                SetupButton(stringResource(R.string.quick_connect), onClick = viewModel::openQuickConnect, icon = GlacierIcons.Bolt)
+                SetupButton(
+                    stringResource(R.string.quick_connect),
+                    onClick = viewModel::openQuickConnect,
+                    icon = GlacierIcons.Bolt,
+                )
             }
             SetupButton(stringResource(R.string.signin_change_server), onClick = viewModel::changeServer)
         }
@@ -113,12 +119,14 @@ fun SignInScreen(
                 when {
                     // Design: OK on the user name continues with the password …
                     done && state.field == SignInField.Username -> viewModel.selectField(SignInField.Password)
+
                     // … and OK on the password signs in.
                     done -> {
                         keyboardOpen = false
                         passwordFocus.requestFocus()
                         viewModel.signIn()
                     }
+
                     else -> {
                         keyboardOpen = false
                         activeFocus.requestFocus()
@@ -157,8 +165,20 @@ private fun ServerBadge(server: ServerInfo) {
             Icon(GlacierIcons.Server, contentDescription = null, tint = accent, modifier = Modifier.size(24.dp))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(server.name, style = GlacierText.display(21), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(server.address, style = GlacierText.mono(16), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                server.name,
+                style = GlacierText.display(21),
+                color = GlacierColors.Ice,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                server.address,
+                style = GlacierText.mono(16),
+                color = GlacierColors.Mist,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

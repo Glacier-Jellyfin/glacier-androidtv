@@ -84,7 +84,10 @@ class HandoverBufferTest {
         second = File(dir, "second.mkv").apply { writeBytes(source) }
         hlsDir = File(dir, "hls").apply { mkdirs() }
         for (name in listOf("index.m3u8") + (0..9).map { "seg$it.ts" }) {
-            File(hlsDir, name).writeBytes(javaClass.classLoader!!.getResourceAsStream("handover-hls/$name")!!.readBytes())
+            File(
+                hlsDir,
+                name,
+            ).writeBytes(javaClass.classLoader!!.getResourceAsStream("handover-hls/$name")!!.readBytes())
         }
         build()
     }
@@ -96,7 +99,8 @@ class HandoverBufferTest {
 
     /** A renderer that has read far ahead of the position, as one of a sparse track does with its next cue. */
     private class AheadRenderer(type: Int) : FakeRenderer(type) {
-        override fun shouldProcessBuffer(bufferTimeUs: Long, playbackPositionUs: Long) = bufferTimeUs < playbackPositionUs + 20_000_000
+        override fun shouldProcessBuffer(bufferTimeUs: Long, playbackPositionUs: Long) =
+            bufferTimeUs < playbackPositionUs + 20_000_000
     }
 
     /** Files are read as they are (the stream that plays), playlists as HLS (the converted stream). */
@@ -117,7 +121,13 @@ class HandoverBufferTest {
         }
 
         override fun createMediaSource(mediaItem: MediaItem): MediaSource =
-            if (mediaItem.localConfiguration?.mimeType == MimeTypes.APPLICATION_M3U8) hls.createMediaSource(mediaItem) else progressive.createMediaSource(mediaItem)
+            if (mediaItem.localConfiguration?.mimeType == MimeTypes.APPLICATION_M3U8) {
+                hls.createMediaSource(
+                    mediaItem,
+                )
+            } else {
+                progressive.createMediaSource(mediaItem)
+            }
     }
 
     private fun build() {
@@ -131,7 +141,9 @@ class HandoverBufferTest {
                 private var segmentRead = 0L
                 private var name: String? = null
 
-                override fun addTransferListener(transferListener: TransferListener) = file.addTransferListener(transferListener)
+                override fun addTransferListener(transferListener: TransferListener) = file.addTransferListener(
+                    transferListener,
+                )
 
                 override fun open(dataSpec: DataSpec): Long {
                     // The playlist of the converted stream is a data address: nothing to record.
@@ -146,15 +158,25 @@ class HandoverBufferTest {
                     return file.open(dataSpec)
                 }
 
-                override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
-                    while ((main && position >= limit.get()) || (segment && holdSegments && segmentRead >= segmentHoldAt)) {
+                override fun read(
+                    buffer: ByteArray,
+                    offset: Int,
+                    length: Int,
+                ): Int {
+                    while ((main && position >= limit.get()) ||
+                        (segment && holdSegments && segmentRead >= segmentHoldAt)
+                    ) {
                         try {
                             Thread.sleep(2)
                         } catch (e: InterruptedException) {
                             throw InterruptedIOException()
                         }
                     }
-                    val read = file.read(buffer, offset, if (main) minOf(length.toLong(), limit.get() - position).toInt() else length)
+                    val read = file.read(
+                        buffer,
+                        offset,
+                        if (main) minOf(length.toLong(), limit.get() - position).toInt() else length,
+                    )
                     if (read > 0) {
                         position += read
                         segmentRead += read
@@ -199,14 +221,28 @@ class HandoverBufferTest {
         player.prepare()
     }
 
-    private fun request(file: File) = StreamRequest(url = Uri.fromFile(file).toString(), isHls = false, headers = emptyMap(), startPositionMs = 0, title = true)
+    private fun request(file: File) = StreamRequest(
+        url = Uri.fromFile(file).toString(),
+        isHls = false,
+        headers = emptyMap(),
+        startPositionMs = 0,
+        title = true,
+    )
 
     /** The converted stream: the playlist of one tier, as the app builds it, with the address of the files. */
     private fun hlsRequest(): StreamRequest {
         val tier = "file:///" + File(hlsDir, "index.m3u8").path.replace(File.separatorChar, '/').trimStart('/')
         val playlist = "#EXTM3U\n#EXT-X-INDEPENDENT-SEGMENTS\n" +
             "#EXT-X-STREAM-INF:BANDWIDTH=60000,RESOLUTION=160x90,CODECS=\"avc1.42c01e,mp4a.40.2\"\n$tier\n"
-        return StreamRequest(url = tier, isHls = true, headers = emptyMap(), startPositionMs = 0, title = true, playlist = playlist, startBitrate = 60_000)
+        return StreamRequest(
+            url = tier,
+            isHls = true,
+            headers = emptyMap(),
+            startPositionMs = 0,
+            title = true,
+            playlist = playlist,
+            startBitrate = 60_000,
+        )
     }
 
     private fun opened(name: String) = synchronized(opens) { opens.filter { it.startsWith(name) } }
@@ -222,7 +258,9 @@ class HandoverBufferTest {
      * work and ends a wait for loading on a busy machine as a player that is stuck).
      */
     private fun awaitReady() {
-        TestPlayerRunHelper.advance(player).untilBackgroundThreadCondition { player.playbackState == Player.STATE_READY }
+        TestPlayerRunHelper.advance(
+            player,
+        ).untilBackgroundThreadCondition { player.playbackState == Player.STATE_READY }
     }
 
     /** Plays to 10 s and lets the link fill the buffer until about 35 s: more than the 25 s where the hand over is to be. */
@@ -261,7 +299,10 @@ class HandoverBufferTest {
 
         assertEquals("ready, not buffering", Player.STATE_READY, player.playbackState)
         assertEquals("the playing stream is not read again", filesBefore, opened("first"))
-        assertTrue("the buffer is still there: $bufferedBefore -> ${player.bufferedPosition}", player.bufferedPosition >= bufferedBefore)
+        assertTrue(
+            "the buffer is still there: $bufferedBefore -> ${player.bufferedPosition}",
+            player.bufferedPosition >= bufferedBefore,
+        )
         assertEquals(2, player.mediaItemCount)
         assertEquals(0, player.currentMediaItemIndex)
     }
@@ -276,12 +317,17 @@ class HandoverBufferTest {
 
         // The preloaded file has 12 s: the move is not postponed.
         player.play()
-        TestPlayerRunHelper.advance(player).untilBackgroundThreadCondition { transitions.any { it.startsWith("handover-1") } }
+        TestPlayerRunHelper.advance(
+            player,
+        ).untilBackgroundThreadCondition { transitions.any { it.startsWith("handover-1") } }
         TestPlayerRunHelper.runUntilPendingCommandsAreFullyHandled(player)
 
         assertEquals("handover-1", player.currentMediaItem?.mediaId)
         assertEquals("handover-1/${Player.MEDIA_ITEM_TRANSITION_REASON_SEEK}", transitions.last())
-        assertTrue("the next stream starts at its beginning, was ${player.currentPosition}", player.currentPosition < 1_000)
+        assertTrue(
+            "the next stream starts at its beginning, was ${player.currentPosition}",
+            player.currentPosition < 1_000,
+        )
         assertEquals("the playing stream was not read again", filesBefore, opened("first"))
         assertEquals("the preloaded stream is used as it is", secondBefore, opened("second"))
 
@@ -356,14 +402,19 @@ class HandoverBufferTest {
         assertEquals("the segment is being loaded", 1, opened("seg4").size)
 
         player.play()
-        TestPlayerRunHelper.advance(player).untilBackgroundThreadCondition { transitions.any { it.startsWith("handover-1") } }
+        TestPlayerRunHelper.advance(
+            player,
+        ).untilBackgroundThreadCondition { transitions.any { it.startsWith("handover-1") } }
         TestPlayerRunHelper.runUntilPendingCommandsAreFullyHandled(player)
         settle()
         holdSegments = false
         awaitReady()
 
         assertEquals("the move was at the hand over point", "handover-1", player.currentMediaItem?.mediaId)
-        assertTrue("the next stream plays from its start, was ${player.currentPosition}", player.currentPosition < 1_000)
+        assertTrue(
+            "the next stream plays from its start, was ${player.currentPosition}",
+            player.currentPosition < 1_000,
+        )
         assertEquals("the segment was loaded once: ${synchronized(opens) { opens.toList() }}", 1, opened("seg4").size)
     }
 
@@ -393,7 +444,11 @@ class HandoverBufferTest {
                 loadEventInfo: androidx.media3.exoplayer.source.LoadEventInfo,
                 mediaLoadData: androidx.media3.exoplayer.source.MediaLoadData,
             ) {
-                if (eventTime.windowIndex == 1 && mediaLoadData.dataType == C.DATA_TYPE_MEDIA) ends += mediaLoadData.mediaEndTimeMs
+                if (eventTime.windowIndex == 1 &&
+                    mediaLoadData.dataType == C.DATA_TYPE_MEDIA
+                ) {
+                    ends += mediaLoadData.mediaEndTimeMs
+                }
             }
         })
         playAndBuffer()
@@ -404,8 +459,15 @@ class HandoverBufferTest {
         val completed = synchronized(ends) { ends.toList() }
         val loadedToMs = completed.max() - 25_000
         // The load control was asked after the second segment only: it knows 11 s of the 17 s that are loaded.
-        assertTrue("the load control lags: $completed, ${loadControl.preloadedMs}", loadControl.preloadedMs < loadedToMs)
-        assertEquals("what the playback reports is what the loads completed: $completed", loadedToMs, playback.nextLoadedMs)
+        assertTrue(
+            "the load control lags: $completed, ${loadControl.preloadedMs}",
+            loadControl.preloadedMs < loadedToMs,
+        )
+        assertEquals(
+            "what the playback reports is what the loads completed: $completed",
+            loadedToMs,
+            playback.nextLoadedMs,
+        )
     }
 
     @Test
@@ -435,8 +497,15 @@ class HandoverBufferTest {
 
         assertEquals("handover-1", player.currentMediaItem?.mediaId)
         val position = player.currentPosition
-        assertTrue("on the position of the playing stream (between 2 s and 6 s past the point), was $position", position in 2_000..6_500)
-        assertEquals("the loaded segments are not loaded again: ${synchronized(opens) { opens.toList() }}", segmentsBefore, opened("seg").take(segmentsBefore.size))
+        assertTrue(
+            "on the position of the playing stream (between 2 s and 6 s past the point), was $position",
+            position in 2_000..6_500,
+        )
+        assertEquals(
+            "the loaded segments are not loaded again: ${synchronized(opens) { opens.toList() }}",
+            segmentsBefore,
+            opened("seg").take(segmentsBefore.size),
+        )
         assertEquals(1, opened("seg4").size)
     }
 
@@ -455,6 +524,9 @@ class HandoverBufferTest {
         playUntilHandedOver()
         assertEquals("handover-1", player.currentMediaItem?.mediaId)
         // The playing stream had nothing beyond 35 s: the next one takes over there, nothing loaded, and waits for its data.
-        assertTrue("took over at 35 s of the title (10 s into the next stream), was ${player.currentPosition}", player.currentPosition in 10_000..11_500)
+        assertTrue(
+            "took over at 35 s of the title (10 s into the next stream), was ${player.currentPosition}",
+            player.currentPosition in 10_000..11_500,
+        )
     }
 }

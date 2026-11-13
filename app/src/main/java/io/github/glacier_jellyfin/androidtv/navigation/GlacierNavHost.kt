@@ -1,6 +1,5 @@
 package io.github.glacier_jellyfin.androidtv.navigation
 
-import io.github.glacier_jellyfin.androidtv.favorites.FavoritesScreen
 import android.annotation.SuppressLint
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -13,9 +12,7 @@ import androidx.navigation.compose.composable
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.detail.DetailScreen
 import io.github.glacier_jellyfin.androidtv.detail.PersonScreen
-import io.github.glacier_jellyfin.androidtv.player.PlayerScreen
-import io.github.glacier_jellyfin.androidtv.search.SearchScreen
-import io.github.glacier_jellyfin.androidtv.seerr.SeerrScreen
+import io.github.glacier_jellyfin.androidtv.favorites.FavoritesScreen
 import io.github.glacier_jellyfin.androidtv.home.HomeScreen
 import io.github.glacier_jellyfin.androidtv.library.FolderScreen
 import io.github.glacier_jellyfin.androidtv.library.LibraryScreen
@@ -23,10 +20,13 @@ import io.github.glacier_jellyfin.androidtv.library.PhotoScreen
 import io.github.glacier_jellyfin.androidtv.livetv.LiveTvPlayerScreen
 import io.github.glacier_jellyfin.androidtv.livetv.LiveTvScreen
 import io.github.glacier_jellyfin.androidtv.music.MusicPlayerScreen
+import io.github.glacier_jellyfin.androidtv.player.PlayerScreen
 import io.github.glacier_jellyfin.androidtv.profiles.ProfilesScreen
+import io.github.glacier_jellyfin.androidtv.search.SearchScreen
+import io.github.glacier_jellyfin.androidtv.seerr.SeerrScreen
 import io.github.glacier_jellyfin.androidtv.settings.SettingsScreen
-import io.github.glacier_jellyfin.androidtv.setup.ServerAddressScreen
 import io.github.glacier_jellyfin.androidtv.setup.QuickConnectScreen
+import io.github.glacier_jellyfin.androidtv.setup.ServerAddressScreen
 import io.github.glacier_jellyfin.androidtv.setup.ServerListScreen
 import io.github.glacier_jellyfin.androidtv.setup.SignInScreen
 import io.github.glacier_jellyfin.androidtv.trailer.TrailerScreen
@@ -34,7 +34,14 @@ import io.github.glacier_jellyfin.androidtv.ui.FolderMemory
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 
 /** Screens without arguments; navigating to one that is already on top does nothing. */
-private val SingleScreens = setOf(ServerListRoute, ServerAddressRoute, HomeRoute, SettingsRoute, FavoritesRoute, LiveTvRoute)
+private val SingleScreens = setOf(
+    ServerListRoute,
+    ServerAddressRoute,
+    HomeRoute,
+    SettingsRoute,
+    FavoritesRoute,
+    LiveTvRoute,
+)
 
 /** Pages about one title or person, which a jump to another title through "More like this" leaves. */
 private val TitlePages = listOf(DetailRoute::class, PersonRoute::class, SeerrRoute::class)
@@ -42,7 +49,11 @@ private val TitlePages = listOf(DetailRoute::class, PersonRoute::class, SeerrRou
 private const val TAG = "Navigation"
 
 @Composable
-fun GlacierNavHost(navController: NavHostController, startDestination: Any, folderMemory: () -> FolderMemory) {
+fun GlacierNavHost(
+    navController: NavHostController,
+    startDestination: Any,
+    folderMemory: () -> FolderMemory,
+) {
     // The whole back stack is readable only through currentBackStack, which lint reports as
     // library-restricted although Navigation offers no public way to it.
     @SuppressLint("RestrictedApi")
@@ -52,8 +63,16 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any, fold
         // The screen under the title and cast pages on top, such as a library or search.
         // It learns the title opened last, to focus that one when Back returns to it.
         val base = if (event.leaveTitles) {
-            navController.currentBackStack.value.lastOrNull { entry -> TitlePages.none { entry.destination.hasRoute(it) } }
-                ?.also { entry -> (event.route as? DetailRoute)?.let { entry.savedStateHandle[RETURN_FOCUS] = it.itemId } }
+            navController.currentBackStack.value.lastOrNull { entry ->
+                TitlePages.none {
+                    entry.destination.hasRoute(
+                        it,
+                    )
+                }
+            }
+                ?.also { entry ->
+                    (event.route as? DetailRoute)?.let { entry.savedStateHandle[RETURN_FOCUS] = it.itemId }
+                }
                 ?.destination?.id
         } else {
             null
@@ -61,7 +80,10 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any, fold
         // "Fotos & Videos" from the bar opens where the user left it: the top and each folder below it get
         // their screen on the back stack, in one go, so only the last one shows.
         val trail = folderMemory().takeIf {
-            event.route == FolderRoute() && !event.clearBackStack && !event.replace && navController.currentDestination?.hasRoute(FolderRoute::class) != true
+            event.route == FolderRoute() && !event.clearBackStack && !event.replace &&
+                navController.currentDestination?.hasRoute(
+                    FolderRoute::class,
+                ) != true
         }?.takeIf { it.path.isNotEmpty() }
         val route = if (trail != null) FolderRoute(focus = trail.path.first().id.toString()) else event.route
         navController.navigate(route) {
@@ -101,10 +123,16 @@ fun GlacierNavHost(navController: NavHostController, startDestination: Any, fold
         composable<QuickConnectRoute> { QuickConnectScreen(onNavigate = navigate, onBack = back) }
         composable<ProfilesRoute> { ProfilesScreen(onNavigate = navigate) }
         composable<HomeRoute> { entry ->
-            HomeScreen(onNavigate = navigate, takeFocusNav = { entry.savedStateHandle.remove<Boolean>(FOCUS_NAV) == true })
+            HomeScreen(
+                onNavigate = navigate,
+                takeFocusNav = { entry.savedStateHandle.remove<Boolean>(FOCUS_NAV) == true },
+            )
         }
         composable<LibraryRoute> { entry ->
-            LibraryScreen(onNavigate = navigate, takeReturnFocus = { entry.savedStateHandle.remove<String>(RETURN_FOCUS) })
+            LibraryScreen(
+                onNavigate = navigate,
+                takeReturnFocus = { entry.savedStateHandle.remove<String>(RETURN_FOCUS) },
+            )
         }
         composable<FolderRoute> { FolderScreen(onNavigate = navigate) }
         composable<PhotoRoute> { PhotoScreen(onNavigate = navigate) }

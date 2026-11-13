@@ -1,8 +1,8 @@
 package io.github.glacier_jellyfin.androidtv.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -74,16 +74,41 @@ fun FilterChip(
                     else -> GlacierColors.GlassFill
                 },
             )
-            .border(2.dp, if (focused) accent else if (active) accent.copy(alpha = 0.45f) else Color.Transparent, PillShape)
-            .combinedClickable(interactionSource = interaction, indication = null, onLongClick = onLongClick, onClick = onClick)
+            .border(
+                2.dp,
+                if (focused) {
+                    accent
+                } else if (active) {
+                    accent.copy(alpha = 0.45f)
+                } else {
+                    Color.Transparent
+                },
+                PillShape,
+            )
+            .combinedClickable(
+                interactionSource = interaction,
+                indication = null,
+                onLongClick = onLongClick,
+                onClick = onClick,
+            )
             // A check at the start and the hold mark at the end sit the same way: a little further from the edge than from the label.
             .padding(start = if (checked) CHECK_EDGE else sidePadding, end = if (holdMark) CHECK_EDGE else sidePadding),
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CHECK_GAP)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(CHECK_GAP)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(CHECK_GAP),
+            ) {
                 // A watched check in the label's own colour.
-                if (checked) Icon(GlacierIcons.Check, contentDescription = null, tint = labelColor, modifier = Modifier.size(16.dp))
+                if (checked) {
+                    Icon(
+                        GlacierIcons.Check,
+                        contentDescription = null,
+                        tint = labelColor,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
                 Text(label, style = GlacierText.body(fontSize, FontWeight.SemiBold), color = labelColor)
             }
             // With options, the focused chip shows the mark that says holding OK opens them; unfocused it takes no room.

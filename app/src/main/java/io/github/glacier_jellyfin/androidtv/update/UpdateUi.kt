@@ -75,13 +75,13 @@ import io.github.glacier_jellyfin.androidtv.core.updater.UpdateManager
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateNotice
 import io.github.glacier_jellyfin.androidtv.core.updater.WhatsNew
 import io.github.glacier_jellyfin.androidtv.core.updater.WhatsNewPrompt
-import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 
 /** The updater for screens outside the settings: the home screen dialogs and the app-wide overlay. */
 @HiltViewModel
@@ -93,7 +93,12 @@ class UpdateViewModel @Inject constructor(val updates: UpdateManager, val whatsN
  * Up/Down scroll the notes, Left/Right move between the buttons.
  */
 @Composable
-fun UpdateDialog(candidate: UpdateCandidate, installed: AppVersion, onNow: () -> Unit, onLater: () -> Unit) {
+fun UpdateDialog(
+    candidate: UpdateCandidate,
+    installed: AppVersion,
+    onNow: () -> Unit,
+    onLater: () -> Unit,
+) {
     BackHandler(onBack = onLater)
     val accent = LocalAccent.current.main
     val notesScroll = rememberScrollState()
@@ -116,29 +121,61 @@ fun UpdateDialog(candidate: UpdateCandidate, installed: AppVersion, onNow: () ->
             .focusProperties { onExit = { cancelFocusChange() } }
             .focusGroup(),
     ) {
-        Column(Modifier.fillMaxSize().padding(start = 130.dp, end = 130.dp, top = 90.dp, bottom = 80.dp), verticalArrangement = Arrangement.spacedBy(48.dp)) {
-            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(100.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            Modifier.fillMaxSize().padding(start = 130.dp, end = 130.dp, top = 90.dp, bottom = 80.dp),
+            verticalArrangement = Arrangement.spacedBy(48.dp),
+        ) {
+            Row(
+                Modifier.weight(1f).fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(100.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Column(Modifier.width(640.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
                     DialogMark()
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Text(
-                            stringResource(if (candidate.version.isBeta) R.string.update_eyebrow_beta else R.string.update_eyebrow).uppercase(),
+                            stringResource(
+                                if (candidate.version.isBeta) R.string.update_eyebrow_beta else R.string.update_eyebrow,
+                            ).uppercase(),
                             style = GlacierText.label(18, 0.08),
                             color = accent,
                         )
                         // "Beta 5" gets a line of its own instead of wrapping wherever the width ends.
-                        Text(stringResource(R.string.update_title, candidate.version.displayName.replace(" Beta", "\nBeta")), style = GlacierText.display(76), color = GlacierColors.Ice)
+                        Text(
+                            stringResource(
+                                R.string.update_title,
+                                candidate.version.displayName.replace(" Beta", "\nBeta"),
+                            ),
+                            style = GlacierText.display(76),
+                            color = GlacierColors.Ice,
+                        )
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         VersionChip(installed.toString(), highlight = false)
-                        Icon(GlacierIcons.ChevronRight, contentDescription = null, tint = GlacierColors.Mist, modifier = Modifier.size(26.dp))
+                        Icon(
+                            GlacierIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = GlacierColors.Mist,
+                            modifier = Modifier.size(26.dp),
+                        )
                         VersionChip(candidate.version.toString(), highlight = true)
                     }
                     Box(Modifier.fillMaxWidth().height(1.dp).background(GlacierColors.GlassBorder))
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        FactLine(stringResource(R.string.update_released), publishedDate(candidate).orEmpty(), mono = false)
+                        FactLine(
+                            stringResource(R.string.update_released),
+                            publishedDate(candidate).orEmpty(),
+                            mono = false,
+                        )
                         FactLine(stringResource(R.string.update_package), candidate.apk.name, mono = true)
-                        FactLine(stringResource(R.string.update_size), megabytes(LocalResources.current, candidate.apk.sizeBytes), mono = true)
+                        FactLine(
+                            stringResource(R.string.update_size),
+                            megabytes(LocalResources.current, candidate.apk.sizeBytes),
+                            mono = true,
+                        )
                     }
                 }
                 val range = if (notes.size > 1) {
@@ -148,10 +185,26 @@ fun UpdateDialog(candidate: UpdateCandidate, installed: AppVersion, onNow: () ->
                 }
                 NotesPanel(notes, range, notesScroll, Modifier.weight(1f).fillMaxHeight())
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(40.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.update_hint), style = GlacierText.body(17), color = GlacierColors.Mist, modifier = Modifier.weight(1f))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(40.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.update_hint),
+                    style = GlacierText.body(17),
+                    color = GlacierColors.Mist,
+                    modifier = Modifier.weight(1f),
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                    PillButton(stringResource(R.string.update_now), onClick = onNow, primary = true, height = 68, width = 320, modifier = Modifier.focusRequester(nowFocus))
+                    PillButton(
+                        stringResource(R.string.update_now),
+                        onClick = onNow,
+                        primary = true,
+                        height = 68,
+                        width = 320,
+                        modifier = Modifier.focusRequester(nowFocus),
+                    )
                     PillButton(stringResource(R.string.update_later), onClick = onLater, height = 68, width = 200)
                 }
             }
@@ -189,17 +242,43 @@ fun WhatsNewDialog(prompt: WhatsNewPrompt, onClose: () -> Unit) {
             .focusProperties { onExit = { cancelFocusChange() } }
             .focusGroup(),
     ) {
-        Column(Modifier.fillMaxSize().padding(start = 130.dp, end = 130.dp, top = 90.dp, bottom = 80.dp), verticalArrangement = Arrangement.spacedBy(48.dp)) {
-            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(100.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            Modifier.fillMaxSize().padding(start = 130.dp, end = 130.dp, top = 90.dp, bottom = 80.dp),
+            verticalArrangement = Arrangement.spacedBy(48.dp),
+        ) {
+            Row(
+                Modifier.weight(1f).fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(100.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Column(Modifier.width(640.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
                     DialogMark(GlacierIcons.Sparkle)
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Text(stringResource(R.string.whats_new_eyebrow).uppercase(), style = GlacierText.label(18, 0.08), color = accent)
-                        Text(stringResource(R.string.update_title, prompt.current.displayName.replace(" Beta", "\nBeta")), style = GlacierText.display(76), color = GlacierColors.Ice)
+                        Text(
+                            stringResource(R.string.whats_new_eyebrow).uppercase(),
+                            style = GlacierText.label(18, 0.08),
+                            color = accent,
+                        )
+                        Text(
+                            stringResource(
+                                R.string.update_title,
+                                prompt.current.displayName.replace(" Beta", "\nBeta"),
+                            ),
+                            style = GlacierText.display(76),
+                            color = GlacierColors.Ice,
+                        )
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         VersionChip(prompt.previous.toString(), highlight = false)
-                        Icon(GlacierIcons.ChevronRight, contentDescription = null, tint = GlacierColors.Mist, modifier = Modifier.size(26.dp))
+                        Icon(
+                            GlacierIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = GlacierColors.Mist,
+                            modifier = Modifier.size(26.dp),
+                        )
                         VersionChip(prompt.current.toString(), highlight = true)
                     }
                     notes.firstOrNull()?.date?.let { date ->
@@ -214,9 +293,25 @@ fun WhatsNewDialog(prompt: WhatsNewPrompt, onClose: () -> Unit) {
                 }
                 NotesPanel(notes, range, notesScroll, Modifier.weight(1f).fillMaxHeight())
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(40.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.whats_new_hint), style = GlacierText.body(17), color = GlacierColors.Mist, modifier = Modifier.weight(1f))
-                PillButton(stringResource(R.string.whats_new_ok), onClick = onClose, primary = true, height = 68, width = 200, modifier = Modifier.focusRequester(okFocus))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(40.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.whats_new_hint),
+                    style = GlacierText.body(17),
+                    color = GlacierColors.Mist,
+                    modifier = Modifier.weight(1f),
+                )
+                PillButton(
+                    stringResource(R.string.whats_new_ok),
+                    onClick = onClose,
+                    primary = true,
+                    height = 68,
+                    width = 200,
+                    modifier = Modifier.focusRequester(okFocus),
+                )
             }
         }
     }
@@ -224,7 +319,12 @@ fun WhatsNewDialog(prompt: WhatsNewPrompt, onClose: () -> Unit) {
 }
 
 @Composable
-private fun NotesPanel(notes: List<VersionNotes>, range: String, scroll: ScrollState, modifier: Modifier) {
+private fun NotesPanel(
+    notes: List<VersionNotes>,
+    range: String,
+    scroll: ScrollState,
+    modifier: Modifier,
+) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
     Column(
@@ -236,7 +336,12 @@ private fun NotesPanel(notes: List<VersionNotes>, range: String, scroll: ScrollS
         verticalArrangement = Arrangement.spacedBy(30.dp),
     ) {
         Row(Modifier.fillMaxWidth().padding(end = 24.dp), verticalAlignment = Alignment.Bottom) {
-            Text(stringResource(R.string.update_notes), style = GlacierText.display(30), color = GlacierColors.Ice, modifier = Modifier.weight(1f))
+            Text(
+                stringResource(R.string.update_notes),
+                style = GlacierText.display(30),
+                color = GlacierColors.Ice,
+                modifier = Modifier.weight(1f),
+            )
             Text(range, style = GlacierText.mono(17), color = GlacierColors.Mist)
         }
         Column(
@@ -249,22 +354,56 @@ private fun NotesPanel(notes: List<VersionNotes>, range: String, scroll: ScrollS
             notes.forEach { release ->
                 // Only an update across several releases needs a heading per version.
                 if (notes.size > 1) {
-                    Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Text(stringResource(R.string.update_title, release.version), style = GlacierText.display(26), color = GlacierColors.Ice)
-                        release.date?.let { Text(it, style = GlacierText.body(17), color = GlacierColors.Mist, modifier = Modifier.padding(bottom = 3.dp)) }
+                    Row(
+                        Modifier.padding(top = 10.dp),
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.update_title, release.version),
+                            style = GlacierText.display(26),
+                            color = GlacierColors.Ice,
+                        )
+                        release.date?.let {
+                            Text(
+                                it,
+                                style = GlacierText.body(17),
+                                color = GlacierColors.Mist,
+                                modifier = Modifier.padding(bottom = 3.dp),
+                            )
+                        }
                     }
                 }
                 release.sections.forEach { section ->
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
                             Text(section.heading.uppercase(), style = GlacierText.label(17, 0.06), color = accent)
                             Box(Modifier.weight(1f).height(1.dp).background(GlacierColors.GlassBorder))
                         }
                         section.items.forEach { item ->
                             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                                Box(Modifier.padding(top = 12.dp).size(6.dp).clip(CircleShape).background(GlacierColors.Ice))
-                                Text(item.text, style = GlacierText.body(20), color = GlacierColors.Ice, modifier = Modifier.weight(1f))
-                                item.ref?.let { Text(it, style = GlacierText.mono(16), color = GlacierColors.Mist, modifier = Modifier.padding(top = 3.dp)) }
+                                Box(
+                                    Modifier.padding(
+                                        top = 12.dp,
+                                    ).size(6.dp).clip(CircleShape).background(GlacierColors.Ice),
+                                )
+                                Text(
+                                    item.text,
+                                    style = GlacierText.body(20),
+                                    color = GlacierColors.Ice,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                item.ref?.let {
+                                    Text(
+                                        it,
+                                        style = GlacierText.mono(16),
+                                        color = GlacierColors.Mist,
+                                        modifier = Modifier.padding(top = 3.dp),
+                                    )
+                                }
                             }
                         }
                     }
@@ -294,7 +433,12 @@ internal fun DialogMark(icon: ImageVector = GlacierIcons.ArrowDown) {
             Modifier.size(40.dp).rotate(45f).clip(RoundedCornerShape(4.dp)).background(accent),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = null, tint = GlacierColors.Void, modifier = Modifier.size(24.dp).rotate(-45f))
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = GlacierColors.Void,
+                modifier = Modifier.size(24.dp).rotate(-45f),
+            )
         }
     }
 }
@@ -313,14 +457,24 @@ private fun VersionChip(text: String, highlight: Boolean) {
     ) {
         Text(
             text,
-            style = if (highlight) GlacierText.mono(19).copy(fontWeight = FontWeight.SemiBold) else GlacierText.mono(19),
+            style = if (highlight) {
+                GlacierText.mono(
+                    19,
+                ).copy(fontWeight = FontWeight.SemiBold)
+            } else {
+                GlacierText.mono(19)
+            },
             color = if (highlight) accent else GlacierColors.Mist,
         )
     }
 }
 
 @Composable
-internal fun FactLine(label: String, value: String, mono: Boolean) {
+internal fun FactLine(
+    label: String,
+    value: String,
+    mono: Boolean,
+) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
         Text(label, style = GlacierText.body(19), color = GlacierColors.Mist, modifier = Modifier.weight(1f))
         Text(value, style = if (mono) GlacierText.mono(19) else GlacierText.body(19), color = GlacierColors.Ice)
@@ -342,8 +496,16 @@ fun InstallingOverlay(version: AppVersion) {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(26.dp)) {
             SpinningDiamond(110)
-            Text(stringResource(R.string.update_installing_title, version.displayName), style = GlacierText.display(28), color = GlacierColors.Ice)
-            Text(stringResource(R.string.update_installing_hint), style = GlacierText.body(19), color = GlacierColors.Mist)
+            Text(
+                stringResource(R.string.update_installing_title, version.displayName),
+                style = GlacierText.display(28),
+                color = GlacierColors.Ice,
+            )
+            Text(
+                stringResource(R.string.update_installing_hint),
+                style = GlacierText.body(19),
+                color = GlacierColors.Mist,
+            )
         }
     }
 }
@@ -355,7 +517,12 @@ fun InstallingOverlay(version: AppVersion) {
  * which cancels the download.
  */
 @Composable
-fun DownloadingOverlay(version: AppVersion, bytes: Long, total: Long, onCancel: () -> Unit) {
+fun DownloadingOverlay(
+    version: AppVersion,
+    bytes: Long,
+    total: Long,
+    onCancel: () -> Unit,
+) {
     BackHandler(onBack = onCancel)
     val accent = LocalAccent.current.main
     val resources = LocalResources.current
@@ -366,9 +533,17 @@ fun DownloadingOverlay(version: AppVersion, bytes: Long, total: Long, onCancel: 
             .background(Color(0xD105090F)),
         contentAlignment = Alignment.Center,
     ) {
-        Column(Modifier.width(640.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(26.dp)) {
+        Column(
+            Modifier.width(640.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(26.dp),
+        ) {
             DialogMark()
-            Text(stringResource(R.string.update_downloading_title, version.displayName), style = GlacierText.display(28), color = GlacierColors.Ice)
+            Text(
+                stringResource(R.string.update_downloading_title, version.displayName),
+                style = GlacierText.display(28),
+                color = GlacierColors.Ice,
+            )
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.fillMaxWidth().height(8.dp).clip(PillShape).background(GlacierColors.GlassFill2)) {
                     Box(Modifier.fillMaxWidth(share).fillMaxHeight().clip(PillShape).background(accent))
@@ -381,19 +556,31 @@ fun DownloadingOverlay(version: AppVersion, bytes: Long, total: Long, onCancel: 
                         modifier = Modifier.weight(1f),
                     )
                     Text(
-                        stringResource(R.string.update_bar_size, megabytes(resources, bytes), megabytes(resources, total)),
+                        stringResource(
+                            R.string.update_bar_size,
+                            megabytes(resources, bytes),
+                            megabytes(resources, total),
+                        ),
                         style = GlacierText.mono(17),
                         color = GlacierColors.Mist,
                     )
                 }
             }
-            Text(stringResource(R.string.update_downloading_hint), style = GlacierText.body(19), color = GlacierColors.Mist)
+            Text(
+                stringResource(R.string.update_downloading_hint),
+                style = GlacierText.body(19),
+                color = GlacierColors.Mist,
+            )
         }
     }
 }
 
 /** The notes of one release the update brings; [version] like "0.2.2", [date] see [publishedDate]. */
-class VersionNotes(val version: String, val date: String?, val sections: List<NotesSection>)
+class VersionNotes(
+    val version: String,
+    val date: String?,
+    val sections: List<NotesSection>,
+)
 
 /** The interface language ("de", "en"), which picks the language of the release notes. */
 @Composable
@@ -403,28 +590,45 @@ fun notesLanguage(): String = LocalConfiguration.current.locales[0].language
  * The notes of every release from the installed version up to [candidate] in [language]
  * (English where a release has no translation), newest first; releases without notes left out.
  */
-fun releaseNotes(candidate: UpdateCandidate, fallbackHeading: String, language: String): List<VersionNotes> =
-    candidate.changes
-        .map {
-            val body = ReleaseNotes.localized(it.body, language)
-            VersionNotes(it.tag.removePrefix("v"), publishedDate(it.publishedAt), ReleaseNotes.parse(body, fallbackHeading))
-        }
-        .filter { it.sections.isNotEmpty() }
+fun releaseNotes(
+    candidate: UpdateCandidate,
+    fallbackHeading: String,
+    language: String,
+): List<VersionNotes> = candidate.changes
+    .map {
+        val body = ReleaseNotes.localized(it.body, language)
+        VersionNotes(
+            it.tag.removePrefix("v"),
+            publishedDate(it.publishedAt),
+            ReleaseNotes.parse(body, fallbackHeading),
+        )
+    }
+    .filter { it.sections.isNotEmpty() }
 
 /** The notes of every version [prompt] brings in [language] (English where there is no translation), newest first. */
-fun changelogNotes(prompt: WhatsNewPrompt, fallbackHeading: String, language: String): List<VersionNotes> =
-    prompt.changes
-        .map { english ->
-            val entry = prompt.translations[language]?.firstOrNull { it.version == english.version } ?: english
-            VersionNotes(entry.version.toString(), changelogDate(entry.date), ReleaseNotes.parse(entry.body, fallbackHeading))
-        }
-        .filter { it.sections.isNotEmpty() }
+fun changelogNotes(
+    prompt: WhatsNewPrompt,
+    fallbackHeading: String,
+    language: String,
+): List<VersionNotes> = prompt.changes
+    .map { english ->
+        val entry = prompt.translations[language]?.firstOrNull { it.version == english.version } ?: english
+        VersionNotes(
+            entry.version.toString(),
+            changelogDate(entry.date),
+            ReleaseNotes.parse(entry.body, fallbackHeading),
+        )
+    }
+    .filter { it.sections.isNotEmpty() }
 
 /** A changelog date like "2026-10-27" in the interface language. */
-private fun changelogDate(date: String?): String? =
-    date
-        ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-        ?.let { DateFormat.getDateInstance(DateFormat.LONG).format(Date.from(it.atStartOfDay(ZoneId.systemDefault()).toInstant())) }
+private fun changelogDate(date: String?): String? = date
+    ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+    ?.let {
+        DateFormat.getDateInstance(
+            DateFormat.LONG,
+        ).format(Date.from(it.atStartOfDay(ZoneId.systemDefault()).toInstant()))
+    }
 
 /** Glacier's page in [store] ("amazon", "play"), where a store build gets its updates; the web page if the store app is missing. */
 fun openStorePage(context: Context, store: String) {
@@ -434,17 +638,20 @@ fun openStorePage(context: Context, store: String) {
         else -> listOf("amzn://apps/android?p=$pkg", "https://www.amazon.com/gp/mas/dl/android?p=$pkg")
     }
     pages.firstOrNull { page ->
-        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, page.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
+        runCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, page.toUri()).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }.isSuccess
     }
 }
 
 /** The release date in the interface language, e.g. "24 September 2026"; null if GitHub sent none. */
 fun publishedDate(candidate: UpdateCandidate): String? = publishedDate(candidate.release.publishedAt)
 
-private fun publishedDate(publishedAt: String?): String? =
-    publishedAt
-        ?.let { runCatching { Instant.parse(it) }.getOrNull() }
-        ?.let { DateFormat.getDateInstance(DateFormat.LONG).format(Date.from(it)) }
+private fun publishedDate(publishedAt: String?): String? = publishedAt
+    ?.let { runCatching { Instant.parse(it) }.getOrNull() }
+    ?.let { DateFormat.getDateInstance(DateFormat.LONG).format(Date.from(it)) }
 
 fun megabytes(resources: Resources, bytes: Long): String = resources.getString(R.string.update_mb, bytes / 1_000_000.0)
 

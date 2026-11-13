@@ -39,7 +39,12 @@ class ServerConnector @Inject constructor(
         for (old in accounts.current().serversReplacedBy(server)) {
             val kept = accounts.current().users.filter { it.serverId == old.id }.mapNotNull { user ->
                 val token = user.accessToken ?: return@mapNotNull null
-                runSuspendCatching { authenticator.tokenUserId(server.address, token) }.getOrNull()?.let { user.userId to it }
+                runSuspendCatching {
+                    authenticator.tokenUserId(
+                        server.address,
+                        token,
+                    )
+                }.getOrNull()?.let { user.userId to it }
             }.toMap()
             accounts.replaceServer(old.id, server, kept)
             settings.moveServer(old.id, server.id, kept)

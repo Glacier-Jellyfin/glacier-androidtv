@@ -44,9 +44,9 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
-import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 
 @Composable
 fun ServerListScreen(
@@ -103,15 +103,39 @@ fun ServerListScreen(
 
             if (state.saved.isNotEmpty()) {
                 SectionHeader(stringResource(R.string.setup_saved_servers), pulsing = false)
-                state.saved.forEach { entry -> ServerCard(entry, onClick = { viewModel.select(entry) }, modifier = nextFocus()) }
+                state.saved.forEach { entry ->
+                    ServerCard(
+                        entry,
+                        onClick = { viewModel.select(entry) },
+                        modifier = nextFocus(),
+                    )
+                }
             }
             SectionHeader(
-                stringResource(if (state.searching && state.discovered.isEmpty()) R.string.setup_searching else R.string.setup_found_on_network),
+                stringResource(
+                    if (state.searching &&
+                        state.discovered.isEmpty()
+                    ) {
+                        R.string.setup_searching
+                    } else {
+                        R.string.setup_found_on_network
+                    },
+                ),
                 pulsing = state.searching,
             )
-            state.discovered.forEach { entry -> ServerCard(entry, onClick = { viewModel.select(entry) }, modifier = nextFocus()) }
+            state.discovered.forEach { entry ->
+                ServerCard(
+                    entry,
+                    onClick = { viewModel.select(entry) },
+                    modifier = nextFocus(),
+                )
+            }
             if (!state.searching && state.discovered.isEmpty()) {
-                Text(stringResource(R.string.setup_nothing_found), style = GlacierText.body(18), color = GlacierColors.Mist)
+                Text(
+                    stringResource(R.string.setup_nothing_found),
+                    style = GlacierText.body(18),
+                    color = GlacierColors.Mist,
+                )
             }
             PillButton(
                 text = stringResource(R.string.setup_manual_address),
@@ -140,7 +164,11 @@ private fun SectionHeader(text: String, pulsing: Boolean) {
 }
 
 @Composable
-private fun ServerCard(entry: ServerEntry, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun ServerCard(
+    entry: ServerEntry,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     val dimmed = !entry.server.isSupported || !entry.reachable
@@ -172,7 +200,12 @@ private fun ServerCard(entry: ServerEntry, onClick: () -> Unit, modifier: Modifi
                 if (entry.reachable) {
                     Icon(GlacierIcons.Server, contentDescription = null, tint = accent, modifier = Modifier.size(30.dp))
                 } else {
-                    Icon(GlacierIcons.WifiOff, contentDescription = null, tint = GlacierColors.Ice, modifier = Modifier.size(34.dp))
+                    Icon(
+                        GlacierIcons.WifiOff,
+                        contentDescription = null,
+                        tint = GlacierColors.Ice,
+                        modifier = Modifier.size(34.dp),
+                    )
                 }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -187,20 +220,36 @@ private fun ServerCard(entry: ServerEntry, onClick: () -> Unit, modifier: Modifi
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 val version = entry.server.version.orEmpty()
                 Text(
-                    if (entry.server.isSupported) "Jellyfin $version" else stringResource(R.string.setup_unsupported, version.ifEmpty { "?" }),
+                    if (entry.server.isSupported) {
+                        "Jellyfin $version"
+                    } else {
+                        stringResource(
+                            R.string.setup_unsupported,
+                            version.ifEmpty { "?" },
+                        )
+                    },
                     style = GlacierText.body(16),
                     color = GlacierColors.Mist,
                 )
                 val latency = entry.latencyMillis?.toInt()
                 val meta = when {
                     !entry.reachable -> stringResource(R.string.setup_offline)
+
                     latency == null -> null
+
                     entry.profileCount != null ->
                         pluralStringResource(R.plurals.setup_profiles, entry.profileCount, entry.profileCount) +
                             " · " + stringResource(R.string.setup_latency, latency)
+
                     else -> stringResource(R.string.setup_latency, latency)
                 }
-                if (meta != null) Text(meta, style = GlacierText.body(16), color = if (entry.reachable) GlacierColors.Mist else GlacierColors.Ice)
+                if (meta != null) {
+                    Text(
+                        meta,
+                        style = GlacierText.body(16),
+                        color = if (entry.reachable) GlacierColors.Mist else GlacierColors.Ice,
+                    )
+                }
             }
             Icon(
                 GlacierIcons.ChevronRight,

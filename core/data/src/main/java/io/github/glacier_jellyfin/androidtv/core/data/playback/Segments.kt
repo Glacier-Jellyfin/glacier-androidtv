@@ -6,7 +6,11 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class SegmentKind { Intro, Recap, Preview, Commercial, Outro }
 
-data class MediaSegment(val kind: SegmentKind, val startMs: Long, val endMs: Long) {
+data class MediaSegment(
+    val kind: SegmentKind,
+    val startMs: Long,
+    val endMs: Long,
+) {
     operator fun contains(positionMs: Long): Boolean = positionMs in startMs until endMs
 }
 
@@ -36,6 +40,7 @@ enum class SegmentAction { None, Ask, Skip }
 /** When the "Up next" card appears. */
 sealed interface UpNextMode {
     data object Off : UpNextMode
+
     /**
      * When the last credits start (episodes with a scene between two credits have two outro segments);
      * when something follows the last credits, once they end;
@@ -82,15 +87,19 @@ data class SegmentPolicy(
         if (durationMs <= 0) return null
         return when (val mode = upNext) {
             UpNextMode.Off -> null
+
             UpNextMode.WithCredits -> {
                 val outro = segments.lastOrNull { it.kind == SegmentKind.Outro }
                 when {
                     outro == null -> durationMs - UpNextMode.FALLBACK_MS
+
                     // A scene after the credits: the card waits until the credits are over.
                     durationMs - outro.endMs > UpNextMode.TRAILING_SCENE_MS -> outro.endMs
+
                     else -> outro.startMs
                 }
             }
+
             is UpNextMode.Before -> durationMs - mode.ms
         }?.coerceAtLeast(0)
     }

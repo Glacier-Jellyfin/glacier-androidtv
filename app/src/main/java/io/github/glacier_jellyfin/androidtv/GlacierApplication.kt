@@ -20,23 +20,27 @@ import io.github.glacier_jellyfin.androidtv.diagnostics.PlaybackCheckActivity
 import javax.inject.Inject
 
 @HiltAndroidApp
-class GlacierApplication : Application(), SingletonImageLoader.Factory {
+class GlacierApplication :
+    Application(),
+    SingletonImageLoader.Factory {
 
     @Inject
     lateinit var homeChannels: HomeChannelsSync
 
     /** Coil's defaults plus SVG, for the language flags. */
-    override fun newImageLoader(context: PlatformContext): ImageLoader =
-        ImageLoader.Builder(context)
-            .components { add(SvgDecoder.Factory()) }
-            .build()
+    override fun newImageLoader(context: PlatformContext): ImageLoader = ImageLoader.Builder(context)
+        .components { add(SvgDecoder.Factory()) }
+        .build()
 
     override fun onCreate() {
         // First, so crashes while the app starts are recorded too.
         Log.install(this)
         Media3Logs.install()
         super.onCreate()
-        Log.i("Glacier", "Started ${BuildConfig.VERSION_NAME} (${BuildConfig.BUILD_TYPE}) on ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE}")
+        Log.i(
+            "Glacier",
+            "Started ${BuildConfig.VERSION_NAME} (${BuildConfig.BUILD_TYPE}) on ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE}",
+        )
         // The playback check's own process only plays its samples.
         if (!PlaybackCheckActivity.isCheckProcess(getProcessName())) homeChannels.start()
         if (BuildConfig.DEBUG) registerThrottle()

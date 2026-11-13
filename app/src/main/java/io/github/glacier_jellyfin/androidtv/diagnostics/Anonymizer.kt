@@ -24,7 +24,11 @@ class Anonymizer(servers: List<Pair<String, String>>, users: List<String>) {
 
     fun apply(text: String): String = replacements.fold(text) { result, it -> it.pattern.replace(result, it.label) }
 
-    private class Replacement(val text: String, val pattern: Regex, val label: String)
+    private class Replacement(
+        val text: String,
+        val pattern: Regex,
+        val label: String,
+    )
 
     companion object {
         fun of(state: AccountState) = Anonymizer(
@@ -37,7 +41,10 @@ class Anonymizer(servers: List<Pair<String, String>>, users: List<String>) {
             address.substringAfter("://").substringBefore('/').substringBefore(':').takeIf { it.isNotBlank() }
 
         /** Whole words only, so "Jens" leaves "Jensen" alone. */
-        private fun word(name: String) = Regex("(?<![\\p{L}\\p{N}])${Regex.escape(name)}(?![\\p{L}\\p{N}])", RegexOption.IGNORE_CASE)
+        private fun word(name: String) = Regex(
+            "(?<![\\p{L}\\p{N}])${Regex.escape(name)}(?![\\p{L}\\p{N}])",
+            RegexOption.IGNORE_CASE,
+        )
 
         /**
          * Names this short, or Jellyfin's default server name, would replace

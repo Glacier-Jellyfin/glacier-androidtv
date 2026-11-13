@@ -47,13 +47,17 @@ fun youTubeId(url: String): String? {
     val path = uri.path.orEmpty().trim('/').split('/')
     val id = when (host) {
         "youtu.be" -> path.firstOrNull()
+
         "youtube.com", "music.youtube.com", "youtube-nocookie.com" -> when (path.firstOrNull()) {
             "watch" -> uri.rawQuery.orEmpty().split('&').firstNotNullOfOrNull { param ->
                 param.split('=', limit = 2).takeIf { it.size == 2 && it[0] == "v" }?.get(1)
             }
+
             "embed", "shorts", "v", "live" -> path.getOrNull(1)
+
             else -> null
         }
+
         else -> null
     }
     return id?.takeIf(::isYouTubeId)

@@ -33,6 +33,8 @@ import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.LiveTvPlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -44,8 +46,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.util.UUID
-import javax.inject.Inject
 
 data class LiveTvPlayerState(
     /** The channel tuned to, or about to be while zapping. */
@@ -84,6 +84,7 @@ data class LiveTvPlayerState(
  */
 data class Timeshift(val liveMs: Long, val positionMs: Long) {
     val behindMs: Long get() = (liveMs - positionMs).coerceAtLeast(0)
+
     /** Close enough to the edge to count as live. */
     val live: Boolean get() = behindMs < LIVE_SLACK_MS
 
@@ -101,7 +102,8 @@ class LiveTvPlayerViewModel @Inject constructor(
     private val handoff: LiveStreamHandoff,
     private val music: MusicController,
     settings: SettingsRepository,
-) : ViewModel(), RecordActions {
+) : ViewModel(),
+    RecordActions {
 
     private val route = savedStateHandle.toRoute<LiveTvPlayerRoute>()
 
@@ -124,15 +126,20 @@ class LiveTvPlayerViewModel @Inject constructor(
     private var closing = false
     private var opening: Job? = null
     private var guide: Job? = null
+
     /** The channel watched before this one, for the remote's "last channel" key. */
     private var previous: UUID? = null
+
     /** The channel tuned to; known before the channel list is. */
     private var tuned: UUID? = null
     private var radioCheck: Job? = null
+
     /** The stream handed back to the channel list on leaving; it is the list's now. */
     private var handedBack: Player? = null
+
     /** The app went to the background and freed the tuner; coming back tunes again. */
     private var backgrounded = false
+
     /** When playback last failed and was tuned again by itself. */
     private var lastAutoRetry = 0L
 
@@ -166,7 +173,11 @@ class LiveTvPlayerViewModel @Inject constructor(
             refreshTimeshift()
         }
 
-        override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int,
+        ) {
             refreshTimeshift()
         }
 
@@ -209,7 +220,13 @@ class LiveTvPlayerViewModel @Inject constructor(
                 val channels = repository.channels().filterNot { it.radio }
                 val channel = channels.firstOrNull { it.id == channelId }
                 // Only the favorites, when started from them and there are some.
-                val zapChannels = if (route.favoritesOnly) channels.filter { it.favorite }.ifEmpty { channels } else channels
+                val zapChannels = if (route.favoritesOnly) {
+                    channels.filter {
+                        it.favorite
+                    }.ifEmpty { channels }
+                } else {
+                    channels
+                }
                 _state.update {
                     it.copy(
                         channels = channels,
@@ -226,7 +243,12 @@ class LiveTvPlayerViewModel @Inject constructor(
         }
         viewModelScope.launch {
             settings.settings.collect { profile ->
-                _state.update { it.copy(seekBackMs = profile.playback.seekBack.ms, seekForwardMs = profile.playback.seekForward.ms) }
+                _state.update {
+                    it.copy(
+                        seekBackMs = profile.playback.seekBack.ms,
+                        seekForwardMs = profile.playback.seekForward.ms,
+                    )
+                }
             }
         }
         tune(channelId, delayMs = 0)
@@ -280,7 +302,11 @@ class LiveTvPlayerViewModel @Inject constructor(
      * Shows [channelId] at once and opens its stream after a short rest, so
      * zapping through several channels does not open a tuner stream for each.
      */
-    private fun tune(channelId: UUID, delayMs: Long = ZAP_DELAY_MS, force: Boolean = false) {
+    private fun tune(
+        channelId: UUID,
+        delayMs: Long = ZAP_DELAY_MS,
+        force: Boolean = false,
+    ) {
         val current = tuned
         if (!force && current != null && current != channelId) previous = current
         tuned = channelId
@@ -320,8 +346,15 @@ class LiveTvPlayerViewModel @Inject constructor(
             try {
                 val opened = playback.open(channelId, startMs = 0, audioIndex = null, subtitleIndex = null)
                 source = opened
-                Log.i(TAG, "Tuned to $channelId: ${opened.method}, hls ${opened.isHls}" + if (opened.live) "" else " (no live stream id)")
-                val created = GlacierPlayer.create(context, StreamRequest(opened.url, opened.isHls, opened.headers, startPositionMs = 0, live = true))
+                Log.i(
+                    TAG,
+                    "Tuned to $channelId: ${opened.method}, hls ${opened.isHls}" +
+                        if (opened.live) "" else " (no live stream id)",
+                )
+                val created = GlacierPlayer.create(
+                    context,
+                    StreamRequest(opened.url, opened.isHls, opened.headers, startPositionMs = 0, live = true),
+                )
                 created.player.addListener(listener)
                 created.player.playWhenReady = true
                 _state.update { it.copy(player = created.player, playback = created, paused = false) }
@@ -376,7 +409,16 @@ class LiveTvPlayerViewModel @Inject constructor(
             try {
                 val programs = repository.programs(channelId, hours = GUIDE_HOURS)
                 val (now, next) = nowAndNext(programs, System.currentTimeMillis())
-                if (tuned == channelId) _state.update { it.copy(now = now, next = next, programs = programs.sortedBy { p -> p.startMs }, guideLoaded = true) }
+                if (tuned == channelId) {
+                    _state.update {
+                        it.copy(
+                            now = now,
+                            next = next,
+                            programs = programs.sortedBy { p -> p.startMs },
+                            guideLoaded = true,
+                        )
+                    }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -386,17 +428,30 @@ class LiveTvPlayerViewModel @Inject constructor(
         }
     }
 
-    override fun record(program: LiveProgram) = changeTimers(R.string.livetv_record_added, program.title) { repository.record(program.id) }
+    override fun record(program: LiveProgram) = changeTimers(
+        R.string.livetv_record_added,
+        program.title,
+    ) { repository.record(program.id) }
 
-    override fun recordSeries(program: LiveProgram) = changeTimers(R.string.livetv_series_added, program.title) { repository.recordSeries(program.id) }
+    override fun recordSeries(program: LiveProgram) = changeTimers(
+        R.string.livetv_series_added,
+        program.title,
+    ) { repository.recordSeries(program.id) }
 
-    override fun cancelTimer(timerId: String, title: String) = changeTimers(R.string.livetv_record_removed, title) { repository.cancelTimer(timerId) }
+    override fun cancelTimer(timerId: String, title: String) = changeTimers(
+        R.string.livetv_record_removed,
+        title,
+    ) { repository.cancelTimer(timerId) }
 
     override fun cancelSeriesTimer(seriesTimerId: String, title: String) =
         changeTimers(R.string.livetv_series_removed, title) { repository.cancelSeriesTimer(seriesTimerId) }
 
     /** Makes the change on the server, says so, and shows the programmes with their marks as they are now. */
-    private fun changeTimers(done: Int, title: String, change: suspend () -> Unit) {
+    private fun changeTimers(
+        done: Int,
+        title: String,
+        change: suspend () -> Unit,
+    ) {
         viewModelScope.launch {
             try {
                 change()
@@ -544,14 +599,19 @@ class LiveTvPlayerViewModel @Inject constructor(
         const val TAG = "LiveTvPlayer"
         const val TICK_MS = 1_000L
         const val REPORT_INTERVAL_MS = 10_000L
+
         /** Zapping rests this long on a channel before its stream opens. */
         const val ZAP_DELAY_MS = 450L
+
         /** A seek this close to the edge goes to the edge itself. */
         const val LIVE_SNAP_MS = 5_000L
+
         /** How far ahead the programme list reaches. */
         const val GUIDE_HOURS = 12L
+
         /** A second failure within this time shows the error instead of tuning again. */
         const val AUTO_RETRY_WINDOW_MS = 60_000L
+
         /** How long a channel plays before its tracks count: a picture may come a little after the sound. */
         const val RADIO_CHECK_MS = 2_000L
     }

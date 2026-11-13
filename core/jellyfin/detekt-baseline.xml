@@ -8,6 +8,7 @@
     <ID>CyclomaticComplexMethod:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$fun hevcLevel: Int?</ID>
     <ID>Kdoc:Authenticator.kt:Authenticator$/** * Runs a Quick Connect session. A code expires on the server after a few * minutes; a fresh one is requested and emitted when that happens. The * flow completes after [QuickConnectState.Authorized], [QuickConnectState.Unavailable] * or [QuickConnectState.Failed]. */</ID>
     <ID>LongMethod:DeviceProfiles.kt:DeviceProfiles$fun build: DeviceProfile</ID>
+    <ID>LongMethod:MediaCapabilityDetector.kt:MediaCapabilityDetector$@SuppressLint("InlinedApi") private fun detect: DeviceCapabilities</ID>
     <ID>MagicNumber:DeviceProfiles.kt:DeviceProfiles$7</ID>
     <ID>MagicNumber:DeviceProfiles.kt:DeviceProfiles$8</ID>
     <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector$6</ID>
@@ -40,11 +41,8 @@
     <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$63</ID>
     <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$90</ID>
     <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$93</ID>
-    <ID>MaxLineLength:Authenticator.kt:Authenticator$suspend fun signIn: SignInResult</ID>
-    <ID>MaxLineLength:DeviceProfiles.kt:DeviceProfiles$capabilities.h264?.let { videoLimits("h264", it, profiles = listOfNotNull("high", "main", "baseline", "constrained baseline", "high 10".takeIf { _ -&gt; it.tenBit })) }</ID>
-    <ID>MaxLineLength:DeviceProfilesTest.kt:DeviceProfilesTest$val tv = fullHdTv.copy(audioCodecs = setOf("aac", "ac3", "eac3", "dts", "truehd"), passthroughAudio = setOf("eac3"), convertTrueHd = true, convertDtsHd = true)</ID>
+    <ID>MaxLineLength:DeviceProfiles.kt:DeviceProfiles$listOf("mkv", "webm", "mp4", "m4v", "mov", "ts", "mpegts", "m2ts", "avi", "flv", "ogg", "ogv", "mpg", "mpeg", "vob")</ID>
     <ID>SwallowedException:Authenticator.kt:Authenticator$e: Exception</ID>
     <ID>TooGenericExceptionCaught:Authenticator.kt:Authenticator$e: Exception</ID>
-    <ID>TrailingCommaOnDeclarationSite:DeviceProfiles.kt:SubtitleBurnIn</ID>
   </CurrentIssues>
 </SmellBaseline>

@@ -9,19 +9,32 @@ class HandoverPlannerTest {
 
     @Test
     fun `a full buffer gives the longest lead`() {
-        val plan = HandoverPlanner.lower(HandoverTrigger.Link, aheadMs = 120_000, positionMs = 600_000, durationMs = 7_200_000)
+        val plan = HandoverPlanner.lower(
+            HandoverTrigger.Link,
+            aheadMs = 120_000,
+            positionMs = 600_000,
+            durationMs = 7_200_000,
+        )
         assertEquals(HandoverPlan.At(690_000, 90_000), plan)
     }
 
     @Test
     fun `lead is the buffer minus the reserve`() {
-        val plan = HandoverPlanner.lower(HandoverTrigger.Draining, aheadMs = 70_000, positionMs = 100_000, durationMs = 7_200_000)
+        val plan = HandoverPlanner.lower(
+            HandoverTrigger.Draining,
+            aheadMs = 70_000,
+            positionMs = 100_000,
+            durationMs = 7_200_000,
+        )
         assertEquals(HandoverPlan.At(165_000, 65_000), plan)
     }
 
     @Test
     fun `the shortest buffer that works is the minimum lead plus the reserve`() {
-        assertEquals(HandoverPlan.At(108_000, 8_000), HandoverPlanner.lower(HandoverTrigger.Link, 13_000, 100_000, 7_200_000))
+        assertEquals(
+            HandoverPlan.At(108_000, 8_000),
+            HandoverPlanner.lower(HandoverTrigger.Link, 13_000, 100_000, 7_200_000),
+        )
         assertEquals(HandoverPlan.Reopen, HandoverPlanner.lower(HandoverTrigger.Link, 12_999, 100_000, 7_200_000))
     }
 
@@ -36,7 +49,10 @@ class HandoverPlannerTest {
 
     @Test
     fun `the throughput trigger hands over like the others`() {
-        assertEquals(HandoverPlan.At(36_000, 36_000), HandoverPlanner.lower(HandoverTrigger.Throughput, 41_000, 0, 7_200_000))
+        assertEquals(
+            HandoverPlan.At(36_000, 36_000),
+            HandoverPlanner.lower(HandoverTrigger.Throughput, 41_000, 0, 7_200_000),
+        )
     }
 
     @Test

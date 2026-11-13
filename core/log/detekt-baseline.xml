@@ -4,6 +4,7 @@
   <CurrentIssues>
     <ID>MagicNumber:DebugThrottle.kt:DebugThrottle$1_000_000_000L</ID>
     <ID>MagicNumber:DebugThrottle.kt:DebugThrottle$8L</ID>
+    <ID>MaxLineLength:Redaction.kt:Redaction$"""(?i)\b(api_?key|access_?token|token|x-emby-token|x-mediabrowser-token|secret|password|pw)\b("?\s*[=:]\s*"?)([^"&amp;\s,;]+)"""</ID>
     <ID>TooManyFunctions:Log.kt:Log</ID>
   </CurrentIssues>
 </SmellBaseline>

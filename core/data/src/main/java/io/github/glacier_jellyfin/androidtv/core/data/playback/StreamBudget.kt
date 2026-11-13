@@ -56,19 +56,30 @@ object StreamBudget {
      * picture, [videoBitrate] with the reserve [COPY_PEAK_PERCENT], plus the converted audio: a 1080p copy of a remux takes
      * 30 Mbit/s, not the 8 Mbit/s of a 1080p transcode. Without a known [videoBitrate] the copy is counted as a transcode.
      */
-    fun tierDemand(height: Int, sourceHeight: Int?, videoCopied: Boolean, videoBitrate: Int?, audioChannels: Int): Int =
-        if (videoCopied && videoBitrate != null && videoBitrate > 0 && height == sourceHeight) {
-            (videoBitrate.toLong() * COPY_PEAK_PERCENT / 100 + audioBitrate(audioChannels)).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
-        } else {
-            expectedBitrate(height)
-        }
+    fun tierDemand(
+        height: Int,
+        sourceHeight: Int?,
+        videoCopied: Boolean,
+        videoBitrate: Int?,
+        audioChannels: Int,
+    ): Int = if (videoCopied && videoBitrate != null && videoBitrate > 0 && height == sourceHeight) {
+        (
+            videoBitrate.toLong() * COPY_PEAK_PERCENT / 100 + audioBitrate(
+                audioChannels,
+            )
+            ).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    } else {
+        expectedBitrate(height)
+    }
 
     /** True when a stream of [bitrate] is more than the [budget] carries. Unknown values never exceed. */
     fun exceeds(bitrate: Int?, budget: Int?): Boolean = bitrate != null && budget != null && bitrate > budget
 
     /** The budget after a stream of [streamBitrate] stalled; never above the [current] one. */
-    fun afterStall(streamBitrate: Int, current: Int?): Int =
-        minOf(current ?: Int.MAX_VALUE, (streamBitrate.toLong() * AFTER_STALL_PERCENT / 100).toInt()).coerceAtLeast(FLOOR)
+    fun afterStall(streamBitrate: Int, current: Int?): Int = minOf(
+        current ?: Int.MAX_VALUE,
+        (streamBitrate.toLong() * AFTER_STALL_PERCENT / 100).toInt(),
+    ).coerceAtLeast(FLOOR)
 
     /** The server's wait per segment request, in seconds (one after the other). */
     const val SEGMENT_WAIT_SECONDS = 3
@@ -100,8 +111,11 @@ object StreamBudget {
      * The maximum bitrate to ask for so the server copies the picture: its video share (the request minus its own audio
      * guess) must reach [videoBitrate], else it transcodes the picture.
      */
-    fun copyRequest(videoBitrate: Int, audioChannels: Int): Int =
-        (videoBitrate.toLong() * 102 / 100 + audioBitrate(audioChannels) + 64_000).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    fun copyRequest(videoBitrate: Int, audioChannels: Int): Int = (
+        videoBitrate.toLong() * 102 / 100 + audioBitrate(
+            audioChannels,
+        ) + 64_000
+        ).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
 
     /** Transcode reasons that leave the picture alone; every other reason (also an unknown one) concerns the video. */
     private val NON_VIDEO_REASONS = setOf(
@@ -116,7 +130,11 @@ object StreamBudget {
      * that all leave the video alone (the video is then copied). [reasons] is the comma-separated value of
      * `TranscodeReasons` in the transcoding URL; a transcode without reasons does not count.
      */
-    fun pictureFits(supportsDirect: Boolean, transcoding: Boolean, reasons: String?): Boolean {
+    fun pictureFits(
+        supportsDirect: Boolean,
+        transcoding: Boolean,
+        reasons: String?,
+    ): Boolean {
         if (supportsDirect) return true
         if (!transcoding) return false
         val list = reasons?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()

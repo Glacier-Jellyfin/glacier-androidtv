@@ -50,6 +50,8 @@ subprojects {
         config.setFrom(rootProject.file("config/detekt/detekt.yml"))
         baseline = file("detekt-baseline.xml")
         parallel = true
+        // ./gradlew detekt -PdetektAutoCorrect rewrites files with ktlint's fixes.
+        autoCorrect = providers.gradleProperty("detektAutoCorrect").isPresent
     }
     dependencies.add("detektPlugins", rootProject.libs.detekt.formatting)
     // SARIF next to the HTML/XML lint reports, uploaded to code scanning by CI.

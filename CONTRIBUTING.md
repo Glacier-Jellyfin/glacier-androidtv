@@ -21,6 +21,7 @@ changes, and merges or closes the pull request.
   CI runs the same command on every pull request.
 - Test focus and navigation with a D-pad (remote or emulator), not with a mouse.
 - Follow the style of the surrounding code. `.editorconfig` defines formatting.
+- `./gradlew detekt` checks code style. `./gradlew detekt -PdetektAutoCorrect` fixes formatting findings automatically.
 - Keep a pull request focused on one change.
 
 The maintainer takes care of the changelog, releases and the

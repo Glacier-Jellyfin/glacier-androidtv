@@ -30,7 +30,9 @@ class DolbyVisionSampleTest {
 
     @Test
     fun `drops an RPU that does not read and counts it`() {
-        val rpu = resource("mel_orig.bin").let { it.copyOfRange(4, it.size) }.also { it[24] = (it[24].toInt() xor 1).toByte() }
+        val rpu = resource(
+            "mel_orig.bin",
+        ).let { it.copyOfRange(4, it.size) }.also { it[24] = (it[24].toInt() xor 1).toByte() }
         val slice = byteArrayOf(0x02, 0x01, 0x11, 0x22, 0x33)
         val sample = START + slice + START + RPU_HEADER + rpu
         val counts = DolbyVisionProfile7Extractors.RpuCounts()

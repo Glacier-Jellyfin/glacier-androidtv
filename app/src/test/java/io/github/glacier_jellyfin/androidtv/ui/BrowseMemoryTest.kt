@@ -4,13 +4,13 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryScope
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaFolder
 import io.github.glacier_jellyfin.androidtv.livetv.LiveTvView
+import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.UUID
 
 class BrowseMemoryTest {
 
@@ -53,7 +53,10 @@ class BrowseMemoryTest {
 
     @Test
     fun keepsTheMusicVideoFolderPath() {
-        memory.remember(LibraryKind.Music, LibraryMemory(LibraryScope.MusicVideos, focusId = "x", folderPath = listOf(a, b)))
+        memory.remember(
+            LibraryKind.Music,
+            LibraryMemory(LibraryScope.MusicVideos, focusId = "x", folderPath = listOf(a, b)),
+        )
         assertEquals(listOf(a, b), memory.library(LibraryKind.Music)?.folderPath)
         session.value = "b"
         assertNull(memory.library(LibraryKind.Music))

@@ -3,37 +3,36 @@ package io.github.glacier_jellyfin.androidtv.livetv
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveChannel
@@ -64,7 +63,12 @@ import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import kotlinx.coroutines.delay
 
 /** What this device decodes, read from the stream's player once a second. */
-private data class LiveStats(val stream: StreamStats?, val videoDecoder: String?, val audioDecoder: String?, val output: AudioOutput?)
+private data class LiveStats(
+    val stream: StreamStats?,
+    val videoDecoder: String?,
+    val audioDecoder: String?,
+    val output: AudioOutput?,
+)
 
 /**
  * The Live TV player's info button, built like the video and music players':
@@ -136,10 +140,19 @@ private fun ProgramTab(state: LiveTvPlayerState) {
                     )
                     if (now != null) {
                         now.episodeTitle?.let {
-                            Text(it, style = GlacierText.body(22), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                it,
+                                style = GlacierText.body(22),
+                                color = GlacierColors.Ice,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                         }
                         Text(
-                            listOf(timeRange(now), runtimeText(((now.endMs - now.startMs) / 60_000).toInt())).joinToString(" · "),
+                            listOf(
+                                timeRange(now),
+                                runtimeText(((now.endMs - now.startMs) / 60_000).toInt()),
+                            ).joinToString(" · "),
                             style = GlacierText.body(18),
                             color = GlacierColors.Mist,
                             maxLines = 1,
@@ -195,7 +208,11 @@ private fun TechnicalTab(source: PlaybackSource?, stats: LiveStats?) {
 
 /** Like the video player's: the channel as the tuner gives it against what reaches this device. */
 @Composable
-private fun ServerTab(source: PlaybackSource?, stats: StreamStats?, transcodeStatus: suspend () -> TranscodeStatus?) {
+private fun ServerTab(
+    source: PlaybackSource?,
+    stats: StreamStats?,
+    transcodeStatus: suspend () -> TranscodeStatus?,
+) {
     val method = source?.method ?: return
     val file = source.file
     val direct = method == PlaybackMethod.DirectPlay
@@ -245,7 +262,12 @@ private class TimelinePlan(
 )
 
 /** Null without programmes. */
-private fun timelinePlan(programs: List<LiveProgram>, current: LiveProgram?, nowMs: Long, total: Float): TimelinePlan? {
+private fun timelinePlan(
+    programs: List<LiveProgram>,
+    current: LiveProgram?,
+    nowMs: Long,
+    total: Float,
+): TimelinePlan? {
     val start = (current?.startMs ?: nowMs).coerceAtLeast(nowMs - LOOKBACK_MS)
     val ahead = programs.filter { it.endMs > start }.sortedBy { it.startMs }
     if (ahead.isEmpty()) return null
@@ -254,7 +276,9 @@ private fun timelinePlan(programs: List<LiveProgram>, current: LiveProgram?, now
     if (visible.isEmpty()) return null
     val windowMs = end - start
     val stations = timelineStations(visible.map { it.startMs }, start, windowMs, total)
-    val withPictures = visible.indices.any { visible[it].imageUrl != null && stations[it].labelWidth >= THUMB_MIN_LABEL }
+    val withPictures = visible.indices.any {
+        visible[it].imageUrl != null && stations[it].labelWidth >= THUMB_MIN_LABEL
+    }
     return TimelinePlan(start, windowMs, visible, stations, withPictures)
 }
 
@@ -265,7 +289,11 @@ private fun timelinePlan(programs: List<LiveProgram>, current: LiveProgram?, now
  * bounded by [timelineStations], so they never overlap. Time runs left to right whatever the layout direction.
  */
 @Composable
-private fun ProgramTimeline(plan: TimelinePlan, nowMs: Long, total: Float) {
+private fun ProgramTimeline(
+    plan: TimelinePlan,
+    nowMs: Long,
+    total: Float,
+) {
     val start = plan.start
     val windowMs = plan.windowMs
     val visible = plan.visible
@@ -276,9 +304,20 @@ private fun ProgramTimeline(plan: TimelinePlan, nowMs: Long, total: Float) {
         Box(Modifier.fillMaxWidth()) {
             val lane = if (withPictures) LaneHeight + ThumbSpace else LaneHeight
             val centre = lane + RailArea / 2
-            val nowX = (TIMELINE_INSET + (total - 2 * TIMELINE_INSET) * ((nowMs - start).coerceIn(0L, windowMs).toFloat() / windowMs)).dp
+            val nowX = (
+                TIMELINE_INSET + (total - 2 * TIMELINE_INSET) * (
+                    (nowMs - start).coerceIn(
+                        0L,
+                        windowMs,
+                    ).toFloat() / windowMs
+                    )
+                ).dp
             Box(Modifier.fillMaxWidth().height(lane * 2 + RailArea)) {
-                Box(Modifier.offset(y = centre - 1.dp).fillMaxWidth().height(2.dp).background(GlacierColors.GlassBorder2))
+                Box(
+                    Modifier.offset(
+                        y = centre - 1.dp,
+                    ).fillMaxWidth().height(2.dp).background(GlacierColors.GlassBorder2),
+                )
                 val currentIndex = visible.indexOfFirst { it.airsAt(nowMs) }
                 if (currentIndex >= 0) {
                     val from = stations[currentIndex].x.dp
@@ -293,13 +332,26 @@ private fun ProgramTimeline(plan: TimelinePlan, nowMs: Long, total: Float) {
                     val station = stations[i]
                     val airing = i == currentIndex
                     val past = program.endMs <= nowMs
-                    val dot = if (airing) 14.dp else if (past) 10.dp else 12.dp
+                    val dot = if (airing) {
+                        14.dp
+                    } else if (past) {
+                        10.dp
+                    } else {
+                        12.dp
+                    }
                     Box(
-                        Modifier.offset(x = station.x.dp - dot / 2, y = centre - dot / 2).size(dot).clip(CircleShape).then(
+                        Modifier.offset(
+                            x = station.x.dp - dot / 2,
+                            y = centre - dot / 2,
+                        ).size(dot).clip(CircleShape).then(
                             when {
                                 airing -> Modifier.background(accent)
+
                                 past -> Modifier.background(GlacierColors.Mist.copy(alpha = 0.6f))
-                                else -> Modifier.background(GlacierColors.Deep).border(2.dp, GlacierColors.Mist, CircleShape)
+
+                                else -> Modifier.background(
+                                    GlacierColors.Deep,
+                                ).border(2.dp, GlacierColors.Mist, CircleShape)
                             },
                         ),
                     )
@@ -310,11 +362,19 @@ private fun ProgramTimeline(plan: TimelinePlan, nowMs: Long, total: Float) {
                         past = past,
                         nowMs = nowMs,
                         reserveThumb = withPictures,
-                        modifier = Modifier.offset(x = station.labelLeft.dp, y = if (station.above) 0.dp else lane + RailArea),
+                        modifier = Modifier.offset(
+                            x = station.labelLeft.dp,
+                            y = if (station.above) 0.dp else lane + RailArea,
+                        ),
                         laneHeight = lane,
                     )
                 }
-                Box(Modifier.offset(x = nowX - 1.dp, y = centre - 9.dp).width(2.dp).height(18.dp).background(GlacierColors.Ice))
+                Box(
+                    Modifier.offset(
+                        x = nowX - 1.dp,
+                        y = centre - 9.dp,
+                    ).width(2.dp).height(18.dp).background(GlacierColors.Ice),
+                )
             }
         }
     }
@@ -350,7 +410,9 @@ private fun StationLabel(
             val shape = RoundedCornerShape(GlacierShapes.RadiusSm)
             Artwork(
                 program.imageUrl,
-                Modifier.width(ThumbWidth).height(ThumbHeight).clip(shape).border(1.dp, GlacierColors.GlassBorder, shape)
+                Modifier.width(
+                    ThumbWidth,
+                ).height(ThumbHeight).clip(shape).border(1.dp, GlacierColors.GlassBorder, shape)
                     .alpha(if (past) 0.6f else 1f),
             )
         }

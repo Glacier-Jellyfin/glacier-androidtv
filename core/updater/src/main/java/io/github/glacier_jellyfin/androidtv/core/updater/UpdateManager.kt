@@ -1,9 +1,11 @@
 package io.github.glacier_jellyfin.androidtv.core.updater
 
 import android.content.Context
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.github.glacier_jellyfin.androidtv.core.log.Log
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,8 +21,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** Where the running app comes from; provided by the app module. */
 data class UpdaterConfig(
@@ -39,10 +39,16 @@ sealed interface UpdateState {
     data object Checking : UpdateState
     data class Current(val checkedAt: Long) : UpdateState
     data class Available(val candidate: UpdateCandidate) : UpdateState
+
     /** [install] continues with the installation right away; the download dialog shows meanwhile. */
-    data class Downloading(val candidate: UpdateCandidate, val bytes: Long, val install: Boolean = false) : UpdateState
+    data class Downloading(
+        val candidate: UpdateCandidate,
+        val bytes: Long,
+        val install: Boolean = false,
+    ) : UpdateState
     data class Ready(val candidate: UpdateCandidate) : UpdateState
     data class Installing(val candidate: UpdateCandidate) : UpdateState
+
     /** [candidate] is null when the check itself failed. */
     data class Failed(val error: UpdateError, val candidate: UpdateCandidate?) : UpdateState
 }
@@ -70,10 +76,7 @@ sealed interface UpdateNotice {
  * Channel and automatic checks apply to the whole device, not per profile.
  */
 @Singleton
-class UpdateManager @Inject constructor(
-    @ApplicationContext private val context: Context,
-    config: UpdaterConfig,
-) {
+class UpdateManager @Inject constructor(@ApplicationContext private val context: Context, config: UpdaterConfig) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val prefs = context.getSharedPreferences("updater", Context.MODE_PRIVATE)
     private val feed = ReleaseFeed(config.feedUrl)
@@ -171,7 +174,17 @@ class UpdateManager @Inject constructor(
                     if (bytes - shown >= candidate.apk.sizeBytes / 100 || bytes == candidate.apk.sizeBytes) {
                         shown = bytes
                         // A cancelled download may still report once; it must not come back.
-                        _state.update { if (it is UpdateState.Downloading) UpdateState.Downloading(candidate, bytes, install) else it }
+                        _state.update {
+                            if (it is UpdateState.Downloading) {
+                                UpdateState.Downloading(
+                                    candidate,
+                                    bytes,
+                                    install,
+                                )
+                            } else {
+                                it
+                            }
+                        }
                     }
                 }
                 ensureActive()
@@ -212,6 +225,7 @@ class UpdateManager @Inject constructor(
                             _state.value = UpdateState.Ready(candidate)
                             _notices.trySend(UpdateNotice.InstallCancelled)
                         }
+
                         is InstallResult.Failed -> {
                             Log.w(TAG, "Installing ${candidate.version} failed: ${result.message}")
                             fail(UpdateError.Install, candidate)
@@ -286,7 +300,12 @@ class UpdateManager @Inject constructor(
     private fun cachedCandidate(): UpdateCandidate? {
         val text = prefs.getString(KEY_CANDIDATE, null) ?: return null
         if (prefs.getString(KEY_CANDIDATE_CHANNEL, null) != _channel.value.name) return null
-        val candidate = runCatching { json.decodeFromString(UpdateCandidate.serializer(), text) }.getOrNull() ?: return null
+        val candidate = runCatching {
+            json.decodeFromString(
+                UpdateCandidate.serializer(),
+                text,
+            )
+        }.getOrNull() ?: return null
         val current = installed ?: return null
         return candidate.takeIf { it.version > current }
     }
@@ -302,4 +321,3 @@ class UpdateManager @Inject constructor(
         const val KEY_SHOW_PROMPT = "show_prompt"
     }
 }
-

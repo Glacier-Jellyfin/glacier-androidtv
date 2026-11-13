@@ -1,12 +1,12 @@
 package io.github.glacier_jellyfin.androidtv.core.designsystem
 
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color
 
 /**
  * Line icons on a 24-unit grid, drawn like the design's inline SVGs
@@ -32,6 +32,7 @@ object GlacierIcons {
         "M7 6.5h.01",
         "M7 17.5h.01",
     )
+
     /** A server that does not answer (Lucide wifi-off). */
     val WifiOff = icon(
         "M12 20h.01",
@@ -42,8 +43,10 @@ object GlacierIcons {
         "M22 8.82a15 15 0 0 0-11.288-3.764",
         "M2 2l20 20",
     )
+
     /** Grip of something that can be moved, e.g. a home row in the settings. */
     val Grip = icon("M9 5h.01", "M9 12h.01", "M9 19h.01", "M15 5h.01", "M15 12h.01", "M15 19h.01", strokeWidth = 3.2f)
+
     /** Moves something up or down, e.g. a home row. */
     val Move = icon("m21 16-4 4-4-4", "M17 20V4", "m3 8 4-4 4 4", "M7 4v16")
     val Plus = icon("M5 12h14", "M12 5v14")
@@ -75,14 +78,19 @@ object GlacierIcons {
     val Heart = icon(HEART, strokeWidth = 1.8f)
     val HeartFilled = filled(HEART, strokeWidth = 1.8f)
     val Play = filled("M6 3 20 12 6 21z")
+
     /** Outline play, how often a music video was watched (Lucide play). */
     val PlayOutline = icon("M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z")
-    val Pause = filled("M7 4h2a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM15 4h2a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z")
+    val Pause = filled(
+        "M7 4h2a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM15 4h2a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z",
+    )
     val Replay = icon("M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8", "M3 3v5h5")
     val Forward = icon("M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8", "M21 3v5h-5")
+
     /** Previous and next episode (design: triangle with a bar). */
     val SkipBack = filled("M19 20 9 12 19 4z", "M5 19V5", strokeWidth = 2f)
     val SkipForward = filled("M5 4 15 12 5 20z", "M19 5v14", strokeWidth = 2f)
+
     /** The remote's rewind and menu keys, for key hints. */
     val Rewind = filled("M11 18 3 12 11 6z", "M21 18 13 12 21 6z", strokeWidth = 1.6f)
     val Menu = icon("M4 7h16", "M4 12h16", "M4 17h16")
@@ -91,41 +99,61 @@ object GlacierIcons {
     val Alert = icon("M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z", "M12 8v5", "M12 16.5h.01")
     val More = icon("M5 12h.01", "M12 12h.01", "M19 12h.01", strokeWidth = 3.4f)
     val Shuffle = icon(
-        "m18 14 4 4-4 4", "m18 2 4 4-4 4",
+        "m18 14 4 4-4 4",
+        "m18 2 4 4-4 4",
         "M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-7.6a4 4 0 0 1 3.3-1.7H22",
         "M2 6h1.972a4 4 0 0 1 3.126 1.5l.302.5",
         "M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45",
     )
+
     /** An instant mix (Lucide compass), as in Jellyfin's web client. */
     val Compass = icon(
         "M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20z",
         "m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z",
     )
-    private val REPEAT = arrayOf("m17 2 4 4-4 4", "M3 11v-1a4 4 0 0 1 4-4h14", "m7 22-4-4 4-4", "M21 13v1a4 4 0 0 1-4 4H3")
+    private val REPEAT = arrayOf(
+        "m17 2 4 4-4 4",
+        "M3 11v-1a4 4 0 0 1 4-4h14",
+        "m7 22-4-4 4-4",
+        "M21 13v1a4 4 0 0 1-4 4H3",
+    )
     val Repeat = icon(*REPEAT)
     val RepeatOne = icon(*REPEAT, "M11 10h1v4")
+
     /** Lyrics (a singer's microphone). */
     val Lyrics = icon(
         "m11 7.601-5.994 8.19a1 1 0 0 0 .1 1.298l.817.818a1 1 0 0 0 1.314.087L15.09 12",
         "M16.5 21.174C15.5 20.5 14.372 20 13 20c-2.058 0-3.928 2.356-6 2-2.072-.356-2.775-3.369-1.5-4.5",
         "M16 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10z",
     )
+
     /** How often a song was heard (Lucide headphones). */
-    val Headphones = icon("M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3")
+    val Headphones = icon(
+        "M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3",
+    )
     val Film = icon(
         "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z",
         "M7 3v18", "M3 7.5h4", "M3 12h18", "M3 16.5h4", "M17 3v18", "M17 7.5h4", "M17 16.5h4",
         strokeWidth = 2.2f,
     )
     val Grid = icon("M3 3h7v7H3z", "M14 3h7v7h-7z", "M14 14h7v7h-7z", "M3 14h7v7H3z")
-    val Folder = icon("M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z")
+    val Folder = icon(
+        "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z",
+    )
+
     /** A picture to full screen (Lucide maximize). */
-    val Maximize = icon("M8 3H5a2 2 0 0 0-2 2v3", "M21 8V5a2 2 0 0 0-2-2h-3", "M3 16v3a2 2 0 0 0 2 2h3", "M16 21h3a2 2 0 0 0 2-2v-3")
+    val Maximize = icon(
+        "M8 3H5a2 2 0 0 0-2 2v3",
+        "M21 8V5a2 2 0 0 0-2-2h-3",
+        "M3 16v3a2 2 0 0 0 2 2h3",
+        "M16 21h3a2 2 0 0 0 2-2v-3",
+    )
     val Chapters = icon("M3 5h.01", "M3 12h.01", "M3 19h.01", "M8 5h13", "M8 12h13", "M8 19h13")
     val PlaylistAdd = icon("M16 6H3", "M11 12H3", "M16 18H3", "M18 9v6", "M21 12h-6")
     val Check = icon("M20 6 9 17l-5-5", strokeWidth = 3.4f)
     val SortLines = icon("M4 7h16", "M7 12h10", "M10 17h4", strokeWidth = 2.2f)
     val ArrowDown = icon("M12 5v14", "m6 13 6 6 6-6", strokeWidth = 2.4f)
+
     /** "What's new": a four-pointed sparkle. */
     val Sparkle = filled("M12 3 14.2 9.8 21 12 14.2 14.2 12 21 9.8 14.2 3 12 9.8 9.8z", strokeWidth = 1.6f)
     val ChevronDown = icon("m6 9 6 6 6-6", strokeWidth = 2.4f)
@@ -137,14 +165,20 @@ object GlacierIcons {
     )
     val Subtitles = icon(
         "M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z",
-        "M7 13h4", "M15 13h2", "M7 9h2", "M13 9h4",
+        "M7 13h4",
+        "M15 13h2",
+        "M7 9h2",
+        "M13 9h4",
     )
     // Marks of a track (TrackMark).
+
     /** Forced subtitles: mostly signs (Lucide signpost). */
     val Signpost = icon(
-        "M12 13v8", "M12 3v3",
+        "M12 13v8",
+        "M12 3v3",
         "M18 6a2 2 0 0 1 1.387.56l2.307 2.22a1 1 0 0 1 0 1.44l-2.307 2.22A2 2 0 0 1 18 13H6a2 2 0 0 1-1.387-.56l-2.306-2.22a1 1 0 0 1 0-1.44l2.306-2.22A2 2 0 0 1 6 6z",
     )
+
     /** Subtitles for the hearing impaired (Lucide ear-off). */
     val EarOff = icon(
         "M6 18.5a3.5 3.5 0 1 0 7 0c0-1.57.92-2.52 2.04-3.46",
@@ -153,16 +187,24 @@ object GlacierIcons {
         "M12.5 6A2.5 2.5 0 0 1 15 8.5M10 13a2 2 0 0 0 1.82-1.18",
         "M2 2l20 20",
     )
+
     /** Closed captions (Lucide closed-caption). */
-    val ClosedCaption = icon("M10 9.17a3 3 0 1 0 0 5.66", "M17 9.17a3 3 0 1 0 0 5.66", "M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z")
+    val ClosedCaption = icon(
+        "M10 9.17a3 3 0 1 0 0 5.66",
+        "M17 9.17a3 3 0 1 0 0 5.66",
+        "M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z",
+    )
+
     /** Sing-along subtitles: song lyrics (Lucide mic-vocal). */
     val MicVocal = icon(
         "m11 7.601-5.994 8.19a1 1 0 0 0 .1 1.298l.817.818a1 1 0 0 0 1.314.087L15.09 12",
         "M16.5 21.174C15.5 20.5 14.372 20 13 20c-2.058 0-3.928 2.356-6 2-2.072-.356-2.775-3.369-1.5-4.5",
         "M16 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10z",
     )
+
     /** An audio commentary. */
     val Comment = icon("M7.9 20A9 9 0 1 0 4 16.1L2 22Z")
+
     /** An audio description for the blind (Lucide ad). */
     val AudioDescription = icon(
         "M10 13H6",
@@ -170,40 +212,59 @@ object GlacierIcons {
         "M14 14.5a.5.5 0 0 0 .5.5h1a2.5 2.5 0 0 0 2.5-2.5v-1A2.5 2.5 0 0 0 15.5 9h-1a.5.5 0 0 0-.5.5z",
         "M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z",
     )
-    private const val CIRCLE ="M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"
+    private const val CIRCLE = "M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z"
     private const val SEEN_CHECK = "M8.2 12.3l2.5 2.6 5.1-5.4"
     val Seen = icon(CIRCLE, SEEN_CHECK, strokeWidth = 1.9f)
     val SeenFilled = filled(CIRCLE, strokeWidth = 1.8f)
+
     /** Drawn over [SeenFilled] in the button's background colour. */
     val SeenMark = icon(SEEN_CHECK, strokeWidth = 2.1f)
+
     /** The red dot of a recording. */
     val Record = filled("M12 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12z")
+
     /** Two dots: a whole series is recorded. */
-    val RecordSeries = filled("M7.5 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9z", "M16.5 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9z")
+    val RecordSeries = filled(
+        "M7.5 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9z",
+        "M16.5 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9z",
+    )
     val Trash = icon("M3 6h18", "M8 6V4h8v2", "M19 6l-1 14H6L5 6", "M10 11v5", "M14 11v5")
     val Star = filled("M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z")
 
-    private fun icon(vararg paths: String, strokeWidth: Float = 2f, mirrored: Boolean = false): ImageVector =
-        build(paths.toList(), fill = false, strokeWidth = strokeWidth, mirrored = mirrored)
+    private fun icon(
+        vararg paths: String,
+        strokeWidth: Float = 2f,
+        mirrored: Boolean = false,
+    ): ImageVector = build(paths.toList(), fill = false, strokeWidth = strokeWidth, mirrored = mirrored)
 
     /** Solid shape; tinted the same way as line icons. */
     private fun filled(vararg paths: String, strokeWidth: Float = 0f): ImageVector =
         build(paths.toList(), fill = true, strokeWidth = strokeWidth, mirrored = false)
 
     /** [mirrored] icons point the way to go and turn round in a right-to-left layout. */
-    private fun build(paths: List<String>, fill: Boolean, strokeWidth: Float, mirrored: Boolean): ImageVector =
-        ImageVector.Builder(defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f, autoMirror = mirrored)
-            .apply {
-                paths.forEach { data ->
-                    addPath(
-                        pathData = addPathNodes(data),
-                        fill = if (fill) SolidColor(Color.White) else null,
-                        stroke = if (strokeWidth > 0f) SolidColor(Color.White) else null,
-                        strokeLineWidth = strokeWidth,
-                        strokeLineCap = StrokeCap.Round,
-                        strokeLineJoin = StrokeJoin.Round,
-                    )
-                }
+    private fun build(
+        paths: List<String>,
+        fill: Boolean,
+        strokeWidth: Float,
+        mirrored: Boolean,
+    ): ImageVector = ImageVector.Builder(
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f,
+        autoMirror = mirrored,
+    )
+        .apply {
+            paths.forEach { data ->
+                addPath(
+                    pathData = addPathNodes(data),
+                    fill = if (fill) SolidColor(Color.White) else null,
+                    stroke = if (strokeWidth > 0f) SolidColor(Color.White) else null,
+                    strokeLineWidth = strokeWidth,
+                    strokeLineCap = StrokeCap.Round,
+                    strokeLineJoin = StrokeJoin.Round,
+                )
             }
-            .build()
+        }
+        .build()
 }

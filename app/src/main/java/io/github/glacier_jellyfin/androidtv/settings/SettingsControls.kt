@@ -2,12 +2,14 @@ package io.github.glacier_jellyfin.androidtv.settings
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,11 +32,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -41,26 +49,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
-import androidx.compose.runtime.withFrameNanos
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.ui.graphics.vector.ImageVector
-import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
@@ -79,27 +82,30 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleEdge
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitlePosition
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyle
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyleMode
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierCard
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
+import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
+import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
 import io.github.glacier_jellyfin.androidtv.player.subtitleTypeface
 import io.github.glacier_jellyfin.androidtv.player.usesNative
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.layout.layout
 
 /** A category on the left (design `pill()`): accent when focused, tinted when it is the open one. */
 @Composable
-internal fun CategoryPill(label: String, active: Boolean, onFocused: () -> Unit, modifier: Modifier = Modifier, dot: Boolean = false) {
+internal fun CategoryPill(
+    label: String,
+    active: Boolean,
+    onFocused: () -> Unit,
+    modifier: Modifier = Modifier,
+    dot: Boolean = false,
+) {
     val accent = LocalAccent.current.main
     GlacierClickable(
         onClick = onFocused,
@@ -128,7 +134,12 @@ internal fun CategoryPill(label: String, active: Boolean, onFocused: () -> Unit,
                 .padding(horizontal = 24.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(label, style = GlacierText.body(21, FontWeight.SemiBold), color = color, modifier = Modifier.weight(1f))
+            Text(
+                label,
+                style = GlacierText.body(21, FontWeight.SemiBold),
+                color = color,
+                modifier = Modifier.weight(1f),
+            )
             // Something waits there, e.g. an app update.
             if (dot) Box(Modifier.size(10.dp).clip(CircleShape).background(color))
         }
@@ -170,7 +181,11 @@ internal fun OptionCard(
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val accent = LocalAccent.current.main
-    val lift by animateFloatAsState(if (highlighted && !LocalReduceMotion.current) 1.025f else 1f, tween(160), label = "lift")
+    val lift by animateFloatAsState(
+        if (highlighted && !LocalReduceMotion.current) 1.025f else 1f,
+        tween(160),
+        label = "lift",
+    )
     val fade by animateFloatAsState(
         when {
             !enabled -> 0.5f
@@ -213,7 +228,11 @@ internal fun OptionCard(
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(label, style = GlacierText.body(22, FontWeight.SemiBold), color = GlacierColors.Ice)
-                Text(sub, style = GlacierText.body(17, if (highlighted) FontWeight.SemiBold else FontWeight.Normal), color = if (highlighted) accent else GlacierColors.Mist)
+                Text(
+                    sub,
+                    style = GlacierText.body(17, if (highlighted) FontWeight.SemiBold else FontWeight.Normal),
+                    color = if (highlighted) accent else GlacierColors.Mist,
+                )
             }
             trailing?.invoke()
         }
@@ -245,7 +264,11 @@ internal fun MovableCard(
     OptionCard(label, sub, highlighted = moving, dimmed = dimmed, trailing = {
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
             if (onConfigure != null) {
-                ValueButton(configureValue, onClick = onConfigure, modifier = configureFocus?.let { Modifier.focusRequester(it) } ?: Modifier)
+                ValueButton(
+                    configureValue,
+                    onClick = onConfigure,
+                    modifier = configureFocus?.let { Modifier.focusRequester(it) } ?: Modifier,
+                )
             }
             ToggleSwitch(checked, onToggle)
             MoveGrip(
@@ -257,11 +280,17 @@ internal fun MovableCard(
                         if (!moving) return@onPreviewKeyEvent false
                         when (event.key) {
                             Key.DirectionUp, Key.DirectionDown -> {
-                                if (event.type == KeyEventType.KeyDown) onMove(if (event.key == Key.DirectionUp) -1 else 1)
+                                if (event.type == KeyEventType.KeyDown) {
+                                    onMove(
+                                        if (event.key == Key.DirectionUp) -1 else 1,
+                                    )
+                                }
                                 true
                             }
+
                             // Sideways would leave the lifted card behind.
                             Key.DirectionLeft, Key.DirectionRight -> true
+
                             else -> false
                         }
                     },
@@ -272,7 +301,11 @@ internal fun MovableCard(
 
 /** The grip: dots only, arrows while lifted. */
 @Composable
-private fun MoveGrip(moving: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) = CardIconButton(
+private fun MoveGrip(
+    moving: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) = CardIconButton(
     icon = if (moving) GlacierIcons.Move else GlacierIcons.Grip,
     contentDescription = stringResource(R.string.settings_row_move),
     lit = moving,
@@ -305,7 +338,12 @@ private fun CardIconButton(
                 .background(if (on) accent else Color.Transparent),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = contentDescription, tint = if (on) GlacierColors.Void else GlacierColors.Mist, modifier = Modifier.size(24.dp))
+            Icon(
+                icon,
+                contentDescription = contentDescription,
+                tint = if (on) GlacierColors.Void else GlacierColors.Mist,
+                modifier = Modifier.size(24.dp),
+            )
         }
     }
 }
@@ -343,7 +381,9 @@ internal fun ChoicesDialog(
         withFrameNanos { }
         val info = listState.layoutInfo
         val item = info.visibleItemsInfo.firstOrNull { it.index == index }
-        if (item == null || item.offset < info.viewportStartOffset || item.offset + item.size > info.viewportEndOffset) {
+        if (item == null || item.offset < info.viewportStartOffset ||
+            item.offset + item.size > info.viewportEndOffset
+        ) {
             if (reduceMotion) listState.scrollToItem(index) else listState.animateScrollToItem(index)
         }
     }
@@ -372,7 +412,14 @@ internal fun ChoicesDialog(
                 contentPadding = PaddingValues(vertical = 6.dp),
             ) {
                 itemsIndexed(cards, key = { _, card -> card.third }) { index, (label, shown, id) ->
-                    val glide = if (reduceMotion) Modifier else Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null)
+                    val glide = if (reduceMotion) {
+                        Modifier
+                    } else {
+                        Modifier.animateItem(
+                            fadeInSpec = null,
+                            fadeOutSpec = null,
+                        )
+                    }
                     Box(glide.then(if (index == 0) Modifier.focusRequester(first) else Modifier).focusGroup()) {
                         MovableCard(
                             label = label,
@@ -396,10 +443,21 @@ internal fun ChoicesDialog(
 
 /** The on/off switch: accent track when on, the knob slides across. */
 @Composable
-internal fun ToggleSwitch(checked: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+internal fun ToggleSwitch(
+    checked: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
     val accent = LocalAccent.current.main
     val knob by animateDpAsState(if (checked) 42.dp else 4.dp, tween(200), label = "knob")
-    GlacierClickable(onClick = onToggle, modifier = modifier, shape = PillShape, enabled = enabled, unfocusedBorder = GlacierColors.GlassBorder2) {
+    GlacierClickable(
+        onClick = onToggle,
+        modifier = modifier,
+        shape = PillShape,
+        enabled = enabled,
+        unfocusedBorder = GlacierColors.GlassBorder2,
+    ) {
         Box(
             Modifier
                 .width(86.dp)
@@ -463,14 +521,32 @@ internal fun ChoicePills(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    if (check && active) Icon(GlacierIcons.Check, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+                    if (check && active) {
+                        Icon(
+                            GlacierIcons.Check,
+                            contentDescription = null,
+                            tint = color,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                     dots?.getOrNull(index)?.let { dot ->
-                        Box(Modifier.size(20.dp).clip(CircleShape).background(dot).border(1.dp, Color(0x66000000), CircleShape))
+                        Box(
+                            Modifier.size(
+                                20.dp,
+                            ).clip(CircleShape).background(dot).border(1.dp, Color(0x66000000), CircleShape),
+                        )
                     }
                     val font = fonts?.getOrNull(index)
                     Text(
                         label,
-                        style = if (font == null) GlacierText.body(18, FontWeight.SemiBold) else GlacierText.body(18).copy(fontFamily = font),
+                        style = if (font == null) {
+                            GlacierText.body(
+                                18,
+                                FontWeight.SemiBold,
+                            )
+                        } else {
+                            GlacierText.body(18).copy(fontFamily = font)
+                        },
                         color = color,
                     )
                 }
@@ -484,7 +560,11 @@ internal data class Swatch(val label: String, val color: Color)
 
 /** The accent swatches (design: 150 wide, gradient chip, name and hex below; the active one in its colour). */
 @Composable
-internal fun SwatchPicker(swatches: List<Swatch>, selected: Int, onSelect: (Int) -> Unit) {
+internal fun SwatchPicker(
+    swatches: List<Swatch>,
+    selected: Int,
+    onSelect: (Int) -> Unit,
+) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     // One line that scrolls when the swatches do not fit. It reaches out over the card's
@@ -495,7 +575,9 @@ internal fun SwatchPicker(swatches: List<Swatch>, selected: Int, onSelect: (Int)
         Modifier
             .layout { measurable, constraints ->
                 val edge = 30.dp.roundToPx()
-                val placeable = measurable.measure(constraints.copy(maxWidth = constraints.maxWidth + 2 * edge, minWidth = 0))
+                val placeable = measurable.measure(
+                    constraints.copy(maxWidth = constraints.maxWidth + 2 * edge, minWidth = 0),
+                )
                 layout(constraints.maxWidth, placeable.height) { placeable.place(-edge, 0) }
             }
             .focusProperties { onEnter = { chosen.requestFocus() } }
@@ -506,12 +588,19 @@ internal fun SwatchPicker(swatches: List<Swatch>, selected: Int, onSelect: (Int)
     ) {
         swatches.forEachIndexed { index, swatch ->
             val active = index == selected
-            GlacierCard(onClick = { onSelect(index) }, modifier = Modifier.width(150.dp).then(if (active) Modifier.focusRequester(chosen) else Modifier)) { focused ->
+            GlacierCard(
+                onClick = { onSelect(index) },
+                modifier = Modifier.width(150.dp).then(if (active) Modifier.focusRequester(chosen) else Modifier),
+            ) { focused ->
                 Box(
                     Modifier
                         .fillMaxWidth()
                         .height(64.dp)
-                        .focusFrame(focused, shape, unfocusedBorder = if (active) swatch.color else GlacierColors.GlassBorder2)
+                        .focusFrame(
+                            focused,
+                            shape,
+                            unfocusedBorder = if (active) swatch.color else GlacierColors.GlassBorder2,
+                        )
                         .clip(shape)
                         .background(Brush.linearGradient(listOf(swatch.color, swatch.color.copy(alpha = 0.53f)))),
                 )
@@ -521,7 +610,12 @@ internal fun SwatchPicker(swatches: List<Swatch>, selected: Int, onSelect: (Int)
                     color = if (active) accent else GlacierColors.Ice,
                     modifier = Modifier.padding(top = 10.dp),
                 )
-                Text("#%06x".format(swatch.color.toArgb() and 0xFFFFFF), style = GlacierText.mono(14), color = GlacierColors.Mist, modifier = Modifier.padding(top = 10.dp))
+                Text(
+                    "#%06x".format(swatch.color.toArgb() and 0xFFFFFF),
+                    style = GlacierText.mono(14),
+                    color = GlacierColors.Mist,
+                    modifier = Modifier.padding(top = 10.dp),
+                )
             }
         }
     }
@@ -559,7 +653,11 @@ internal fun ValueButton(
  * can scroll down to it.
  */
 @Composable
-internal fun InfoCard(label: String, sub: String, value: String) {
+internal fun InfoCard(
+    label: String,
+    sub: String,
+    value: String,
+) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
@@ -569,7 +667,11 @@ internal fun InfoCard(label: String, sub: String, value: String) {
             .focusable(interactionSource = interaction)
             .clip(shape)
             .background(GlacierColors.GlassFill)
-            .border(if (focused) 2.dp else 1.dp, if (focused) LocalAccent.current.main.copy(alpha = 0.6f) else GlacierColors.GlassBorder, shape)
+            .border(
+                if (focused) 2.dp else 1.dp,
+                if (focused) LocalAccent.current.main.copy(alpha = 0.6f) else GlacierColors.GlassBorder,
+                shape,
+            )
             .padding(horizontal = 30.dp, vertical = 26.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(24.dp),
@@ -584,21 +686,34 @@ internal fun InfoCard(label: String, sub: String, value: String) {
 
 /** Below the update card while it downloads: the progress, the version and the size so far. */
 @Composable
-internal fun UpdateProgress(progress: Float, progressStart: String, progressEnd: String) {
+internal fun UpdateProgress(
+    progress: Float,
+    progressStart: String,
+    progressEnd: String,
+) {
     val accent = LocalAccent.current.main
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.fillMaxWidth().height(8.dp).clip(PillShape).background(GlacierColors.GlassFill2)) {
             Box(Modifier.fillMaxWidth(progress).fillMaxHeight().clip(PillShape).background(accent))
         }
         Row(Modifier.fillMaxWidth()) {
-            Text(progressStart, style = GlacierText.mono(16), color = GlacierColors.Mist, modifier = Modifier.weight(1f))
+            Text(
+                progressStart,
+                style = GlacierText.mono(16),
+                color = GlacierColors.Mist,
+                modifier = Modifier.weight(1f),
+            )
             Text(progressEnd, style = GlacierText.mono(16), color = GlacierColors.Mist)
         }
     }
 }
 
 /** One entry of the language list: a language, or the "no preference" entry on top. */
-internal data class LanguageEntry(val code: String?, val name: String, val hint: String)
+internal data class LanguageEntry(
+    val code: String?,
+    val name: String,
+    val hint: String,
+)
 
 /** The language list (design: 620 × 820 sheet, the chosen language ticked); shorter lists get a shorter sheet. */
 @Composable
@@ -638,7 +753,11 @@ internal fun LanguagePicker(
                 )
             }
             Box(Modifier.fillMaxWidth().height(1.dp).background(GlacierColors.GlassBorder))
-            LazyColumn(state = listState, modifier = Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.weight(1f, fill = false),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 itemsIndexed(entries, key = { _, entry -> entry.code ?: "" }) { index, entry ->
                     LanguageRow(
                         entry = entry,
@@ -657,7 +776,12 @@ internal fun LanguagePicker(
 }
 
 @Composable
-private fun LanguageRow(entry: LanguageEntry, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
+private fun LanguageRow(
+    entry: LanguageEntry,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -679,10 +803,22 @@ private fun LanguageRow(entry: LanguageEntry, selected: Boolean, onClick: () -> 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Text(entry.name, style = GlacierText.body(19, FontWeight.SemiBold), color = foreground, modifier = Modifier.weight(1f))
+        Text(
+            entry.name,
+            style = GlacierText.body(19, FontWeight.SemiBold),
+            color = foreground,
+            modifier = Modifier.weight(1f),
+        )
         Text(entry.hint, style = GlacierText.mono(15), color = if (focused) GlacierColors.Void else GlacierColors.Mist)
         Box(Modifier.size(22.dp)) {
-            if (selected) Icon(GlacierIcons.Check, contentDescription = null, tint = foreground, modifier = Modifier.size(22.dp))
+            if (selected) {
+                Icon(
+                    GlacierIcons.Check,
+                    contentDescription = null,
+                    tint = foreground,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
         }
     }
 }
@@ -695,7 +831,10 @@ private fun LanguageRow(entry: LanguageEntry, selected: Boolean, onClick: () -> 
 internal fun SubtitlePreview(style: SubtitleStyle, image: String?) {
     val context = LocalContext.current
     val native = style.usesNative(context)
-    val typeface = remember(style.font, style.weight) { FontFamily(subtitleTypeface(context, style.font, style.weight)) }
+    val typeface = remember(
+        style.font,
+        style.weight,
+    ) { FontFamily(subtitleTypeface(context, style.font, style.weight)) }
     val tag = when {
         style.mode == SubtitleStyleMode.Auto && native -> R.string.settings_preview_auto_system
         style.mode == SubtitleStyleMode.Auto -> R.string.settings_preview_auto_custom
@@ -722,12 +861,18 @@ internal fun SubtitlePreview(style: SubtitleStyle, image: String?) {
                 .padding(horizontal = 14.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(stringResource(R.string.settings_preview, stringResource(tag)), style = GlacierText.body(14, FontWeight.SemiBold), color = GlacierColors.Ice)
+            Text(
+                stringResource(R.string.settings_preview, stringResource(tag)),
+                style = GlacierText.body(14, FontWeight.SemiBold),
+                color = GlacierColors.Ice,
+            )
         }
 
         // As tall as on a 16:9 picture of this width: the size setting is a share of the picture height.
         val pictureHeight = maxWidth * 9f / 16f
-        val fontSize = with(LocalDensity.current) { (pictureHeight * if (native) NATIVE_PREVIEW_SIZE else style.size.fraction).toSp() }
+        val fontSize = with(
+            LocalDensity.current,
+        ) { (pictureHeight * if (native) NATIVE_PREVIEW_SIZE else style.size.fraction).toSp() }
         val lineHeight = pictureHeight * (if (native) NATIVE_PREVIEW_SIZE else style.size.fraction) * 1.3f
         val margin = 18.dp
         val bottomLines = when (style.position) {
@@ -746,8 +891,19 @@ internal fun SubtitlePreview(style: SubtitleStyle, image: String?) {
         Column(
             Modifier
                 .align(if (bottomLines == null) Alignment.TopCenter else Alignment.BottomCenter)
-                .padding(top = if (bottomLines == null) margin else 0.dp, bottom = if (bottomLines != null) margin + lineHeight * bottomLines else 0.dp)
-                .then(if (native) Modifier.background(Color(0x99000000)).padding(horizontal = 8.dp, vertical = 2.dp) else Modifier),
+                .padding(
+                    top = if (bottomLines == null) margin else 0.dp,
+                    bottom = if (bottomLines != null) margin + lineHeight * bottomLines else 0.dp,
+                )
+                .then(
+                    if (native) {
+                        Modifier.background(
+                            Color(0x99000000),
+                        ).padding(horizontal = 8.dp, vertical = 2.dp)
+                    } else {
+                        Modifier
+                    },
+                ),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             listOf(R.string.settings_preview_line1, R.string.settings_preview_line2).forEach { line ->
@@ -762,7 +918,11 @@ internal fun SubtitlePreview(style: SubtitleStyle, image: String?) {
  * underneath. That lower copy carries the background, so it stays behind the stroke.
  */
 @Composable
-private fun OutlinedText(text: String, style: TextStyle, outline: Boolean) {
+private fun OutlinedText(
+    text: String,
+    style: TextStyle,
+    outline: Boolean,
+) {
     Box {
         if (outline) Text(text, style = style.copy(color = Color.Black, shadow = null, drawStyle = Stroke(width = 4f)))
         Text(text, style = if (outline) style.copy(background = Color.Unspecified) else style)

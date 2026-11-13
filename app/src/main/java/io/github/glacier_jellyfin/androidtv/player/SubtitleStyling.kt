@@ -55,7 +55,11 @@ fun SubtitleView.applyStyle(style: SubtitleStyle) {
 }
 
 /** The typeface the player draws with; the settings preview uses the same one. */
-fun subtitleTypeface(context: Context, font: SubtitleFont, weight: SubtitleWeight): Typeface {
+fun subtitleTypeface(
+    context: Context,
+    font: SubtitleFont,
+    weight: SubtitleWeight,
+): Typeface {
     val family = font.family ?: return createFontFamilyResolver(context)
         .resolveAsTypeface(GoogleSans, FontWeight(weight.value)).value
     return Typeface.create(Typeface.create(family, Typeface.NORMAL), weight.value, false)

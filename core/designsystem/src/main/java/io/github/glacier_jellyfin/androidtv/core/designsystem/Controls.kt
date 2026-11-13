@@ -73,7 +73,15 @@ fun PillButton(
         onClick = onClick,
         shape = PillShape,
         modifier = modifier
-            .then(if (fillWidth) Modifier.fillMaxWidth() else if (width != null) Modifier.width(width.dp) else Modifier)
+            .then(
+                if (fillWidth) {
+                    Modifier.fillMaxWidth()
+                } else if (width != null) {
+                    Modifier.width(width.dp)
+                } else {
+                    Modifier
+                },
+            )
             .alpha(if (enabled) 1f else 0.5f),
         enabled = enabled,
     ) { focused ->
@@ -89,10 +97,23 @@ fun PillButton(
                 .height(height.dp)
                 .clip(PillShape)
                 .background(background)
-                .then(if (!focused && !primary) Modifier.border(2.dp, GlacierColors.GlassBorder, PillShape) else Modifier)
-                .padding(horizontal = if (fillWidth) 30.dp else if (primary) 40.dp else 34.dp),
+                .then(
+                    if (!focused && !primary) Modifier.border(2.dp, GlacierColors.GlassBorder, PillShape) else Modifier,
+                )
+                .padding(
+                    horizontal = if (fillWidth) {
+                        30.dp
+                    } else if (primary) {
+                        40.dp
+                    } else {
+                        34.dp
+                    },
+                ),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp, if (width != null) Alignment.CenterHorizontally else Alignment.Start),
+            horizontalArrangement = Arrangement.spacedBy(
+                12.dp,
+                if (width != null) Alignment.CenterHorizontally else Alignment.Start,
+            ),
         ) {
             if (icon != null) Icon(icon, contentDescription = null, tint = foreground, modifier = Modifier.size(20.dp))
             Text(
@@ -112,7 +133,12 @@ fun PillButton(
                         .padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(tag, style = GlacierText.body(15, FontWeight.Bold), color = if (focused) accent.main else GlacierColors.Void, maxLines = 1)
+                    Text(
+                        tag,
+                        style = GlacierText.body(15, FontWeight.Bold),
+                        color = if (focused) accent.main else GlacierColors.Void,
+                        maxLines = 1,
+                    )
                 }
             }
             if (badge != null) {
@@ -120,12 +146,35 @@ fun PillButton(
                     Modifier
                         .height(30.dp)
                         .clip(PillShape)
-                        .background(if (focused || primary) GlacierColors.Void.copy(alpha = 0.12f) else GlacierColors.GlassFill2)
-                        .border(1.dp, if (focused || primary) GlacierColors.Void.copy(alpha = 0.3f) else GlacierColors.GlassBorder, PillShape)
+                        .background(
+                            if (focused || primary) {
+                                GlacierColors.Void.copy(
+                                    alpha = 0.12f,
+                                )
+                            } else {
+                                GlacierColors.GlassFill2
+                            },
+                        )
+                        .border(
+                            1.dp,
+                            if (focused || primary) {
+                                GlacierColors.Void.copy(
+                                    alpha = 0.3f,
+                                )
+                            } else {
+                                GlacierColors.GlassBorder
+                            },
+                            PillShape,
+                        )
                         .padding(horizontal = 11.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(badge, style = GlacierText.body(15, FontWeight.SemiBold), color = if (focused || primary) GlacierColors.Void else GlacierColors.Mist, maxLines = 1)
+                    Text(
+                        badge,
+                        style = GlacierText.body(15, FontWeight.SemiBold),
+                        color = if (focused || primary) GlacierColors.Void else GlacierColors.Mist,
+                        maxLines = 1,
+                    )
                 }
             }
         }
@@ -233,15 +282,34 @@ fun PinWheel(
     // OK types on release, so holding it can switch the block instead. Only a press seen here counts.
     var okDown by remember { mutableStateOf(false) }
     var okHeld by remember { mutableStateOf(false) }
+
     // No digit lights up: only the dots show that a key was taken, so nobody watching sees the PIN.
     fun type(slot: Int) = onKey(PinKey.Digit(digits[slot]))
     fun wheelKey(key: Key): (() -> Unit)? = when (key) {
-        Key.DirectionUp -> { { type(1) } }
-        Key.DirectionRight -> { { type(2) } }
-        Key.DirectionDown -> { { type(3) } }
-        Key.DirectionLeft -> { { type(4) } }
-        Key.Menu, Key.MediaPlayPause -> { { block = 1 - block } }
-        Key.MediaRewind, Key.Backspace -> { { onKey(PinKey.Delete) } }
+        Key.DirectionUp -> {
+            { type(1) }
+        }
+
+        Key.DirectionRight -> {
+            { type(2) }
+        }
+
+        Key.DirectionDown -> {
+            { type(3) }
+        }
+
+        Key.DirectionLeft -> {
+            { type(4) }
+        }
+
+        Key.Menu, Key.MediaPlayPause -> {
+            { block = 1 - block }
+        }
+
+        Key.MediaRewind, Key.Backspace -> {
+            { onKey(PinKey.Delete) }
+        }
+
         else -> remoteKey(key)?.let { pinKey -> { onKey(pinKey) } }
     }
     Column(
@@ -256,15 +324,18 @@ fun PinWheel(
                             okDown = true
                             okHeld = false
                         }
+
                         down -> if (okDown && !okHeld) {
                             okHeld = true
                             block = 1 - block
                         }
+
                         event.type == KeyEventType.KeyUp -> {
                             if (okDown && !okHeld) type(0)
                             okDown = false
                         }
                     }
+
                     else -> {
                         val action = wheelKey(event.key) ?: return@onKeyEvent false
                         // A held key types once.
@@ -306,7 +377,11 @@ fun PinWheel(
         }
         Row(horizontalArrangement = Arrangement.spacedBy(48.dp), verticalAlignment = Alignment.CenterVertically) {
             @Composable
-            fun Hint(icon: ImageVector, key: String, label: String) = Row(
+            fun Hint(
+                icon: ImageVector,
+                key: String,
+                label: String,
+            ) = Row(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -315,7 +390,12 @@ fun PinWheel(
                         Modifier.size(34.dp).clip(CircleShape).border(2.dp, GlacierColors.GlassBorder2, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(icon, contentDescription = null, tint = GlacierColors.Mist, modifier = Modifier.size(18.dp))
+                        Icon(
+                            icon,
+                            contentDescription = null,
+                            tint = GlacierColors.Mist,
+                            modifier = Modifier.size(18.dp),
+                        )
                     }
                 } else {
                     val round = key.length <= 2
@@ -329,7 +409,12 @@ fun PinWheel(
                             .padding(horizontal = if (round) 0.dp else 12.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(key, style = GlacierText.body(16, FontWeight.SemiBold), color = GlacierColors.Ice, maxLines = 1)
+                        Text(
+                            key,
+                            style = GlacierText.body(16, FontWeight.SemiBold),
+                            color = GlacierColors.Ice,
+                            maxLines = 1,
+                        )
                     }
                 }
                 Text(label, style = GlacierText.body(19, FontWeight.SemiBold), color = GlacierColors.Ice)
@@ -352,7 +437,12 @@ fun KeyCap(
     content: @Composable (color: Color) -> Unit,
 ) {
     val accent = LocalAccent.current.main
-    GlacierClickable(onClick = onClick, shape = shape, modifier = modifier, contentAlignment = Alignment.Center) { focused ->
+    GlacierClickable(
+        onClick = onClick,
+        shape = shape,
+        modifier = modifier,
+        contentAlignment = Alignment.Center,
+    ) { focused ->
         Box(
             modifier = Modifier
                 .width(width.dp)
@@ -365,7 +455,17 @@ fun KeyCap(
                         else -> GlacierColors.GlassFill
                     },
                 )
-                .border(2.dp, if (focused) accent else if (active) accent.copy(alpha = 0.45f) else GlacierColors.GlassBorder, shape),
+                .border(
+                    2.dp,
+                    if (focused) {
+                        accent
+                    } else if (active) {
+                        accent.copy(alpha = 0.45f)
+                    } else {
+                        GlacierColors.GlassBorder
+                    },
+                    shape,
+                ),
             contentAlignment = Alignment.Center,
         ) {
             content(if (focused) GlacierColors.Void else GlacierColors.Ice)

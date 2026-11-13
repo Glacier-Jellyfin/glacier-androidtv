@@ -12,7 +12,14 @@ object DebugThrottle {
         set(value) {
             field = value
             synchronized(this) { nextFreeNs = 0 }
-            if (value > 0) Log.w("Throttle", "Streams limited to ${value / 1000} kbit/s") else Log.w("Throttle", "Streams not limited")
+            if (value > 0) {
+                Log.w(
+                    "Throttle",
+                    "Streams limited to ${value / 1000} kbit/s",
+                )
+            } else {
+                Log.w("Throttle", "Streams not limited")
+            }
         }
 
     private var nextFreeNs = 0L

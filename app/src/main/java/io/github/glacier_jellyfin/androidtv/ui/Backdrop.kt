@@ -73,13 +73,22 @@ val ImagePageGround = GlacierColors.Void
  * where the text sits and fading into the page ground at the bottom.
  */
 @Composable
-fun DetailBackdrop(url: String?, height: Int, modifier: Modifier = Modifier) {
+fun DetailBackdrop(
+    url: String?,
+    height: Int,
+    modifier: Modifier = Modifier,
+) {
     Box(modifier.fillMaxWidth().height(height.dp).clipToBounds()) {
         KenBurns { Artwork(url, Modifier.fillMaxSize()) }
         Box(
             Modifier
                 .fillMaxSize()
-                .startGradient(0f to Color(0xF70A1420), 0.44f to Color(0xCC0A1420), 0.62f to Color(0x990A1420), 0.9f to Color(0x290A1420)),
+                .startGradient(
+                    0f to Color(0xF70A1420),
+                    0.44f to Color(0xCC0A1420),
+                    0.62f to Color(0x990A1420),
+                    0.9f to Color(0x290A1420),
+                ),
         )
         Box(
             Modifier

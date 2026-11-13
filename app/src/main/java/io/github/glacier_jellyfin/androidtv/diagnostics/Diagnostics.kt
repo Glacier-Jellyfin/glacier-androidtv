@@ -16,10 +16,6 @@ import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.MediaCapabili
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.player.FfmpegAudio
 import io.github.glacier_jellyfin.androidtv.ui.TvPlatform
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.jellyfin.sdk.api.client.extensions.systemApi
 import java.net.Inet4Address
 import java.time.LocalDateTime
 import java.time.ZonedDateTime
@@ -27,6 +23,10 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToInt
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.jellyfin.sdk.api.client.extensions.systemApi
 
 /**
  * The app log for bug reports, a device summary on top: sent to the Jellyfin
@@ -104,7 +104,11 @@ class Diagnostics @Inject constructor(
     private fun header(serverVersion: String?): String = buildString {
         appendLine("Glacier ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}, ${BuildConfig.BUILD_TYPE})")
         appendLine("Created: ${ZonedDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)}")
-        appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}, ${TvPlatform.of(context).name}, Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+        appendLine(
+            "Device: ${Build.MANUFACTURER} ${Build.MODEL}, ${TvPlatform.of(
+                context,
+            ).name}, Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
+        )
         appendLine("ABIs: ${Build.SUPPORTED_ABIS.joinToString()}")
         appendLine("Display: ${display()}")
         appendLine("Video decoders: ${videoDecoders()}")
@@ -122,7 +126,9 @@ class Diagnostics @Inject constructor(
     }
 
     private fun display(): String {
-        val display = context.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY) ?: return "unknown"
+        val display = context.getSystemService(
+            DisplayManager::class.java,
+        )?.getDisplay(Display.DEFAULT_DISPLAY) ?: return "unknown"
         val mode = display.mode
         val hdr = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             mode.supportedHdrTypes
@@ -136,14 +142,13 @@ class Diagnostics @Inject constructor(
     }
 
     /** Video formats the device decodes, e.g. "video/avc, video/hevc, video/dolby-vision". */
-    private fun videoDecoders(): String =
-        MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos
-            .filter { !it.isEncoder }
-            .flatMap { it.supportedTypes.asList() }
-            .filter { it.startsWith("video/") }
-            .distinct()
-            .sorted()
-            .joinToString()
+    private fun videoDecoders(): String = MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos
+        .filter { !it.isEncoder }
+        .flatMap { it.supportedTypes.asList() }
+        .filter { it.startsWith("video/") }
+        .distinct()
+        .sorted()
+        .joinToString()
 
     private companion object {
         const val TAG = "Diagnostics"

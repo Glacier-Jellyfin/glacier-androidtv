@@ -170,9 +170,17 @@ private fun Validity(secondsLeft: Int) {
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             PulseDot()
-            Text(stringResource(R.string.quick_connect_waiting), style = GlacierText.body(18), color = GlacierColors.Mist, modifier = Modifier.weight(1f))
             Text(
-                stringResource(R.string.quick_connect_valid, "%d:%02d".format(Locale.ROOT, secondsLeft / 60, secondsLeft % 60)),
+                stringResource(R.string.quick_connect_waiting),
+                style = GlacierText.body(18),
+                color = GlacierColors.Mist,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                stringResource(
+                    R.string.quick_connect_valid,
+                    "%d:%02d".format(Locale.ROOT, secondsLeft / 60, secondsLeft % 60),
+                ),
                 style = GlacierText.mono(18),
                 color = GlacierColors.Mist,
             )

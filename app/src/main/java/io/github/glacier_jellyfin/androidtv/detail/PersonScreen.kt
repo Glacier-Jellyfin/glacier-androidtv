@@ -1,6 +1,5 @@
 package io.github.glacier_jellyfin.androidtv.detail
 
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -52,6 +51,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
 import io.github.glacier_jellyfin.androidtv.core.data.media.Credit
 import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
@@ -60,34 +60,36 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrCredit
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrMediaType
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrStatus
-import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
-import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.navigation.PersonRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SeerrRoute
+import io.github.glacier_jellyfin.androidtv.navigation.routeFor
 import io.github.glacier_jellyfin.androidtv.seerr.seerrStatusLabel
-import io.github.glacier_jellyfin.androidtv.ui.PosterCard
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.DetailBackdrop
 import io.github.glacier_jellyfin.androidtv.ui.FactBadge
 import io.github.glacier_jellyfin.androidtv.ui.GridCard
+import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
+import io.github.glacier_jellyfin.androidtv.ui.PosterCard
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
-import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 import io.github.glacier_jellyfin.androidtv.ui.yearText
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -96,9 +98,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.UUID
-import javax.inject.Inject
-import io.github.glacier_jellyfin.androidtv.navigation.routeFor
 
 data class PersonState(
     val loading: Boolean = true,
@@ -177,7 +176,8 @@ class PersonViewModel @Inject constructor(
             return
         }
         val requestable = credits.filter {
-            it.item.jellyfinId == null && it.item.status != SeerrStatus.Available && it.item.status != SeerrStatus.Blocklisted
+            it.item.jellyfinId == null && it.item.status != SeerrStatus.Available &&
+                it.item.status != SeerrStatus.Blocklisted
         }
         _state.update { it.copy(seerrCredits = requestable) }
     }
@@ -189,7 +189,11 @@ class PersonViewModel @Inject constructor(
         _state.update { it.copy(person = person.copy(isFavorite = favorite)) }
         viewModelScope.launch {
             runSuspendCatching { repository.setFavorite(id, favorite) }
-                .onSuccess { _events.send(UiEvent.Toast(if (favorite) R.string.favorite_added else R.string.favorite_removed)) }
+                .onSuccess {
+                    _events.send(
+                        UiEvent.Toast(if (favorite) R.string.favorite_added else R.string.favorite_removed),
+                    )
+                }
                 .onFailure { _state.update { it.copy(person = it.person?.copy(isFavorite = !favorite)) } }
         }
     }
@@ -214,10 +218,7 @@ class PersonViewModel @Inject constructor(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun PersonScreen(
-    onNavigate: (UiEvent.Navigate) -> Unit,
-    viewModel: PersonViewModel = hiltViewModel(),
-) {
+fun PersonScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: PersonViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
     val person = state.person
@@ -236,35 +237,69 @@ fun PersonScreen(
     }
 
     // A loader covers the page: the remote must not reach the navigation or anything else behind it.
-    Box(Modifier.fillMaxSize().blockKeysWhile(person == null && !state.failed, takeFocus = true).background(ImagePageGround)) {
+    Box(
+        Modifier.fillMaxSize().blockKeysWhile(
+            person == null && !state.failed,
+            takeFocus = true,
+        ).background(ImagePageGround),
+    ) {
         when {
             person == null && state.failed -> ErrorState(onRetry = viewModel::load)
+
             person == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
+
             else -> {
                 DetailBackdrop(
                     url = person.credits.firstOrNull { it.item.backdropUrl != null }?.item?.backdropUrl
                         ?: state.seerrCredits.firstOrNull { it.item.backdropUrl != null }?.item?.backdropUrl,
                     height = 700,
                     modifier = Modifier.graphicsLayer {
-                        translationY = if (listState.firstVisibleItemIndex == 0) -listState.firstVisibleItemScrollOffset.toFloat() else -size.height
+                        translationY =
+                            if (listState.firstVisibleItemIndex ==
+                                0
+                            ) {
+                                -listState.firstVisibleItemScrollOffset.toFloat()
+                            } else {
+                                -size.height
+                            }
                     },
                 )
                 CompositionLocalProvider(LocalBringIntoViewSpec provides rememberRowPivotSpec(listState, 650)) {
                     LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                         item(key = "header") {
-                            Row(Modifier.padding(start = PageEdge.dp, end = PageEdge.dp, top = 132.dp), horizontalArrangement = Arrangement.spacedBy(64.dp)) {
+                            Row(
+                                Modifier.padding(start = PageEdge.dp, end = PageEdge.dp, top = 132.dp),
+                                horizontalArrangement = Arrangement.spacedBy(64.dp),
+                            ) {
                                 Portrait(person)
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                                     val crumb = listOfNotNull(state.fromTitle, state.role).joinToString(" · ")
                                     if (crumb.isNotEmpty()) {
-                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                            Icon(GlacierIcons.ChevronLeft, contentDescription = null, tint = GlacierColors.Mist, modifier = Modifier.size(16.dp))
-                                            Text(crumb.uppercase(), style = GlacierText.body(17).copy(letterSpacing = 0.06.em), color = GlacierColors.Mist)
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        ) {
+                                            Icon(
+                                                GlacierIcons.ChevronLeft,
+                                                contentDescription = null,
+                                                tint = GlacierColors.Mist,
+                                                modifier = Modifier.size(16.dp),
+                                            )
+                                            Text(
+                                                crumb.uppercase(),
+                                                style = GlacierText.body(17).copy(letterSpacing = 0.06.em),
+                                                color = GlacierColors.Mist,
+                                            )
                                         }
                                     }
                                     Text(
                                         person.name,
-                                        style = GlacierText.display(76).copy(lineHeight = 79.sp, shadow = Shadow(Color(0x99000000), blurRadius = 30f)),
+                                        style = GlacierText.display(
+                                            76,
+                                        ).copy(
+                                            lineHeight = 79.sp,
+                                            shadow = Shadow(Color(0x99000000), blurRadius = 30f),
+                                        ),
                                         color = GlacierColors.Ice,
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis,
@@ -281,14 +316,19 @@ fun PersonScreen(
                                             modifier = Modifier.widthIn(max = 920.dp),
                                         )
                                     }
-                                    Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                    Row(
+                                        Modifier.padding(top = 8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                    ) {
                                         // A person the library does not know cannot be a favourite.
                                         if (person.id != null) {
                                             ActionButton(
                                                 onClick = viewModel::toggleFavorite,
                                                 icon = if (person.isFavorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
                                                 on = person.isFavorite,
-                                                contentDescription = stringResource(if (person.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
+                                                contentDescription = stringResource(
+                                                    if (person.isFavorite) R.string.action_unfavorite else R.string.action_favorite,
+                                                ),
                                                 modifier = Modifier.focusRequester(favoriteFocus),
                                             )
                                         }
@@ -296,7 +336,13 @@ fun PersonScreen(
                                             onClick = viewModel::searchLibrary,
                                             label = stringResource(R.string.person_search),
                                             icon = GlacierIcons.Search,
-                                            modifier = if (person.id == null) Modifier.focusRequester(favoriteFocus) else Modifier,
+                                            modifier = if (person.id == null) {
+                                                Modifier.focusRequester(
+                                                    favoriteFocus,
+                                                )
+                                            } else {
+                                                Modifier
+                                            },
                                         )
                                     }
                                 }
@@ -320,7 +366,10 @@ fun PersonScreen(
                                             GridCard(
                                                 imageUrl = credit.item.posterUrl,
                                                 title = credit.item.title,
-                                                caption = listOfNotNull(credit.role, yearText(credit.item)).joinToString(" · "),
+                                                caption = listOfNotNull(
+                                                    credit.role,
+                                                    yearText(credit.item),
+                                                ).joinToString(" · "),
                                                 onClick = {
                                                     lastOpened = credit.item.id.toString()
                                                     viewModel.open(credit)
@@ -328,7 +377,15 @@ fun PersonScreen(
                                                 modifier = Modifier.restoring(credit.item.id.toString()),
                                                 locked = credit.item.showsLock(),
                                             )
-                                            KindPill(if (credit.item.kind == ItemKind.Series) R.string.kind_show else R.string.kind_movie)
+                                            KindPill(
+                                                if (credit.item.kind ==
+                                                    ItemKind.Series
+                                                ) {
+                                                    R.string.kind_show
+                                                } else {
+                                                    R.string.kind_movie
+                                                },
+                                            )
                                         }
                                     }
                                     // Then what the library lacks, to request through Seerr.
@@ -336,7 +393,10 @@ fun PersonScreen(
                                         Box {
                                             PosterCard(
                                                 imageUrl = credit.item.posterUrl,
-                                                caption = listOfNotNull(credit.role, credit.item.year?.toString()).joinToString(" · "),
+                                                caption = listOfNotNull(
+                                                    credit.role,
+                                                    credit.item.year?.toString(),
+                                                ).joinToString(" · "),
                                                 onClick = {
                                                     lastOpened = credit.key
                                                     viewModel.open(credit)
@@ -345,7 +405,15 @@ fun PersonScreen(
                                                 title = credit.item.title,
                                                 tag = stringResource(seerrStatusLabel(credit.item.status)),
                                             )
-                                            KindPill(if (credit.item.type == SeerrMediaType.Tv) R.string.kind_show else R.string.kind_movie)
+                                            KindPill(
+                                                if (credit.item.type ==
+                                                    SeerrMediaType.Tv
+                                                ) {
+                                                    R.string.kind_show
+                                                } else {
+                                                    R.string.kind_movie
+                                                },
+                                            )
                                         }
                                     }
                                 }
@@ -390,7 +458,11 @@ private fun PersonFacts(person: PersonDetails) {
                 .padding(horizontal = 15.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(stringResource(R.string.detail_cast).uppercase(), style = GlacierText.body(15, FontWeight.Bold).copy(letterSpacing = 0.09.em), color = accent)
+            Text(
+                stringResource(R.string.detail_cast).uppercase(),
+                style = GlacierText.body(15, FontWeight.Bold).copy(letterSpacing = 0.09.em),
+                color = accent,
+            )
         }
         val count = person.credits.size
         val facts = listOfNotNull(

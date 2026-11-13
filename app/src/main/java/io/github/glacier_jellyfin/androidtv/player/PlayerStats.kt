@@ -41,7 +41,11 @@ data class StreamStats(
 internal const val DEFAULT_MAX_BUFFER_SECONDS = 50
 
 @OptIn(UnstableApi::class)
-internal fun ExoPlayer.streamStats(context: Context, maxBufferMs: Int? = null, playback: GlacierPlayback? = null) = StreamStats(
+internal fun ExoPlayer.streamStats(
+    context: Context,
+    maxBufferMs: Int? = null,
+    playback: GlacierPlayback? = null,
+) = StreamStats(
     video = videoFormat,
     audio = audioFormat,
     bufferSeconds = ((bufferedPosition - currentPosition) / 1000).coerceAtLeast(0),
@@ -64,8 +68,16 @@ internal fun videoHeadline(format: Format): String = listOfNotNull(
 internal fun videoDetails(format: Format): String = listOfNotNull(
     format.frameRate.takeIf { it > 0 }?.let { fpsText(it) },
     when (format.colorInfo?.colorTransfer) {
-        C.COLOR_TRANSFER_ST2084 -> if (format.sampleMimeType == MimeTypes.VIDEO_DOLBY_VISION) "Dolby Vision" else "HDR10"
+        C.COLOR_TRANSFER_ST2084 -> if (format.sampleMimeType ==
+            MimeTypes.VIDEO_DOLBY_VISION
+        ) {
+            "Dolby Vision"
+        } else {
+            "HDR10"
+        }
+
         C.COLOR_TRANSFER_HLG -> "HLG"
+
         else -> "SDR".takeIf { format.colorInfo != null }
     },
     bitrateText(format.bitrate),
@@ -81,7 +93,13 @@ internal fun audioHeadline(format: Format): String = listOfNotNull(
 /** "48 kHz · 640 kbit/s". */
 @OptIn(UnstableApi::class)
 internal fun audioDetails(format: Format): String = listOfNotNull(
-    format.sampleRate.takeIf { it > 0 }?.let { String.format(Locale.ROOT, "%.1f", it / 1000.0).removeSuffix(".0") + " kHz" },
+    format.sampleRate.takeIf { it > 0 }?.let {
+        String.format(
+            Locale.ROOT,
+            "%.1f",
+            it / 1000.0,
+        ).removeSuffix(".0") + " kHz"
+    },
     bitrateText(format.bitrate),
 ).joinToString(" · ")
 
@@ -136,8 +154,9 @@ internal fun sizeText(bytes: Long): String = when {
  * Platform decoders of the hardware vendor versus software ones: Android's own
  * codecs (c2.android.*, OMX.google.*) and the FFmpeg/libgav1 extensions.
  */
-internal fun isSoftwareDecoder(name: String): Boolean =
-    name.startsWith("c2.android.") || name.startsWith("OMX.google.") || name.startsWith("lib") || name.contains("ffmpeg", ignoreCase = true)
+internal fun isSoftwareDecoder(name: String): Boolean = name.startsWith(
+    "c2.android.",
+) || name.startsWith("OMX.google.") || name.startsWith("lib") || name.contains("ffmpeg", ignoreCase = true)
 
 /** What reaches the audio hardware: [passthrough] names the bitstream sent on, null for PCM. */
 data class AudioOutput(val passthrough: String?, val channels: Int)
@@ -166,7 +185,12 @@ internal fun audioOutput(encoding: Int, channelMask: Int) = AudioOutput(
 )
 
 /** The TV's current picture mode and the HDR formats it takes. */
-data class DisplayInfo(val width: Int, val height: Int, val refreshRate: Float, val hdr: Set<HdrFormat>)
+data class DisplayInfo(
+    val width: Int,
+    val height: Int,
+    val refreshRate: Float,
+    val hdr: Set<HdrFormat>,
+)
 
 enum class HdrFormat(val label: String) { HDR10("HDR10"), HLG("HLG"), DolbyVision("Dolby Vision"), HDR10Plus("HDR10+") }
 

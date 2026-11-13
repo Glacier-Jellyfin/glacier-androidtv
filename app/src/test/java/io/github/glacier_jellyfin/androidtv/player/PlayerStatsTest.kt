@@ -55,7 +55,10 @@ class PlayerStatsTest {
     @Test
     fun `source audio prefers the DTS profile and marks Atmos`() {
         assertEquals("DTS-HD MA 7.1", sourceAudioText(SourceAudio(1, "dts", "DTS-HD MA", 8, 48_000, null)))
-        assertEquals("EAC3 Atmos 5.1", sourceAudioText(SourceAudio(1, "eac3", "Dolby Digital Plus + Dolby Atmos", 6, 48_000, null)))
+        assertEquals(
+            "EAC3 Atmos 5.1",
+            sourceAudioText(SourceAudio(1, "eac3", "Dolby Digital Plus + Dolby Atmos", 6, 48_000, null)),
+        )
         assertEquals("AAC 2.0", sourceAudioText(SourceAudio(1, "aac", "LC", 2, 48_000, null)))
     }
 

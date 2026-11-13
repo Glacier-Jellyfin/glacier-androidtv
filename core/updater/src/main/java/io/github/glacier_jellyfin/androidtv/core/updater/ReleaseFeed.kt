@@ -1,13 +1,13 @@
 package io.github.glacier_jellyfin.androidtv.core.updater
 
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
 
 /**
  * Reads Glacier's releases from the GitHub releases API
@@ -43,8 +43,7 @@ class ReleaseFeed(private val url: String) {
 
         private val json = Json { ignoreUnknownKeys = true }
 
-        fun parse(text: String): List<Release> =
-            json.decodeFromString<List<GitHubRelease>>(text).map { it.toRelease() }
+        fun parse(text: String): List<Release> = json.decodeFromString<List<GitHubRelease>>(text).map { it.toRelease() }
     }
 }
 

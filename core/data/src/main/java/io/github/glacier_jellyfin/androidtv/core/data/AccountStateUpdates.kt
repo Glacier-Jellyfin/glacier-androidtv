@@ -16,26 +16,40 @@ import io.github.glacier_jellyfin.androidtv.core.jellyfin.SignedInUser
 internal fun AccountState.withServer(server: ServerInfo, now: Long): AccountState {
     val stored = StoredServer(server.id, server.name, server.address, server.version, lastUsedAt = now)
     val remaining = serversReplacedBy(server).fold(this) { state, old -> state.withoutServer(old.id) }
-    return remaining.copy(servers = remaining.servers.filterNot { it.id == server.id } + stored, lastServerId = server.id)
+    return remaining.copy(
+        servers = remaining.servers.filterNot { it.id == server.id } + stored,
+        lastServerId = server.id,
+    )
 }
 
 /** Saved servers at [server]'s address under another id: it was set up again there. */
-fun AccountState.serversReplacedBy(server: ServerInfo): List<StoredServer> =
-    servers.filter { it.id != server.id && it.address.trimEnd('/').equals(server.address.trimEnd('/'), ignoreCase = true) }
+fun AccountState.serversReplacedBy(server: ServerInfo): List<StoredServer> = servers.filter {
+    it.id != server.id && it.address.trimEnd(
+        '/',
+    ).equals(server.address.trimEnd('/'), ignoreCase = true)
+}
 
 /**
  * [server] took the place of [oldId]. The profiles in [kept] (old user id to the id the
  * new server knows the user by) move over with sign-in, PIN and parental control, and stay
  * the start profile; the other profiles of [oldId] go with it.
  */
-internal fun AccountState.withServerReplaced(oldId: String, server: ServerInfo, kept: Map<String, String>, now: Long): AccountState {
+internal fun AccountState.withServerReplaced(
+    oldId: String,
+    server: ServerInfo,
+    kept: Map<String, String>,
+    now: Long,
+): AccountState {
     val moved = users.filter { it.serverId == oldId && it.userId in kept }
         .map { it.copy(serverId = server.id, userId = kept.getValue(it.userId)) }
     val start = startProfile.takeUnless { it.serverId == oldId }
         ?: startProfile.userId?.let(kept::get)?.let { startProfile.copy(serverId = server.id, userId = it) }
         ?: StartProfile()
     val without = withoutServer(oldId)
-    return without.copy(users = without.users.filterNot { it.serverId == server.id && it.userId in kept.values } + moved, startProfile = start)
+    return without.copy(
+        users = without.users.filterNot { it.serverId == server.id && it.userId in kept.values } + moved,
+        startProfile = start,
+    )
         .withServer(server, now)
 }
 
@@ -59,8 +73,11 @@ internal fun AccountState.withSignIn(user: SignedInUser, now: Long): AccountStat
     return copy(users = users.filterNot { (it.serverId to it.userId) == key } + stored, lastServerId = user.serverId)
 }
 
-internal fun AccountState.updateUser(serverId: String, userId: String, change: (StoredUser) -> StoredUser): AccountState =
-    copy(users = users.map { if (it.serverId == serverId && it.userId == userId) change(it) else it })
+internal fun AccountState.updateUser(
+    serverId: String,
+    userId: String,
+    change: (StoredUser) -> StoredUser,
+): AccountState = copy(users = users.map { if (it.serverId == serverId && it.userId == userId) change(it) else it })
 
 internal fun AccountState.withoutServer(serverId: String): AccountState = copy(
     servers = servers.filterNot { it.id == serverId },
@@ -133,8 +150,13 @@ sealed interface StartChoice {
 fun AccountState.startChoice(serverId: String, profiles: List<Profile>): StartChoice {
     val userId = when (startProfile.mode) {
         StartMode.Picker -> null
+
         StartMode.Single -> profiles.singleOrNull()?.userId
-        StartMode.Last -> users.filter { it.serverId == serverId && it.accessToken != null }.maxByOrNull { it.lastUsedAt }?.userId
+
+        StartMode.Last -> users.filter {
+            it.serverId == serverId && it.accessToken != null
+        }.maxByOrNull { it.lastUsedAt }?.userId
+
         StartMode.Fixed -> startProfile.userId.takeIf { startProfile.serverId == serverId }
     }
     return userId?.let { profileChoice(it, profiles) } ?: StartChoice.Pick

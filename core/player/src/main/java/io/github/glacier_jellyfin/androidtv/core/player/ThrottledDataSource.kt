@@ -15,7 +15,9 @@ import java.util.concurrent.TimeUnit
 @UnstableApi
 internal class ThrottledDataSource(private val upstream: DataSource) : DataSource {
 
-    override fun addTransferListener(transferListener: TransferListener) = upstream.addTransferListener(transferListener)
+    override fun addTransferListener(transferListener: TransferListener) = upstream.addTransferListener(
+        transferListener,
+    )
 
     private var openedAtMs = 0L
     private var headersAtMs = 0L
@@ -31,7 +33,11 @@ internal class ThrottledDataSource(private val upstream: DataSource) : DataSourc
         return length
     }
 
-    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+    override fun read(
+        buffer: ByteArray,
+        offset: Int,
+        length: Int,
+    ): Int {
         val read = upstream.read(buffer, offset, length)
         if (read > 0) bytes += read
         val waitNs = DebugThrottle.waitNs(read)
@@ -47,7 +53,10 @@ internal class ThrottledDataSource(private val upstream: DataSource) : DataSourc
     override fun close() {
         if (DebugOptions.segmentLog && openedAtMs != 0L) {
             val now = SystemClock.elapsedRealtime()
-            Log.i("Http", "$name: waited ${headersAtMs - openedAtMs} ms for the answer, ${bytes / 1024} KiB in ${now - headersAtMs} ms")
+            Log.i(
+                "Http",
+                "$name: waited ${headersAtMs - openedAtMs} ms for the answer, ${bytes / 1024} KiB in ${now - headersAtMs} ms",
+            )
         }
         openedAtMs = 0
         upstream.close()

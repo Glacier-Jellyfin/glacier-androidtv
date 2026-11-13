@@ -15,22 +15,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.player.formatTime
-import io.github.glacier_jellyfin.androidtv.R
-import androidx.compose.ui.res.stringResource
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
-import androidx.tv.material3.Icon
 
 /** Height of a [SongRow]; lists space them [SONG_ROW_GAP] apart. */
 const val SONG_ROW_HEIGHT = 64
@@ -63,7 +63,13 @@ fun SongRow(
 ) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
-    GlacierClickable(onClick = onClick, onLongClick = onOptions, shape = shape, maxWidthGrowth = FOCUS_GROWTH.dp, modifier = modifier.fillMaxWidth()) { focused ->
+    GlacierClickable(
+        onClick = onClick,
+        onLongClick = onOptions,
+        shape = shape,
+        maxWidthGrowth = FOCUS_GROWTH.dp,
+        modifier = modifier.fillMaxWidth(),
+    ) { focused ->
         Row(
             Modifier
                 .fillMaxWidth()
@@ -75,9 +81,18 @@ fun SongRow(
             horizontalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             if (showCover) {
-                Box(Modifier.size(48.dp).clip(RoundedCornerShape(GlacierShapes.RadiusSm)).background(GlacierColors.GlassFill2)) {
+                Box(
+                    Modifier.size(
+                        48.dp,
+                    ).clip(RoundedCornerShape(GlacierShapes.RadiusSm)).background(GlacierColors.GlassFill2),
+                ) {
                     if (coverUrl != null) {
-                        AsyncImage(model = coverUrl, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.size(48.dp))
+                        AsyncImage(
+                            model = coverUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.size(48.dp),
+                        )
                     }
                 }
             } else {
@@ -88,9 +103,18 @@ fun SongRow(
                     modifier = Modifier.width(30.dp),
                 )
             }
-            Row(Modifier.weight(1.4f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                Modifier.weight(1.4f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 if (video) {
-                    Icon(GlacierIcons.Film, contentDescription = stringResource(R.string.music_video), tint = if (focused) accent else GlacierColors.Mist, modifier = Modifier.size(18.dp))
+                    Icon(
+                        GlacierIcons.Film,
+                        contentDescription = stringResource(R.string.music_video),
+                        tint = if (focused) accent else GlacierColors.Mist,
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
                 Text(
                     title,
@@ -116,5 +140,12 @@ fun SongRow(
 
 @Composable
 private fun SideText(text: String?, modifier: Modifier) {
-Text(text.orEmpty(), style = GlacierText.body(17), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier)
+    Text(
+        text.orEmpty(),
+        style = GlacierText.body(17),
+        color = GlacierColors.Mist,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier,
+    )
 }

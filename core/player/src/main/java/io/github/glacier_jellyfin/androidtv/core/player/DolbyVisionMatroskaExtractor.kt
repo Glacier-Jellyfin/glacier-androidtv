@@ -7,8 +7,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.extractor.Extractor
 import androidx.media3.extractor.ExtractorInput
 import androidx.media3.extractor.ExtractorOutput
-import androidx.media3.extractor.SeekMap
 import androidx.media3.extractor.ExtractorsFactory
+import androidx.media3.extractor.SeekMap
 import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.text.SubtitleParser
 import io.github.peerless2012.ass.media.AssHandler
@@ -21,16 +21,20 @@ import io.github.peerless2012.ass.media.extractor.AssMatroskaExtractor
  * video samples, and Media3 drops them; [blockAdditions] gets them instead.
  */
 @OptIn(UnstableApi::class)
-internal class DolbyVisionMatroskaExtractor(
-    subtitleParsers: SubtitleParser.Factory,
-    ass: AssHandler,
-) : AssMatroskaExtractor(subtitleParsers, ass), BlockAdditionSource {
+internal class DolbyVisionMatroskaExtractor(subtitleParsers: SubtitleParser.Factory, ass: AssHandler) :
+    AssMatroskaExtractor(subtitleParsers, ass),
+    BlockAdditionSource {
 
     override var blockAdditions: ((BlockAddition) -> Unit)? = null
 
     private val addition = BlockAddition()
 
-    override fun handleBlockAdditionalData(track: Track, blockAdditionalId: Int, input: ExtractorInput, contentSize: Int) {
+    override fun handleBlockAdditionalData(
+        track: Track,
+        blockAdditionalId: Int,
+        input: ExtractorInput,
+        contentSize: Int,
+    ) {
         val listener = blockAdditions
         // Media3 marks the field as never null, but it is null for every track without a Dolby Vision configuration.
         val dolbyVision: ByteArray? = track.dolbyVisionConfigBytes
@@ -72,7 +76,10 @@ internal class BlockAddition {
  * and discard anything.
  */
 @OptIn(UnstableApi::class)
-internal fun ExtractorsFactory.withDolbyVisionMkvSupport(subtitleParsers: SubtitleParser.Factory, ass: AssHandler): ExtractorsFactory {
+internal fun ExtractorsFactory.withDolbyVisionMkvSupport(
+    subtitleParsers: SubtitleParser.Factory,
+    ass: AssHandler,
+): ExtractorsFactory {
     val inner = this
     return object : ExtractorsFactory {
         override fun createExtractors(): Array<Extractor> = wrap(inner.createExtractors(), null)
@@ -80,12 +87,11 @@ internal fun ExtractorsFactory.withDolbyVisionMkvSupport(subtitleParsers: Subtit
         override fun createExtractors(uri: Uri, responseHeaders: Map<String, List<String>>): Array<Extractor> =
             wrap(inner.createExtractors(uri, responseHeaders), SyncPoints.keyOf(uri.toString()))
 
-        private fun wrap(extractors: Array<Extractor>, key: String?): Array<Extractor> =
-            extractors.map {
-                if (it !is MatroskaExtractor) return@map it
-                val dolbyVision = DolbyVisionMatroskaExtractor(subtitleParsers, ass)
-                if (key == null) dolbyVision else SeekMapReporter(dolbyVision, key)
-            }.toTypedArray()
+        private fun wrap(extractors: Array<Extractor>, key: String?): Array<Extractor> = extractors.map {
+            if (it !is MatroskaExtractor) return@map it
+            val dolbyVision = DolbyVisionMatroskaExtractor(subtitleParsers, ass)
+            if (key == null) dolbyVision else SeekMapReporter(dolbyVision, key)
+        }.toTypedArray()
     }
 }
 

@@ -36,12 +36,11 @@ internal class Iec61937OutputProvider private constructor(
     private val iecTrack: BooleanArray,
 ) : AudioOutputProvider by inner {
 
-    override fun getFormatSupport(formatConfig: FormatConfig): FormatSupport =
-        if (encodingOf(formatConfig) != null) {
-            FormatSupport.Builder().setFormatSupportLevel(AudioOutputProvider.FORMAT_SUPPORTED_DIRECTLY).build()
-        } else {
-            inner.getFormatSupport(formatConfig)
-        }
+    override fun getFormatSupport(formatConfig: FormatConfig): FormatSupport = if (encodingOf(formatConfig) != null) {
+        FormatSupport.Builder().setFormatSupportLevel(AudioOutputProvider.FORMAT_SUPPORTED_DIRECTLY).build()
+    } else {
+        inner.getFormatSupport(formatConfig)
+    }
 
     override fun getOutputConfig(formatConfig: FormatConfig): OutputConfig {
         val encoding = encodingOf(formatConfig) ?: return inner.getOutputConfig(formatConfig)
@@ -93,7 +92,12 @@ internal class Iec61937OutputProvider private constructor(
     private fun encodingOf(formatConfig: FormatConfig): Int? {
         val format = formatConfig.format
         if (format.sampleMimeType !in BITSTREAMS || format.sampleRate <= 0) return null
-        if (inner.getFormatSupport(formatConfig).supportLevel != AudioOutputProvider.FORMAT_SUPPORTED_DIRECTLY) return null
+        if (inner.getFormatSupport(
+                formatConfig,
+            ).supportLevel != AudioOutputProvider.FORMAT_SUPPORTED_DIRECTLY
+        ) {
+            return null
+        }
         val encoding = runCatching { inner.getOutputConfig(formatConfig).encoding }.getOrNull()
         return encoding?.takeIf { it == C.ENCODING_DOLBY_TRUEHD || it == C.ENCODING_DTS_HD }
     }
@@ -102,12 +106,19 @@ internal class Iec61937OutputProvider private constructor(
         private const val TAG = "Iec61937"
         private const val BURST_SAMPLE_RATE = 192_000
         private val BITSTREAMS = setOf(MimeTypes.AUDIO_TRUEHD, MimeTypes.AUDIO_DTS, MimeTypes.AUDIO_DTS_HD)
+
         /** Eight TrueHD bursts, 160 ms. */
         private const val BUFFER_SIZE = 8 * 61440
 
         /** [BUFFER_SIZE], or more where the platform asks for more. */
-        private fun burstBufferSize(): Int =
-            maxOf(BUFFER_SIZE, AudioTrack.getMinBufferSize(BURST_SAMPLE_RATE, AudioFormat.CHANNEL_OUT_7POINT1_SURROUND, AudioFormat.ENCODING_IEC61937))
+        private fun burstBufferSize(): Int = maxOf(
+            BUFFER_SIZE,
+            AudioTrack.getMinBufferSize(
+                BURST_SAMPLE_RATE,
+                AudioFormat.CHANNEL_OUT_7POINT1_SURROUND,
+                AudioFormat.ENCODING_IEC61937,
+            ),
+        )
 
         fun create(context: Context): Iec61937OutputProvider {
             val iecTrack = BooleanArray(1)
@@ -141,10 +152,15 @@ internal class Iec61937Output(
 ) : AudioOutput by inner {
 
     private val pending = Iec61937Bursts()
+
     /** Stopped by the sink at the end of the stream: the rest of [pending] goes before the track stops. */
     private var stopping = false
 
-    override fun write(buffer: ByteBuffer, encodedAccessUnitCount: Int, presentationTimeUs: Long): Boolean {
+    override fun write(
+        buffer: ByteBuffer,
+        encodedAccessUnitCount: Int,
+        presentationTimeUs: Long,
+    ): Boolean {
         // Bursts from earlier input first; new input waits until they are gone.
         if (!drain(presentationTimeUs)) return false
         // The packer takes the whole buffer, so it counts as written even if bursts still wait:
@@ -195,7 +211,11 @@ internal class Iec61937Output(
 
     override fun setPlayerId(playerId: PlayerId) = inner.setPlayerId(playerId)
 
-    override fun canReuseAudioOutput(currentConfig: OutputConfig, newFormat: FormatConfig, newConfig: OutputConfig) = false
+    override fun canReuseAudioOutput(
+        currentConfig: OutputConfig,
+        newFormat: FormatConfig,
+        newConfig: OutputConfig,
+    ) = false
 
     override fun setPlaybackParameters(playbackParameters: PlaybackParameters) = Unit
 }

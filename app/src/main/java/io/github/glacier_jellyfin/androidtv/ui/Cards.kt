@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,7 +40,6 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
-import kotlinx.coroutines.delay
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierCard
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
@@ -51,6 +49,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
 import io.github.glacier_jellyfin.androidtv.core.designsystem.startGradient
+import kotlinx.coroutines.delay
 
 /** Card sizes of the design's two row densities (Settings › Appearance). */
 @Immutable
@@ -147,7 +146,11 @@ fun ContinueCard(
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     val sizes = LocalCardSizes.current
-    GlacierCard(onClick = onClick, modifier = modifier.width(sizes.continueWidth.dp), onLongClick = onLongClick) { focused ->
+    GlacierCard(
+        onClick = onClick,
+        modifier = modifier.width(sizes.continueWidth.dp),
+        onLongClick = onLongClick,
+    ) { focused ->
         Box(
             Modifier
                 .size(sizes.continueWidth.dp, (imageHeight ?: sizes.continueHeight).dp)
@@ -164,7 +167,15 @@ fun ContinueCard(
             )
             if (locked) LockBadge(Modifier.align(Alignment.TopStart))
             // With options, the mark in the corner says that holding OK opens them.
-            if (onLongClick != null) HoldOkMark(focused, accent, Modifier.align(Alignment.TopEnd).padding(14.dp), size = 34, onPicture = true)
+            if (onLongClick != null) {
+                HoldOkMark(
+                    focused,
+                    accent,
+                    Modifier.align(Alignment.TopEnd).padding(14.dp),
+                    size = 34,
+                    onPicture = true,
+                )
+            }
             if (progress != null) {
                 ProgressBar(
                     progress = progress,
@@ -186,12 +197,28 @@ fun ContinueCard(
                     .background(accent),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(GlacierIcons.Play, contentDescription = null, tint = GlacierColors.Void, modifier = Modifier.size(24.dp))
+                Icon(
+                    GlacierIcons.Play,
+                    contentDescription = null,
+                    tint = GlacierColors.Void,
+                    modifier = Modifier.size(24.dp),
+                )
             }
         }
         Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            MarqueeText(title, style = GlacierText.body(19, FontWeight.SemiBold), color = if (focused) accent else GlacierColors.Ice, active = focused)
-            Text(subtitle, style = GlacierText.body(16), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            MarqueeText(
+                title,
+                style = GlacierText.body(19, FontWeight.SemiBold),
+                color = if (focused) accent else GlacierColors.Ice,
+                active = focused,
+            )
+            Text(
+                subtitle,
+                style = GlacierText.body(16),
+                color = GlacierColors.Mist,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -230,7 +257,14 @@ fun PosterCard(
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(Brush.linearGradient(0f to Color(0x1AE8F4F7), 0.42f to Color.Transparent, start = Offset(Float.POSITIVE_INFINITY, 0f), end = Offset(0f, Float.POSITIVE_INFINITY))),
+                    .background(
+                        Brush.linearGradient(
+                            0f to Color(0x1AE8F4F7),
+                            0.42f to Color.Transparent,
+                            start = Offset(Float.POSITIVE_INFINITY, 0f),
+                            end = Offset(0f, Float.POSITIVE_INFINITY),
+                        ),
+                    ),
             )
             if (locked) LockBadge(Modifier.align(Alignment.TopStart))
             if (tag != null) {
@@ -244,7 +278,12 @@ fun PosterCard(
                         .padding(horizontal = 14.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(tag, style = GlacierText.body(16, FontWeight.SemiBold), color = GlacierColors.Ice, maxLines = 1)
+                    Text(
+                        tag,
+                        style = GlacierText.body(16, FontWeight.SemiBold),
+                        color = GlacierColors.Ice,
+                        maxLines = 1,
+                    )
                 }
             }
             if (badge != null) {
@@ -265,10 +304,26 @@ fun PosterCard(
         }
         Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (title != null) {
-                MarqueeText(title, style = GlacierText.display(20), color = if (focused) accent else GlacierColors.Ice, active = focused)
-                Text(caption, style = GlacierText.body(16), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                MarqueeText(
+                    title,
+                    style = GlacierText.display(20),
+                    color = if (focused) accent else GlacierColors.Ice,
+                    active = focused,
+                )
+                Text(
+                    caption,
+                    style = GlacierText.body(16),
+                    color = GlacierColors.Mist,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             } else {
-                MarqueeText(caption, style = GlacierText.body(18), color = if (focused) accent else GlacierColors.Ice, active = focused)
+                MarqueeText(
+                    caption,
+                    style = GlacierText.body(18),
+                    color = if (focused) accent else GlacierColors.Ice,
+                    active = focused,
+                )
             }
         }
     }
@@ -276,7 +331,13 @@ fun PosterCard(
 
 /** "My media": wide library tile with name and title count. */
 @Composable
-fun LibraryCard(name: String, count: String?, imageUrl: String?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun LibraryCard(
+    name: String,
+    count: String?,
+    imageUrl: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     GlacierCard(onClick = onClick, modifier = modifier) { focused ->
         Box(
@@ -301,7 +362,11 @@ fun LibraryCard(name: String, count: String?, imageUrl: String?, onClick: () -> 
 }
 
 @Composable
-fun ProgressBar(progress: Float, modifier: Modifier = Modifier, track: Color = GlacierColors.GlassFill2) {
+fun ProgressBar(
+    progress: Float,
+    modifier: Modifier = Modifier,
+    track: Color = GlacierColors.GlassFill2,
+) {
     Box(
         modifier
             .fillMaxWidth()
@@ -374,13 +439,28 @@ fun GridCard(
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(Brush.linearGradient(0f to Color(0x1AE8F4F7), 0.42f to Color.Transparent, start = Offset(Float.POSITIVE_INFINITY, 0f), end = Offset(0f, Float.POSITIVE_INFINITY))),
+                    .background(
+                        Brush.linearGradient(
+                            0f to Color(0x1AE8F4F7),
+                            0.42f to Color.Transparent,
+                            start = Offset(Float.POSITIVE_INFINITY, 0f),
+                            end = Offset(0f, Float.POSITIVE_INFINITY),
+                        ),
+                    ),
             )
             if (locked) LockBadge(Modifier.align(Alignment.TopStart))
             when {
                 // With options, the mark in the corner says that holding OK opens them.
-                onLongClick != null -> HoldOkMark(focused, accent, Modifier.align(Alignment.TopEnd).padding(14.dp), size = 34, onPicture = true)
+                onLongClick != null -> HoldOkMark(
+                    focused,
+                    accent,
+                    Modifier.align(Alignment.TopEnd).padding(14.dp),
+                    size = 34,
+                    onPicture = true,
+                )
+
                 count != null -> Badge(count.toString(), accent, Modifier.align(Alignment.TopEnd))
+
                 watched -> Box(
                     Modifier
                         .align(Alignment.TopEnd)
@@ -390,19 +470,41 @@ fun GridCard(
                         .background(accent),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(GlacierIcons.Check, contentDescription = null, tint = GlacierColors.Void, modifier = Modifier.size(18.dp))
+                    Icon(
+                        GlacierIcons.Check,
+                        contentDescription = null,
+                        tint = GlacierColors.Void,
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
             }
         }
         Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            MarqueeText(title, style = GlacierText.display(20), color = if (focused) accent else GlacierColors.Ice, active = focused)
-            if (caption != null) Text(caption, style = GlacierText.body(16), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            MarqueeText(
+                title,
+                style = GlacierText.display(20),
+                color = if (focused) accent else GlacierColors.Ice,
+                active = focused,
+            )
+            if (caption != null) {
+                Text(
+                    caption,
+                    style = GlacierText.body(16),
+                    color = GlacierColors.Mist,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun Badge(text: String, color: Color, modifier: Modifier) {
+private fun Badge(
+    text: String,
+    color: Color,
+    modifier: Modifier,
+) {
     Box(
         modifier
             .padding(14.dp)

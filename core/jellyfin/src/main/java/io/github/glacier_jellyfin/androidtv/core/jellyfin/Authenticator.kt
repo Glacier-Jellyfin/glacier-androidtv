@@ -1,5 +1,9 @@
 package io.github.glacier_jellyfin.androidtv.core.jellyfin
 
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -16,10 +20,6 @@ import org.jellyfin.sdk.api.client.extensions.sessionApi
 import org.jellyfin.sdk.api.client.extensions.userApi
 import org.jellyfin.sdk.model.api.AuthenticationResult
 import org.jellyfin.sdk.model.api.UserDto
-import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
-import kotlin.time.Duration.Companion.seconds
 
 /** A signed-in user: the access token is the credential kept on the device. */
 data class SignedInUser(
@@ -61,17 +61,25 @@ sealed interface QuickConnectState {
 }
 
 @Singleton
-class Authenticator @Inject constructor(
-    private val jellyfin: Jellyfin,
-) {
+class Authenticator @Inject constructor(private val jellyfin: Jellyfin) {
 
     suspend fun publicUsers(address: String): List<PublicUser> = withContext(Dispatchers.IO) {
         jellyfin.createApi(baseUrl = address).userApi.getPublicUsers().content.map { it.toPublicUser() }
     }
 
-    suspend fun signIn(server: ServerInfo, username: String, password: String): SignInResult = withContext(Dispatchers.IO) { signInBlocking(server, username, password) }
+    suspend fun signIn(
+        server: ServerInfo,
+        username: String,
+        password: String,
+    ): SignInResult = withContext(
+        Dispatchers.IO,
+    ) { signInBlocking(server, username, password) }
 
-    private suspend fun signInBlocking(server: ServerInfo, username: String, password: String): SignInResult = try {
+    private suspend fun signInBlocking(
+        server: ServerInfo,
+        username: String,
+        password: String,
+    ): SignInResult = try {
         val api = jellyfin.createApi(baseUrl = server.address)
         val result = api.authenticationApi.authenticateUserByName(username, password).content
         result.toSignedInUser(server)?.let(SignInResult::Success)
@@ -88,6 +96,7 @@ class Authenticator @Inject constructor(
      * flow completes after [QuickConnectState.Authorized], [QuickConnectState.Unavailable]
      * or [QuickConnectState.Failed].
      */
+
     /** Whether the server allows Quick Connect; false when it cannot be asked. */
     suspend fun isQuickConnectEnabled(server: ServerInfo): Boolean = withContext(Dispatchers.IO) {
         try {
@@ -147,7 +156,10 @@ class Authenticator @Inject constructor(
      */
     suspend fun tokenUserId(address: String, accessToken: String): String? = withContext(Dispatchers.IO) {
         try {
-            jellyfin.createApi(baseUrl = address, accessToken = accessToken).userApi.getCurrentUser().content.id.toString()
+            jellyfin.createApi(
+                baseUrl = address,
+                accessToken = accessToken,
+            ).userApi.getCurrentUser().content.id.toString()
         } catch (e: InvalidStatusException) {
             if (e.status == HTTP_UNAUTHORIZED) null else throw e
         }
@@ -163,7 +175,11 @@ class Authenticator @Inject constructor(
         }
     }
 
-    fun userImageUrl(address: String, userId: UUID, imageTag: String?): String? =
+    fun userImageUrl(
+        address: String,
+        userId: UUID,
+        imageTag: String?,
+    ): String? =
         imageTag?.let { jellyfin.createApi(baseUrl = address).imageApi.getUserImageUrl(userId = userId, tag = it) }
 
     private fun AuthenticationResult.toSignedInUser(server: ServerInfo): SignedInUser? {

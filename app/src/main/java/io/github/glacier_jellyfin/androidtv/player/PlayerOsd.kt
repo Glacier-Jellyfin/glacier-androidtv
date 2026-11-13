@@ -1,17 +1,5 @@
 package io.github.glacier_jellyfin.androidtv.player
 
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.foundation.layout.width
-import io.github.glacier_jellyfin.androidtv.core.data.media.Chapter
-import io.github.glacier_jellyfin.androidtv.core.data.media.Trickplay
-import io.github.glacier_jellyfin.androidtv.core.data.playback.MediaSegment
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.TileMode
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
@@ -30,7 +18,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -38,11 +28,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -51,25 +46,30 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.core.data.media.Chapter
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
+import io.github.glacier_jellyfin.androidtv.core.data.media.Trickplay
+import io.github.glacier_jellyfin.androidtv.core.data.playback.MediaSegment
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LeftToRight
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.ui.seasonLabel
-import kotlinx.coroutines.delay
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 @Composable
 fun PlayerOsd(
@@ -125,40 +125,90 @@ fun PlayerOsd(
                 )
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     // Playback keeps its direction in every language; the buttons after it follow the layout.
                     LeftToRight {
-                        Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             if (state.previous != null) {
-                                ControlButton(GlacierIcons.SkipBack, stringResource(R.string.player_previous), onClick = onPrevious)
+                                ControlButton(
+                                    GlacierIcons.SkipBack,
+                                    stringResource(R.string.player_previous),
+                                    onClick = onPrevious,
+                                )
                             }
-                            ControlButton(GlacierIcons.Replay, stringResource(R.string.player_rewind), onClick = { onSeekBy(-state.seekBackMs) })
+                            ControlButton(
+                                GlacierIcons.Replay,
+                                stringResource(R.string.player_rewind),
+                                onClick = { onSeekBy(-state.seekBackMs) },
+                            )
                             ControlButton(
                                 if (state.playWhenReady) GlacierIcons.Pause else GlacierIcons.Play,
-                                stringResource(if (state.playWhenReady) R.string.player_pause else R.string.player_play),
+                                stringResource(
+                                    if (state.playWhenReady) R.string.player_pause else R.string.player_play,
+                                ),
                                 onClick = onTogglePlay,
                                 big = true,
-                                modifier = Modifier.focusRequester(playFocus).onFocusChanged { onPlayFocused(it.isFocused) },
+                                modifier = Modifier.focusRequester(
+                                    playFocus,
+                                ).onFocusChanged { onPlayFocused(it.isFocused) },
                             )
-                            ControlButton(GlacierIcons.Forward, stringResource(R.string.player_forward), onClick = { onSeekBy(state.seekForwardMs) })
+                            ControlButton(
+                                GlacierIcons.Forward,
+                                stringResource(R.string.player_forward),
+                                onClick = { onSeekBy(state.seekForwardMs) },
+                            )
                             if (state.next != null) {
-                                ControlButton(GlacierIcons.SkipForward, stringResource(R.string.player_next), onClick = onNext)
+                                ControlButton(
+                                    GlacierIcons.SkipForward,
+                                    stringResource(R.string.player_next),
+                                    onClick = onNext,
+                                )
                             }
                         }
                     }
-                    LabelButton(GlacierIcons.Speaker, stringResource(R.string.player_audio), { onOpen(OsdButton.Audio) }, Modifier.focusRequester(buttonFocus.getValue(OsdButton.Audio)))
+                    LabelButton(
+                        GlacierIcons.Speaker,
+                        stringResource(R.string.player_audio),
+                        { onOpen(OsdButton.Audio) },
+                        Modifier.focusRequester(buttonFocus.getValue(OsdButton.Audio)),
+                    )
                     if (state.subtitles.isNotEmpty()) {
-                        LabelButton(GlacierIcons.Subtitles, stringResource(R.string.player_subtitles), { onOpen(OsdButton.Subtitles) }, Modifier.focusRequester(buttonFocus.getValue(OsdButton.Subtitles)))
+                        LabelButton(
+                            GlacierIcons.Subtitles,
+                            stringResource(R.string.player_subtitles),
+                            { onOpen(OsdButton.Subtitles) },
+                            Modifier.focusRequester(buttonFocus.getValue(OsdButton.Subtitles)),
+                        )
                     }
                     if (state.chapters.isNotEmpty()) {
-                        LabelButton(GlacierIcons.Chapters, stringResource(R.string.player_chapters), { onOpen(OsdButton.Chapters) }, Modifier.focusRequester(buttonFocus.getValue(OsdButton.Chapters)))
+                        LabelButton(
+                            GlacierIcons.Chapters,
+                            stringResource(R.string.player_chapters),
+                            { onOpen(OsdButton.Chapters) },
+                            Modifier.focusRequester(buttonFocus.getValue(OsdButton.Chapters)),
+                        )
                     }
-                    ControlButton(GlacierIcons.Info, stringResource(R.string.player_info), onClick = { onOpen(OsdButton.Info) }, modifier = Modifier.focusRequester(buttonFocus.getValue(OsdButton.Info)))
+                    ControlButton(
+                        GlacierIcons.Info,
+                        stringResource(R.string.player_info),
+                        onClick = { onOpen(OsdButton.Info) },
+                        modifier = Modifier.focusRequester(buttonFocus.getValue(OsdButton.Info)),
+                    )
                 }
                 Spacer(Modifier.weight(1f))
                 if (progress.durationMs > 0) {
                     val end = now.plusSeconds((progress.durationMs - progress.positionMs).coerceAtLeast(0) / 1000)
-                    Text(stringResource(R.string.player_ends_at, end.format(ClockFormat)), style = GlacierText.body(18), color = OsdSecondary)
+                    Text(
+                        stringResource(R.string.player_ends_at, end.format(ClockFormat)),
+                        style = GlacierText.body(18),
+                        color = OsdSecondary,
+                    )
                 }
             }
         }
@@ -183,7 +233,13 @@ private fun TitleBlock(state: PlayerUiState, modifier: Modifier) {
         Text(crumb.uppercase(), style = GlacierText.body(18).copy(letterSpacing = 0.06.em), color = OsdSecondary)
         val title = item.episodeNumber?.takeIf { item.kind == ItemKind.Episode }
             ?.let { stringResource(R.string.player_episode_title, it, item.title) } ?: item.title
-        Text(title, style = GlacierText.display(46), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            title,
+            style = GlacierText.display(46),
+            color = GlacierColors.Ice,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -238,9 +294,21 @@ private fun Timeline(
                 .onKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                     when (event.key) {
-                        Key.DirectionLeft -> { onScrub(-seekBackMs); true }
-                        Key.DirectionRight -> { onScrub(seekForwardMs); true }
-                        Key.DirectionCenter, Key.Enter -> { onCommit(); true }
+                        Key.DirectionLeft -> {
+                            onScrub(-seekBackMs)
+                            true
+                        }
+
+                        Key.DirectionRight -> {
+                            onScrub(seekForwardMs)
+                            true
+                        }
+
+                        Key.DirectionCenter, Key.Enter -> {
+                            onCommit()
+                            true
+                        }
+
                         else -> false
                     }
                 }
@@ -256,7 +324,11 @@ private fun Timeline(
                     .clip(PillShape)
                     .background(OsdGlass),
             ) {
-                Box(Modifier.fillMaxHeight().fillMaxWidth(fraction(progress.bufferedMs, duration)).background(GlacierColors.GlassBorder2))
+                Box(
+                    Modifier.fillMaxHeight().fillMaxWidth(
+                        fraction(progress.bufferedMs, duration),
+                    ).background(GlacierColors.GlassBorder2),
+                )
                 Box(Modifier.fillMaxHeight().fillMaxWidth(fraction(progress.positionMs, duration)).background(accent))
                 // Known segments (intro, credits …) as hatched stretches (design).
                 if (progress.durationMs > 0) {
@@ -264,7 +336,14 @@ private fun Timeline(
                         Box(
                             Modifier
                                 .offset(x = trackWidth * fraction(segment.startMs, duration))
-                                .width(trackWidth * (fraction(segment.endMs, duration) - fraction(segment.startMs, duration)))
+                                .width(
+                                    trackWidth * (
+                                        fraction(
+                                            segment.endMs,
+                                            duration,
+                                        ) - fraction(segment.startMs, duration)
+                                        ),
+                                )
                                 .fillMaxHeight()
                                 .clip(PillShape)
                                 .drawBehind { drawRect(SegmentHatch) },
@@ -286,20 +365,22 @@ private fun Timeline(
             val knob = if (focused) 26.dp else 18.dp
             // Focused, a glow ring of 8 around the knob shows where the keys go (design).
             val ring = if (focused) 8.dp else 0.dp
-            if (progress.durationMs > 0) Box(
-                Modifier
-                    .offset(x = maxWidth * fraction(shown, duration) - knob / 2 - ring)
-                    .size(knob + ring * 2)
-                    .background(if (focused) accent.copy(alpha = 0.3f) else Color.Transparent, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
+            if (progress.durationMs > 0) {
                 Box(
                     Modifier
-                        .size(knob)
-                        .shadow(if (focused) 0.dp else 8.dp, CircleShape)
-                        .clip(CircleShape)
-                        .background(accent),
-                )
+                        .offset(x = maxWidth * fraction(shown, duration) - knob / 2 - ring)
+                        .size(knob + ring * 2)
+                        .background(if (focused) accent.copy(alpha = 0.3f) else Color.Transparent, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        Modifier
+                            .size(knob)
+                            .shadow(if (focused) 0.dp else 8.dp, CircleShape)
+                            .clip(CircleShape)
+                            .background(accent),
+                    )
+                }
             }
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -314,7 +395,11 @@ private fun Timeline(
                 modifier = Modifier.weight(1f).padding(horizontal = 24.dp),
             )
             if (progress.durationMs > 0) {
-                Text("−" + formatTime(progress.durationMs - progress.positionMs), style = GlacierText.mono(20), color = OsdSecondary)
+                Text(
+                    "−" + formatTime(progress.durationMs - progress.positionMs),
+                    style = GlacierText.mono(20),
+                    color = OsdSecondary,
+                )
             }
         }
     }
@@ -323,7 +408,10 @@ private fun Timeline(
 /** OSD buttons that open an overlay; the overlay hands focus back to them when it closes. */
 enum class OsdButton { Audio, Subtitles, Chapters, Info }
 
-private fun chapterAt(chapters: List<Chapter>, positionMs: Long): Chapter? = chapters.lastOrNull { it.startMs <= positionMs }
+private fun chapterAt(chapters: List<Chapter>, positionMs: Long): Chapter? = chapters.lastOrNull {
+    it.startMs <=
+        positionMs
+}
 
 /**
  * Trickplay preview (design: 340×191) with the chapter, the target time and
@@ -378,7 +466,11 @@ private fun ScrubPreview(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(formatTime(positionMs), style = GlacierText.mono(24), color = GlacierColors.Ice)
-                Text((if (deltaMs >= 0) "+" else "−") + formatTime(kotlin.math.abs(deltaMs)), style = GlacierText.mono(18), color = accent)
+                Text(
+                    (if (deltaMs >= 0) "+" else "−") + formatTime(kotlin.math.abs(deltaMs)),
+                    style = GlacierText.mono(18),
+                    color = accent,
+                )
             }
         }
     }
@@ -386,15 +478,44 @@ private fun ScrubPreview(
 
 /** Pill with icon and label, 62 high (design: Audio, Subtitles, Chapters; the trailer's "Play movie" is [primary]). */
 @Composable
-internal fun LabelButton(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = false) {
+internal fun LabelButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    primary: Boolean = false,
+) {
     val accent = LocalAccent.current
-    GlacierClickable(onClick = onClick, shape = PillShape, modifier = modifier, contentAlignment = Alignment.Center) { focused ->
+    GlacierClickable(
+        onClick = onClick,
+        shape = PillShape,
+        modifier = modifier,
+        contentAlignment = Alignment.Center,
+    ) { focused ->
         Row(
             Modifier
                 .height(62.dp)
                 .clip(PillShape)
-                .background(if (focused) accent.main else if (primary) accent.deep else OsdGlass)
-                .border(2.dp, if (focused) accent.main else if (primary) accent.deep else GlacierColors.GlassBorder2, PillShape)
+                .background(
+                    if (focused) {
+                        accent.main
+                    } else if (primary) {
+                        accent.deep
+                    } else {
+                        OsdGlass
+                    },
+                )
+                .border(
+                    2.dp,
+                    if (focused) {
+                        accent.main
+                    } else if (primary) {
+                        accent.deep
+                    } else {
+                        GlacierColors.GlassBorder2
+                    },
+                    PillShape,
+                )
                 .padding(horizontal = 22.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -417,7 +538,12 @@ internal fun ControlButton(
 ) {
     val accent = LocalAccent.current.main
     val size = if (big) 78.dp else 62.dp
-    GlacierClickable(onClick = onClick, shape = CircleShape, modifier = modifier, contentAlignment = Alignment.Center) { focused ->
+    GlacierClickable(
+        onClick = onClick,
+        shape = CircleShape,
+        modifier = modifier,
+        contentAlignment = Alignment.Center,
+    ) { focused ->
         Box(
             Modifier
                 .size(size)
@@ -426,14 +552,22 @@ internal fun ControlButton(
                 .border(2.dp, if (focused) accent else GlacierColors.GlassBorder2, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = description, tint = if (focused) GlacierColors.Void else GlacierColors.Ice, modifier = Modifier.size(if (big) 30.dp else 24.dp))
+            Icon(
+                icon,
+                contentDescription = description,
+                tint = if (focused) GlacierColors.Void else GlacierColors.Ice,
+                modifier = Modifier.size(if (big) 30.dp else 24.dp),
+            )
         }
     }
 }
 
 /** Diagonal stripes, 5 px ice and 5 px clear (design: repeating 115° gradient). */
 private val SegmentHatch = Brush.linearGradient(
-    0f to Color(0x57E8F4F7), 0.5f to Color(0x57E8F4F7), 0.5f to Color.Transparent, 1f to Color.Transparent,
+    0f to Color(0x57E8F4F7),
+    0.5f to Color(0x57E8F4F7),
+    0.5f to Color.Transparent,
+    1f to Color.Transparent,
     start = Offset.Zero,
     end = Offset(9f, -4.2f),
     tileMode = TileMode.Repeated,
@@ -461,4 +595,3 @@ internal fun formatTime(ms: Long): String {
     val s = total % 60
     return if (h > 0) "%d:%02d:%02d".format(Locale.ROOT, h, m, s) else "%d:%02d".format(Locale.ROOT, m, s)
 }
-

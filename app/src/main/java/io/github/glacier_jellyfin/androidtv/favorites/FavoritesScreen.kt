@@ -1,14 +1,13 @@
 package io.github.glacier_jellyfin.androidtv.favorites
 
 import androidx.activity.compose.BackHandler
-import io.github.glacier_jellyfin.androidtv.core.data.settings.FavoriteRow
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.Spacer
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,6 +35,7 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.Favorites
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
+import io.github.glacier_jellyfin.androidtv.core.data.settings.FavoriteRow
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
@@ -56,10 +56,7 @@ import io.github.glacier_jellyfin.androidtv.ui.yearText
 /** Everything marked with the heart: a row per kind, empty kinds left out. */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun FavoritesScreen(
-    onNavigate: (UiEvent.Navigate) -> Unit,
-    viewModel: FavoritesViewModel = hiltViewModel(),
-) {
+fun FavoritesScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: FavoritesViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val rows by viewModel.rows.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
@@ -78,24 +75,46 @@ fun FavoritesScreen(
     LaunchedEffect(favorites != null) {
         if (favorites == null || rows.none { favorites.has(it) }) return@LaunchedEffect
         withFrameNanos { }
-        val restored = lastFocus?.let { requesters[it] }?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true
+        val restored = lastFocus?.let { requesters[it] }?.let {
+            runCatching { it.requestFocus() }.getOrDefault(
+                false,
+            )
+        } == true
         if (!restored) runCatching { listFocus.requestFocus() }
     }
 
     // A loader covers the page: the remote must not reach the navigation or anything else behind it.
     Box(Modifier.fillMaxSize().blockKeysWhile(state.loading && favorites == null, takeFocus = true)) {
         when {
-            state.loading && favorites == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
+            state.loading && favorites == null -> Box(
+                Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) { SpinningDiamond(110) }
+
             state.failed && favorites == null -> Message(
                 text = stringResource(R.string.favorites_error),
                 button = stringResource(R.string.action_retry),
                 onClick = viewModel::load,
             )
+
             favorites == null -> Unit
-            rows.none { favorites.has(it) } -> Message(text = stringResource(R.string.favorites_empty), body = stringResource(R.string.favorites_empty_body))
+
+            rows.none {
+                favorites.has(
+                    it,
+                )
+            } -> Message(
+                text = stringResource(R.string.favorites_empty),
+                body = stringResource(R.string.favorites_empty_body),
+            )
+
             else -> {
                 val songsTitle = stringResource(R.string.favorites_songs)
-                LazyColumn(Modifier.fillMaxSize().onFocusChanged { inList = it.hasFocus }.focusRequester(listFocus).focusRestorer()) {
+                LazyColumn(
+                    Modifier.fillMaxSize().onFocusChanged { inList = it.hasFocus }.focusRequester(
+                        listFocus,
+                    ).focusRestorer(),
+                ) {
                     item(key = "title") {
                         Text(
                             stringResource(R.string.nav_favorites),
@@ -122,7 +141,11 @@ fun FavoritesScreen(
                             } else {
                                 MediaRow(title = stringResource(row.title)) {
                                     items(favorites.titles(row), key = { it.id }) { item ->
-                                        FavoriteCard(item, onClick = { viewModel.open(item) }, modifier = Modifier.remembered(item.id.toString()))
+                                        FavoriteCard(
+                                            item,
+                                            onClick = { viewModel.open(item) },
+                                            modifier = Modifier.remembered(item.id.toString()),
+                                        )
                                     }
                                 }
                             }
@@ -168,10 +191,20 @@ private fun Favorites.titles(row: FavoriteRow): List<MediaItem> = when (row) {
     FavoriteRow.Songs -> emptyList()
 }
 
-private fun Favorites.has(row: FavoriteRow): Boolean = if (row == FavoriteRow.Songs) songs.isNotEmpty() else titles(row).isNotEmpty()
+private fun Favorites.has(row: FavoriteRow): Boolean = if (row == FavoriteRow.Songs) {
+    songs.isNotEmpty()
+} else {
+    titles(
+        row,
+    ).isNotEmpty()
+}
 
 @Composable
-private fun FavoriteCard(item: MediaItem, onClick: () -> Unit, modifier: Modifier) {
+private fun FavoriteCard(
+    item: MediaItem,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
     when (item.kind) {
         // An episode shows its still, under the show's name, like "Continue watching".
         ItemKind.Episode -> ContinueCard(
@@ -183,6 +216,7 @@ private fun FavoriteCard(item: MediaItem, onClick: () -> Unit, modifier: Modifie
             modifier = modifier,
             locked = item.showsLock(),
         )
+
         ItemKind.Album, ItemKind.Artist -> PosterCard(
             imageUrl = item.posterUrl,
             caption = item.parentTitle.orEmpty(),
@@ -191,6 +225,7 @@ private fun FavoriteCard(item: MediaItem, onClick: () -> Unit, modifier: Modifie
             onClick = onClick,
             modifier = modifier,
         )
+
         else -> PosterCard(
             imageUrl = item.posterUrl,
             caption = listOfNotNull(yearText(item), item.genres.firstOrNull()).joinToString(" · "),
@@ -207,13 +242,26 @@ private fun FavoriteCard(item: MediaItem, onClick: () -> Unit, modifier: Modifie
 private fun episodeLine(item: MediaItem): String {
     val season = item.seasonNumber
     val episode = item.episodeNumber
-    val number = if (season != null && episode != null) stringResource(R.string.episode_short, season, episode) else null
+    val number = if (season != null && episode != null) {
+        stringResource(
+            R.string.episode_short,
+            season,
+            episode,
+        )
+    } else {
+        null
+    }
     return listOfNotNull(number, item.title).joinToString(" · ")
 }
 
 /** Nothing to show: a line, an explanation and maybe a button, in the middle of the page. */
 @Composable
-private fun Message(text: String, body: String? = null, button: String? = null, onClick: () -> Unit = {}) {
+private fun Message(
+    text: String,
+    body: String? = null,
+    button: String? = null,
+    onClick: () -> Unit = {},
+) {
     val focus = remember { FocusRequester() }
     if (button != null) LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     Column(
@@ -223,6 +271,13 @@ private fun Message(text: String, body: String? = null, button: String? = null, 
     ) {
         Text(text, style = GlacierText.display(30), color = GlacierColors.Ice)
         if (body != null) Text(body, style = GlacierText.body(20), color = GlacierColors.Mist)
-        if (button != null) PillButton(button, onClick = onClick, primary = true, modifier = Modifier.focusRequester(focus))
+        if (button != null) {
+            PillButton(
+                button,
+                onClick = onClick,
+                primary = true,
+                modifier = Modifier.focusRequester(focus),
+            )
+        }
     }
 }

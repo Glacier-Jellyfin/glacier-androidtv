@@ -39,8 +39,10 @@ internal class GuardedAudioSink(
 
     private var format: Format? = null
     private var listener: AudioSink.Listener? = null
+
     /** The dead track's error, thrown if the link does not come back. */
     private var deadTrack: AudioSink.WriteException? = null
+
     /** A capability change held back during a link hold. */
     private var capabilitiesChanged = false
 
@@ -74,7 +76,11 @@ internal class GuardedAudioSink(
         super.configure(audioSinkConfig)
     }
 
-    override fun handleBuffer(buffer: ByteBuffer, presentationTimeUs: Long, encodedAccessUnitCount: Int): Boolean {
+    override fun handleBuffer(
+        buffer: ByteBuffer,
+        presentationTimeUs: Long,
+        encodedAccessUnitCount: Int,
+    ): Boolean {
         val now = clock()
         // Refusing data is ordinary back pressure: the renderer offers the buffer again.
         if (guard.holdWrites(now)) return false
@@ -152,7 +158,8 @@ internal class GuardedAudioSink(
         super.reset()
     }
 
-    private fun AudioSink.WriteException.isDeadTrack() = errorCode == AudioTrack.ERROR_DEAD_OBJECT || errorCode == ERROR_NATIVE_DEAD_OBJECT
+    private fun AudioSink.WriteException.isDeadTrack() =
+        errorCode == AudioTrack.ERROR_DEAD_OBJECT || errorCode == ERROR_NATIVE_DEAD_OBJECT
 
     /** Passes everything on to the renderer, except capability changes during a link hold. */
     private inner class GuardedListener(private val inner: AudioSink.Listener) : AudioSink.Listener {
@@ -161,14 +168,31 @@ internal class GuardedAudioSink(
         }
 
         override fun onPositionDiscontinuity() = inner.onPositionDiscontinuity()
-        override fun onPositionAdvancing(playoutStartSystemTimeMs: Long) = inner.onPositionAdvancing(playoutStartSystemTimeMs)
-        override fun onUnderrun(bufferSize: Int, bufferSizeMs: Long, elapsedSinceLastFeedMs: Long) = inner.onUnderrun(bufferSize, bufferSizeMs, elapsedSinceLastFeedMs)
-        override fun onSkipSilenceEnabledChanged(skipSilenceEnabled: Boolean) = inner.onSkipSilenceEnabledChanged(skipSilenceEnabled)
+        override fun onPositionAdvancing(playoutStartSystemTimeMs: Long) = inner.onPositionAdvancing(
+            playoutStartSystemTimeMs,
+        )
+        override fun onUnderrun(
+            bufferSize: Int,
+            bufferSizeMs: Long,
+            elapsedSinceLastFeedMs: Long,
+        ) = inner.onUnderrun(
+            bufferSize,
+            bufferSizeMs,
+            elapsedSinceLastFeedMs,
+        )
+        override fun onSkipSilenceEnabledChanged(skipSilenceEnabled: Boolean) = inner.onSkipSilenceEnabledChanged(
+            skipSilenceEnabled,
+        )
         override fun onOffloadBufferEmptying() = inner.onOffloadBufferEmptying()
         override fun onOffloadBufferFull() = inner.onOffloadBufferFull()
         override fun onAudioSinkError(audioSinkError: Exception) = inner.onAudioSinkError(audioSinkError)
-        override fun onAudioTrackInitialized(audioTrackConfig: AudioSink.AudioTrackConfig) = inner.onAudioTrackInitialized(audioTrackConfig)
-        override fun onAudioTrackReleased(audioTrackConfig: AudioSink.AudioTrackConfig) = inner.onAudioTrackReleased(audioTrackConfig)
+        override fun onAudioTrackInitialized(audioTrackConfig: AudioSink.AudioTrackConfig) =
+            inner.onAudioTrackInitialized(
+                audioTrackConfig,
+            )
+        override fun onAudioTrackReleased(audioTrackConfig: AudioSink.AudioTrackConfig) = inner.onAudioTrackReleased(
+            audioTrackConfig,
+        )
         override fun onSilenceSkipped() = inner.onSilenceSkipped()
         override fun onAudioSessionIdChanged(audioSessionId: Int) = inner.onAudioSessionIdChanged(audioSessionId)
     }

@@ -32,7 +32,13 @@ data class PlaybackCheckState(
  * The playback check in [PlaybackCheckActivity]'s own process. With [resume]
  * it goes on after a sample whose decoder took the previous process down.
  */
-class PlaybackCheckViewModel(application: Application, setup: PlaybackSetup, resume: Boolean) : AndroidViewModel(application) {
+class PlaybackCheckViewModel(
+    application: Application,
+    setup: PlaybackSetup,
+    resume: Boolean,
+) : AndroidViewModel(
+    application,
+) {
 
     private val check = PlaybackCheck(application, setup)
     private val journal = PlaybackCheckJournal(application)
@@ -61,7 +67,11 @@ class PlaybackCheckViewModel(application: Application, setup: PlaybackSetup, res
     private fun resume() {
         val entries = journal.read()
         val open = entries.open ?: return
-        val crashed = CheckResult(PlaybackCheck.SAMPLES[open], CheckResult.Outcome.Crashed, error = "the player's process died")
+        val crashed = CheckResult(
+            PlaybackCheck.SAMPLES[open],
+            CheckResult.Outcome.Crashed,
+            error = "the player's process died",
+        )
         journal.finished(open, crashed)
         Log.w(TAG, crashed.describe())
         run(from = open + 1, earlier = entries.results + crashed)

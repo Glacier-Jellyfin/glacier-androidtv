@@ -63,7 +63,12 @@ internal object HandoverPlanner {
      * on the stream is handed over, else the title is opened again (waiting would only end in a stall and that). Near the
      * end of the title the title is opened again after a stall, else left as it is.
      */
-    fun lower(trigger: HandoverTrigger, aheadMs: Long, positionMs: Long, durationMs: Long): HandoverPlan {
+    fun lower(
+        trigger: HandoverTrigger,
+        aheadMs: Long,
+        positionMs: Long,
+        durationMs: Long,
+    ): HandoverPlan {
         val lead = aheadMs - RESERVE_MS
         val boundedLead = lead.coerceIn(0, MAX_LEAD_MS)
         if (nearEnd(positionMs + boundedLead, durationMs)) {
@@ -74,7 +79,11 @@ internal object HandoverPlanner {
     }
 
     /** The way back from a reduced stream to the file: only with a buffer of [RETURN_MIN_BUFFER_MS]. */
-    fun back(aheadMs: Long, positionMs: Long, durationMs: Long): HandoverPlan {
+    fun back(
+        aheadMs: Long,
+        positionMs: Long,
+        durationMs: Long,
+    ): HandoverPlan {
         if (aheadMs < RETURN_MIN_BUFFER_MS) return HandoverPlan.Wait
         val lead = (aheadMs - RESERVE_MS).coerceIn(RETURN_MIN_LEAD_MS, MAX_LEAD_MS)
         if (nearEnd(positionMs + lead, durationMs)) return HandoverPlan.Wait
@@ -110,8 +119,11 @@ internal object HandoverPlanner {
         minOf(MAX_SYNC_SHIFT_MS, bufferedBeyondMs - RESERVE_MS - loadAheadMs)
 
     /** True when the new stream is open and enough of the lead is left for it to start before the hand over. */
-    fun stillWorks(lowering: Boolean, atMs: Long, positionMs: Long): Boolean =
-        atMs - positionMs >= if (lowering) MIN_REMAINING_DOWN_MS else MIN_REMAINING_BACK_MS
+    fun stillWorks(
+        lowering: Boolean,
+        atMs: Long,
+        positionMs: Long,
+    ): Boolean = atMs - positionMs >= if (lowering) MIN_REMAINING_DOWN_MS else MIN_REMAINING_BACK_MS
 
     private fun nearEnd(atMs: Long, durationMs: Long) = durationMs > 0 && atMs > durationMs - TAIL_MS
 }
@@ -128,7 +140,11 @@ internal class BufferTrend(
     private val samples = ArrayDeque<Pair<Long, Long>>()
 
     /** One sample; true when the buffer has been draining. Not loading (a full buffer, a pause) starts the count again. */
-    fun record(nowMs: Long, aheadMs: Long, loading: Boolean): Boolean {
+    fun record(
+        nowMs: Long,
+        aheadMs: Long,
+        loading: Boolean,
+    ): Boolean {
         if (!loading) {
             samples.clear()
             return false

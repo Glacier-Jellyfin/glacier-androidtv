@@ -1,9 +1,9 @@
 package io.github.glacier_jellyfin.androidtv.music
 
+import kotlin.random.Random
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlin.random.Random
 
 class MusicQueueTest {
 
@@ -26,7 +26,14 @@ class MusicQueueTest {
 
     @Test
     fun `shuffle without a chosen song starts anywhere`() {
-        val firsts = (0 until 40).map { seed -> MusicQueue.start(songs, start = null, shuffle = true, random = Random(seed)).items.first() }
+        val firsts = (0 until 40).map { seed ->
+            MusicQueue.start(
+                songs,
+                start = null,
+                shuffle = true,
+                random = Random(seed),
+            ).items.first()
+        }
         assertTrue(firsts.toSet().size > 1)
     }
 

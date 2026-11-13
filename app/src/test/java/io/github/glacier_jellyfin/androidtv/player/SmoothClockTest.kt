@@ -7,7 +7,11 @@ import org.junit.Test
 
 class SmoothClockTest {
     /** Frames of 16 ms; a sample every 500 ms reporting [rate] times the wall clock plus [jitter]. */
-    private fun run(rate: Double, jitter: (Int) -> Long, seconds: Int = 20): List<Long> {
+    private fun run(
+        rate: Double,
+        jitter: (Int) -> Long,
+        seconds: Int = 20,
+    ): List<Long> {
         val clock = SmoothClock()
         val out = mutableListOf<Long>()
         var now = 0L

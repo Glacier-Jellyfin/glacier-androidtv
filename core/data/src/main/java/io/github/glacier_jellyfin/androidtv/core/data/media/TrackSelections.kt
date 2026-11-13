@@ -1,18 +1,22 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Audio and subtitle stream picked on a detail page; subtitle null means off.
  * [versionId]: the file they belong to, for a title with several (media source id).
  */
-data class TrackSelection(val audio: Int?, val subtitle: Int?, val versionId: String? = null)
+data class TrackSelection(
+    val audio: Int?,
+    val subtitle: Int?,
+    val versionId: String? = null,
+)
 
 /**
  * Tracks picked on detail pages "for the next playback" (design). Kept for

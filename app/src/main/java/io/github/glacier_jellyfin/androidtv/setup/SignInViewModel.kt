@@ -17,6 +17,7 @@ import io.github.glacier_jellyfin.androidtv.navigation.QuickConnectRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ServerListRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SignInRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,7 +25,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 enum class SignInField { Username, Password }
 
@@ -97,13 +97,20 @@ class SignInViewModel @Inject constructor(
             _state.update { it.copy(busy = true) }
             when (val result = authenticator.signIn(server, current.username.trim(), current.password)) {
                 is SignInResult.Success -> finish(result.user)
+
                 SignInResult.InvalidCredentials -> {
                     _state.update { it.copy(busy = false, password = "", field = SignInField.Password) }
                     _events.send(UiEvent.Toast(R.string.signin_invalid))
                 }
+
                 is SignInResult.Failed -> {
                     _state.update { it.copy(busy = false) }
-                    _events.send(UiEvent.Toast(R.string.signin_failed, listOf(result.cause.message ?: result.cause.javaClass.simpleName)))
+                    _events.send(
+                        UiEvent.Toast(
+                            R.string.signin_failed,
+                            listOf(result.cause.message ?: result.cause.javaClass.simpleName),
+                        ),
+                    )
                 }
             }
         }

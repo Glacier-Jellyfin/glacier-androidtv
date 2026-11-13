@@ -31,12 +31,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -63,9 +62,9 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.endKey
 import io.github.glacier_jellyfin.androidtv.core.designsystem.startGradient
 import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
+import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.FactsRow
 import io.github.glacier_jellyfin.androidtv.ui.KenBurns
-import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 import io.github.glacier_jellyfin.androidtv.ui.episodeText
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
@@ -171,16 +170,29 @@ private fun SpotlightInfo(
         if (resuming) ResumeChip()
         Text(
             if (isEpisode) item.parentTitle ?: item.title else item.title,
-            style = GlacierText.display(76).copy(lineHeight = 78.sp, shadow = Shadow(Color(0x99000000), blurRadius = 30f)),
+            style = GlacierText.display(
+                76,
+            ).copy(lineHeight = 78.sp, shadow = Shadow(Color(0x99000000), blurRadius = 30f)),
             color = GlacierColors.Ice,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
         if (isEpisode) {
             val episode = episodeText(item)
-            Text(listOfNotNull(episode, item.title).joinToString(" · "), style = GlacierText.body(24, FontWeight.SemiBold), color = GlacierColors.Ice)
+            Text(
+                listOfNotNull(episode, item.title).joinToString(" · "),
+                style = GlacierText.body(24, FontWeight.SemiBold),
+                color = GlacierColors.Ice,
+            )
         }
-        FactsRow(item, listOfNotNull(yearText(item), item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }, item.genres.firstOrNull()))
+        FactsRow(
+            item,
+            listOfNotNull(
+                yearText(item),
+                item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) },
+                item.genres.firstOrNull(),
+            ),
+        )
         item.overview?.let {
             Text(
                 it,
@@ -195,7 +207,11 @@ private fun SpotlightInfo(
             Column(Modifier.width(520.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 ProgressBar(item.progress ?: 0f, Modifier.height(6.dp))
                 item.remainingMinutes?.let {
-                    Text(stringResource(R.string.minutes_left, it), style = GlacierText.body(17), color = GlacierColors.Mist)
+                    Text(
+                        stringResource(R.string.minutes_left, it),
+                        style = GlacierText.body(17),
+                        color = GlacierColors.Mist,
+                    )
                 }
             }
         }
@@ -204,16 +220,34 @@ private fun SpotlightInfo(
             val episode = item.episodeNumber
             val playLabel = when {
                 !resuming -> stringResource(R.string.hero_play)
-                isEpisode && season != null && episode != null -> stringResource(R.string.hero_resume_episode, season, episode)
+
+                isEpisode && season != null && episode != null -> stringResource(
+                    R.string.hero_resume_episode,
+                    season,
+                    episode,
+                )
+
                 else -> stringResource(R.string.hero_resume)
             }
-            ActionButton(onClick = onPlay, label = playLabel, icon = GlacierIcons.Play, primary = true, modifier = Modifier.focusRequester(playFocus).then(buttonModifier("play")))
-            ActionButton(onClick = onInfo, label = stringResource(R.string.hero_more_info), modifier = buttonModifier("info"))
+            ActionButton(
+                onClick = onPlay,
+                label = playLabel,
+                icon = GlacierIcons.Play,
+                primary = true,
+                modifier = Modifier.focusRequester(playFocus).then(buttonModifier("play")),
+            )
+            ActionButton(
+                onClick = onInfo,
+                label = stringResource(R.string.hero_more_info),
+                modifier = buttonModifier("info"),
+            )
             ActionButton(
                 onClick = onFavorite,
                 icon = if (item.isFavorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
                 on = item.isFavorite,
-                contentDescription = stringResource(if (item.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
+                contentDescription = stringResource(
+                    if (item.isFavorite) R.string.action_unfavorite else R.string.action_favorite,
+                ),
                 modifier = buttonModifier("favorite"),
             )
         }

@@ -1,8 +1,8 @@
 package io.github.glacier_jellyfin.androidtv.seerr
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -64,6 +64,7 @@ import io.github.glacier_jellyfin.androidtv.ui.ActionButton
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.FactBadge
 import io.github.glacier_jellyfin.androidtv.ui.FilterChip
+import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
@@ -73,30 +74,35 @@ import io.github.glacier_jellyfin.androidtv.ui.ratingText
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import io.github.glacier_jellyfin.androidtv.ui.seasonLabel
-import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 
 private const val BACKDROP = 760
 
 /** A movie or show that is not in the library yet, with what it takes to request it through Seerr. */
 @Composable
-fun SeerrScreen(
-    onNavigate: (UiEvent.Navigate) -> Unit,
-    viewModel: SeerrViewModel = hiltViewModel(),
-) {
+fun SeerrScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SeerrViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
     val details = state.details
     when {
         details == null && state.failed -> ErrorState(onRetry = viewModel::load)
+
         // Nothing to focus yet: the loader takes focus so the remote cannot reach the navigation behind it.
-        details == null -> Box(Modifier.fillMaxSize().blockKeysWhile(true, takeFocus = true), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
+        details == null -> Box(
+            Modifier.fillMaxSize().blockKeysWhile(true, takeFocus = true),
+            contentAlignment = Alignment.Center,
+        ) { SpinningDiamond(110) }
+
         else -> Page(state, details, viewModel)
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun Page(state: SeerrState, details: SeerrDetails, viewModel: SeerrViewModel) {
+private fun Page(
+    state: SeerrState,
+    details: SeerrDetails,
+    viewModel: SeerrViewModel,
+) {
     val item = details.item
     val requestFocus = remember { FocusRequester() }
     // Set once per state of the page, so coming back from a cast member keeps the focus there.
@@ -122,7 +128,20 @@ private fun Page(state: SeerrState, details: SeerrDetails, viewModel: SeerrViewM
                         Modifier.padding(start = PageEdge.dp, end = PageEdge.dp, top = 130.dp, bottom = 20.dp),
                         verticalArrangement = Arrangement.spacedBy(22.dp),
                     ) {
-                        Crumb(stringResource(R.string.seerr_crumb, stringResource(if (item.type == SeerrMediaType.Movie) R.string.seerr_movie else R.string.seerr_show)))
+                        Crumb(
+                            stringResource(
+                                R.string.seerr_crumb,
+                                stringResource(
+                                    if (item.type ==
+                                        SeerrMediaType.Movie
+                                    ) {
+                                        R.string.seerr_movie
+                                    } else {
+                                        R.string.seerr_show
+                                    },
+                                ),
+                            ),
+                        )
                         Title(item.title, size = 84, maxWidth = 1180)
                         Facts(details)
                         item.overview?.let { Overview(it, maxWidth = 900) }
@@ -134,9 +153,17 @@ private fun Page(state: SeerrState, details: SeerrDetails, viewModel: SeerrViewM
                             val label = if (item.type == SeerrMediaType.Movie) {
                                 stringResource(R.string.seerr_request)
                             } else {
-                                pluralStringResource(R.plurals.seerr_request_seasons, state.selected.size, state.selected.size)
+                                pluralStringResource(
+                                    R.plurals.seerr_request_seasons,
+                                    state.selected.size,
+                                    state.selected.size,
+                                )
                             }
-                            Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Row(
+                                Modifier.padding(top = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            ) {
                                 PillButton(
                                     text = label,
                                     onClick = viewModel::request,
@@ -155,12 +182,22 @@ private fun Page(state: SeerrState, details: SeerrDetails, viewModel: SeerrViewM
                             }
                         } else {
                             // Nothing left to ask for: the button stays where it was, showing where the request stands.
-                            Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Row(
+                                Modifier.padding(top = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            ) {
                                 PillButton(
                                     text = stringResource(seerrStatusLabel(settledStatus(details))),
                                     onClick = {},
                                     primary = true,
-                                    icon = if (details.item.status == SeerrStatus.Available) GlacierIcons.Check else null,
+                                    icon = if (details.item.status ==
+                                        SeerrStatus.Available
+                                    ) {
+                                        GlacierIcons.Check
+                                    } else {
+                                        null
+                                    },
                                     enabled = false,
                                 )
                                 if (details.trailers.isNotEmpty()) {
@@ -200,7 +237,13 @@ private fun Page(state: SeerrState, details: SeerrDetails, viewModel: SeerrViewM
                                         lastPerson = person.tmdbId
                                         viewModel.openPerson(person)
                                     },
-                                    modifier = if (person.tmdbId == lastPerson) Modifier.focusRequester(personFocus) else Modifier,
+                                    modifier = if (person.tmdbId == lastPerson) {
+                                        Modifier.focusRequester(
+                                            personFocus,
+                                        )
+                                    } else {
+                                        Modifier
+                                    },
                                 )
                             }
                         }
@@ -226,17 +269,32 @@ private fun Facts(details: SeerrDetails) {
                 Text(ratingText(it), style = GlacierText.body(20, FontWeight.Bold), color = accent)
             }
         }
-        if (facts.isNotEmpty()) Text(facts.joinToString("  ·  "), style = GlacierText.body(20), color = GlacierColors.Mist)
+        if (facts.isNotEmpty()) {
+            Text(
+                facts.joinToString("  ·  "),
+                style = GlacierText.body(20),
+                color = GlacierColors.Mist,
+            )
+        }
         // Once nothing is left to request, the button shows the state instead.
         if (details.requestable && details.item.status != SeerrStatus.Unknown) {
-            FactBadge(stringResource(seerrStatusLabel(details.item.status)), GlacierColors.GlassBorder2, 15, GlacierColors.Ice)
+            FactBadge(
+                stringResource(seerrStatusLabel(details.item.status)),
+                GlacierColors.GlassBorder2,
+                15,
+                GlacierColors.Ice,
+            )
         }
     }
 }
 
 /** Seasons to tick for the request; those already there or asked for show their state instead. */
 @Composable
-private fun Seasons(seasons: List<SeerrSeason>, selected: Set<Int>, onToggle: (Int) -> Unit) {
+private fun Seasons(
+    seasons: List<SeerrSeason>,
+    selected: Set<Int>,
+    onToggle: (Int) -> Unit,
+) {
     Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(
             stringResource(R.string.seerr_seasons_title).uppercase(),
@@ -252,7 +310,15 @@ private fun Seasons(seasons: List<SeerrSeason>, selected: Set<Int>, onToggle: (I
                 val label = if (season.requestable) {
                     seasonLabel(season.number)
                 } else {
-                    val state = if (season.requested && season.status in setOf(SeerrStatus.Unknown, SeerrStatus.Deleted)) SeerrStatus.Pending else season.status
+                    val state = if (season.requested && season.status in setOf(
+                            SeerrStatus.Unknown,
+                            SeerrStatus.Deleted,
+                        )
+                    ) {
+                        SeerrStatus.Pending
+                    } else {
+                        season.status
+                    }
                     "${seasonLabel(season.number)} · ${stringResource(seerrStatusLabel(state))}"
                 }
                 FilterChip(
@@ -269,7 +335,12 @@ private fun Seasons(seasons: List<SeerrSeason>, selected: Set<Int>, onToggle: (I
 
 @Composable
 private fun TrailerButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    ActionButton(onClick = onClick, modifier = modifier, label = stringResource(R.string.detail_trailer), icon = GlacierIcons.Play)
+    ActionButton(
+        onClick = onClick,
+        modifier = modifier,
+        label = stringResource(R.string.detail_trailer),
+        icon = GlacierIcons.Play,
+    )
 }
 
 /** How many requests are left, and what happens after one is sent. */
@@ -295,7 +366,12 @@ private fun RequestInfo(state: SeerrState) {
 private fun InfoLine(label: String, value: String) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
         Text(label, style = GlacierText.body(19), color = GlacierColors.Mist, modifier = Modifier.width(220.dp))
-        Text(value, style = GlacierText.body(19, FontWeight.SemiBold), color = GlacierColors.Ice, modifier = Modifier.weight(1f))
+        Text(
+            value,
+            style = GlacierText.body(19, FontWeight.SemiBold),
+            color = GlacierColors.Ice,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 

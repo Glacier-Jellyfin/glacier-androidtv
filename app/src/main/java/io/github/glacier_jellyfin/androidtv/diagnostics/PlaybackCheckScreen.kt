@@ -72,8 +72,15 @@ fun PlaybackCheckScreen(viewModel: PlaybackCheckViewModel, onClose: () -> Unit) 
             .focusProperties { onExit = { cancelFocusChange() } }
             .focusGroup(),
     ) {
-        Column(Modifier.fillMaxSize().padding(start = 130.dp, end = 130.dp, top = 90.dp, bottom = 80.dp), verticalArrangement = Arrangement.spacedBy(48.dp)) {
-            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(100.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            Modifier.fillMaxSize().padding(start = 130.dp, end = 130.dp, top = 90.dp, bottom = 80.dp),
+            verticalArrangement = Arrangement.spacedBy(48.dp),
+        ) {
+            Row(
+                Modifier.weight(1f).fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(100.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(36.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Text(
@@ -97,9 +104,25 @@ fun PlaybackCheckScreen(viewModel: PlaybackCheckViewModel, onClose: () -> Unit) 
                 }
                 Results(state, Modifier.width(880.dp).fillMaxHeight())
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.check_hint), style = GlacierText.body(17), color = GlacierColors.Mist, modifier = Modifier.weight(1f))
-                if (!state.running && !state.done) PillButton(stringResource(R.string.check_close), onClick = close, height = 68, width = 260)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.check_hint),
+                    style = GlacierText.body(17),
+                    color = GlacierColors.Mist,
+                    modifier = Modifier.weight(1f),
+                )
+                if (!state.running && !state.done) {
+                    PillButton(
+                        stringResource(R.string.check_close),
+                        onClick = close,
+                        height = 68,
+                        width = 260,
+                    )
+                }
                 // One button for Start, Stop and Close: it keeps the focus while its job changes.
                 PillButton(
                     stringResource(
@@ -124,7 +147,11 @@ fun PlaybackCheckScreen(viewModel: PlaybackCheckViewModel, onClose: () -> Unit) 
         // The decoder needs a surface to render to, as in real playback; nobody needs to watch test pictures.
         state.playback?.let { playback ->
             Box(Modifier.size(2.dp).alpha(0f).focusProperties { canFocus = false }) {
-                ContentFrame(player = playback.player, surfaceType = SURFACE_TYPE_TEXTURE_VIEW, contentScale = ContentScale.Fit)
+                ContentFrame(
+                    player = playback.player,
+                    surfaceType = SURFACE_TYPE_TEXTURE_VIEW,
+                    contentScale = ContentScale.Fit,
+                )
             }
         }
     }
@@ -146,7 +173,11 @@ private fun Progress(state: PlaybackCheckState) {
                 modifier = Modifier.weight(1f),
             )
             Text(
-                stringResource(R.string.check_progress, (state.results.size + if (state.running) 1 else 0).coerceAtMost(state.total), state.total),
+                stringResource(
+                    R.string.check_progress,
+                    (state.results.size + if (state.running) 1 else 0).coerceAtMost(state.total),
+                    state.total,
+                ),
                 style = GlacierText.mono(20),
                 color = GlacierColors.Mist,
             )
@@ -176,14 +207,25 @@ private fun Results(state: PlaybackCheckState, modifier: Modifier) {
 }
 
 @Composable
-private fun ResultRow(sample: CheckSample, result: CheckResult?, playing: Boolean) {
+private fun ResultRow(
+    sample: CheckSample,
+    result: CheckResult?,
+    playing: Boolean,
+) {
     val (status, color) = when {
         playing -> stringResource(R.string.check_checking) to LocalAccent.current.main
+
         result == null -> stringResource(R.string.check_waiting) to GlacierColors.Mist.copy(alpha = 0.6f)
+
         result.outcome == CheckResult.Outcome.Plays ->
             stringResource(if (result.beyondDeclared) R.string.check_plays_beyond else R.string.check_plays) to InfoOk
-        result.outcome == CheckResult.Outcome.NotSupported -> stringResource(R.string.check_not_supported) to GlacierColors.Mist
+
+        result.outcome == CheckResult.Outcome.NotSupported -> stringResource(
+            R.string.check_not_supported,
+        ) to GlacierColors.Mist
+
         result.outcome == CheckResult.Outcome.Crashed -> stringResource(R.string.check_crashed) to InfoWarn
+
         else -> stringResource(R.string.check_fails) to InfoWarn
     }
     val detail = when {
@@ -194,9 +236,26 @@ private fun ResultRow(sample: CheckSample, result: CheckResult?, playing: Boolea
     }
     val labelColor = if (result == null && !playing) GlacierColors.Mist.copy(alpha = 0.6f) else GlacierColors.Ice
     // One line each, so all samples fit without scrolling, which a remote cannot do here.
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-        Text(sample.label, style = GlacierText.body(20), color = labelColor, maxLines = 1, modifier = Modifier.width(250.dp))
-        Text(detail.orEmpty(), style = GlacierText.mono(14), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
+    ) {
+        Text(
+            sample.label,
+            style = GlacierText.body(20),
+            color = labelColor,
+            maxLines = 1,
+            modifier = Modifier.width(250.dp),
+        )
+        Text(
+            detail.orEmpty(),
+            style = GlacierText.mono(14),
+            color = GlacierColors.Mist,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
         Text(status, style = GlacierText.body(19), color = color, maxLines = 1)
     }
 }

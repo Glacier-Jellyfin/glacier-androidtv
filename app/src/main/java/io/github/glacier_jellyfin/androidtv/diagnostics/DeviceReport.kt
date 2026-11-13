@@ -28,7 +28,12 @@ internal object DeviceReport {
             .filter { !it.isEncoder && !it.name.endsWith(".secure") }
         return PROFILED_VIDEO.flatMap { (mime, names) ->
             decoders.filter { info -> info.supportedTypes.any { it.equals(mime, ignoreCase = true) } }
-                .map { info -> "  $mime ${info.name}${info.kind()}: ${describe(info.getCapabilitiesForType(mime), names)}" }
+                .map { info ->
+                    "  $mime ${info.name}${info.kind()}: ${describe(
+                        info.getCapabilitiesForType(mime),
+                        names,
+                    )}"
+                }
         }
     }
 
@@ -109,7 +114,11 @@ internal object DeviceReport {
 
         private fun constants(prefix: String, keep: (String) -> Boolean): Map<Int, String> =
             CodecProfileLevel::class.java.fields
-                .filter { Modifier.isStatic(it.modifiers) && it.type == Int::class.javaPrimitiveType && it.name.startsWith(prefix) }
+                .filter {
+                    Modifier.isStatic(
+                        it.modifiers,
+                    ) && it.type == Int::class.javaPrimitiveType && it.name.startsWith(prefix)
+                }
                 .map { it.getInt(null) to it.name.removePrefix(prefix) }
                 .filter { keep(it.second) }
                 .toMap()
@@ -126,12 +135,20 @@ internal object DeviceReport {
     /** AudioFormat.ENCODING_* by value, e.g. "E_AC3_JOC". */
     private val ENCODINGS: Map<Int, String> =
         AudioFormat::class.java.fields
-            .filter { Modifier.isStatic(it.modifiers) && it.type == Int::class.javaPrimitiveType && it.name.startsWith("ENCODING_") }
+            .filter {
+                Modifier.isStatic(
+                    it.modifiers,
+                ) && it.type == Int::class.javaPrimitiveType && it.name.startsWith("ENCODING_")
+            }
             .associate { it.getInt(null) to it.name.removePrefix("ENCODING_") }
 
     /** AudioDeviceInfo.TYPE_* by value, e.g. "HDMI_EARC". */
     private val DEVICE_TYPES: Map<Int, String> =
         AudioDeviceInfo::class.java.fields
-            .filter { Modifier.isStatic(it.modifiers) && it.type == Int::class.javaPrimitiveType && it.name.startsWith("TYPE_") }
+            .filter {
+                Modifier.isStatic(
+                    it.modifiers,
+                ) && it.type == Int::class.javaPrimitiveType && it.name.startsWith("TYPE_")
+            }
             .associate { it.getInt(null) to it.name.removePrefix("TYPE_") }
 }

@@ -1,15 +1,15 @@
 package io.github.glacier_jellyfin.androidtv.core.data
 
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.Authenticator
+import io.github.glacier_jellyfin.androidtv.core.log.Log
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.jellyfin.sdk.Jellyfin
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.util.AuthorizationHeaderBuilder
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** The profile currently using the app. */
 data class Session(

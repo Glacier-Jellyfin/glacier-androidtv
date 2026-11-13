@@ -3,6 +3,9 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.log.Log
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -22,15 +25,10 @@ import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.SortOrder
-import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** Songs of albums, artists and playlists, and their lyrics. */
 @Singleton
-class MusicRepository @Inject constructor(
-    private val sessions: SessionManager,
-) {
+class MusicRepository @Inject constructor(private val sessions: SessionManager) {
 
     /** In disc and track order. */
     suspend fun albumTracks(albumId: UUID): List<MusicTrack> = withContext(Dispatchers.IO) {
@@ -86,7 +84,12 @@ class MusicRepository @Inject constructor(
             recursive = true,
             fields = TRACK_FIELDS,
             enableUserData = true,
-            sortBy = listOf(ItemSortBy.PRODUCTION_YEAR, ItemSortBy.ALBUM, ItemSortBy.PARENT_INDEX_NUMBER, ItemSortBy.INDEX_NUMBER),
+            sortBy = listOf(
+                ItemSortBy.PRODUCTION_YEAR,
+                ItemSortBy.ALBUM,
+                ItemSortBy.PARENT_INDEX_NUMBER,
+                ItemSortBy.INDEX_NUMBER,
+            ),
             sortOrder = listOf(SortOrder.DESCENDING, SortOrder.ASCENDING, SortOrder.ASCENDING, SortOrder.ASCENDING),
         ).content.items.map(mapper::track)
     }
@@ -146,7 +149,12 @@ class MusicRepository @Inject constructor(
     suspend fun instantMix(itemId: UUID): List<MusicTrack> = withContext(Dispatchers.IO) {
         val session = requireSession()
         val mapper = MediaMapper(session.api)
-        session.api.instantMixApi.getInstantMixFromItem(itemId = itemId, userId = session.userId, limit = MIX_LIMIT, fields = TRACK_FIELDS)
+        session.api.instantMixApi.getInstantMixFromItem(
+            itemId = itemId,
+            userId = session.userId,
+            limit = MIX_LIMIT,
+            fields = TRACK_FIELDS,
+        )
             .content.items
             .filter { it.type == BaseItemKind.AUDIO }
             .map(mapper::track)
@@ -179,7 +187,14 @@ class MusicRepository @Inject constructor(
         withContext(Dispatchers.IO) {
             val session = requireSession()
             session.api.playlistApi.createPlaylist(
-                CreatePlaylistDto(name = name, ids = trackIds, userId = session.userId, mediaType = MediaType.AUDIO, users = emptyList(), isPublic = false),
+                CreatePlaylistDto(
+                    name = name,
+                    ids = trackIds,
+                    userId = session.userId,
+                    mediaType = MediaType.AUDIO,
+                    users = emptyList(),
+                    isPublic = false,
+                ),
             )
         }
     }
@@ -187,7 +202,10 @@ class MusicRepository @Inject constructor(
     /** Removes entries ([MusicTrack.playlistItemId]) from the playlist. */
     suspend fun removeFromPlaylist(playlistId: UUID, entryIds: List<String>) {
         withContext(Dispatchers.IO) {
-            requireSession().api.playlistApi.removeItemFromPlaylist(playlistId = playlistId.toString(), entryIds = entryIds)
+            requireSession().api.playlistApi.removeItemFromPlaylist(
+                playlistId = playlistId.toString(),
+                entryIds = entryIds,
+            )
         }
     }
 
@@ -209,7 +227,11 @@ class MusicRepository @Inject constructor(
      */
     suspend fun themeSong(itemId: UUID): MusicTrack? = withContext(Dispatchers.IO) {
         val session = requireSession()
-        val song = session.api.libraryApi.getThemeSongs(itemId = itemId, userId = session.userId, inheritFromParent = true)
+        val song = session.api.libraryApi.getThemeSongs(
+            itemId = itemId,
+            userId = session.userId,
+            inheritFromParent = true,
+        )
             .content.items.firstOrNull() ?: return@withContext null
         session.api.libraryApi.getItems(userId = session.userId, ids = listOf(song.id), fields = TRACK_FIELDS)
             .content.items.firstOrNull()?.let(MediaMapper(session.api)::track)
@@ -233,9 +255,19 @@ class MusicRepository @Inject constructor(
         val artistRef = dto.artistItems?.firstOrNull() ?: dto.albumArtists?.firstOrNull()
         val (albumCount, artist) = coroutineScope {
             val count = async {
-                albumId?.let { id -> optional("album $id") { session.api.libraryApi.getItem(itemId = id, userId = session.userId).content.childCount } }
+                albumId?.let { id ->
+                    optional(
+                        "album $id",
+                    ) { session.api.libraryApi.getItem(itemId = id, userId = session.userId).content.childCount }
+                }
             }
-            val info = async { artistRef?.let { ref -> optional("artist ${ref.id}") { artistInfo(session, ref.id, ref.name) } } }
+            val info = async {
+                artistRef?.let { ref ->
+                    optional(
+                        "artist ${ref.id}",
+                    ) { artistInfo(session, ref.id, ref.name) }
+                }
+            }
             count.await() to info.await()
         }
         SongDetails(
@@ -247,13 +279,22 @@ class MusicRepository @Inject constructor(
         )
     }
 
-    private suspend fun artistInfo(session: Session, id: UUID, fallbackName: String?): ArtistInfo? {
+    private suspend fun artistInfo(
+        session: Session,
+        id: UUID,
+        fallbackName: String?,
+    ): ArtistInfo? {
         val dto = session.api.libraryApi.getItem(itemId = id, userId = session.userId).content
         return ArtistInfo(
             id = id,
             name = dto.name?.takeIf { it.isNotBlank() } ?: fallbackName ?: return null,
             imageUrl = dto.imageTags?.get(ImageType.PRIMARY)?.let { tag ->
-                session.api.imageApi.getItemImageUrl(itemId = id, imageType = ImageType.PRIMARY, tag = tag, maxWidth = ARTIST_IMAGE_WIDTH)
+                session.api.imageApi.getItemImageUrl(
+                    itemId = id,
+                    imageType = ImageType.PRIMARY,
+                    tag = tag,
+                    maxWidth = ARTIST_IMAGE_WIDTH,
+                )
             },
             overview = plainText(dto.overview),
         )
@@ -278,6 +319,7 @@ class MusicRepository @Inject constructor(
         const val MIX_LIMIT = 100
         const val ARTIST_IMAGE_WIDTH = 400
         const val TAG = "MusicRepository"
+
         /** Ids per request for [tracks]; a hundred make an address of about 3.7 kB. */
         const val IDS_PER_REQUEST = 100
         val TRACK_FIELDS = listOf(ItemFields.MEDIA_STREAMS)

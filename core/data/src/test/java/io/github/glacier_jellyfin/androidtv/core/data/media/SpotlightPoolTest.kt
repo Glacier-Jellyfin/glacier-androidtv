@@ -1,13 +1,17 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
+import kotlin.random.Random
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import kotlin.random.Random
 
 class SpotlightPoolTest {
 
-    private fun pool(started: List<String>, other: List<List<String>>, count: Int, seed: Int = 1) =
-        spotlightPool(started, other, count, Random(seed)) { it }
+    private fun pool(
+        started: List<String>,
+        other: List<List<String>>,
+        count: Int,
+        seed: Int = 1,
+    ) = spotlightPool(started, other, count, Random(seed)) { it }
 
     @Test
     fun `continue watching comes first in its own order`() {

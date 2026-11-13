@@ -15,7 +15,6 @@ object Redaction {
 
     private val BEARER = Regex("""(?i)\b(bearer\s+)\S+""")
 
-    fun apply(text: String): String =
-        text.replace(KEY_VALUE) { "${it.groupValues[1]}${it.groupValues[2]}$HIDDEN" }
-            .replace(BEARER) { "${it.groupValues[1]}$HIDDEN" }
+    fun apply(text: String): String = text.replace(KEY_VALUE) { "${it.groupValues[1]}${it.groupValues[2]}$HIDDEN" }
+        .replace(BEARER) { "${it.groupValues[1]}$HIDDEN" }
 }

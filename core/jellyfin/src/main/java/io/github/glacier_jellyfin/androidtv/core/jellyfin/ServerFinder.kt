@@ -1,5 +1,8 @@
 package io.github.glacier_jellyfin.androidtv.core.jellyfin
 
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.time.measureTimedValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.mapNotNull
@@ -8,9 +11,6 @@ import org.jellyfin.sdk.Jellyfin
 import org.jellyfin.sdk.api.client.extensions.systemApi
 import org.jellyfin.sdk.api.client.extensions.userApi
 import org.jellyfin.sdk.model.api.PublicSystemInfo
-import javax.inject.Inject
-import javax.inject.Singleton
-import kotlin.time.measureTimedValue
 
 sealed interface ResolveResult {
     data class Found(val server: ServerInfo) : ResolveResult
@@ -20,13 +20,10 @@ sealed interface ResolveResult {
 }
 
 @Singleton
-class ServerFinder @Inject constructor(
-    private val jellyfin: Jellyfin,
-) {
+class ServerFinder @Inject constructor(private val jellyfin: Jellyfin) {
 
     /** Servers answering the Jellyfin UDP broadcast on the local network, probed one by one. */
-    fun discover(): Flow<DiscoveredServer> =
-        jellyfin.discovery.discoverLocalServers().mapNotNull { probe(it.address) }
+    fun discover(): Flow<DiscoveredServer> = jellyfin.discovery.discoverLocalServers().mapNotNull { probe(it.address) }
 
     /**
      * Turns user input such as "jellyfin.example.com" or "192.168.1.10" into a
@@ -50,7 +47,11 @@ class ServerFinder @Inject constructor(
 
     /** The server answering at a known address, without the extras of [probe]; null when none does. */
     suspend fun identify(address: String): ServerInfo? = withContext(Dispatchers.IO) {
-        runSuspendCatching { jellyfin.createApi(baseUrl = address).systemApi.getPublicSystemInfo().content }.getOrNull()?.toServerInfo(address)
+        runSuspendCatching {
+            jellyfin.createApi(
+                baseUrl = address,
+            ).systemApi.getPublicSystemInfo().content
+        }.getOrNull()?.toServerInfo(address)
     }
 
     /** Checks a known address; null when it does not answer as a Jellyfin server. */

@@ -6,27 +6,17 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.tv.material3.Icon
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierBackground
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
-import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
-import io.github.glacier_jellyfin.androidtv.update.DialogMark
-import io.github.glacier_jellyfin.androidtv.update.FactLine
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,31 +24,41 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
-import androidx.tv.material3.Text
 import androidx.lifecycle.viewModelScope
+import androidx.tv.material3.Icon
+import androidx.tv.material3.Text
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.settings.DeviceSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.RestoreOffer
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsSync
 import io.github.glacier_jellyfin.androidtv.core.designsystem.AccentChip
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierBackground
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
+import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
+import io.github.glacier_jellyfin.androidtv.update.DialogMark
+import io.github.glacier_jellyfin.androidtv.update.FactLine
 import java.text.DateFormat
 import java.util.Date
 import javax.inject.Inject
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 /** The home screen's side of [SettingsSync]: the one-time question on a profile new to this device. */
 @HiltViewModel
@@ -83,13 +83,28 @@ fun RestoreOfferDialog(offer: RestoreOffer, onAnswer: (DeviceSettings?) -> Unit)
     val first = remember { FocusRequester() }
     val format = remember { DateFormat.getDateInstance(DateFormat.MEDIUM) }
     GlacierBackground(Modifier.focusProperties { onExit = { cancelFocusChange() } }.focusGroup()) {
-        Column(Modifier.fillMaxSize().padding(start = 130.dp, end = 130.dp, top = 90.dp, bottom = 80.dp), verticalArrangement = Arrangement.spacedBy(48.dp)) {
-            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(100.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            Modifier.fillMaxSize().padding(start = 130.dp, end = 130.dp, top = 90.dp, bottom = 80.dp),
+            verticalArrangement = Arrangement.spacedBy(48.dp),
+        ) {
+            Row(
+                Modifier.weight(1f).fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(100.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Column(Modifier.width(640.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
                     DialogMark(GlacierIcons.Settings)
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Text(stringResource(R.string.settings_copy_take).uppercase(), style = GlacierText.label(18, 0.08), color = accent)
-                        Text(stringResource(R.string.settings_restore_title), style = GlacierText.display(64).copy(lineHeight = 70.sp), color = GlacierColors.Ice)
+                        Text(
+                            stringResource(R.string.settings_copy_take).uppercase(),
+                            style = GlacierText.label(18, 0.08),
+                            color = accent,
+                        )
+                        Text(
+                            stringResource(R.string.settings_restore_title),
+                            style = GlacierText.display(64).copy(lineHeight = 70.sp),
+                            color = GlacierColors.Ice,
+                        )
                     }
                     Text(
                         stringResource(R.string.settings_restore_body, offer.userName),
@@ -110,7 +125,12 @@ fun RestoreOfferDialog(offer: RestoreOffer, onAnswer: (DeviceSettings?) -> Unit)
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
                     Row(verticalAlignment = Alignment.Bottom) {
-                        Text(stringResource(R.string.settings_restore_devices), style = GlacierText.display(30), color = GlacierColors.Ice, modifier = Modifier.weight(1f))
+                        Text(
+                            stringResource(R.string.settings_restore_devices),
+                            style = GlacierText.display(30),
+                            color = GlacierColors.Ice,
+                            modifier = Modifier.weight(1f),
+                        )
                         Text(offer.copies.size.toString(), style = GlacierText.mono(17), color = GlacierColors.Mist)
                     }
                     Column(
@@ -120,8 +140,17 @@ fun RestoreOfferDialog(offer: RestoreOffer, onAnswer: (DeviceSettings?) -> Unit)
                         offer.copies.forEachIndexed { index, copy ->
                             DeviceCard(
                                 copy,
-                                saved = stringResource(R.string.settings_restore_saved, format.format(Date(copy.savedAt))),
-                                tag = if (copy.deviceId == offer.thisDeviceId) stringResource(R.string.settings_copy_this_device) else null,
+                                saved = stringResource(
+                                    R.string.settings_restore_saved,
+                                    format.format(Date(copy.savedAt)),
+                                ),
+                                tag = if (copy.deviceId == offer.thisDeviceId) {
+                                    stringResource(
+                                        R.string.settings_copy_this_device,
+                                    )
+                                } else {
+                                    null
+                                },
                                 onClick = { onAnswer(copy) },
                                 modifier = if (index == 0) Modifier.focusRequester(first) else Modifier,
                             )
@@ -129,9 +158,23 @@ fun RestoreOfferDialog(offer: RestoreOffer, onAnswer: (DeviceSettings?) -> Unit)
                     }
                 }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(40.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.settings_restore_hint), style = GlacierText.body(17), color = GlacierColors.Mist, modifier = Modifier.weight(1f))
-                PillButton(stringResource(R.string.settings_restore_skip), onClick = { onAnswer(null) }, height = 68, width = 260)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(40.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.settings_restore_hint),
+                    style = GlacierText.body(17),
+                    color = GlacierColors.Mist,
+                    modifier = Modifier.weight(1f),
+                )
+                PillButton(
+                    stringResource(R.string.settings_restore_skip),
+                    onClick = { onAnswer(null) },
+                    height = 68,
+                    width = 260,
+                )
             }
         }
     }
@@ -143,10 +186,21 @@ fun RestoreOfferDialog(offer: RestoreOffer, onAnswer: (DeviceSettings?) -> Unit)
 
 /** One device with a copy of the settings in [RestoreOfferDialog]: its name, when it saved them, and [tag] for this device. */
 @Composable
-private fun DeviceCard(copy: DeviceSettings, saved: String, tag: String?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun DeviceCard(
+    copy: DeviceSettings,
+    saved: String,
+    tag: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
-    GlacierClickable(onClick = onClick, shape = shape, modifier = modifier.fillMaxWidth(), unfocusedBorder = GlacierColors.GlassBorder) { focused ->
+    GlacierClickable(
+        onClick = onClick,
+        shape = shape,
+        modifier = modifier.fillMaxWidth(),
+        unfocusedBorder = GlacierColors.GlassBorder,
+    ) { focused ->
         Row(
             Modifier
                 .fillMaxWidth()
@@ -157,17 +211,30 @@ private fun DeviceCard(copy: DeviceSettings, saved: String, tag: String?, onClic
             horizontalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             Box(
-                Modifier.size(60.dp).clip(RoundedCornerShape(GlacierShapes.RadiusSm)).background(accent.copy(alpha = 0.16f)),
+                Modifier.size(
+                    60.dp,
+                ).clip(RoundedCornerShape(GlacierShapes.RadiusSm)).background(accent.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(GlacierIcons.Settings, contentDescription = null, tint = accent, modifier = Modifier.size(28.dp))
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(copy.deviceName, style = GlacierText.display(24), color = if (focused) accent else GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    copy.deviceName,
+                    style = GlacierText.display(24),
+                    color = if (focused) accent else GlacierColors.Ice,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(saved, style = GlacierText.body(17), color = GlacierColors.Mist)
             }
             if (tag != null) AccentChip(tag)
-            Icon(GlacierIcons.ChevronRight, contentDescription = null, tint = if (focused) accent else GlacierColors.Ice, modifier = Modifier.size(22.dp))
+            Icon(
+                GlacierIcons.ChevronRight,
+                contentDescription = null,
+                tint = if (focused) accent else GlacierColors.Ice,
+                modifier = Modifier.size(22.dp),
+            )
         }
     }
 }
@@ -191,7 +258,12 @@ fun DeviceCopyPicker(
     ModalSheet(onDismiss = onDismiss, width = 720) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(title, style = GlacierText.display(28), color = GlacierColors.Ice, textAlign = TextAlign.Center)
-            Text(body, style = GlacierText.body(19).copy(lineHeight = 28.sp), color = GlacierColors.Mist, textAlign = TextAlign.Center)
+            Text(
+                body,
+                style = GlacierText.body(19).copy(lineHeight = 28.sp),
+                color = GlacierColors.Mist,
+                textAlign = TextAlign.Center,
+            )
         }
         val first = remember { FocusRequester() }
         val format = remember { DateFormat.getDateInstance(DateFormat.MEDIUM) }
@@ -232,7 +304,13 @@ fun DeviceCopyPicker(
  * removes the profile here too ([DeleteCopyDialog] says so first).
  */
 @Composable
-fun DeviceCopyActions(copy: DeviceSettings, own: Boolean, onTake: () -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
+fun DeviceCopyActions(
+    copy: DeviceSettings,
+    own: Boolean,
+    onTake: () -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     ModalSheet(onDismiss = onDismiss, width = 720) {
         val saved = remember(copy.savedAt) { DateFormat.getDateInstance(DateFormat.LONG).format(Date(copy.savedAt)) }
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -254,7 +332,13 @@ fun DeviceCopyActions(copy: DeviceSettings, own: Boolean, onTake: () -> Unit, on
         val first = remember { FocusRequester() }
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (!own) {
-                PillButton(stringResource(R.string.settings_copy_use), onClick = onTake, primary = true, fillWidth = true, modifier = Modifier.focusRequester(first))
+                PillButton(
+                    stringResource(R.string.settings_copy_use),
+                    onClick = onTake,
+                    primary = true,
+                    fillWidth = true,
+                    modifier = Modifier.focusRequester(first),
+                )
             }
             PillButton(
                 stringResource(if (own) R.string.settings_copy_delete_own else R.string.settings_copy_delete_server),
@@ -277,12 +361,30 @@ fun DeviceCopyActions(copy: DeviceSettings, own: Boolean, onTake: () -> Unit, on
  * question says before it goes on. Cancel has the focus.
  */
 @Composable
-fun DeleteCopyDialog(copy: DeviceSettings, own: Boolean, userName: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+fun DeleteCopyDialog(
+    copy: DeviceSettings,
+    own: Boolean,
+    userName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     ModalSheet(onDismiss = onDismiss, width = 720) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(R.string.settings_copy_delete_title), style = GlacierText.display(28), color = GlacierColors.Ice, textAlign = TextAlign.Center)
             Text(
-                if (own) stringResource(R.string.settings_copy_delete_own_body, userName) else stringResource(R.string.settings_copy_delete_body, copy.deviceName),
+                stringResource(R.string.settings_copy_delete_title),
+                style = GlacierText.display(28),
+                color = GlacierColors.Ice,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                if (own) {
+                    stringResource(
+                        R.string.settings_copy_delete_own_body,
+                        userName,
+                    )
+                } else {
+                    stringResource(R.string.settings_copy_delete_body, copy.deviceName)
+                },
                 style = GlacierText.body(19).copy(lineHeight = 28.sp),
                 color = GlacierColors.Mist,
                 textAlign = TextAlign.Center,
@@ -290,7 +392,12 @@ fun DeleteCopyDialog(copy: DeviceSettings, own: Boolean, userName: String, onCon
         }
         val cancel = remember { FocusRequester() }
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            PillButton(stringResource(R.string.action_cancel), onClick = onDismiss, fillWidth = true, modifier = Modifier.focusRequester(cancel))
+            PillButton(
+                stringResource(R.string.action_cancel),
+                onClick = onDismiss,
+                fillWidth = true,
+                modifier = Modifier.focusRequester(cancel),
+            )
             PillButton(
                 stringResource(if (own) R.string.settings_copy_delete_own_confirm else R.string.settings_copy_delete),
                 onClick = onConfirm,
@@ -313,12 +420,25 @@ enum class RemoveProfile { KeepCopy, DeleteCopy }
  * settings go; the Jellyfin account stays. Cancel has the focus.
  */
 @Composable
-fun RemoveProfileDialog(userName: String, hasCopy: Boolean, onRemove: (RemoveProfile) -> Unit, onDismiss: () -> Unit) {
+fun RemoveProfileDialog(
+    userName: String,
+    hasCopy: Boolean,
+    onRemove: (RemoveProfile) -> Unit,
+    onDismiss: () -> Unit,
+) {
     ModalSheet(onDismiss = onDismiss, width = 720) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(R.string.settings_remove_title), style = GlacierText.display(28), color = GlacierColors.Ice, textAlign = TextAlign.Center)
             Text(
-                stringResource(if (hasCopy) R.string.settings_remove_body_copy else R.string.settings_remove_body, userName),
+                stringResource(R.string.settings_remove_title),
+                style = GlacierText.display(28),
+                color = GlacierColors.Ice,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                stringResource(
+                    if (hasCopy) R.string.settings_remove_body_copy else R.string.settings_remove_body,
+                    userName,
+                ),
                 style = GlacierText.body(19).copy(lineHeight = 28.sp),
                 color = GlacierColors.Mist,
                 textAlign = TextAlign.Center,
@@ -326,14 +446,23 @@ fun RemoveProfileDialog(userName: String, hasCopy: Boolean, onRemove: (RemovePro
         }
         val cancel = remember { FocusRequester() }
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            PillButton(stringResource(R.string.action_cancel), onClick = onDismiss, fillWidth = true, modifier = Modifier.focusRequester(cancel))
+            PillButton(
+                stringResource(R.string.action_cancel),
+                onClick = onDismiss,
+                fillWidth = true,
+                modifier = Modifier.focusRequester(cancel),
+            )
             PillButton(
                 stringResource(if (hasCopy) R.string.settings_remove_keep_copy else R.string.settings_remove_value),
                 onClick = { onRemove(RemoveProfile.KeepCopy) },
                 fillWidth = true,
             )
             if (hasCopy) {
-                PillButton(stringResource(R.string.settings_remove_delete_copy), onClick = { onRemove(RemoveProfile.DeleteCopy) }, fillWidth = true)
+                PillButton(
+                    stringResource(R.string.settings_remove_delete_copy),
+                    onClick = { onRemove(RemoveProfile.DeleteCopy) },
+                    fillWidth = true,
+                )
             }
         }
         LaunchedEffect(Unit) {

@@ -175,6 +175,7 @@ fun TrailerScreen(
     val stopped = state.ended || state.failed || state.empty
     var osdVisible by remember { mutableStateOf(true) }
     var interaction by remember { mutableIntStateOf(0) }
+
     /** The OSD came up with the trailer, not by a key press. */
     var autoShown by remember { mutableStateOf(true) }
     // Back's release only counts when its press came here too, not to the subtitle menu that closed on it.
@@ -234,8 +235,17 @@ fun TrailerScreen(
                         viewModel.togglePlay()
                         true
                     }
-                    Key.MediaRewind -> { viewModel.seekBy(-SEEK_BACK_MS); true }
-                    Key.MediaFastForward -> { viewModel.seekBy(SEEK_FORWARD_MS); true }
+
+                    Key.MediaRewind -> {
+                        viewModel.seekBy(-SEEK_BACK_MS)
+                        true
+                    }
+
+                    Key.MediaFastForward -> {
+                        viewModel.seekBy(SEEK_FORWARD_MS)
+                        true
+                    }
+
                     // With the OSD hidden, a key only wakes it (design).
                     else -> if (!osdVisible && !stopped) {
                         showOsd()
@@ -255,7 +265,13 @@ fun TrailerScreen(
         if (youTube != null && !stopped) Box(Modifier.fillMaxSize().background(Color(0xA605090F)))
 
         state.player?.let { player ->
-            if (!state.ended) ContentFrame(player = player, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+            if (!state.ended) {
+                ContentFrame(
+                    player = player,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit,
+                )
+            }
         }
 
         // Hidden OSD: a hairline of progress at the bottom edge (not over a YouTube player).
@@ -394,9 +410,19 @@ private fun TrailerOsd(
                     color = GlacierColors.Mist,
                 )
             }
-            Text(item?.title.orEmpty(), style = GlacierText.display(46), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
-                listOfNotNull(trailerName(state, state.index), trailerSource(state.current), state.durationOf(state.index)?.let(::formatTime))
+                item?.title.orEmpty(),
+                style = GlacierText.display(46),
+                color = GlacierColors.Ice,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                listOfNotNull(
+                    trailerName(state, state.index),
+                    trailerSource(state.current),
+                    state.durationOf(state.index)?.let(::formatTime),
+                )
                     .joinToString(" · "),
                 style = GlacierText.body(20),
                 color = GlacierColors.Mist,
@@ -442,7 +468,11 @@ private fun TrailerOsd(
                         Text(formatTime(progress.positionMs), style = GlacierText.mono(19), color = GlacierColors.Ice)
                         Spacer(Modifier.weight(1f))
                         if (progress.durationMs > 0) {
-                            Text("−" + formatTime(progress.durationMs - progress.positionMs), style = GlacierText.mono(19), color = GlacierColors.Mist)
+                            Text(
+                                "−" + formatTime(progress.durationMs - progress.positionMs),
+                                style = GlacierText.mono(19),
+                                color = GlacierColors.Mist,
+                            )
                         }
                     }
                 }
@@ -451,8 +481,15 @@ private fun TrailerOsd(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 // Playback keeps its direction in every language; the buttons after it follow the layout.
                 LeftToRight {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        ControlButton(GlacierIcons.Replay, stringResource(R.string.player_rewind), onClick = { onSeekBy(-SEEK_BACK_MS) })
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        ControlButton(
+                            GlacierIcons.Replay,
+                            stringResource(R.string.player_rewind),
+                            onClick = { onSeekBy(-SEEK_BACK_MS) },
+                        )
                         ControlButton(
                             if (state.playWhenReady) GlacierIcons.Pause else GlacierIcons.Play,
                             stringResource(if (state.playWhenReady) R.string.player_pause else R.string.player_play),
@@ -460,7 +497,11 @@ private fun TrailerOsd(
                             big = true,
                             modifier = Modifier.focusRequester(playFocus),
                         )
-                        ControlButton(GlacierIcons.Forward, stringResource(R.string.trailer_forward), onClick = { onSeekBy(SEEK_FORWARD_MS) })
+                        ControlButton(
+                            GlacierIcons.Forward,
+                            stringResource(R.string.trailer_forward),
+                            onClick = { onSeekBy(SEEK_FORWARD_MS) },
+                        )
                     }
                 }
                 state.titleAction?.let { action ->
@@ -516,7 +557,11 @@ private fun TrailerOsd(
 
 /** The track sheet with the trailer's subtitle languages, left of the YouTube player. */
 @Composable
-private fun SubtitlePanel(state: TrailerUiState, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
+private fun SubtitlePanel(
+    state: TrailerUiState,
+    onPick: (String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
     val off = stringResource(R.string.track_off)
     val languages = listOf<String?>(null) + state.subtitleTracks.map { it.language }
     val rows = listOf(TrackRow(off, null)) + state.subtitleTracks.map { track ->
@@ -564,7 +609,11 @@ private fun TrailerChip() {
 
 /** Focused, Left and Right skip like the buttons below it. */
 @Composable
-private fun ProgressBar(progress: TrailerProgress, onSeekBy: (Long) -> Unit, downFocus: FocusRequester) {
+private fun ProgressBar(
+    progress: TrailerProgress,
+    onSeekBy: (Long) -> Unit,
+    downFocus: FocusRequester,
+) {
     val accent = LocalAccent.current.main
     val played = fraction(progress)
     val interaction = remember { MutableInteractionSource() }
@@ -577,8 +626,16 @@ private fun ProgressBar(progress: TrailerProgress, onSeekBy: (Long) -> Unit, dow
             .onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 when (event.key) {
-                    Key.DirectionLeft -> { onSeekBy(-SEEK_BACK_MS); true }
-                    Key.DirectionRight -> { onSeekBy(SEEK_FORWARD_MS); true }
+                    Key.DirectionLeft -> {
+                        onSeekBy(-SEEK_BACK_MS)
+                        true
+                    }
+
+                    Key.DirectionRight -> {
+                        onSeekBy(SEEK_FORWARD_MS)
+                        true
+                    }
+
                     else -> false
                 }
             }
@@ -659,8 +716,17 @@ private fun TrailerThumb(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Icon(GlacierIcons.Play, contentDescription = null, tint = GlacierColors.Void, modifier = Modifier.size(11.dp))
-                    Text(stringResource(R.string.trailer_now), style = GlacierText.body(14, FontWeight.Bold), color = GlacierColors.Void)
+                    Icon(
+                        GlacierIcons.Play,
+                        contentDescription = null,
+                        tint = GlacierColors.Void,
+                        modifier = Modifier.size(11.dp),
+                    )
+                    Text(
+                        stringResource(R.string.trailer_now),
+                        style = GlacierText.body(14, FontWeight.Bold),
+                        color = GlacierColors.Void,
+                    )
                 }
             }
             durationMs?.let {
@@ -742,15 +808,36 @@ private fun EndScreen(
                 style = GlacierText.body(17, FontWeight.Bold).copy(letterSpacing = 0.09.em),
                 color = accent,
             )
-            Text(item.title, style = GlacierText.display(84), color = GlacierColors.Ice, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(
+                item.title,
+                style = GlacierText.display(84),
+                color = GlacierColors.Ice,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ageRatingText(item.officialRating)?.let { FactBadge(it, GlacierColors.GlassBorder2, 17, GlacierColors.Ice) }
+                ageRatingText(
+                    item.officialRating,
+                )?.let { FactBadge(it, GlacierColors.GlassBorder2, 17, GlacierColors.Ice) }
                 val length = when (item.kind) {
-                    ItemKind.Series -> state.details?.seasonCount?.let { pluralStringResource(R.plurals.count_seasons, it, it) }
+                    ItemKind.Series -> state.details?.seasonCount?.let {
+                        pluralStringResource(
+                            R.plurals.count_seasons,
+                            it,
+                            it,
+                        )
+                    }
+
                     else -> item.runtimeMinutes?.let { runtimeText(it) }
                 }
                 val facts = listOfNotNull(yearText(item), item.genres.firstOrNull(), length)
-                if (facts.isNotEmpty()) Text(facts.joinToString(" · "), style = GlacierText.body(21), color = GlacierColors.Mist)
+                if (facts.isNotEmpty()) {
+                    Text(
+                        facts.joinToString(" · "),
+                        style = GlacierText.body(21),
+                        color = GlacierColors.Mist,
+                    )
+                }
             }
             item.overview?.let {
                 Text(
@@ -772,7 +859,14 @@ private fun EndScreen(
                 val action = state.titleAction
                 val first = Modifier.focusRequester(firstFocus)
                 if (action != null) {
-                    PillButton(stringResource(action.label()), onClick = onPlayTitle, primary = true, height = 66, icon = GlacierIcons.Play, modifier = first)
+                    PillButton(
+                        stringResource(action.label()),
+                        onClick = onPlayTitle,
+                        primary = true,
+                        height = 66,
+                        icon = GlacierIcons.Play,
+                        modifier = first,
+                    )
                 }
                 if (state.next != null) {
                     PillButton(
@@ -799,7 +893,10 @@ private fun EndScreen(
         if (next != null && countdown != null) {
             NextCard(
                 name = trailerName(state, state.index + 1),
-                sub = listOfNotNull(trailerSource(next), state.durationOf(state.index + 1)?.let(::formatTime)).joinToString(" · "),
+                sub = listOfNotNull(
+                    trailerSource(next),
+                    state.durationOf(state.index + 1)?.let(::formatTime),
+                ).joinToString(" · "),
                 image = next.imageUrl ?: item.backdropUrl,
                 seconds = countdown,
                 modifier = Modifier
@@ -812,7 +909,13 @@ private fun EndScreen(
 
 /** "Up next" with a ring counting down the seconds (design: 460 wide, bottom right). */
 @Composable
-private fun NextCard(name: String, sub: String, image: String?, seconds: Int, modifier: Modifier) {
+private fun NextCard(
+    name: String,
+    sub: String,
+    image: String?,
+    seconds: Int,
+    modifier: Modifier,
+) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
     // The ring empties over the countdown, ahead by a second so it reaches zero as the next trailer starts.
@@ -839,15 +942,37 @@ private fun NextCard(name: String, sub: String, image: String?, seconds: Int, mo
                     val inset = stroke / 2 + 1.5.dp.toPx()
                     val arc = Size(size.width - 2 * inset, size.height - 2 * inset)
                     val topLeft = Offset(inset, inset)
-                    drawArc(GlacierColors.Ice.copy(alpha = 0.2f), 0f, 360f, useCenter = false, topLeft = topLeft, size = arc, style = Stroke(stroke))
-                    drawArc(accent, -90f, 360f * fill, useCenter = false, topLeft = topLeft, size = arc, style = Stroke(stroke, cap = StrokeCap.Round))
+                    drawArc(
+                        GlacierColors.Ice.copy(alpha = 0.2f),
+                        0f,
+                        360f,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = arc,
+                        style = Stroke(stroke),
+                    )
+                    drawArc(
+                        accent,
+                        -90f,
+                        360f * fill,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = arc,
+                        style = Stroke(stroke, cap = StrokeCap.Round),
+                    )
                 }
                 Text(seconds.toString(), style = GlacierText.body(18, FontWeight.Bold), color = GlacierColors.Ice)
             }
         }
         Artwork(image, Modifier.size(412.dp, 232.dp).clip(RoundedCornerShape(GlacierShapes.RadiusMd)))
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(name, style = GlacierText.body(22, FontWeight.SemiBold), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                name,
+                style = GlacierText.body(22, FontWeight.SemiBold),
+                color = GlacierColors.Ice,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             if (sub.isNotEmpty()) Text(sub, style = GlacierText.body(17), color = GlacierColors.Mist)
         }
     }
@@ -901,7 +1026,10 @@ private fun ErrorView(
                 if (youTube != null) {
                     add(
                         stringResource(R.string.trailer_open_youtube) to {
-                            val intent = Intent(Intent.ACTION_VIEW, "https://www.youtube.com/watch?v=${youTube.videoId}".toUri())
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                "https://www.youtube.com/watch?v=${youTube.videoId}".toUri(),
+                            )
                             try {
                                 context.startActivity(intent)
                             } catch (_: ActivityNotFoundException) {

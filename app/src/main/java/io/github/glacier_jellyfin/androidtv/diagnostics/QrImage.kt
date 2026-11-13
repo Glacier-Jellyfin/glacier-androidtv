@@ -21,7 +21,13 @@ fun QrImage(text: String, modifier: Modifier = Modifier) {
         for (y in 0 until code.size) {
             for (x in 0 until code.size) {
                 // A hair larger than the cell, so no seams show between neighbours.
-                if (code.getModule(x, y)) drawRect(Color.Black, Offset(x * cell, y * cell), Size(cell + 0.5f, cell + 0.5f))
+                if (code.getModule(
+                        x,
+                        y,
+                    )
+                ) {
+                    drawRect(Color.Black, Offset(x * cell, y * cell), Size(cell + 0.5f, cell + 0.5f))
+                }
             }
         }
     }

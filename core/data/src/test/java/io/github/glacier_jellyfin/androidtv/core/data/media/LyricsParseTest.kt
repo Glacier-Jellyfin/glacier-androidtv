@@ -10,14 +10,18 @@ class LyricsParseTest {
 
     @Test
     fun `synced lyrics keep their timed lines`() {
-        val lyrics = parseLyrics(listOf(LyricLine("[ar: Someone]", null), LyricLine("One", 1_000), LyricLine("Two", 2_000)))!!
+        val lyrics = parseLyrics(
+            listOf(LyricLine("[ar: Someone]", null), LyricLine("One", 1_000), LyricLine("Two", 2_000)),
+        )!!
         assertTrue(lyrics.synced)
         assertEquals(listOf("One", "Two"), lyrics.lines.map { it.text })
     }
 
     @Test
     fun `plain lyrics stay in order without tags`() {
-        val lyrics = parseLyrics(listOf(LyricLine("[ti: Title]", null), LyricLine("[Chorus]", null), LyricLine("Line", null)))!!
+        val lyrics = parseLyrics(
+            listOf(LyricLine("[ti: Title]", null), LyricLine("[Chorus]", null), LyricLine("Line", null)),
+        )!!
         assertFalse(lyrics.synced)
         assertEquals(listOf("[Chorus]", "Line"), lyrics.lines.map { it.text })
     }

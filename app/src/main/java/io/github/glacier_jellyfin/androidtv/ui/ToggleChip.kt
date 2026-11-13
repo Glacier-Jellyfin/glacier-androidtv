@@ -61,7 +61,17 @@ fun ToggleChip(
                     else -> GlacierColors.GlassFill
                 },
             )
-            .border(2.dp, if (focused) accent else if (on) accent.copy(alpha = 0.45f) else Color.Transparent, PillShape)
+            .border(
+                2.dp,
+                if (focused) {
+                    accent
+                } else if (on) {
+                    accent.copy(alpha = 0.45f)
+                } else {
+                    Color.Transparent
+                },
+                PillShape,
+            )
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .padding(horizontal = 24.dp),
         verticalAlignment = Alignment.CenterVertically,

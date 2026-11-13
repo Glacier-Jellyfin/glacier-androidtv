@@ -47,7 +47,10 @@ object SyncPoints {
         action?.invoke(seekMap)
         val mid = seekMap.durationUs.takeIf { it > 0 }?.div(2) ?: 0
         val points = seekMap.getSeekPoints(mid)
-        Log.i("Player", "Seek points of $key: known, around ${mid / 1_000_000} s ${points.first.timeUs / 1000} to ${points.second.timeUs / 1000} ms")
+        Log.i(
+            "Player",
+            "Seek points of $key: known, around ${mid / 1_000_000} s ${points.first.timeUs / 1000} to ${points.second.timeUs / 1000} ms",
+        )
     }
 
     /**
@@ -59,14 +62,22 @@ object SyncPoints {
     }
 
     /** The last seek point of the file of [url] at or before [atMs], if it is known and no more than [maxShiftMs] earlier. */
-    fun atOrBefore(url: String, atMs: Long, maxShiftMs: Long): Long? {
+    fun atOrBefore(
+        url: String,
+        atMs: Long,
+        maxShiftMs: Long,
+    ): Long? {
         val key = keyOf(url) ?: return null
         val seekMap = synchronized(known) { known[key] } ?: return null
         return lastAtOrBefore(seekMap, atMs, maxShiftMs)
     }
 
     /** The first seek point of the file of [url] at or after [atMs], if it is known and no more than [maxShiftMs] later. */
-    fun atOrAfter(url: String, atMs: Long, maxShiftMs: Long): Long? {
+    fun atOrAfter(
+        url: String,
+        atMs: Long,
+        maxShiftMs: Long,
+    ): Long? {
         val key = keyOf(url) ?: return null
         val seekMap = synchronized(known) { known[key] } ?: return null
         return firstAtOrAfter(seekMap, atMs, maxShiftMs)
@@ -82,21 +93,43 @@ object SyncPoints {
         if (!seekMap.isSeekable) return false
         val duration = seekMap.durationUs
         // A few places along the file, off the round numbers a cue point may sit on; a single point gives the same answer everywhere.
-        val probes = if (duration > 0) (1..9).map { duration / 10 * it + 1_000 } else listOf(1_000_000L, 60_000_000L, 600_000_000L)
+        val probes = if (duration > 0) {
+            (1..9).map { duration / 10 * it + 1_000 }
+        } else {
+            listOf(
+                1_000_000L,
+                60_000_000L,
+                600_000_000L,
+            )
+        }
         return probes.any { seekMap.getSeekPoints(it).let { points -> points.first != points.second } }
     }
 
     /** The first of the two seek points around [atMs] that is not before it, unless it is more than [maxShiftMs] later. */
-    internal fun firstAtOrAfter(seekMap: SeekMap, atMs: Long, maxShiftMs: Long): Long? {
+    internal fun firstAtOrAfter(
+        seekMap: SeekMap,
+        atMs: Long,
+        maxShiftMs: Long,
+    ): Long? {
         val points = seekMap.getSeekPoints(atMs * 1000)
-        val pointMs = listOf(points.first, points.second).map { it.timeUs / 1000 }.firstOrNull { it >= atMs } ?: return null
+        val pointMs = listOf(
+            points.first,
+            points.second,
+        ).map { it.timeUs / 1000 }.firstOrNull { it >= atMs } ?: return null
         return pointMs.takeIf { it - atMs <= maxShiftMs }
     }
 
     /** The last of the two seek points around [atMs] that is not after it, unless it is more than [maxShiftMs] earlier. */
-    internal fun lastAtOrBefore(seekMap: SeekMap, atMs: Long, maxShiftMs: Long): Long? {
+    internal fun lastAtOrBefore(
+        seekMap: SeekMap,
+        atMs: Long,
+        maxShiftMs: Long,
+    ): Long? {
         val points = seekMap.getSeekPoints(atMs * 1000)
-        val pointMs = listOf(points.second, points.first).map { it.timeUs / 1000 }.firstOrNull { it <= atMs } ?: return null
+        val pointMs = listOf(
+            points.second,
+            points.first,
+        ).map { it.timeUs / 1000 }.firstOrNull { it <= atMs } ?: return null
         return pointMs.takeIf { atMs - it <= maxShiftMs }
     }
 
@@ -108,6 +141,9 @@ object SyncPoints {
      * the player ([external]: the detail page, a resume) does; a seek of the viewer, a hand over or a reopen after a stall
      * must stay where it is. A point further back than [START_SNAP_MAX_MS] is not taken.
      */
-    fun snapsStart(external: Boolean, startMs: Long, pointMs: Long?): Boolean =
-        external && pointMs != null && pointMs < startMs && startMs - pointMs <= START_SNAP_MAX_MS
+    fun snapsStart(
+        external: Boolean,
+        startMs: Long,
+        pointMs: Long?,
+    ): Boolean = external && pointMs != null && pointMs < startMs && startMs - pointMs <= START_SNAP_MAX_MS
 }

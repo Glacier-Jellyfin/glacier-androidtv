@@ -1,6 +1,5 @@
 package io.github.glacier_jellyfin.androidtv.search
 
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,16 +12,19 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.SearchRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrStatus
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SeerrRoute
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
+import io.github.glacier_jellyfin.androidtv.navigation.routeFor
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,8 +32,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import io.github.glacier_jellyfin.androidtv.navigation.routeFor
 
 data class SearchState(
     val query: String = "",
@@ -92,7 +92,15 @@ class SearchViewModel @Inject constructor(
             try {
                 if (term.isEmpty()) {
                     val results = repository.suggestions()
-                    _state.update { it.copy(loading = false, results = results, resultsFor = null, seerr = emptyList(), seerrLoading = false) }
+                    _state.update {
+                        it.copy(
+                            loading = false,
+                            results = results,
+                            resultsFor = null,
+                            seerr = emptyList(),
+                            seerrLoading = false,
+                        )
+                    }
                 } else {
                     searchBoth(term)
                 }
@@ -108,14 +116,35 @@ class SearchViewModel @Inject constructor(
     /** Library hits show at once; Seerr's follow when they arrive and never fail the search. */
     private suspend fun searchBoth(term: String) = coroutineScope {
         // Requests are kept away from profiles with an age limit.
-        val found = async { if (parental.lock.value.protection.restricts) emptyList() else softly { seerr.search(term) } }
+        val found = async {
+            if (parental.lock.value.protection.restricts) {
+                emptyList()
+            } else {
+                softly {
+                    seerr.search(
+                        term,
+                    )
+                }
+            }
+        }
         val results = repository.search(term)
-        _state.update { it.copy(loading = false, results = results, resultsFor = term, seerr = emptyList(), seerrLoading = true) }
+        _state.update {
+            it.copy(
+                loading = false,
+                results = results,
+                resultsFor = term,
+                seerr = emptyList(),
+                seerrLoading = true,
+            )
+        }
         val hits = found.await()
         // Titles Seerr knows in the library but the title search missed (another language, say).
         val known = results.mapTo(HashSet()) { it.id }
         val extra = softly { repository.byIds(hits.mapNotNull { it.jellyfinId }.filter { it !in known }.distinct()) }
-        val requestable = hits.filter { it.jellyfinId == null && it.status != SeerrStatus.Available && it.status != SeerrStatus.Blocklisted }
+        val requestable = hits.filter {
+            it.jellyfinId == null && it.status != SeerrStatus.Available &&
+                it.status != SeerrStatus.Blocklisted
+        }
         _state.update { it.copy(results = results + extra, seerr = requestable, seerrLoading = false) }
     }
 

@@ -6,10 +6,10 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.glacier_jellyfin.androidtv.MainActivity
+import javax.inject.Inject
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 /**
  * Keeps music going outside the player screen and the app: a media session on
@@ -37,10 +37,12 @@ class MusicService : MediaSessionService() {
                         session = null
                         stopSelf()
                     }
+
                     current == null -> session = MediaSession.Builder(this@MusicService, player)
                         .setSessionActivity(openApp())
                         .build()
                         .also(::addSession)
+
                     else -> current.player = player
                 }
             }

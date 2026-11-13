@@ -4,8 +4,8 @@ import android.content.Context
 import android.net.Uri
 import android.os.Handler
 import android.os.SystemClock
-import androidx.annotation.OptIn
 import android.util.Base64
+import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.Format
@@ -13,6 +13,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.common.util.ExperimentalApi
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
@@ -26,6 +27,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.LoadControl
 import androidx.media3.exoplayer.PlayerMessage
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.analytics.PlayerId
 import androidx.media3.exoplayer.audio.AudioCapabilities
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
@@ -36,13 +38,11 @@ import androidx.media3.exoplayer.source.ForwardingMediaSourceFactory
 import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
 import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.MediaSource.MediaPeriodId
 import androidx.media3.exoplayer.trackselection.AdaptiveTrackSelection
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.BandwidthMeter
 import androidx.media3.exoplayer.upstream.DefaultAllocator
-import androidx.media3.common.Timeline
-import androidx.media3.exoplayer.analytics.PlayerId
-import androidx.media3.exoplayer.source.MediaSource.MediaPeriodId
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.ui.SubtitleView
@@ -55,7 +55,13 @@ import io.github.peerless2012.ass.media.type.AssRenderType
 import io.github.peerless2012.ass.media.widget.AssSubtitleView
 
 /** A song (or a music video, [video]) as the system shows it. */
-data class SongMetadata(val title: String, val artist: String?, val album: String?, val artworkUrl: String?, val video: Boolean = false)
+data class SongMetadata(
+    val title: String,
+    val artist: String?,
+    val album: String?,
+    val artworkUrl: String?,
+    val video: Boolean = false,
+)
 
 /** One stream to play: the URL the server handed out and the headers it needs. */
 data class StreamRequest(
@@ -111,7 +117,11 @@ data class SideloadedSubtitle(
  * on because the next stream had loaded too little ([postponedMs], 0 when not), and what the next stream has loaded beyond the
  * point.
  */
-data class HandOverProgress(val pointInItemMs: Long, val postponedMs: Long, val nextLoadedMs: Long)
+data class HandOverProgress(
+    val pointInItemMs: Long,
+    val postponedMs: Long,
+    val nextLoadedMs: Long,
+)
 
 /**
  * A player and its ASS renderer. libass draws ASS/SSA subtitles itself, in a
@@ -215,8 +225,11 @@ class GlacierPlayback(
      * [maxShiftMs] later. Matroska has cue points only every 20 to 40 s; a stream that starts between two of them first
      * decodes from the one before, which made the hand over to the file stall for seconds.
      */
-    fun syncPointAtOrAfter(request: StreamRequest, atMs: Long, maxShiftMs: Long): Long? =
-        if (request.isHls) null else SyncPoints.atOrAfter(request.url, atMs, maxShiftMs)
+    fun syncPointAtOrAfter(
+        request: StreamRequest,
+        atMs: Long,
+        maxShiftMs: Long,
+    ): Long? = if (request.isHls) null else SyncPoints.atOrAfter(request.url, atMs, maxShiftMs)
 
     /** True for a title: its stream can be handed over to another without the player starting again. */
     val canHandOver: Boolean get() = current != null
@@ -254,7 +267,12 @@ class GlacierPlayback(
         postponedMs = 0
         pendingLoadedToMs = C.TIME_UNSET
         scheduleMove(nextItem, inItemMs)
-        Log.i(TAG, "Hand over at $atMs ms: the playing stream goes on, the next is queued and loads ahead (${stateName(player.playbackState)} at ${player.currentPosition} ms, ${player.mediaItemCount} items)")
+        Log.i(
+            TAG,
+            "Hand over at $atMs ms: the playing stream goes on, the next is queued and loads ahead (${stateName(
+                player.playbackState,
+            )} at ${player.currentPosition} ms, ${player.mediaItemCount} items)",
+        )
         return true
     }
 
@@ -277,15 +295,24 @@ class GlacierPlayback(
         val fromLoadControl = loadControl?.preloadedMs ?: Long.MAX_VALUE
         val loaded = loadedMs(fromLoadControl)
         val nextStop = plannedInItemMs + postponedMs + POSTPONE_STEP_MS
-        if (loaded < READY_MS && postponedMs + POSTPONE_STEP_MS <= POSTPONE_MAX_MS && player.bufferedPosition >= nextStop + KEEP_MS) {
+        if (loaded < READY_MS && postponedMs + POSTPONE_STEP_MS <= POSTPONE_MAX_MS &&
+            player.bufferedPosition >= nextStop + KEEP_MS
+        ) {
             postponedMs += POSTPONE_STEP_MS
-            Log.i(TAG, "Hand over point reached at $position ms, the next stream has ${loaded / 1000} s (load control ${fromLoadControl / 1000} s, completed loads ${loadedToLog()}): waiting, now $postponedMs ms past the plan")
+            Log.i(
+                TAG,
+                "Hand over point reached at $position ms, the next stream has ${loaded / 1000} s (load control ${fromLoadControl / 1000} s, completed loads ${loadedToLog()}): waiting, now $postponedMs ms past the plan",
+            )
             scheduleMove(item, plannedInItemMs + postponedMs)
             return
         }
         // The stream that waits begins at the hand over point; the way on from there is its position, in its own item.
         val into = (position - plannedInItemMs).takeIf { it >= MIN_SKIP_MS } ?: 0L
-        Log.i(TAG, "Hand over point reached at $position ms (${loaded / 1000} s of the next stream loaded, load control ${fromLoadControl / 1000} s, completed loads ${loadedToLog()}), moving on to the next stream" + if (into > 0) " at +$into ms" else "")
+        Log.i(
+            TAG,
+            "Hand over point reached at $position ms (${loaded / 1000} s of the next stream loaded, load control ${fromLoadControl / 1000} s, completed loads ${loadedToLog()}), moving on to the next stream" +
+                if (into > 0) " at +$into ms" else "",
+        )
         enterNext(into)
     }
 
@@ -373,9 +400,11 @@ class GlacierPlayback(
         private set
     var audioDecoder: String? = null
         private set
+
     /** How the sound leaves the device: the audio track's encoding (C.ENCODING_*), null until it is set up. */
     var audioEncoding: Int? = null
         private set
+
     /** The audio track's channel mask (AudioFormat.CHANNEL_OUT_*). */
     var audioChannelMask: Int = 0
         private set
@@ -403,22 +432,36 @@ class GlacierPlayback(
         player.addAnalyticsListener(object : AnalyticsListener {
             // The stream that waits is the second item. Its completed media loads tell how far it has loaded at once, which the
             // load control only learns between two loads; a file has no end time on its loads and is skipped.
-            override fun onLoadCompleted(eventTime: AnalyticsListener.EventTime, loadEventInfo: LoadEventInfo, mediaLoadData: MediaLoadData) {
+            override fun onLoadCompleted(
+                eventTime: AnalyticsListener.EventTime,
+                loadEventInfo: LoadEventInfo,
+                mediaLoadData: MediaLoadData,
+            ) {
                 if (pending == null || eventTime.windowIndex != 1 || mediaLoadData.dataType != C.DATA_TYPE_MEDIA) return
                 if (mediaLoadData.mediaEndTimeMs == C.TIME_UNSET) return
                 pendingLoadedToMs = maxOf(pendingLoadedToMs, mediaLoadData.mediaEndTimeMs)
             }
 
             // Logged on every playback: a bug report shows the decoders and the sound output without detailed logging.
-            override fun onVideoDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
+            override fun onVideoDecoderInitialized(
+                eventTime: AnalyticsListener.EventTime,
+                decoderName: String,
+                initializedTimestampMs: Long,
+                initializationDurationMs: Long,
+            ) {
                 videoDecoder = decoderName
                 Log.i(TAG, "Video decoder: $decoderName")
             }
 
-            override fun onAudioDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
+            override fun onAudioDecoderInitialized(
+                eventTime: AnalyticsListener.EventTime,
+                decoderName: String,
+                initializedTimestampMs: Long,
+                initializationDurationMs: Long,
+            ) {
                 audioDecoder = decoderName
                 Log.i(TAG, "Audio decoder: $decoderName")
-                audioStart("decoder $decoderName ready, init ${initializationDurationMs} ms")
+                audioStart("decoder $decoderName ready, init $initializationDurationMs ms")
             }
 
             // Timeline of one audio start ("AudioStart"): where the time between the decoder and the audio output goes.
@@ -426,27 +469,58 @@ class GlacierPlayback(
                 audioStartReset("audio enabled")
             }
 
-            override fun onPositionDiscontinuity(eventTime: AnalyticsListener.EventTime, oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+            override fun onPositionDiscontinuity(
+                eventTime: AnalyticsListener.EventTime,
+                oldPosition: Player.PositionInfo,
+                newPosition: Player.PositionInfo,
+                reason: Int,
+            ) {
                 audioStartReset("discontinuity reason $reason to ${newPosition.positionMs} ms")
             }
 
-            override fun onMediaItemTransition(eventTime: AnalyticsListener.EventTime, mediaItem: MediaItem?, reason: Int) {
+            override fun onMediaItemTransition(
+                eventTime: AnalyticsListener.EventTime,
+                mediaItem: MediaItem?,
+                reason: Int,
+            ) {
                 audioStartReset("media item transition reason $reason")
             }
 
-            override fun onAudioInputFormatChanged(eventTime: AnalyticsListener.EventTime, format: Format, decoderReuseEvaluation: DecoderReuseEvaluation?) {
-                audioStart("input ${format.codecs?.let { "$it " } ?: ""}${format.sampleMimeType} ${format.channelCount} ch ${format.sampleRate} Hz ${format.averageBitrate} bit/s")
+            override fun onAudioInputFormatChanged(
+                eventTime: AnalyticsListener.EventTime,
+                format: Format,
+                decoderReuseEvaluation: DecoderReuseEvaluation?,
+            ) {
+                audioStart(
+                    "input ${format.codecs?.let {
+                        "$it "
+                    } ?: ""}${format.sampleMimeType} ${format.channelCount} ch ${format.sampleRate} Hz ${format.averageBitrate} bit/s",
+                )
             }
 
-            override fun onAudioPositionAdvancing(eventTime: AnalyticsListener.EventTime, playoutStartSystemTimeMs: Long) {
-                audioStart("position advancing, playout start ${playoutStartSystemTimeMs - SystemClock.elapsedRealtime()} ms from now (system time)")
+            override fun onAudioPositionAdvancing(
+                eventTime: AnalyticsListener.EventTime,
+                playoutStartSystemTimeMs: Long,
+            ) {
+                audioStart(
+                    "position advancing, playout start ${playoutStartSystemTimeMs - SystemClock.elapsedRealtime()} ms from now (system time)",
+                )
             }
 
-            override fun onAudioUnderrun(eventTime: AnalyticsListener.EventTime, bufferSize: Int, bufferSizeMs: Long, elapsedSinceLastFeedMs: Long) {
-                audioStart("underrun, buffer $bufferSizeMs ms, ${elapsedSinceLastFeedMs} ms since last feed")
+            override fun onAudioUnderrun(
+                eventTime: AnalyticsListener.EventTime,
+                bufferSize: Int,
+                bufferSizeMs: Long,
+                elapsedSinceLastFeedMs: Long,
+            ) {
+                audioStart("underrun, buffer $bufferSizeMs ms, $elapsedSinceLastFeedMs ms since last feed")
             }
 
-            override fun onRenderedFirstFrame(eventTime: AnalyticsListener.EventTime, output: Any, renderTimeMs: Long) {
+            override fun onRenderedFirstFrame(
+                eventTime: AnalyticsListener.EventTime,
+                output: Any,
+                renderTimeMs: Long,
+            ) {
                 audioStart("first video frame")
             }
 
@@ -454,14 +528,24 @@ class GlacierPlayback(
                 audioStart("state ${stateName(state)}, buffered ${player.totalBufferedDuration} ms")
             }
 
-            override fun onAudioTrackInitialized(eventTime: AnalyticsListener.EventTime, audioTrackConfig: AudioSink.AudioTrackConfig) {
+            override fun onAudioTrackInitialized(
+                eventTime: AnalyticsListener.EventTime,
+                audioTrackConfig: AudioSink.AudioTrackConfig,
+            ) {
                 audioEncoding = audioTrackConfig.encoding
                 audioChannelMask = audioTrackConfig.channelConfig
                 // The first output of a title that starts as the file is the file's own: it tells which way the sound goes.
                 if (titleAudio != null && startsAsFile && fileAudioDecoded == null) {
                     setFileDecoded(AudioPath.isDecoded(audioTrackConfig.encoding))
                 }
-                Log.i(TAG, "Audio output: ${encodingName(audioTrackConfig.encoding)}, ${Integer.bitCount(audioTrackConfig.channelConfig)} channels, ${audioTrackConfig.sampleRate} Hz")
+                Log.i(
+                    TAG,
+                    "Audio output: ${encodingName(
+                        audioTrackConfig.encoding,
+                    )}, ${Integer.bitCount(
+                        audioTrackConfig.channelConfig,
+                    )} channels, ${audioTrackConfig.sampleRate} Hz",
+                )
                 audioStart("track ${encodingName(audioTrackConfig.encoding)} ${audioTrackConfig.sampleRate} Hz")
             }
         })
@@ -567,7 +651,12 @@ class HandoverLoadControl(
         preloadedMs = 0
     }
 
-    override fun shouldContinuePreloading(playerId: PlayerId, timeline: Timeline, mediaPeriodId: MediaPeriodId, bufferedDurationUs: Long): Boolean {
+    override fun shouldContinuePreloading(
+        playerId: PlayerId,
+        timeline: Timeline,
+        mediaPeriodId: MediaPeriodId,
+        bufferedDurationUs: Long,
+    ): Boolean {
         if (!preloadNext) return super.shouldContinuePreloading(playerId, timeline, mediaPeriodId, bufferedDurationUs)
         // What is passed as the buffered duration is the buffered position of the period: its position in its item, once the
         // start of the item (the clipping start, which is where the period starts) is taken off. Nothing before it is prepared.
@@ -585,7 +674,8 @@ class HandoverLoadControl(
         val period = parameters.timeline.getPeriodByUid(parameters.mediaPeriodId.periodUid, Timeline.Period())
         // Only the playing item (the first); the one that waits is preloaded, and takes the connection.
         if (period.windowIndex != 0) return true
-        val bufferedUntilMs = (parameters.playbackPositionUs + period.positionInWindowUs + parameters.bufferedDurationUs) / 1000
+        val bufferedUntilMs =
+            (parameters.playbackPositionUs + period.positionInWindowUs + parameters.bufferedDurationUs) / 1000
         return bufferedUntilMs < stopAtMs
     }
 }
@@ -626,13 +716,14 @@ object GlacierPlayer {
      */
     @OptIn(UnstableApi::class, ExperimentalApi::class)
     internal class ClippedSources(private val factory: MediaSource.Factory) : ForwardingMediaSourceFactory(factory) {
-        override fun createMediaSource(mediaItem: MediaItem): MediaSource =
-            ClippingMediaSource.Builder(
-                factory.createMediaSource(mediaItem.buildUpon().setClippingConfiguration(MediaItem.ClippingConfiguration.UNSET).build()),
-            )
-                .setClippingConfiguration(mediaItem.clippingConfiguration)
-                .setEnableClippingInMediaPeriod(true)
-                .build()
+        override fun createMediaSource(mediaItem: MediaItem): MediaSource = ClippingMediaSource.Builder(
+            factory.createMediaSource(
+                mediaItem.buildUpon().setClippingConfiguration(MediaItem.ClippingConfiguration.UNSET).build(),
+            ),
+        )
+            .setClippingConfiguration(mediaItem.clippingConfiguration)
+            .setEnableClippingInMediaPeriod(true)
+            .build()
     }
 
     /**
@@ -640,25 +731,27 @@ object GlacierPlayer {
      * first), and ends where the stream ends: a stream plays the whole title (the playlist or the file spans it), so the
      * player's positions of the item are relative to [startMs].
      */
-    internal fun titleItem(request: StreamRequest, id: String, startMs: Long): MediaItem =
-        itemOf(request)
-            .buildUpon()
-            .setMediaId(id)
-            .setClippingConfiguration(
-                MediaItem.ClippingConfiguration.Builder()
-                    .setStartPositionMs(startMs)
-                    // From the start no sample is cut off: no jump at the beginning. Later it starts inside a segment.
-                    .setStartsAtKeyFrame(startMs == 0L)
-                    .build(),
-            )
-            .build()
+    internal fun titleItem(
+        request: StreamRequest,
+        id: String,
+        startMs: Long,
+    ): MediaItem = itemOf(request)
+        .buildUpon()
+        .setMediaId(id)
+        .setClippingConfiguration(
+            MediaItem.ClippingConfiguration.Builder()
+                .setStartPositionMs(startMs)
+                // From the start no sample is cut off: no jump at the beginning. Later it starts inside a segment.
+                .setStartsAtKeyFrame(startMs == 0L)
+                .build(),
+        )
+        .build()
 
-    private fun itemOf(request: StreamRequest): MediaItem =
-        MediaItem.Builder()
-            .setUri(request.playlist?.let(::playlistUri) ?: Uri.parse(request.url))
-            .apply { if (request.isHls) setMimeType(MimeTypes.APPLICATION_M3U8) }
-            .setSubtitleConfigurations(request.subtitles.map { it.toConfiguration() })
-            .build()
+    private fun itemOf(request: StreamRequest): MediaItem = MediaItem.Builder()
+        .setUri(request.playlist?.let(::playlistUri) ?: Uri.parse(request.url))
+        .apply { if (request.isHls) setMimeType(MimeTypes.APPLICATION_M3U8) }
+        .setSubtitleConfigurations(request.subtitles.map { it.toConfiguration() })
+        .build()
 
     /** A playlist the app wrote, as an address Media3 reads without a request. */
     private fun playlistUri(playlist: String): Uri =
@@ -680,10 +773,20 @@ object GlacierPlayer {
         // HTTP for the server's streams; asset:// for the playback check's samples.
         val sources = ThrottledDataSource.Factory(DefaultDataSource.Factory(context, dataSource))
         val profile7 = request.setup.dolbyVisionProfile7
-        Log.i("Player", "Setup: Dolby Vision profile 7 $profile7, IEC 61937 ${if (request.setup.iec61937) "on" else "off"}")
+        Log.i(
+            "Player",
+            "Setup: Dolby Vision profile 7 $profile7, IEC 61937 ${if (request.setup.iec61937) "on" else "off"}",
+        )
         val mediaSources = DefaultMediaSourceFactory(
             sources,
-            if (profile7 == DolbyVisionProfile7.AsIs) extractors else DolbyVisionProfile7Extractors(extractors, profile7),
+            if (profile7 == DolbyVisionProfile7.AsIs) {
+                extractors
+            } else {
+                DolbyVisionProfile7Extractors(
+                    extractors,
+                    profile7,
+                )
+            },
         )
             // Side-loaded .ass files go through the same parser.
             .setSubtitleParserFactory(assParsers)
@@ -743,7 +846,10 @@ object GlacierPlayer {
         val loadControl = handOverLoadControl ?: loadControlBuilder.build()
         // Tiers of one transcode: quality comes first, so it moves up as soon as the link allows and down only when
         // the buffer runs low, and uses more of the measured speed than Media3's default 70 %.
-        val trackSelector = DefaultTrackSelector(context, AdaptiveTrackSelection.Factory(5_000, DECREASE_ANYTIME_MS, 25_000, STEER_FRACTION))
+        val trackSelector = DefaultTrackSelector(
+            context,
+            AdaptiveTrackSelection.Factory(5_000, DECREASE_ANYTIME_MS, 25_000, STEER_FRACTION),
+        )
         // Media3 leaves out tiers bigger than the display; a test of the display scaling a bigger picture down lets them in.
         if (!DebugOptions.fitDisplay) {
             trackSelector.setParameters(trackSelector.buildUponParameters().setViewportSize(3840, 2160, true))
@@ -760,7 +866,8 @@ object GlacierPlayer {
                     .setUsage(C.USAGE_MEDIA)
                     .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
                     .build(),
-                /* handleAudioFocus = */ true,
+                /* handleAudioFocus = */
+                true,
             )
             .build()
         built = player
@@ -808,7 +915,12 @@ object GlacierPlayer {
                 error: java.io.IOException,
                 wasCanceled: Boolean,
             ) {
-                if (DebugOptions.segmentLog) Log.w("Segment", "load failed after ${loadEventInfo.loadDurationMs} ms: ${error.javaClass.simpleName}")
+                if (DebugOptions.segmentLog) {
+                    Log.w(
+                        "Segment",
+                        "load failed after ${loadEventInfo.loadDurationMs} ms: ${error.javaClass.simpleName}",
+                    )
+                }
             }
 
             override fun onPlaybackStateChanged(eventTime: AnalyticsListener.EventTime, state: Int) {
@@ -823,14 +935,29 @@ object GlacierPlayer {
                 }
             }
 
-            override fun onVideoInputFormatChanged(eventTime: AnalyticsListener.EventTime, format: Format, decoderReuseEvaluation: DecoderReuseEvaluation?) {
-                if (request.playlist != null) Log.i("Player", "Video tier ${format.bitrate / 1000} kbit/s ${format.width}x${format.height}")
+            override fun onVideoInputFormatChanged(
+                eventTime: AnalyticsListener.EventTime,
+                format: Format,
+                decoderReuseEvaluation: DecoderReuseEvaluation?,
+            ) {
+                if (request.playlist != null) {
+                    Log.i(
+                        "Player",
+                        "Video tier ${format.bitrate / 1000} kbit/s ${format.width}x${format.height}",
+                    )
+                }
             }
         })
         val item = if (handOverable) titleItem(request, "title", 0) else itemOf(request)
         // Media3 gives a start position of a file as it is and decodes from the seek point before it, discarding what it decodes.
         var startMs = request.startPositionMs
-        val snapKey = if (request.snapStart && !request.live && !request.isHls && startMs > 0) SyncPoints.keyOf(request.url) else null
+        val snapKey = if (request.snapStart && !request.live && !request.isHls && startMs > 0) {
+            SyncPoints.keyOf(
+                request.url,
+            )
+        } else {
+            null
+        }
         if (snapKey != null) {
             val point = SyncPoints.atOrBefore(request.url, startMs, SyncPoints.START_SNAP_MAX_MS)
             if (SyncPoints.snapsStart(true, startMs, point)) {
@@ -865,7 +992,14 @@ object GlacierPlayer {
         if (titleAudio != null && predicted == null && !startsAsFile) {
             // The file has not played yet: predict from what the output takes as it is.
             predicted = predictFileDecoded(context, titleAudio, request.setup.iec61937)
-            Log.i("Player", "The file's audio is ${when (predicted) { true -> "decoded on this device"; false -> "passed on as a bitstream"; null -> "not known" }} (predicted)")
+            Log.i(
+                "Player",
+                "The file's audio is ${when (predicted) {
+                    true -> "decoded on this device"
+                    false -> "passed on as a bitstream"
+                    null -> "not known"
+                }} (predicted)",
+            )
         }
         val playback = GlacierPlayback(
             player, ass, meter,
@@ -883,12 +1017,19 @@ object GlacierPlayer {
 
     /** Whether the file's audio goes out as PCM on this device, predicted from the sink's support for its format. */
     @OptIn(UnstableApi::class)
-    private fun predictFileDecoded(context: Context, audio: TitleAudio, iec61937: Boolean): Boolean? {
+    private fun predictFileDecoded(
+        context: Context,
+        audio: TitleAudio,
+        iec61937: Boolean,
+    ): Boolean? {
         val mime = AudioPath.mimeOf(audio.codec, audio.profile)
         val passthrough = mime != null && mime in AudioPath.COMPRESSED && runCatching {
             val attributes = androidx.media3.common.AudioAttributes.DEFAULT
             AudioCapabilities.getCapabilities(context, attributes, null)
-                .isPassthroughPlaybackSupported(Format.Builder().setSampleMimeType(mime).setChannelCount(6).setSampleRate(48_000).build(), attributes)
+                .isPassthroughPlaybackSupported(
+                    Format.Builder().setSampleMimeType(mime).setChannelCount(6).setSampleRate(48_000).build(),
+                    attributes,
+                )
         }.getOrDefault(false)
         return AudioPath.predictDecoded(mime, passthrough, iec61937)
     }
@@ -912,7 +1053,8 @@ object GlacierPlayer {
                     .setUsage(C.USAGE_MEDIA)
                     .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
                     .build(),
-                /* handleAudioFocus = */ true,
+                /* handleAudioFocus = */
+                true,
             )
             .build()
             .also(Media3Logs::attach)
@@ -922,25 +1064,31 @@ object GlacierPlayer {
      * One song of the queue; [id] comes back as the player's media id. [metadata]
      * is what the system shows for it (media session, "Now playing").
      */
-    fun audioItem(id: String, url: String, isHls: Boolean, metadata: SongMetadata? = null): MediaItem =
-        MediaItem.Builder()
-            .setMediaId(id)
-            .setUri(url)
-            .apply { if (isHls) setMimeType(MimeTypes.APPLICATION_M3U8) }
-            .apply {
-                if (metadata != null) {
-                    setMediaMetadata(
-                        MediaMetadata.Builder()
-                            .setTitle(metadata.title)
-                            .setArtist(metadata.artist)
-                            .setAlbumTitle(metadata.album)
-                            .setArtworkUri(metadata.artworkUrl?.let(Uri::parse))
-                            .setMediaType(if (metadata.video) MediaMetadata.MEDIA_TYPE_VIDEO else MediaMetadata.MEDIA_TYPE_MUSIC)
-                            .build(),
-                    )
-                }
+    fun audioItem(
+        id: String,
+        url: String,
+        isHls: Boolean,
+        metadata: SongMetadata? = null,
+    ): MediaItem = MediaItem.Builder()
+        .setMediaId(id)
+        .setUri(url)
+        .apply { if (isHls) setMimeType(MimeTypes.APPLICATION_M3U8) }
+        .apply {
+            if (metadata != null) {
+                setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(metadata.title)
+                        .setArtist(metadata.artist)
+                        .setAlbumTitle(metadata.album)
+                        .setArtworkUri(metadata.artworkUrl?.let(Uri::parse))
+                        .setMediaType(
+                            if (metadata.video) MediaMetadata.MEDIA_TYPE_VIDEO else MediaMetadata.MEDIA_TYPE_MUSIC,
+                        )
+                        .build(),
+                )
             }
-            .build()
+        }
+        .build()
 
     /**
      * Media3's renderers with an audio sink that watches bitstreams ([GuardedAudioSink]) and, with
@@ -961,7 +1109,10 @@ object GlacierPlayer {
             // the answer follows the sink's switch: while compressed sound is decoded here, FFmpeg takes it, not a platform
             // decoder (see AudioPath.platformMayDecode); the renderer then reports the format as unsupported.
             setMediaCodecSelector { mimeType, secure, tunneling ->
-                val ffmpeg = mimeType in AudioPath.COMPRESSED && FfmpegLibrary.isAvailable() && FfmpegLibrary.supportsFormat(mimeType)
+                val ffmpeg =
+                    mimeType in AudioPath.COMPRESSED && FfmpegLibrary.isAvailable() && FfmpegLibrary.supportsFormat(
+                        mimeType,
+                    )
                 if (AudioPath.platformMayDecode(mimeType, sink?.decodeCompressed == true, ffmpeg)) {
                     MediaCodecSelector.DEFAULT.getDecoderInfos(mimeType, secure, tunneling)
                 } else {
@@ -970,23 +1121,27 @@ object GlacierPlayer {
             }
         }
 
-        override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioOutputPlaybackParams: Boolean): AudioSink =
-            GuardedAudioSink(
-                DefaultAudioSink.Builder(context)
-                    .setEnableFloatOutput(enableFloatOutput)
-                    .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
-                    .apply { if (iec61937) setAudioOutputProvider(Iec61937OutputProvider.create(context)) }
-                    .build(),
-                onStall,
-            ).also { sink = it }
+        override fun buildAudioSink(
+            context: Context,
+            enableFloatOutput: Boolean,
+            enableAudioOutputPlaybackParams: Boolean,
+        ): AudioSink = GuardedAudioSink(
+            DefaultAudioSink.Builder(context)
+                .setEnableFloatOutput(enableFloatOutput)
+                .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
+                .apply { if (iec61937) setAudioOutputProvider(Iec61937OutputProvider.create(context)) }
+                .build(),
+            onStall,
+        ).also { sink = it }
     }
 
-    private fun SideloadedSubtitle.toConfiguration() =
-        MediaItem.SubtitleConfiguration.Builder(Uri.parse(url))
-            .setId(TrackControl.externalId(index))
-            .setMimeType(subtitleMimeType(url.substringBefore('?').substringAfterLast('.', "").ifEmpty { codec.orEmpty() }))
-            .setLanguage(language)
-            .build()
+    private fun SideloadedSubtitle.toConfiguration() = MediaItem.SubtitleConfiguration.Builder(Uri.parse(url))
+        .setId(TrackControl.externalId(index))
+        .setMimeType(
+            subtitleMimeType(url.substringBefore('?').substringAfterLast('.', "").ifEmpty { codec.orEmpty() }),
+        )
+        .setLanguage(language)
+        .build()
 
     /** Media3 needs the format up front for side-loaded files: the URL's extension, else the codec. */
     private fun subtitleMimeType(format: String): String = when (format.lowercase()) {
@@ -1020,5 +1175,11 @@ class SteeredBandwidthMeter(private val real: BandwidthMeter) : BandwidthMeter b
     override fun getBitrateEstimate(): Long = steered.takeIf { it > 0 } ?: real.bitrateEstimate
 
     /** A transcode answers late for every segment; Media3 would take that off the speed it allows a tier. */
-    override fun getTimeToFirstByteEstimateUs(): Long = if (steered > 0) C.TIME_UNSET else real.timeToFirstByteEstimateUs
+    override fun getTimeToFirstByteEstimateUs(): Long = if (steered >
+        0
+    ) {
+        C.TIME_UNSET
+    } else {
+        real.timeToFirstByteEstimateUs
+    }
 }

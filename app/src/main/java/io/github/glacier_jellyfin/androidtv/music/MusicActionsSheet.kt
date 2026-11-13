@@ -7,9 +7,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.key
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -68,17 +68,41 @@ private fun OptionsPanelScope.Menu(sheet: MusicSheet.Menu, actions: MusicActions
     // Play all and shuffle all first, when the target has them; the focus starts on the first entry.
     val playFirst = target.play != null
     if (target.play != null) {
-        OptionRow(stringResource(R.string.music_play_all), stringResource(R.string.music_play_all_desc), actions::playAll, Modifier.focusRequester(first), GlacierIcons.Play)
+        OptionRow(
+            stringResource(R.string.music_play_all),
+            stringResource(R.string.music_play_all_desc),
+            actions::playAll,
+            Modifier.focusRequester(first),
+            GlacierIcons.Play,
+        )
     }
     if (target.shuffle != null) {
-        OptionRow(stringResource(R.string.music_shuffle_all), stringResource(R.string.music_shuffle_all_desc), actions::shuffleAll, icon = GlacierIcons.Shuffle)
+        OptionRow(
+            stringResource(R.string.music_shuffle_all),
+            stringResource(R.string.music_shuffle_all_desc),
+            actions::shuffleAll,
+            icon = GlacierIcons.Shuffle,
+        )
     }
     when {
         target.playing -> Unit
+
         target.queueIndex != null -> {
-            OptionRow(stringResource(R.string.music_options_play_next), stringResource(R.string.music_options_move_next_desc), actions::moveNext, Modifier.focusRequester(first), GlacierIcons.Play)
-            OptionRow(stringResource(R.string.music_options_remove_queue), stringResource(R.string.music_options_remove_queue_desc), actions::removeFromQueue, icon = GlacierIcons.Close)
+            OptionRow(
+                stringResource(R.string.music_options_play_next),
+                stringResource(R.string.music_options_move_next_desc),
+                actions::moveNext,
+                Modifier.focusRequester(first),
+                GlacierIcons.Play,
+            )
+            OptionRow(
+                stringResource(R.string.music_options_remove_queue),
+                stringResource(R.string.music_options_remove_queue_desc),
+                actions::removeFromQueue,
+                icon = GlacierIcons.Close,
+            )
         }
+
         else -> {
             OptionRow(
                 stringResource(R.string.music_options_play_next),
@@ -87,9 +111,19 @@ private fun OptionsPanelScope.Menu(sheet: MusicSheet.Menu, actions: MusicActions
                 if (playFirst) Modifier else Modifier.focusRequester(first),
                 GlacierIcons.Play,
             )
-            OptionRow(stringResource(R.string.music_options_add_queue), stringResource(R.string.music_options_add_queue_desc), actions::addToQueue, icon = GlacierIcons.Chapters)
+            OptionRow(
+                stringResource(R.string.music_options_add_queue),
+                stringResource(R.string.music_options_add_queue_desc),
+                actions::addToQueue,
+                icon = GlacierIcons.Chapters,
+            )
             if (target.videos != null) {
-                OptionRow(stringResource(R.string.music_options_add_videos_queue), stringResource(R.string.music_options_add_videos_queue_desc), actions::addVideosToQueue, icon = GlacierIcons.Film)
+                OptionRow(
+                    stringResource(R.string.music_options_add_videos_queue),
+                    stringResource(R.string.music_options_add_videos_queue_desc),
+                    actions::addVideosToQueue,
+                    icon = GlacierIcons.Film,
+                )
             }
         }
     }
@@ -101,10 +135,20 @@ private fun OptionsPanelScope.Menu(sheet: MusicSheet.Menu, actions: MusicActions
         GlacierIcons.PlaylistAdd,
     )
     if (target.mixFrom != null) {
-        OptionRow(stringResource(R.string.music_options_mix), stringResource(R.string.music_options_mix_desc), actions::playMix, icon = GlacierIcons.Compass)
+        OptionRow(
+            stringResource(R.string.music_options_mix),
+            stringResource(R.string.music_options_mix_desc),
+            actions::playMix,
+            icon = GlacierIcons.Compass,
+        )
     }
     if (target.playlistId != null) {
-        OptionRow(stringResource(R.string.music_options_remove_playlist), stringResource(R.string.music_options_remove_playlist_desc), actions::removeFromPlaylist, icon = GlacierIcons.Close)
+        OptionRow(
+            stringResource(R.string.music_options_remove_playlist),
+            stringResource(R.string.music_options_remove_playlist_desc),
+            actions::removeFromPlaylist,
+            icon = GlacierIcons.Close,
+        )
     }
     FocusOnStart(first)
 }
@@ -137,7 +181,13 @@ private fun OptionsPanelScope.Playlists(sheet: MusicSheet.Playlists, actions: Mu
             )
         }
     }
-    if (playlists.isEmpty()) Text(stringResource(R.string.music_no_playlists), style = GlacierText.body(18), color = GlacierColors.Mist)
+    if (playlists.isEmpty()) {
+        Text(
+            stringResource(R.string.music_no_playlists),
+            style = GlacierText.body(18),
+            color = GlacierColors.Mist,
+        )
+    }
     FocusOnStart(first)
 }
 

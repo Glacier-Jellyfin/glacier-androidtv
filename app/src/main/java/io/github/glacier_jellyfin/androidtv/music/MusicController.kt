@@ -2,7 +2,6 @@ package io.github.glacier_jellyfin.androidtv.music
 
 import android.content.Context
 import android.content.Intent
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import android.view.KeyEvent
 import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
@@ -28,14 +27,16 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepositor
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
 import io.github.glacier_jellyfin.androidtv.core.data.playback.TranscodeStatus
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.SongMetadata
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,9 +53,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 enum class RepeatMode { Off, All, One }
 
@@ -119,10 +119,18 @@ data class RadioState(
 data class MusicProgress(val positionMs: Long = 0, val durationMs: Long = 0)
 
 /** How to load a queue again ([MusicController.retry]): its songs, the one to start with, and whether it starts shuffled. */
-private class QueueRequest(val startTrackId: String?, val shuffle: Boolean = false, val load: suspend () -> LoadedQueue)
+private class QueueRequest(
+    val startTrackId: String?,
+    val shuffle: Boolean = false,
+    val load: suspend () -> LoadedQueue,
+)
 
 /** A loaded queue: what it was made from ([ItemKind.Other] for an instant mix, null for loose songs), its title and songs. */
-private data class LoadedQueue(val kind: ItemKind?, val title: String, val tracks: List<MusicTrack>)
+private data class LoadedQueue(
+    val kind: ItemKind?,
+    val title: String,
+    val tracks: List<MusicTrack>,
+)
 
 /** What the mini player and the saver show: a song, or a radio station with its programme. */
 data class NowPlaying(
@@ -182,8 +190,26 @@ class MusicController @Inject constructor(
             s.radio?.let { radio ->
                 val station = radio.station
                 val program = radio.nowAndNextAt(System.currentTimeMillis()).first
-                NowPlaying(station.name, program?.title, null, station.logoUrl, station.logoUrl, s.playWhenReady, live = true)
-            } ?: s.current?.let { NowPlaying(it.title, it.artist, it.album, it.coverUrl, it.largeCoverUrl ?: it.coverUrl, s.playWhenReady, video = it.isVideo) }
+                NowPlaying(
+                    station.name,
+                    program?.title,
+                    null,
+                    station.logoUrl,
+                    station.logoUrl,
+                    s.playWhenReady,
+                    live = true,
+                )
+            } ?: s.current?.let {
+                NowPlaying(
+                    it.title,
+                    it.artist,
+                    it.album,
+                    it.coverUrl,
+                    it.largeCoverUrl ?: it.coverUrl,
+                    s.playWhenReady,
+                    video = it.isVideo,
+                )
+            }
         }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, null)
@@ -191,11 +217,15 @@ class MusicController @Inject constructor(
     /** The player screen is in front, where a music video shows its picture; see [pictureShown]. */
     private val pictureOn = MutableStateFlow(false)
     private var pictures = 0
+
     /** Mini players on screen, which show a music video small; they do not keep the saver away. */
     private var miniPictures = 0
 
     /** A music video plays with its picture on the player screen: the now-playing saver stays away, as in the video player. */
-    val videoVisible: StateFlow<Boolean> = combine(state, pictureOn) { s, on -> on && s.radio == null && s.current?.isVideo == true }
+    val videoVisible: StateFlow<Boolean> = combine(
+        state,
+        pictureOn,
+    ) { s, on -> on && s.radio == null && s.current?.isVideo == true }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, false)
 
@@ -203,35 +233,44 @@ class MusicController @Inject constructor(
     val isPlaying: Boolean get() = _player.value != null && _state.value.playWhenReady
 
     private val activePlayer: ExoPlayer? get() = _player.value
+
     /** What the queue was made from, for [retry]. */
     private var request: QueueRequest? = null
     private var loadJob: Job? = null
+
     /** The source's songs in their own order, to return to when shuffle goes off. */
     private var sourceOrder: List<QueueEntry> = emptyList()
+
     /**
      * Where the entries stream from, by [QueueEntry.key]. A song's is known at once; a video's comes
      * when it is near ([resolveAhead]), and until then the player holds a stand-in for it.
      */
     private var sources: Map<Int, PlaybackSource> = emptyMap()
+
     /** Videos being asked of the server, by key. */
     private val opening = mutableMapOf<Int, Job>()
     private val openGate = Semaphore(PARALLEL_OPENS)
+
     /** Key for the next song added to the queue ([QueueEntry.key]). */
     private var nextKey = 0
+
     /** The song reported to the server as playing, and where it last was. */
     private var reported: PlaybackSource? = null
     private var lastPositionMs = 0L
     private val lyricsCache = mutableMapOf<UUID, Lyrics?>()
     private var lyricsJob: Job? = null
     private var ticker: Job? = null
+
     /** Open player screens; music that ends while one shows stays on it until it closes. */
     private var screens = 0
+
     /** The queue ran out; the last song waits, paused. */
     private var ended = false
     private var idleStop: Job? = null
 
     /** The radio's own player, kept while switching stations; null while songs play. */
     private var radioPlayer: ExoPlayer? = null
+
     /** The station's live stream on the server; closing it frees the tuner. */
     private var radioSource: PlaybackSource? = null
     private var radioStarted = false
@@ -249,8 +288,10 @@ class MusicController @Inject constructor(
                         radioSource?.let { playback.reportStart(it, radioPosition()) }
                     }
                 }
+
                 // A live stream has no end: the server stopped sending.
                 Player.STATE_ENDED -> radioFailed(null)
+
                 else -> Unit
             }
         }
@@ -280,7 +321,9 @@ class MusicController @Inject constructor(
     private val listener = object : Player.Listener {
         override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
             // A song that ran to its end stopped at its end, not at the last tick before it.
-            val endedAt = if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
+            val endedAt = if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
+                reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT
+            ) {
                 reported?.let { source -> sourceTrack(source)?.durationMs }
             } else {
                 null
@@ -296,6 +339,7 @@ class MusicController @Inject constructor(
                     _state.update { it.copy(loading = false) }
                     if (reported == null) reportCurrentStarted()
                 }
+
                 Player.STATE_ENDED -> {
                     // The end of the queue: the last song stays shown, paused (design), while the
                     // player screen is open; elsewhere the mini player goes.
@@ -305,6 +349,7 @@ class MusicController @Inject constructor(
                     // After the callback, not inside it: stop() releases this player.
                     if (screens == 0) scope.launch { stop() }
                 }
+
                 else -> Unit
             }
         }
@@ -324,7 +369,11 @@ class MusicController @Inject constructor(
             reported?.let { playback.reportProgress(it, position()) }
         }
 
-        override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int,
+        ) {
             if (reason == Player.DISCONTINUITY_REASON_SEEK) reported?.let { playback.reportProgress(it, position()) }
         }
 
@@ -355,13 +404,19 @@ class MusicController @Inject constructor(
         scope.launch {
             settings.settings.collect { profile ->
                 _state.update {
-                    it.copy(seekBackMs = profile.playback.seekBack.ms, seekForwardMs = profile.playback.seekForward.ms, lyricsOn = profile.music.lyrics)
+                    it.copy(
+                        seekBackMs = profile.playback.seekBack.ms,
+                        seekForwardMs = profile.playback.seekForward.ms,
+                        lyricsOn = profile.music.lyrics,
+                    )
                 }
             }
         }
         // Another profile does not inherit the music.
         scope.launch {
-            sessions.session.map { it?.server?.id to it?.user?.userId }.distinctUntilChanged().drop(1).collect { stop() }
+            sessions.session.map { it?.server?.id to it?.user?.userId }.distinctUntilChanged().drop(
+                1,
+            ).collect { stop() }
         }
     }
 
@@ -369,11 +424,21 @@ class MusicController @Inject constructor(
      * Plays the songs of an album, artist or playlist (with its music videos), from [startTrackId] if given.
      * [shuffle] starts them in a random order, whatever the shuffle switch says (Shuffle on their page).
      */
-    fun play(sourceId: UUID, startTrackId: String?, shuffle: Boolean = false) {
+    fun play(
+        sourceId: UUID,
+        startTrackId: String?,
+        shuffle: Boolean = false,
+    ) {
         request = QueueRequest(startTrackId, shuffle) {
             val source = details.details(sourceId).item
             // A music video on its own: it has no page, so it comes here to play.
-            if (source.kind == ItemKind.MusicVideo) return@QueueRequest LoadedQueue(null, source.title, music.tracks(listOf(sourceId)))
+            if (source.kind == ItemKind.MusicVideo) {
+                return@QueueRequest LoadedQueue(
+                    null,
+                    source.title,
+                    music.tracks(listOf(sourceId)),
+                )
+            }
             val tracks = when (source.kind) {
                 ItemKind.Artist -> music.artistTracks(sourceId)
                 ItemKind.Playlist -> music.playlistQueue(sourceId)
@@ -388,7 +453,12 @@ class MusicController @Inject constructor(
      * Songs from elsewhere in place of the queue: an instant mix ([kind] Other, see
      * MusicRepository.instantMix) or the favorite songs (null, a plain queue).
      */
-    fun playTracks(kind: ItemKind?, title: String, tracks: List<MusicTrack>, startTrackId: String? = null) {
+    fun playTracks(
+        kind: ItemKind?,
+        title: String,
+        tracks: List<MusicTrack>,
+        startTrackId: String? = null,
+    ) {
         request = QueueRequest(startTrackId) { LoadedQueue(kind, title, tracks) }
         load()
     }
@@ -397,7 +467,11 @@ class MusicController @Inject constructor(
      * The songs or music videos with [ids] as a plain queue named [title], fetched here: the songs
      * and music videos tabs of the music library, an artist's music videos.
      */
-    fun playSongs(title: String, ids: List<UUID>, startTrackId: String? = null) {
+    fun playSongs(
+        title: String,
+        ids: List<UUID>,
+        startTrackId: String? = null,
+    ) {
         request = QueueRequest(startTrackId) { LoadedQueue(null, title, music.tracks(ids)) }
         load()
     }
@@ -405,7 +479,11 @@ class MusicController @Inject constructor(
     /** Loads the last [play] again after it failed, or tunes to the radio station again. */
     fun retry() {
         val radio = _state.value.radio
-        if (radio != null) tune(radio.station, delayMs = 0) else if (request != null) load()
+        if (radio != null) {
+            tune(radio.station, delayMs = 0)
+        } else if (request != null) {
+            load()
+        }
     }
 
     /**
@@ -457,7 +535,11 @@ class MusicController @Inject constructor(
             it.copy(
                 radio = it.radio?.let { r ->
                     val same = r.station.id == station.id
-                    r.copy(station = station, programs = if (same) r.programs else emptyList(), programsLoaded = same && r.programsLoaded)
+                    r.copy(
+                        station = station,
+                        programs = if (same) r.programs else emptyList(),
+                        programsLoaded = same && r.programsLoaded,
+                    )
                 },
                 loading = true,
                 failed = false,
@@ -475,7 +557,14 @@ class MusicController @Inject constructor(
                 Log.i(TAG, "Tuned to radio ${station.id}: ${opened.method}")
                 val p = radioPlayer ?: startRadioPlayer(opened)
                 val program = _state.value.radio?.nowAndNextAt(System.currentTimeMillis())?.first
-                p.setMediaItem(GlacierPlayer.audioItem(station.id.toString(), opened.url, opened.isHls, SongMetadata(station.name, program?.title, null, station.logoUrl)))
+                p.setMediaItem(
+                    GlacierPlayer.audioItem(
+                        station.id.toString(),
+                        opened.url,
+                        opened.isHls,
+                        SongMetadata(station.name, program?.title, null, station.logoUrl),
+                    ),
+                )
                 p.prepare()
                 p.play()
                 _state.update { it.copy(method = opened.method) }
@@ -531,12 +620,28 @@ class MusicController @Inject constructor(
         programsJob = scope.launch {
             try {
                 val programs = liveTv.programs(stationId, hours = RADIO_GUIDE_HOURS)
-                _state.update { s -> if (s.radio?.station?.id == stationId) s.copy(radio = s.radio.copy(programs = programs, programsLoaded = true)) else s }
+                _state.update { s ->
+                    if (s.radio?.station?.id == stationId) {
+                        s.copy(
+                            radio = s.radio.copy(programs = programs, programsLoaded = true),
+                        )
+                    } else {
+                        s
+                    }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Loading the programmes of radio $stationId failed", e)
-                _state.update { s -> if (s.radio?.station?.id == stationId) s.copy(radio = s.radio.copy(programsLoaded = true)) else s }
+                _state.update { s ->
+                    if (s.radio?.station?.id == stationId) {
+                        s.copy(
+                            radio = s.radio.copy(programsLoaded = true),
+                        )
+                    } else {
+                        s
+                    }
+                }
             }
         }
     }
@@ -624,7 +729,12 @@ class MusicController @Inject constructor(
                 clearSources()
                 sources = songSources(entries)
                 sourceOrder = entries
-                val start = request.startTrackId?.let { id -> tracks.indexOfFirst { it.id.toString() == id }.takeIf { it >= 0 } }
+                val start = request.startTrackId?.let { id ->
+                    tracks.indexOfFirst { it.id.toString() == id }.takeIf {
+                        it >=
+                            0
+                    }
+                }
                 val shuffled = request.shuffle || shuffleSwitch.on.value
                 val order = openStart(MusicQueue.start(entries, start, shuffled))
                 if (order == null) {
@@ -632,7 +742,14 @@ class MusicController @Inject constructor(
                     return@launch
                 }
                 _state.update {
-                    it.copy(sourceKind = kind, sourceTitle = title, queue = order.items, index = order.index, shuffle = shuffled, replacing = false)
+                    it.copy(
+                        sourceKind = kind,
+                        sourceTitle = title,
+                        queue = order.items,
+                        index = order.index,
+                        shuffle = shuffled,
+                        replacing = false,
+                    )
                 }
                 startPlayer(order)
             } catch (e: CancellationException) {
@@ -759,8 +876,19 @@ class MusicController @Inject constructor(
     /** The entry for the player; a video the server has not answered for yet gets a stand-in that cannot play. */
     private fun mediaItem(entry: QueueEntry): androidx.media3.common.MediaItem {
         val track = entry.track
-        val metadata = SongMetadata(track.title, track.artist, track.album, track.largeCoverUrl ?: track.coverUrl, video = track.isVideo)
-        val source = sources[entry.key] ?: return GlacierPlayer.audioItem(entry.key.toString(), PENDING_URL, false, metadata)
+        val metadata = SongMetadata(
+            track.title,
+            track.artist,
+            track.album,
+            track.largeCoverUrl ?: track.coverUrl,
+            video = track.isVideo,
+        )
+        val source = sources[entry.key] ?: return GlacierPlayer.audioItem(
+            entry.key.toString(),
+            PENDING_URL,
+            false,
+            metadata,
+        )
         return GlacierPlayer.audioItem(entry.key.toString(), source.url, source.isHls, metadata)
     }
 
@@ -816,7 +944,9 @@ class MusicController @Inject constructor(
                 p.seekTo(p.currentMediaItemIndex, 0)
                 p.play()
             }
+
             p.playWhenReady -> p.pause()
+
             else -> p.play()
         }
     }
@@ -894,7 +1024,18 @@ class MusicController @Inject constructor(
             clearSources()
             sources = songSources(entries)
             sourceOrder = entries
-            _state.update { it.copy(loading = true, replacing = false, failed = false, nothingToPlay = false, sourceKind = null, sourceTitle = "", queue = entries, index = 0) }
+            _state.update {
+                it.copy(
+                    loading = true,
+                    replacing = false,
+                    failed = false,
+                    nothingToPlay = false,
+                    sourceKind = null,
+                    sourceTitle = "",
+                    queue = entries,
+                    index = 0,
+                )
+            }
             loadJob = scope.launch {
                 val order = openStart(QueueOrder(entries, 0))
                 if (order == null) {
@@ -934,7 +1075,12 @@ class MusicController @Inject constructor(
         val entry = current.queue[index]
         p.removeMediaItem(index)
         sourceOrder = sourceOrder - entry
-        _state.update { it.copy(queue = it.queue.filterIndexed { i, _ -> i != index }, index = p.currentMediaItemIndex) }
+        _state.update {
+            it.copy(
+                queue = it.queue.filterIndexed { i, _ -> i != index },
+                index = p.currentMediaItemIndex,
+            )
+        }
     }
 
     /** Moves a queued song to right after the current one. */
@@ -972,7 +1118,12 @@ class MusicController @Inject constructor(
     }
 
     /** Swaps everything around the playing song, which plays on undisturbed. */
-    private fun replaceAround(p: ExoPlayer, index: Int, before: List<QueueEntry>, after: List<QueueEntry>) {
+    private fun replaceAround(
+        p: ExoPlayer,
+        index: Int,
+        before: List<QueueEntry>,
+        after: List<QueueEntry>,
+    ) {
         p.removeMediaItems(index + 1, p.mediaItemCount)
         p.removeMediaItems(0, index)
         p.addMediaItems(0, before.map(::mediaItem))
@@ -1026,7 +1177,12 @@ class MusicController @Inject constructor(
         scope.launch {
             try {
                 liveTv.setFavorite(station.id, favorite)
-                _events.tryEmit(UiEvent.Toast(if (favorite) R.string.livetv_favorite_added else R.string.livetv_favorite_removed, listOf(station.name)))
+                _events.tryEmit(
+                    UiEvent.Toast(
+                        if (favorite) R.string.livetv_favorite_added else R.string.livetv_favorite_removed,
+                        listOf(station.name),
+                    ),
+                )
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -1046,7 +1202,13 @@ class MusicController @Inject constructor(
             try {
                 liveTv.moveChannel(station.id, toRadio = false)
                 _state.update { s ->
-                    s.copy(radio = s.radio?.let { r -> r.copy(stations = r.stations.filter { it.id != station.id || it.id == r.station.id }) })
+                    s.copy(
+                        radio = s.radio?.let { r ->
+                            r.copy(
+                                stations = r.stations.filter { it.id != station.id || it.id == r.station.id },
+                            )
+                        },
+                    )
                 }
                 _events.tryEmit(UiEvent.Toast(R.string.livetv_moved_tv, listOf(station.name)))
             } catch (e: CancellationException) {
@@ -1058,7 +1220,15 @@ class MusicController @Inject constructor(
     }
 
     private fun setStationFavorite(stationId: UUID, favorite: Boolean) {
-        val change = { channel: LiveChannel -> if (channel.id == stationId) channel.copy(favorite = favorite) else channel }
+        val change = { channel: LiveChannel ->
+            if (channel.id == stationId) {
+                channel.copy(
+                    favorite = favorite,
+                )
+            } else {
+                channel
+            }
+        }
         _state.update { s ->
             s.copy(radio = s.radio?.let { it.copy(stations = it.stations.map(change), station = change(it.station)) })
         }
@@ -1066,7 +1236,15 @@ class MusicController @Inject constructor(
 
     /** Every entry of the song in the queue (a playlist may hold it twice). */
     private fun setFavorite(trackId: UUID, favorite: Boolean) {
-        val change = { entry: QueueEntry -> if (entry.track.id == trackId) entry.copy(track = entry.track.copy(isFavorite = favorite)) else entry }
+        val change = { entry: QueueEntry ->
+            if (entry.track.id == trackId) {
+                entry.copy(
+                    track = entry.track.copy(isFavorite = favorite),
+                )
+            } else {
+                entry
+            }
+        }
         sourceOrder = sourceOrder.map(change)
         _state.update { it.copy(queue = it.queue.map(change)) }
     }
@@ -1196,7 +1374,15 @@ class MusicController @Inject constructor(
         sourceOrder = emptyList()
         clearSources()
         _progress.value = MusicProgress()
-        _state.update { MusicUiState(shuffle = it.shuffle, repeat = it.repeat, lyricsOn = it.lyricsOn, seekBackMs = it.seekBackMs, seekForwardMs = it.seekForwardMs) }
+        _state.update {
+            MusicUiState(
+                shuffle = it.shuffle,
+                repeat = it.repeat,
+                lyricsOn = it.lyricsOn,
+                seekBackMs = it.seekBackMs,
+                seekForwardMs = it.seekForwardMs,
+            )
+        }
     }
 
     private fun reportCurrentStarted() {
@@ -1215,7 +1401,10 @@ class MusicController @Inject constructor(
         playback.reportStopped(source, atMs ?: if (video) 0 else lastPositionMs, failed)
     }
 
-    private fun sourceTrack(source: PlaybackSource): MusicTrack? = sourceOrder.firstOrNull { it.track.id == source.itemId }?.track
+    private fun sourceTrack(source: PlaybackSource): MusicTrack? = sourceOrder.firstOrNull {
+        it.track.id ==
+            source.itemId
+    }?.track
 
     private fun startTicker() {
         ticker?.cancel()
@@ -1225,7 +1414,10 @@ class MusicController @Inject constructor(
                 val p = activePlayer ?: break
                 val position = p.currentPosition
                 lastPositionMs = position
-                _progress.value = MusicProgress(position, p.duration.takeIf { it > 0 } ?: _state.value.current?.durationMs ?: 0)
+                _progress.value = MusicProgress(
+                    position,
+                    p.duration.takeIf { it > 0 } ?: _state.value.current?.durationMs ?: 0,
+                )
                 sinceReport += TICK_MS
                 if (sinceReport >= REPORT_INTERVAL_MS && p.isPlaying) {
                     sinceReport = 0
@@ -1236,7 +1428,10 @@ class MusicController @Inject constructor(
         }
     }
 
-    private fun position() = PlaybackPosition(activePlayer?.currentPosition ?: lastPositionMs, paused = activePlayer?.isPlaying != true)
+    private fun position() = PlaybackPosition(
+        activePlayer?.currentPosition ?: lastPositionMs,
+        paused = activePlayer?.isPlaying != true,
+    )
 
     private fun toast(message: Int) {
         _events.tryEmit(UiEvent.Toast(message))
@@ -1259,17 +1454,23 @@ class MusicController @Inject constructor(
         const val TICK_MS = 250L
         const val REPORT_INTERVAL_MS = 10_000L
         const val IDLE_STOP_MS = 10 * 60_000L
+
         /** Switching stations rests this long on one before its stream opens (as in Live TV). */
         const val ZAP_DELAY_MS = 450L
+
         /** A second radio failure within this time shows the error instead of tuning again. */
         const val AUTO_RETRY_WINDOW_MS = 60_000L
         const val RADIO_GUIDE_HOURS = 6L
+
         /** How long the video track stays on after the last picture went, see applyPicture. */
         const val PICTURE_OFF_DELAY_MS = 600L
+
         /** Videos asked of the server at once. */
         const val PARALLEL_OPENS = 2
+
         /** Videos after the current one asked of the server ahead, so they play without a wait. */
         const val LOOKAHEAD = 2
+
         /** The stand-in for a video whose stream is not known yet; it fails, and [open] replaces it. */
         const val PENDING_URL = "glacier-pending://video"
         val MediaKeys = setOf(

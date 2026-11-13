@@ -23,6 +23,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinDots
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinKey
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinWheel
+import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -30,7 +31,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 /**
  * Runs a [PinPrompt] for a view model: checks the profile's PIN, saves a new
@@ -70,10 +70,12 @@ class PinGate(
         scope.launch {
             when {
                 !ageFilter.isLocked(id, parents) -> onOpen()
+
                 ageFilter.hides -> {
                     toast(UiEvent.Toast(R.string.pin_title_hidden))
                     onRefused()
                 }
+
                 else -> open(PinReason.Title(id.toString(), name, rating), onOpen)
             }
         }
@@ -96,18 +98,23 @@ class PinGate(
             val ok = typed.step == PinStep.Current && parental.verifyPin(typed.digits)
             when (val outcome = typed.next(currentOk = ok)) {
                 is PinOutcome.Continue -> _prompt.value = outcome.prompt
+
                 PinOutcome.Unlocked -> {
                     when (val reason = typed.reason) {
                         PinReason.Settings -> parental.unlockSettings()
+
                         is PinReason.Title -> parental.unlock(reason.itemId)
+
                         PinReason.Remove -> {
                             parental.removePin()
                             toast(UiEvent.Toast(R.string.pin_removed))
                         }
+
                         PinReason.Change, PinReason.Create -> Unit
                     }
                     finish()
                 }
+
                 is PinOutcome.NewPin -> {
                     parental.setPin(outcome.pin)
                     // Setting the PIN proves who is at the remote, like entering it would.
@@ -133,10 +140,16 @@ class PinGate(
 
 /** The design's PIN sheet for a [PinGate]. */
 @Composable
-fun PinDialog(prompt: PinPrompt, onKey: (PinKey) -> Unit, onDismiss: () -> Unit) {
+fun PinDialog(
+    prompt: PinPrompt,
+    onKey: (PinKey) -> Unit,
+    onDismiss: () -> Unit,
+) {
     val title = when (prompt.step) {
         PinStep.New -> stringResource(R.string.pin_new_title)
+
         PinStep.Confirm -> stringResource(R.string.pin_confirm_title)
+
         PinStep.Current -> when (val reason = prompt.reason) {
             PinReason.Settings -> stringResource(R.string.pin_settings_title)
             is PinReason.Title -> reason.name
@@ -146,15 +159,23 @@ fun PinDialog(prompt: PinPrompt, onKey: (PinKey) -> Unit, onDismiss: () -> Unit)
     }
     val sub = when {
         prompt.error == PinError.Mismatch -> stringResource(R.string.pin_mismatch)
+
         prompt.error == PinError.Wrong -> stringResource(R.string.pin_wrong)
+
         prompt.step == PinStep.New -> stringResource(R.string.pin_new_hint)
+
         prompt.step == PinStep.Confirm -> stringResource(R.string.pin_confirm_hint)
+
         else -> when (val reason = prompt.reason) {
             PinReason.Settings -> stringResource(R.string.pin_settings_hint)
-            is PinReason.Title -> reason.rating
-                ?.let { stringResource(R.string.pin_title_rated_hint, it) }
-                ?: stringResource(R.string.pin_title_unrated_hint)
+
+            is PinReason.Title ->
+                reason.rating
+                    ?.let { stringResource(R.string.pin_title_rated_hint, it) }
+                    ?: stringResource(R.string.pin_title_unrated_hint)
+
             PinReason.Change, PinReason.Create -> stringResource(R.string.pin_current_hint)
+
             PinReason.Remove -> stringResource(R.string.pin_remove_hint)
         }
     }
@@ -181,7 +202,11 @@ fun PinDialog(prompt: PinPrompt, onKey: (PinKey) -> Unit, onDismiss: () -> Unit)
  * typed it closes the sheet as usual.
  */
 @Composable
-fun PinEntry(typed: Int, onKey: (PinKey) -> Unit, focus: FocusRequester) {
+fun PinEntry(
+    typed: Int,
+    onKey: (PinKey) -> Unit,
+    focus: FocusRequester,
+) {
     BackHandler(enabled = typed > 0) { onKey(PinKey.Delete) }
     val fireTv = TvPlatform.of(LocalContext.current) == TvPlatform.FireTv
     val resources = LocalResources.current

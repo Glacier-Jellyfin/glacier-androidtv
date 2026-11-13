@@ -44,7 +44,14 @@ fun GlacierTheme(
         border = GlacierColors.GlassBorder,
     )
     val windowWidth = LocalWindowInfo.current.containerSize.width
-    val density = if (windowWidth > 0) Density(density = windowWidth / DesignWidth, fontScale = 1f) else LocalDensity.current
+    val density = if (windowWidth > 0) {
+        Density(
+            density = windowWidth / DesignWidth,
+            fontScale = 1f,
+        )
+    } else {
+        LocalDensity.current
+    }
     CompositionLocalProvider(
         LocalDensity provides density,
         LocalAccent provides accent,

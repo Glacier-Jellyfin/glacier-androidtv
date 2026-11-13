@@ -3,11 +3,14 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.log.Log
+import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -15,10 +18,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.artistApi
 import org.jellyfin.sdk.api.client.extensions.genreApi
@@ -30,10 +34,6 @@ import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.SortOrder
-import java.util.UUID
-import java.util.concurrent.atomic.AtomicInteger
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** The filter chips of the library screen. */
 enum class LibraryScope { All, Collections, Genres, Albums, Artists, Songs, MusicVideos, Playlists }
@@ -71,7 +71,8 @@ data class LibraryQuery(
 
     /** The movies tab shows collections in place of their movies. Filtered, the titles themselves count, except for unwatched. */
     val groupsCollections: Boolean
-        get() = scope == LibraryScope.All && kind == LibraryKind.Movies && groupCollections && genreId == null && !favoritesOnly
+        get() = scope == LibraryScope.All && kind == LibraryKind.Movies && groupCollections && genreId == null &&
+            !favoritesOnly
 
     /** Genres are listed as they are: the toggles narrow titles, not genres. */
     val filterable: Boolean get() = scope != LibraryScope.Genres
@@ -82,21 +83,52 @@ data class LibraryQuery(
     /** The sorts the sort menu offers for this scope, in menu order. */
     val sorts: List<LibrarySort> get() = when (scope) {
         LibraryScope.Artists, LibraryScope.Playlists -> listOf(LibrarySort.DateAdded, LibrarySort.Title)
+
         LibraryScope.Albums -> listOf(
-            LibrarySort.DateAdded, LibrarySort.Title, LibrarySort.Artist, LibrarySort.Year, LibrarySort.Rating, LibrarySort.Runtime,
+            LibrarySort.DateAdded,
+            LibrarySort.Title,
+            LibrarySort.Artist,
+            LibrarySort.Year,
+            LibrarySort.Rating,
+            LibrarySort.Runtime,
         )
+
         LibraryScope.Songs -> listOf(
-            LibrarySort.DateAdded, LibrarySort.Title, LibrarySort.Artist, LibrarySort.Album, LibrarySort.Year, LibrarySort.Runtime,
+            LibrarySort.DateAdded,
+            LibrarySort.Title,
+            LibrarySort.Artist,
+            LibrarySort.Album,
+            LibrarySort.Year,
+            LibrarySort.Runtime,
         )
-        LibraryScope.MusicVideos -> listOf(LibrarySort.DateAdded, LibrarySort.Title, LibrarySort.Year, LibrarySort.Artist)
-        else -> listOf(LibrarySort.DateAdded, LibrarySort.Title, LibrarySort.Year, LibrarySort.Rating, LibrarySort.Runtime)
+
+        LibraryScope.MusicVideos -> listOf(
+            LibrarySort.DateAdded,
+            LibrarySort.Title,
+            LibrarySort.Year,
+            LibrarySort.Artist,
+        )
+
+        else -> listOf(
+            LibrarySort.DateAdded,
+            LibrarySort.Title,
+            LibrarySort.Year,
+            LibrarySort.Rating,
+            LibrarySort.Runtime,
+        )
     }
 
     /**
      * Where the chosen sort is kept: one per kind, and one per tab for music, whose tabs
      * sort by different things. Albums keep the plain kind key they had before tabs had their own.
      */
-    val sortKey: String get() = if (kind == LibraryKind.Music && scope != LibraryScope.Albums) "${kind.name}.${scope.name}" else kind.name
+    val sortKey: String get() = if (kind == LibraryKind.Music &&
+        scope != LibraryScope.Albums
+    ) {
+        "${kind.name}.${scope.name}"
+    } else {
+        kind.name
+    }
 
     /** The order actually requested: [descending] only applies to the chosen sort. */
     val orderDescending: Boolean get() = descending && !listedByName
@@ -105,18 +137,34 @@ data class LibraryQuery(
     val grouped: Boolean get() = !listedByName && sort != LibrarySort.Title
 
     /** An A–Z rail where the list goes by names: titles, or groups of artists or albums. */
-    val railed: Boolean get() = listedByName || sort == LibrarySort.Title || sort == LibrarySort.Artist || sort == LibrarySort.Album
+    val railed: Boolean get() = listedByName || sort == LibrarySort.Title || sort == LibrarySort.Artist ||
+        sort == LibrarySort.Album
 
     companion object {
         fun defaultScope(kind: LibraryKind) = if (kind == LibraryKind.Music) LibraryScope.Albums else LibraryScope.All
 
         /** Music has a tab for the music videos when the server has a library of them ([musicVideos]). */
-        fun scopes(kind: LibraryKind, inGenre: Boolean, musicVideos: Boolean = false): List<LibraryScope> = when {
+        fun scopes(
+            kind: LibraryKind,
+            inGenre: Boolean,
+            musicVideos: Boolean = false,
+        ): List<LibraryScope> = when {
             kind == LibraryKind.Music -> listOfNotNull(
-                LibraryScope.Albums, LibraryScope.Artists, LibraryScope.Songs, LibraryScope.MusicVideos.takeIf { musicVideos }, LibraryScope.Playlists,
+                LibraryScope.Albums,
+                LibraryScope.Artists,
+                LibraryScope.Songs,
+                LibraryScope.MusicVideos.takeIf { musicVideos },
+                LibraryScope.Playlists,
             )
+
             inGenre -> listOf(LibraryScope.All)
-            kind == LibraryKind.Movies || kind == LibraryKind.Shows -> listOf(LibraryScope.All, LibraryScope.Collections, LibraryScope.Genres)
+
+            kind == LibraryKind.Movies || kind == LibraryKind.Shows -> listOf(
+                LibraryScope.All,
+                LibraryScope.Collections,
+                LibraryScope.Genres,
+            )
+
             else -> listOf(LibraryScope.All, LibraryScope.Genres)
         }
     }
@@ -125,7 +173,11 @@ data class LibraryQuery(
 data class LibraryPage(val items: List<MediaItem>, val total: Int)
 
 /** How far the whole list of [query] has come while the grid waits for it: [loaded] of [total] titles. */
-data class LoadProgress(val query: LibraryQuery, val loaded: Int, val total: Int) {
+data class LoadProgress(
+    val query: LibraryQuery,
+    val loaded: Int,
+    val total: Int,
+) {
     /** Whether this is the list [other] waits for. One list serves every sort. */
     fun isFor(other: LibraryQuery): Boolean = query.unsorted == other.unsorted
 }
@@ -154,7 +206,11 @@ class LibraryRepository @Inject constructor(
     val progress: StateFlow<LoadProgress?> = _progress.asStateFlow()
 
     /** Titles [start] to [start] + [limit] of [query], each with its group when the list is grouped. */
-    suspend fun page(query: LibraryQuery, start: Int, limit: Int): LibraryPage = withContext(Dispatchers.IO) {
+    suspend fun page(
+        query: LibraryQuery,
+        start: Int,
+        limit: Int,
+    ): LibraryPage = withContext(Dispatchers.IO) {
         val session = requireSession()
         val mapper = MediaMapper(session.api)
         // The first page is a fresh look: something may have changed meanwhile.
@@ -164,12 +220,16 @@ class LibraryRepository @Inject constructor(
         if (start >= end) return@withContext LibraryPage(emptyList(), list.size)
         val slice = list.entries.subList(start, end)
         val groups = list.groups?.let { all -> slice.indices.associate { slice[it].id to all[start + it] } }
-        val dtos = listing.whole?.let { whole -> slice.mapNotNull { whole[it.id] } } ?: itemsByIds(session, slice.map { it.id })
+        val dtos = listing.whole?.let { whole -> slice.mapNotNull { whole[it.id] } } ?: itemsByIds(
+            session,
+            slice.map { it.id },
+        )
         val items = dtos.map(mapper::item).map { item -> groups?.get(item.id)?.let { item.copy(group = it) } ?: item }
         LibraryPage(ageFilter.mark(items), list.size)
     }
 
     /** Letters that have at least one title, for greying out the rest of the A–Z rail. */
+
     /** The share of [query]'s titles that name an artist, from the same index the grid pages through. */
     suspend fun artistShare(query: LibraryQuery): Float = withContext(Dispatchers.IO) {
         val entries = listing(requireSession(), query).source
@@ -198,7 +258,11 @@ class LibraryRepository @Inject constructor(
     }
 
     /** Where the row that holds [index] starts in a grid of [columns] (see [ArrangedList.rowStart]). */
-    suspend fun rowStart(query: LibraryQuery, index: Int, columns: Int): Int = withContext(Dispatchers.IO) {
+    suspend fun rowStart(
+        query: LibraryQuery,
+        index: Int,
+        columns: Int,
+    ): Int = withContext(Dispatchers.IO) {
         listing(requireSession(), query).list.rowStart(index, columns)
     }
 
@@ -214,7 +278,11 @@ class LibraryRepository @Inject constructor(
         if (query.scope == LibraryScope.Songs) dto.name.orEmpty() else NameOrder.title(dto.name.orEmpty(), dto.sortName)
 
     /** [shared] keeps one copy of each artist and album: a big music library repeats them on every song. */
-    private fun entryOf(dto: BaseItemDto, query: LibraryQuery, shared: MutableMap<String, String>? = null): IndexEntry {
+    private fun entryOf(
+        dto: BaseItemDto,
+        query: LibraryQuery,
+        shared: MutableMap<String, String>? = null,
+    ): IndexEntry {
         fun String.once() = shared?.getOrPut(this) { this } ?: this
         return IndexEntry(
             id = dto.id,
@@ -236,7 +304,12 @@ class LibraryRepository @Inject constructor(
     }
 
     /** A list in the grid's order and, when fetched whole, its titles. */
-    private class Listing(val query: LibraryQuery, val source: List<IndexEntry>, val list: ArrangedList, val whole: Map<UUID, BaseItemDto>?)
+    private class Listing(
+        val query: LibraryQuery,
+        val source: List<IndexEntry>,
+        val list: ArrangedList,
+        val whole: Map<UUID, BaseItemDto>?,
+    )
 
     private var listingCache: Listing? = null
     private val listingLock = Mutex()
@@ -247,16 +320,29 @@ class LibraryRepository @Inject constructor(
      * and each page is then fetched by its ids. One index serves every sort, so a new sort
      * only puts the titles in a new order.
      */
-    private suspend fun listing(session: Session, query: LibraryQuery, fresh: Boolean = false): Listing {
+    private suspend fun listing(
+        session: Session,
+        query: LibraryQuery,
+        fresh: Boolean = false,
+    ): Listing {
         val whole = if (query.listedWhole) wholeList(session, query, fresh) else null
         val entries = whole?.entries ?: index(session, query, fresh)
         return listingLock.withLock {
             listingCache?.takeIf { it.query == query && it.source === entries }
-                ?: Listing(query, entries, ListArrangement.arrange(entries, query), whole?.dtos).also { listingCache = it }
+                ?: Listing(
+                    query,
+                    entries,
+                    ListArrangement.arrange(entries, query),
+                    whole?.dtos,
+                ).also { listingCache = it }
         }
     }
 
-    private class Cached<T>(val key: Any, val at: Long, val value: T)
+    private class Cached<T>(
+        val key: Any,
+        val at: Long,
+        val value: T,
+    )
 
     /** The index the grid pages through. */
     private var indexCache: Cached<List<IndexEntry>>? = null
@@ -272,15 +358,28 @@ class LibraryRepository @Inject constructor(
      * unwatched, and the playlists, it is not saved: a change elsewhere can take a title out (or
      * add a playlist), so each fresh look fetches it again unless that was a moment ago.
      */
-    private suspend fun index(session: Session, query: LibraryQuery, fresh: Boolean = false): List<IndexEntry> = indexLock.withLock {
+    private suspend fun index(
+        session: Session,
+        query: LibraryQuery,
+        fresh: Boolean = false,
+    ): List<IndexEntry> = indexLock.withLock {
         val key = indexKey(session, query)
         val now = System.currentTimeMillis()
         val cached = indexCache?.takeIf { it.key == key }
         when {
             cached != null && !fresh -> cached.value
+
             // Playlists change from here too (a new one, from a song's or video's options) and are few.
             query.favoritesOnly || query.unwatchedOnly || query.scope == LibraryScope.Playlists ->
-                if (cached != null && now - cached.at < WHOLE_FRESH_MS) cached.value else fetchIndex(session, query).also { indexCache = Cached(key, now, it) }
+                if (cached != null && now - cached.at < WHOLE_FRESH_MS) {
+                    cached.value
+                } else {
+                    fetchIndex(
+                        session,
+                        query,
+                    ).also { indexCache = Cached(key, now, it) }
+                }
+
             else -> {
                 val savedAt = store.savedAt(key)
                 val newest = if (savedAt != null && (cached == null || savedAt > cached.at)) store.read(key) else null
@@ -290,10 +389,12 @@ class LibraryRepository @Inject constructor(
                         if (now - newest.at > INDEX_REFRESH_MS) refreshInBackground(session, query, key)
                         newest.entries
                     }
+
                     cached != null -> {
                         if (now - cached.at > INDEX_REFRESH_MS) refreshInBackground(session, query, key)
                         cached.value
                     }
+
                     else -> fetchIndex(session, query).also {
                         indexCache = Cached(key, now, it)
                         store.write(key, SavedIndex(now, it))
@@ -321,14 +422,27 @@ class LibraryRepository @Inject constructor(
      * [query]'s titles from the server. Each page becomes index entries as it comes: 70,000
      * songs as the server's items at once do not fit in a TV's memory.
      */
-    private suspend fun fetchIndex(session: Session, query: LibraryQuery, waitedFor: Boolean = true): List<IndexEntry> {
+    private suspend fun fetchIndex(
+        session: Session,
+        query: LibraryQuery,
+        waitedFor: Boolean = true,
+    ): List<IndexEntry> {
         val shared = HashMap<String, String>()
-        return fetchAll(session, query, light = true, waitedFor = waitedFor) { page -> synchronized(shared) { page.map { entryOf(it, query, shared) } } }
+        return fetchAll(
+            session,
+            query,
+            light = true,
+            waitedFor = waitedFor,
+        ) { page -> synchronized(shared) { page.map { entryOf(it, query, shared) } } }
             .distinctBy { it.id }
     }
 
     /** Saves a new copy of an index for the next fresh look; the one in use stays as it is. */
-    private fun refreshInBackground(session: Session, query: LibraryQuery, key: String) {
+    private fun refreshInBackground(
+        session: Session,
+        query: LibraryQuery,
+        key: String,
+    ) {
         synchronized(refreshing) { if (!refreshing.add(key)) return }
         background.launch {
             try {
@@ -357,7 +471,11 @@ class LibraryRepository @Inject constructor(
      * does not group once a played filter is in the query, so the app leaves out the movies
      * watched and the collections whose movies were all watched (the server marks those played).
      */
-    private suspend fun wholeList(session: Session, query: LibraryQuery, fresh: Boolean = false): Whole = wholeLock.withLock {
+    private suspend fun wholeList(
+        session: Session,
+        query: LibraryQuery,
+        fresh: Boolean = false,
+    ): Whole = wholeLock.withLock {
         val key = indexKey(session, query)
         wholeCache?.let { cached ->
             val recent = System.currentTimeMillis() - cached.at < WHOLE_FRESH_MS
@@ -393,11 +511,28 @@ class LibraryRepository @Inject constructor(
                 (WHOLE_PAGE until total step WHOLE_PAGE).map { start ->
                     async {
                         permits.withPermit {
-                            val page = fetch(session, query, start = start, limit = WHOLE_PAGE, light = light, grouped = grouped).items
+                            val page = fetch(
+                                session,
+                                query,
+                                start = start,
+                                limit = WHOLE_PAGE,
+                                light = light,
+                                grouped = grouped,
+                            ).items
                             if (counted) {
                                 val now = loaded.addAndGet(page.size).coerceAtMost(total)
                                 // Pages finish in any order: the count only goes up.
-                                _progress.update { if (it?.query == query && it.loaded >= now) it else LoadProgress(query, now, total) }
+                                _progress.update {
+                                    if (it?.query == query && it.loaded >= now) {
+                                        it
+                                    } else {
+                                        LoadProgress(
+                                            query,
+                                            now,
+                                            total,
+                                        )
+                                    }
+                                }
                             }
                             convert(page)
                         }
@@ -442,7 +577,11 @@ class LibraryRepository @Inject constructor(
     private suspend fun showCollectionIds(session: Session): List<UUID> = showCollectionsLock.withLock {
         val userId = UUID.fromString(session.user.userId)
         showCollectionsCache?.let { (user, at, ids) ->
-            if (user == session.user.userId && System.currentTimeMillis() - at < SHOW_COLLECTIONS_FRESH_MS) return@withLock ids
+            if (user == session.user.userId &&
+                System.currentTimeMillis() - at < SHOW_COLLECTIONS_FRESH_MS
+            ) {
+                return@withLock ids
+            }
         }
         val collections = session.api.libraryApi.getItems(
             userId = userId,
@@ -490,7 +629,13 @@ class LibraryRepository @Inject constructor(
         val order = listOf(SortOrder.ASCENDING)
         val only = if (query.showCollections) showCollectionIds(session) else emptyList()
         // Asked without ids, the server would list every collection.
-        if (query.showCollections && only.isEmpty()) return BaseItemDtoQueryResult(items = emptyList(), totalRecordCount = 0, startIndex = 0)
+        if (query.showCollections && only.isEmpty()) {
+            return BaseItemDtoQueryResult(
+                items = emptyList(),
+                totalRecordCount = 0,
+                startIndex = 0,
+            )
+        }
         return when (query.scope) {
             LibraryScope.Genres -> session.api.genreApi.getGenres(
                 userId = userId,
@@ -502,23 +647,33 @@ class LibraryRepository @Inject constructor(
                 sortBy = listOf(ItemSortBy.SORT_NAME),
                 sortOrder = order,
             ).content
+
             // Deprecated since the 12.1 API, but nothing else lists only album artists: /Artists and
             // /Items with MusicArtist also list every guest artist of a song (checked on 12.2).
-            LibraryScope.Artists -> @Suppress("DEPRECATION") session.api.artistApi.getAlbumArtists(
-                userId = userId,
-                parentId = query.libraryId,
-                fields = listOf(ItemFields.CHILD_COUNT, ItemFields.SORT_NAME, ItemFields.DATE_CREATED),
-                startIndex = start,
-                limit = limit,
-                isFavorite = favorite,
-                sortBy = sortBy,
-                sortOrder = order,
-                enableUserData = true,
-            ).content
+            LibraryScope.Artists ->
+                @Suppress("DEPRECATION")
+                session.api.artistApi.getAlbumArtists(
+                    userId = userId,
+                    parentId = query.libraryId,
+                    fields = listOf(ItemFields.CHILD_COUNT, ItemFields.SORT_NAME, ItemFields.DATE_CREATED),
+                    startIndex = start,
+                    limit = limit,
+                    isFavorite = favorite,
+                    sortBy = sortBy,
+                    sortOrder = order,
+                    enableUserData = true,
+                ).content
+
             else -> session.api.libraryApi.getItems(
                 userId = userId,
                 // Music videos come from their own libraries, not the music library the tab belongs to.
-                parentId = if (query.scope == LibraryScope.Playlists || query.scope == LibraryScope.MusicVideos) null else query.libraryId,
+                parentId = if (query.scope == LibraryScope.Playlists ||
+                    query.scope == LibraryScope.MusicVideos
+                ) {
+                    null
+                } else {
+                    query.libraryId
+                },
                 ids = only,
                 recursive = true,
                 includeItemTypes = listOf(itemTypeFor(query)),
@@ -529,7 +684,19 @@ class LibraryRepository @Inject constructor(
                 isFavorite = favorite,
                 // Filtered, the titles themselves count: a collection would hide which of its movies match.
                 collapseBoxSetItems = (grouped || (query.groupsCollections && !query.unwatchedOnly)).takeIf { it },
-                fields = if (light) listOf(ItemFields.SORT_NAME, ItemFields.DATE_CREATED) else listOf(ItemFields.CHILD_COUNT, ItemFields.GENRES, ItemFields.SORT_NAME, ItemFields.DATE_CREATED),
+                fields = if (light) {
+                    listOf(
+                        ItemFields.SORT_NAME,
+                        ItemFields.DATE_CREATED,
+                    )
+                } else {
+                    listOf(
+                        ItemFields.CHILD_COUNT,
+                        ItemFields.GENRES,
+                        ItemFields.SORT_NAME,
+                        ItemFields.DATE_CREATED,
+                    )
+                },
                 enableImages = !light,
                 enableUserData = !light,
                 startIndex = start,
@@ -552,9 +719,13 @@ class LibraryRepository @Inject constructor(
     private val LibraryKind.itemType: BaseItemKind
         get() = when (this) {
             LibraryKind.Movies -> BaseItemKind.MOVIE
+
             LibraryKind.Shows -> BaseItemKind.SERIES
+
             LibraryKind.Music -> BaseItemKind.MUSIC_ALBUM
+
             LibraryKind.MusicVideos -> BaseItemKind.MUSIC_VIDEO
+
             // Browsed by folder (FolderRepository), never listed here.
             LibraryKind.HomeVideos -> BaseItemKind.VIDEO
         }
@@ -562,21 +733,29 @@ class LibraryRepository @Inject constructor(
     private companion object {
         /** Titles per request when a whole list is fetched. */
         const val WHOLE_PAGE = 2000
+
         /** Requests at once when a whole list is fetched. */
         const val WHOLE_PARALLEL = 8
+
         /** The grid's first page and the A–Z rail ask for the whole list together: one fetch serves both. */
         const val WHOLE_FRESH_MS = 3_000L
+
         /** An [index] older than this is fetched again in the background. The pages fetched with it are always fresh. */
         const val INDEX_REFRESH_MS = 30 * 60_000L
         const val TAG = "Library"
+
         /** Ids per request when a page is fetched by its ids. */
         const val IDS_PER_REQUEST = 40
+
         /** How long the collections holding shows are trusted before they are looked up again. */
         const val SHOW_COLLECTIONS_FRESH_MS = 5 * 60_000L
+
         /** Collections asked for their shows at once. */
         const val SHOW_COLLECTIONS_PARALLEL = 8
+
         /** Beyond this many titles only the first ones are listed. */
         const val MAX_WHOLE = 200_000
+
         /** Part of the index key: saved indexes of an older form are not read. */
         const val INDEX_VERSION = 2
     }

@@ -14,8 +14,6 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
@@ -40,7 +38,9 @@ import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -67,13 +67,13 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.input.key.key
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
@@ -116,11 +116,12 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
 import io.github.glacier_jellyfin.androidtv.detail.Crumb
-import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
+import io.github.glacier_jellyfin.androidtv.ui.BackFromTop
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.ContinueCard
 import io.github.glacier_jellyfin.androidtv.ui.FilterChip
+import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.MarqueeText
@@ -129,7 +130,6 @@ import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.RowPivot
 import io.github.glacier_jellyfin.androidtv.ui.SortButton
 import io.github.glacier_jellyfin.androidtv.ui.SortMenu
-import io.github.glacier_jellyfin.androidtv.ui.BackFromTop
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
@@ -137,10 +137,10 @@ import io.github.glacier_jellyfin.androidtv.ui.rememberEdgeSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import io.github.glacier_jellyfin.androidtv.ui.title
-import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.launch
 
 /**
  * A folder of a home video library under the way down to it: its subfolders as low tiles, then
@@ -150,10 +150,7 @@ import java.time.format.DateTimeFormatter
  * it full screen, on a video plays it and the folder's next ones; Back goes up a folder.
  */
 @Composable
-fun FolderScreen(
-    onNavigate: (UiEvent.Navigate) -> Unit,
-    viewModel: FolderViewModel = hiltViewModel(),
-) {
+fun FolderScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: FolderViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val settings by viewModel.folderSettings.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
@@ -194,7 +191,10 @@ fun FolderScreen(
         }
     }
     // Subfolders in the profile's order like the media below them.
-    val content = remember(state.content, settings) { state.content?.let { it.copy(folders = it.folders.sortedFor(settings)) } }
+    val content = remember(
+        state.content,
+        settings,
+    ) { state.content?.let { it.copy(folders = it.folders.sortedFor(settings)) } }
     val empty = content?.isEmpty == true
     val gallery = settings.view == FolderView.Gallery
     // Back among the folders and pictures first goes up to the view's chip; from there to the bar or the folder above.
@@ -209,7 +209,11 @@ fun FolderScreen(
     LaunchedEffect(content != null) {
         if (content == null || empty) return@LaunchedEffect
         withFrameNanos { }
-        fun focus(key: String?) = key?.let { requesters[it] }?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true
+        fun focus(key: String?) = key?.let { requesters[it] }?.let {
+            runCatching { it.requestFocus() }.getOrDefault(
+                false,
+            )
+        } == true
         // A card further down is not composed yet: the grid scrolls to it first.
         if (!gallery && lastFocus != null && !focus(lastFocus)) {
             gridKeys(content, mediaSections(content, settings), settings).indexOf(lastFocus).takeIf { it >= 0 }?.let {
@@ -221,7 +225,9 @@ fun FolderScreen(
         // gallery does not bring its picture to the front at once.
         if (!focus(lastFocus) && !focus(content.folders.firstOrNull()?.id?.toString()) &&
             !runCatching { activeView.requestFocus() }.getOrDefault(false)
-        ) runCatching { pageFocus.requestFocus() }
+        ) {
+            runCatching { pageFocus.requestFocus() }
+        }
     }
     // Switched between grid and gallery in its dropdown: the new view starts at its top, with the
     // focus back on the dropdown's button, as after any other dropdown.
@@ -238,23 +244,43 @@ fun FolderScreen(
     // A loader covers the page: the remote must not reach the navigation or anything else behind it.
     Box(Modifier.fillMaxSize().blockKeysWhile(state.loading && content == null, takeFocus = true)) {
         when {
-            state.loading && content == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
+            state.loading && content == null -> Box(
+                Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) { SpinningDiamond(110) }
+
             state.failed && content == null -> Message(
                 text = stringResource(R.string.library_error),
                 button = stringResource(R.string.action_retry),
                 onClick = viewModel::load,
             )
+
             content == null -> Unit
+
             empty -> Message(text = stringResource(R.string.folder_empty))
+
             else -> {
                 val sections = remember(content, settings) { mediaSections(content, settings) }
                 val header: @Composable () -> Unit = {
                     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
                         // In a folder: the way down to it, from the kind's name. Too long, it loses its start.
                         if (!viewModel.inNavBar) {
-                            Crumb((listOf(stringResource(LibraryKind.HomeVideos.title)) + content.trail).joinToString(" › "), overflow = TextOverflow.StartEllipsis)
+                            Crumb(
+                                (
+                                    listOf(
+                                        stringResource(LibraryKind.HomeVideos.title),
+                                    ) + content.trail
+                                    ).joinToString(" › "),
+                                overflow = TextOverflow.StartEllipsis,
+                            )
                         }
-                        Text(title, style = GlacierText.display(50), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            title,
+                            style = GlacierText.display(50),
+                            color = GlacierColors.Ice,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 }
                 // Also over folders alone: the view and order chosen there hold for the folders below.
@@ -278,9 +304,17 @@ fun FolderScreen(
                     .focusRequester(pageFocus)
                 CompositionLocalProvider(LocalFolderAspect provides settings.aspect) {
                     if (gallery) {
-                        GalleryLayout(content, sections, header, toolbar, viewModel, remembered, { requesters.getOrPut(it) { FocusRequester() } }, page, onStage = { stageInFront = it })
+                        GalleryLayout(content, sections, header, toolbar, viewModel, remembered, {
+                            requesters.getOrPut(
+                                it,
+                            ) { FocusRequester() }
+                        }, page, onStage = { stageInFront = it })
                     } else {
-                        GridLayout(content, sections, settings, header, toolbar, viewModel, remembered, { requesters.getOrPut(it) { FocusRequester() } }, page, gridState)
+                        GridLayout(content, sections, settings, header, toolbar, viewModel, remembered, {
+                            requesters.getOrPut(
+                                it,
+                            ) { FocusRequester() }
+                        }, page, gridState)
                     }
                 }
             }
@@ -298,6 +332,7 @@ fun FolderScreen(
                     descending = settings.descending,
                 )
             }
+
             FolderMenu.View -> anchors[FolderMenu.View]?.let { anchor ->
                 SortMenu(
                     sorts = FolderView.entries,
@@ -308,6 +343,7 @@ fun FolderScreen(
                     onDismiss = { viewModel.toggleMenu(null) },
                 )
             }
+
             null -> Unit
         }
 
@@ -381,17 +417,32 @@ private fun GridLayout(
             LazyVerticalGrid(
                 state = gridState,
                 columns = GridCells.FixedSize(sizes.continueWidth.dp),
-                contentPadding = PaddingValues(start = PageEdge.dp, end = if (showRail) 22.dp else PageEdge.dp, top = 150.dp, bottom = 120.dp),
+                contentPadding = PaddingValues(
+                    start = PageEdge.dp,
+                    end = if (showRail) 22.dp else PageEdge.dp,
+                    top = 150.dp,
+                    bottom = 120.dp,
+                ),
                 horizontalArrangement = Arrangement.spacedBy(sizes.gridGap.dp),
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             ) {
-                item(span = { GridItemSpan(maxLineSpan) }, key = "title") { Box(Modifier.padding(bottom = 24.dp)) { header() } }
+                item(
+                    span = { GridItemSpan(maxLineSpan) },
+                    key = "title",
+                ) { Box(Modifier.padding(bottom = 24.dp)) { header() } }
                 item(span = { GridItemSpan(maxLineSpan) }, key = "toolbar") {
                     // Coming up from the cards, the page scrolls back to its top with the title.
-                    Box(Modifier.padding(bottom = 34.dp).onFocusChanged { if (it.hasFocus) scope.launch { gridState.animateScrollToItem(0) } }) { toolbar() }
+                    Box(
+                        Modifier.padding(
+                            bottom = 34.dp,
+                        ).onFocusChanged { if (it.hasFocus) scope.launch { gridState.animateScrollToItem(0) } },
+                    ) { toolbar() }
                 }
                 if (foldersHeaded) {
-                    item(span = { GridItemSpan(maxLineSpan) }, key = "folders") { SectionHeading(stringResource(R.string.folder_section_folders)) }
+                    item(
+                        span = { GridItemSpan(maxLineSpan) },
+                        key = "folders",
+                    ) { SectionHeading(stringResource(R.string.folder_section_folders)) }
                 }
                 content.folders.forEach { folder ->
                     item(key = folder.id) {
@@ -400,7 +451,17 @@ private fun GridLayout(
                             onClick = { viewModel.open(folder) },
                             modifier = remembered(folder.id.toString())
                                 .padding(bottom = sizes.gridGap.dp)
-                                .then(if (folder == content.folders.last()) Modifier.focusProperties { end = FocusRequester.Cancel } else Modifier),
+                                .then(
+                                    if (folder ==
+                                        content.folders.last()
+                                    ) {
+                                        Modifier.focusProperties {
+                                            end = FocusRequester.Cancel
+                                        }
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
                         )
                     }
                 }
@@ -408,7 +469,10 @@ private fun GridLayout(
                     if (headed) {
                         item(span = { GridItemSpan(maxLineSpan) }, key = "section-${section.kind}") {
                             val first = index == 0 && content.folders.isEmpty()
-                            SectionHeading(stringResource(section.kind.label), Modifier.padding(top = if (first) 0.dp else 24.dp))
+                            SectionHeading(
+                                stringResource(section.kind.label),
+                                Modifier.padding(top = if (first) 0.dp else 24.dp),
+                            )
                         }
                     }
                     mediaCards(
@@ -438,13 +502,23 @@ private fun GridLayout(
                     scope.launch {
                         gridState.scrollToItem(firstMedia + index)
                         withFrameNanos { }
-                        val row = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == firstMedia + index } ?: return@launch
+                        val row =
+                            gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == firstMedia + index }
+                                ?: return@launch
                         val top = row.offset.y - gridState.layoutInfo.viewportStartOffset
                         gridState.scrollBy(top - with(density) { RowPivot.dp.toPx() })
                     }
                 },
                 // Left lands on the card the letter jumped to, not the geometrically nearest one.
-                onLeft = { jumpTarget?.let { runCatching { requester(it).requestFocus() }.getOrDefault(false) } == true },
+                onLeft = {
+                    jumpTarget?.let {
+                        runCatching {
+                            requester(
+                                it,
+                            ).requestFocus()
+                        }.getOrDefault(false)
+                    } == true
+                },
                 modifier = Modifier
                     .padding(end = 22.dp)
                     .offset { IntOffset(0, if (railTop >= 0) railTop else RAIL_TOP.dp.roundToPx()) },
@@ -454,7 +528,11 @@ private fun GridLayout(
 }
 
 /** The grid's items in order, by the keys [GridLayout] gives them (those of the cards and tiles as their ids), to find a card's position. */
-private fun gridKeys(content: FolderContent, sections: List<MediaSection>, settings: FolderSettings): List<String> = buildList {
+private fun gridKeys(
+    content: FolderContent,
+    sections: List<MediaSection>,
+    settings: FolderSettings,
+): List<String> = buildList {
     add("title")
     add("toolbar")
     if (content.folders.isNotEmpty()) add("folders")
@@ -481,7 +559,10 @@ private fun LazyGridScope.mediaCards(
     val groups = if (settings.sort == FolderSort.Date) section.media.byMonth() else listOf(null to section.media)
     groups.forEach { (month, media) ->
         if (settings.sort == FolderSort.Date) {
-            item(span = { GridItemSpan(maxLineSpan) }, key = "month-${section.kind}-${month ?: "none"}") { MonthHeading(month) }
+            item(
+                span = { GridItemSpan(maxLineSpan) },
+                key = "month-${section.kind}-${month ?: "none"}",
+            ) { MonthHeading(month) }
         }
         media.forEach { item ->
             item(key = item.id) {
@@ -501,6 +582,7 @@ private fun LazyGridScope.mediaCards(
                         locked = item.item.showsLock(),
                         imageHeight = cardHeight(),
                     )
+
                     is FolderMedia.Photo -> PhotoCard(item, onClick = { onOpen(item) }, modifier = modifier)
                 }
             }
@@ -535,7 +617,11 @@ private fun GalleryLayout(
     // The name and the row along the bottom; the picture in front keeps clear of them.
     var rowHeight by remember { mutableIntStateOf(0) }
     // 0 with the title and folders over the dimmed picture, 1 with the picture in front; in step with the navigation bar.
-    val front by animateFloatAsState(if (onRow) 1f else 0f, tween(GLIDE_MS, easing = FastOutSlowInEasing), label = "front")
+    val front by animateFloatAsState(
+        if (onRow) 1f else 0f,
+        tween(GLIDE_MS, easing = FastOutSlowInEasing),
+        label = "front",
+    )
     DisposableEffect(Unit) { onDispose { onStage(false) } }
     Box(modifier) {
         // In front the picture narrows to the space above its name and the row, so all of it shows.
@@ -547,12 +633,21 @@ private fun GalleryLayout(
             inFront = onRow,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = PageEdge.dp * front, end = PageEdge.dp * front, top = PICTURE_TOP.dp * front, bottom = below * front)
+                .padding(
+                    start = PageEdge.dp * front,
+                    end = PageEdge.dp * front,
+                    top = PICTURE_TOP.dp * front,
+                    bottom = below * front,
+                )
                 .clip(RoundedCornerShape(GlacierShapes.RadiusLg * front)),
         )
         Box(Modifier.fillMaxSize().graphicsLayer { alpha = 1f - front }.background(Color(0xC705090F)))
         // Dark along the bottom for the row over the full picture; in front the picture keeps clear of the row anyway.
-        Box(Modifier.fillMaxSize().graphicsLayer { alpha = 1f - front }.background(Brush.verticalGradient(0.5f to Color.Transparent, 1f to Color(0xF205090F))))
+        Box(
+            Modifier.fillMaxSize().graphicsLayer { alpha = 1f - front }.background(
+                Brush.verticalGradient(0.5f to Color.Transparent, 1f to Color(0xF205090F)),
+            ),
+        )
         Column(Modifier.fillMaxSize()) {
             Column(
                 Modifier
@@ -566,9 +661,16 @@ private fun GalleryLayout(
                 Box(Modifier.padding(bottom = 34.dp)) { toolbar() }
                 if (content.folders.isNotEmpty()) {
                     SectionHeading(stringResource(R.string.folder_section_folders))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(sizes.gridGap.dp), verticalArrangement = Arrangement.spacedBy(sizes.gridGap.dp)) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(sizes.gridGap.dp),
+                        verticalArrangement = Arrangement.spacedBy(sizes.gridGap.dp),
+                    ) {
                         content.folders.forEach { folder ->
-                            FolderTile(folder, onClick = { viewModel.open(folder) }, modifier = remembered(folder.id.toString()).width(sizes.continueWidth.dp))
+                            FolderTile(
+                                folder,
+                                onClick = { viewModel.open(folder) },
+                                modifier = remembered(folder.id.toString()).width(sizes.continueWidth.dp),
+                            )
                         }
                     }
                 }
@@ -586,14 +688,25 @@ private fun GalleryLayout(
                         // Not the tile nearest to where the focus came from: a request for one tile is left alone.
                         .focusProperties {
                             onEnter = {
-                                if (requestedFocusDirection != FocusDirection.Enter) preview?.let { requester(it.id.toString()).requestFocus() }
+                                if (requestedFocusDirection != FocusDirection.Enter) {
+                                    preview?.let {
+                                        requester(
+                                            it.id.toString(),
+                                        ).requestFocus()
+                                    }
+                                }
                             }
                         }
                         .focusGroup()
                         .padding(bottom = 40.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp),
                 ) {
-                    preview?.let { Caption(it, Modifier.graphicsLayer { alpha = front }.padding(horizontal = PageEdge.dp)) }
+                    preview?.let {
+                        Caption(
+                            it,
+                            Modifier.graphicsLayer { alpha = front }.padding(horizontal = PageEdge.dp),
+                        )
+                    }
                     sections.forEach { section ->
                         Strip(
                             section = section,
@@ -673,6 +786,7 @@ private fun Backdrop(media: FolderMedia?, video: InlineVideoState, inFront: Bool
                         contentScale = scale,
                         modifier = Modifier.fillMaxSize(),
                     )
+
                     is FolderMedia.Video -> {
                         val player = video.player.takeIf { video.id == shown.id }
                         AsyncImage(
@@ -682,16 +796,27 @@ private fun Backdrop(media: FolderMedia?, video: InlineVideoState, inFront: Bool
                             modifier = Modifier.fillMaxSize(),
                         )
                         if (player != null) {
-                            ContentFrame(player = player, modifier = Modifier.fillMaxSize(), surfaceType = SURFACE_TYPE_TEXTURE_VIEW, contentScale = scale)
+                            ContentFrame(
+                                player = player,
+                                modifier = Modifier.fillMaxSize(),
+                                surfaceType = SURFACE_TYPE_TEXTURE_VIEW,
+                                contentScale = scale,
+                            )
                         } else if (inFront) {
                             Box(
                                 Modifier.size(84.dp).clip(PillShape).background(LocalAccent.current.main),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Icon(GlacierIcons.Play, contentDescription = null, tint = GlacierColors.Void, modifier = Modifier.size(32.dp))
+                                Icon(
+                                    GlacierIcons.Play,
+                                    contentDescription = null,
+                                    tint = GlacierColors.Void,
+                                    modifier = Modifier.size(32.dp),
+                                )
                             }
                         }
                     }
+
                     null -> Unit
                 }
             }
@@ -704,7 +829,13 @@ private fun Backdrop(media: FolderMedia?, video: InlineVideoState, inFront: Bool
 private fun Caption(media: FolderMedia, modifier: Modifier) {
     val length = (media as? FolderMedia.Video)?.item?.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(media.name, style = GlacierText.display(34), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            media.name,
+            style = GlacierText.display(34),
+            color = GlacierColors.Ice,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         val facts = listOfNotNull(takenText(media.date), length).joinToString(" · ")
         if (facts.isNotEmpty()) Text(facts, style = GlacierText.body(19), color = GlacierColors.Mist)
     }
@@ -741,7 +872,15 @@ private fun Toolbar(
         Modifier
             .fillMaxWidth()
             // A request for one control (a dropdown's button after it closes) is left alone.
-            .focusProperties { onEnter = { if (requestedFocusDirection != FocusDirection.Enter) active.requestFocus() } }
+            .focusProperties {
+                onEnter = {
+                    if (requestedFocusDirection !=
+                        FocusDirection.Enter
+                    ) {
+                        active.requestFocus()
+                    }
+                }
+            }
             .focusGroup(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -821,7 +960,12 @@ private fun videoLine(video: MediaItem): String {
 /** The small heading over the folders, videos or photos, like a group heading in a library. */
 @Composable
 private fun SectionHeading(text: String, modifier: Modifier = Modifier) {
-    Text(text, style = GlacierText.body(19, FontWeight.SemiBold), color = GlacierColors.Mist, modifier = modifier.padding(bottom = 16.dp))
+    Text(
+        text,
+        style = GlacierText.body(19, FontWeight.SemiBold),
+        color = GlacierColors.Mist,
+        modifier = modifier.padding(bottom = 16.dp),
+    )
 }
 
 /** "August 2024" over a month's media, smaller than a section's heading. */
@@ -830,7 +974,12 @@ private fun MonthHeading(month: YearMonth?) {
     val locale = LocalLocale.current.platformLocale
     val text = month?.format(DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "LLLLyyyy"), locale))
         ?: stringResource(R.string.folder_undated)
-    Text(text, style = GlacierText.body(17), color = GlacierColors.Mist, modifier = Modifier.padding(top = 4.dp, bottom = 14.dp))
+    Text(
+        text,
+        style = GlacierText.body(17),
+        color = GlacierColors.Mist,
+        modifier = Modifier.padding(top = 4.dp, bottom = 14.dp),
+    )
 }
 
 /** "12 Aug 2024" in the app language, for the gallery's preview and the viewer. */
@@ -842,7 +991,12 @@ internal fun takenText(date: LocalDateTime?): String? {
 
 /** A subfolder: a low tile with the folder sign and its name, as wide as its cell. */
 @Composable
-internal fun FolderTile(folder: MediaFolder, onClick: () -> Unit, modifier: Modifier, onLongClick: (() -> Unit)? = null) {
+internal fun FolderTile(
+    folder: MediaFolder,
+    onClick: () -> Unit,
+    modifier: Modifier,
+    onLongClick: (() -> Unit)? = null,
+) {
     val accent = LocalAccent.current
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     GlacierCard(onClick = onClick, modifier = modifier.fillMaxWidth(), onLongClick = onLongClick) { focused ->
@@ -858,7 +1012,13 @@ internal fun FolderTile(folder: MediaFolder, onClick: () -> Unit, modifier: Modi
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(GlacierIcons.Folder, contentDescription = null, tint = accent.main, modifier = Modifier.size(28.dp))
-            MarqueeText(folder.name, style = GlacierText.body(19, FontWeight.SemiBold), color = if (focused) accent.main else GlacierColors.Ice, active = focused, modifier = Modifier.weight(1f))
+            MarqueeText(
+                folder.name,
+                style = GlacierText.body(19, FontWeight.SemiBold),
+                color = if (focused) accent.main else GlacierColors.Ice,
+                active = focused,
+                modifier = Modifier.weight(1f),
+            )
             // With options (music video folders), the mark says that holding OK opens them.
             if (onLongClick != null) HoldOkMark(focused, accent.main, size = 24)
         }
@@ -877,7 +1037,11 @@ private fun cardHeight(): Int {
 
 /** A photo: the picture cropped to the card shape like a video's card, its name below. */
 @Composable
-private fun PhotoCard(photo: FolderMedia.Photo, onClick: () -> Unit, modifier: Modifier) {
+private fun PhotoCard(
+    photo: FolderMedia.Photo,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
     val accent = LocalAccent.current
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     val sizes = LocalCardSizes.current
@@ -901,7 +1065,11 @@ private fun PhotoCard(photo: FolderMedia.Photo, onClick: () -> Unit, modifier: M
 
 /** A small picture of the gallery's row, in the card shape; a video carries the play sign and its length. */
 @Composable
-private fun GalleryTile(media: FolderMedia, onClick: () -> Unit, modifier: Modifier) {
+private fun GalleryTile(
+    media: FolderMedia,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
     val shape = RoundedCornerShape(GlacierShapes.RadiusSm)
     val url = when (media) {
         is FolderMedia.Video -> media.item.thumbUrl
@@ -910,7 +1078,10 @@ private fun GalleryTile(media: FolderMedia, onClick: () -> Unit, modifier: Modif
     GlacierCard(onClick = onClick, modifier = modifier.width(STRIP_WIDTH.dp)) { focused ->
         Box(
             Modifier
-                .size(STRIP_WIDTH.dp, (STRIP_WIDTH * LocalFolderAspect.current.height / LocalFolderAspect.current.width).dp)
+                .size(
+                    STRIP_WIDTH.dp,
+                    (STRIP_WIDTH * LocalFolderAspect.current.height / LocalFolderAspect.current.width).dp,
+                )
                 .focusFrame(focused, shape)
                 .clip(shape),
         ) {
@@ -926,8 +1097,19 @@ private fun GalleryTile(media: FolderMedia, onClick: () -> Unit, modifier: Modif
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Icon(GlacierIcons.Play, contentDescription = null, tint = GlacierColors.Ice, modifier = Modifier.size(12.dp))
-                    media.item.runtimeMinutes?.takeIf { it > 0 }?.let { Text(runtimeText(it), style = GlacierText.body(14), color = GlacierColors.Ice) }
+                    Icon(
+                        GlacierIcons.Play,
+                        contentDescription = null,
+                        tint = GlacierColors.Ice,
+                        modifier = Modifier.size(12.dp),
+                    )
+                    media.item.runtimeMinutes?.takeIf { it > 0 }?.let {
+                        Text(
+                            runtimeText(it),
+                            style = GlacierText.body(14),
+                            color = GlacierColors.Ice,
+                        )
+                    }
                 }
             }
         }
@@ -936,7 +1118,11 @@ private fun GalleryTile(media: FolderMedia, onClick: () -> Unit, modifier: Modif
 
 /** Nothing to show: a line and maybe a button, in the middle of the page. */
 @Composable
-private fun Message(text: String, button: String? = null, onClick: () -> Unit = {}) {
+private fun Message(
+    text: String,
+    button: String? = null,
+    onClick: () -> Unit = {},
+) {
     val focus = remember { FocusRequester() }
     if (button != null) LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     Column(
@@ -945,7 +1131,14 @@ private fun Message(text: String, button: String? = null, onClick: () -> Unit = 
         verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterVertically),
     ) {
         Text(text, style = GlacierText.display(30), color = GlacierColors.Ice, textAlign = TextAlign.Center)
-        if (button != null) PillButton(button, onClick = onClick, primary = true, modifier = Modifier.focusRequester(focus))
+        if (button != null) {
+            PillButton(
+                button,
+                onClick = onClick,
+                primary = true,
+                modifier = Modifier.focusRequester(focus),
+            )
+        }
     }
 }
 

@@ -1,9 +1,9 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
-import org.jellyfin.sdk.model.api.MediaStream
-import org.jellyfin.sdk.model.api.MediaStreamType
 import java.text.Normalizer
 import java.util.Locale
+import org.jellyfin.sdk.model.api.MediaStream
+import org.jellyfin.sdk.model.api.MediaStreamType
 
 /** An audio or subtitle stream of a title, as offered in the track picker. */
 data class Track(
@@ -91,6 +91,7 @@ internal fun audioDescriptionByName(title: String?): Boolean = hasWord(title, DE
 // Words in the languages subtitles come in most. Accents, case and the joins of
 // longer terms ("sing along", "sing-along", "singalong") need no variants here:
 // the matching ignores them.
+
 /** Words for "forced" itself, which the facts leave out once the mark says it. */
 private val FORCED_LABELS = listOf(
     "forced", "erzwungen", "forcé", "forcés", "forcée", "forcées", "forzados", "forzadas", "forzado", "forzada",
@@ -98,8 +99,17 @@ private val FORCED_LABELS = listOf(
     "tvingad", "tvingade", "tvungen", "tvungne", "pakotettu", "pakotetut", "wymuszone", "wymuszony", "vynucené",
     "kényszerített", "форсированные", "принудительные", "zorunlu", "強制", "强制",
 )
+
 /** A track of signs (and song lines) is the forced track: "Signs & Songs", "Schild- und Liedtext". */
-private val FORCED_WORDS = FORCED_LABELS + listOf("signs", "schild", "schilder", "panneaux", "carteles", "cartelli", "letreiros")
+private val FORCED_WORDS = FORCED_LABELS + listOf(
+    "signs",
+    "schild",
+    "schilder",
+    "panneaux",
+    "carteles",
+    "cartelli",
+    "letreiros",
+)
 private val SDH_WORDS = listOf(
     "sdh", "hearing impaired", "deaf and hard of hearing", "hard of hearing", "hörgeschädigt", "hörgeschädigte",
     "gehörlose", "malentendants", "sourds et malentendants", "para sordos", "sordos", "non udenti", "sordi",
@@ -138,7 +148,8 @@ private val FULL_WORDS = listOf(
  */
 private val REGIONS = mapOf(
     "fra" to listOf(
-        "CA" to listOf("canada", "canadian", "kanada", "kanadisch", "québec", "quebec", "québécois", "quebecois", "vfq", "ca"),
+        "CA" to
+            listOf("canada", "canadian", "kanada", "kanadisch", "québec", "quebec", "québécois", "quebecois", "vfq", "ca"),
         "BE" to listOf("belgique", "belgian", "belgium", "belgisch", "belgien", "vfb"),
         "CH" to listOf("suisse", "swiss", "schweiz", "schweizer"),
         "FR" to listOf("france", "frankreich", "parisian", "european", "vff", "fr"),
@@ -149,7 +160,16 @@ private val REGIONS = mapOf(
     ),
     "spa" to listOf(
         "AR" to listOf("argentina", "argentine", "argentinian", "argentinien", "argentinisch", "rioplatense"),
-        "419" to listOf("latin america", "latin american", "latam", "latino", "lateinamerika", "lateinamerikanisch", "419", "la"),
+        "419" to listOf(
+            "latin america",
+            "latin american",
+            "latam",
+            "latino",
+            "lateinamerika",
+            "lateinamerikanisch",
+            "419",
+            "la",
+        ),
         "MX" to listOf("mexico", "méxico", "mexican", "mexikanisch", "mx"),
         "ES" to listOf("spain", "españa", "castilian", "castellano", "kastilisch", "european", "es"),
     ),
@@ -203,7 +223,13 @@ fun mainInsteadOfExtra(pick: Int?, audio: List<Track>): Int? {
     if (!picked.extra) return pick
     val main = audio.filter { !it.extra }
     val language = Languages.iso3(picked.language)
-    return (main.firstOrNull { language != null && Languages.iso3(it.language) == language } ?: main.firstOrNull())?.index ?: pick
+    return (
+        main.firstOrNull {
+            language != null && Languages.iso3(
+                it.language,
+            ) == language
+        } ?: main.firstOrNull()
+        )?.index ?: pick
 }
 
 /**
@@ -214,13 +240,23 @@ fun mainInsteadOfExtra(pick: Int?, audio: List<Track>): Int? {
  * language plays instead. A forced track stays when it was asked for
  * ([onlyForced]) or when the audio is in its language (a dub with forced signs).
  */
-fun fullInsteadOfForced(pick: Int?, subtitles: List<Track>, audio: Track?, onlyForced: Boolean): Int? {
+fun fullInsteadOfForced(
+    pick: Int?,
+    subtitles: List<Track>,
+    audio: Track?,
+    onlyForced: Boolean,
+): Int? {
     val picked = subtitles.firstOrNull { it.index == pick } ?: return pick
     if (!picked.forced || onlyForced) return pick
     val language = Languages.iso3(picked.language) ?: return pick
     if (Languages.iso3(audio?.language) == language) return pick
     val full = subtitles.filter { !it.forced && Languages.iso3(it.language) == language }
-    return (full.firstOrNull { !it.hearingImpaired && !it.closedCaptions && !it.singAlong } ?: full.firstOrNull())?.index ?: pick
+    return (
+        full.firstOrNull {
+            !it.hearingImpaired && !it.closedCaptions && !it.singAlong
+        } ?: full.firstOrNull()
+        )?.index
+        ?: pick
 }
 
 /** Audio and subtitle choices of a title, with the server's defaults for this user. */
@@ -265,7 +301,10 @@ object Languages {
     /** Normalises "ger" / "deu" / "de" to the ISO 639-2/T code, or null if unknown. */
     fun iso3(code: String?): String? {
         // A tag's region ("pt-BR") does not change the language.
-        val value = code?.trim()?.lowercase()?.replace('_', '-')?.substringBefore('-')?.takeIf { it.isNotEmpty() && it != "und" } ?: return null
+        val value = code?.trim()?.lowercase()?.replace(
+            '_',
+            '-',
+        )?.substringBefore('-')?.takeIf { it.isNotEmpty() && it != "und" } ?: return null
         if (value.length == 2) return Locale.forLanguageTag(value).isO3Language.takeIf { it.isNotEmpty() }
         val normal = bibliographic[value] ?: value
         return normal.takeIf { byIso3.containsKey(it) || it in withoutIso2 }
@@ -274,7 +313,9 @@ object Languages {
     /** Languages Java knows only by their three-letter code. */
     private val withoutIso2 = setOf("yue")
 
-    private fun locale(iso3: String): Locale? = byIso3[iso3] ?: iso3.takeIf { it in withoutIso2 }?.let(Locale::forLanguageTag)
+    private fun locale(iso3: String): Locale? = byIso3[iso3] ?: iso3.takeIf { it in withoutIso2 }?.let(
+        Locale::forLanguageTag,
+    )
 
     /**
      * Flag for a language, as a file name in the app's flags/ assets ("gb",
@@ -338,7 +379,11 @@ object Languages {
      * Language name in the display language, e.g. "Deutsch" / "German"; with
      * a [region] (or one in the tag) "Französisch (Kanada)".
      */
-    fun name(code: String?, display: Locale = Locale.getDefault(), region: String? = null): String? {
+    fun name(
+        code: String?,
+        display: Locale = Locale.getDefault(),
+        region: String? = null,
+    ): String? {
         val language = iso3(code)?.let(::locale) ?: return null
         // The country the language's flag stands for needs no name: "Französisch", not "Französisch (Frankreich)".
         val variant = (region ?: region(code))?.takeUnless { it.equals(flags[iso3(code)], ignoreCase = true) }
@@ -383,7 +428,11 @@ enum class TrackMark { Forced, HearingImpaired, ClosedCaptions, SingAlong, Comme
  * second line, [marks] the pills. External and default follow the facts in
  * the UI, which has the words for them.
  */
-data class TrackDescription(val name: String, val facts: List<String>, val marks: List<TrackMark>)
+data class TrackDescription(
+    val name: String,
+    val facts: List<String>,
+    val marks: List<TrackMark>,
+)
 
 /**
  * Audio facts: the format ("DTS-HD MA 5.1"), then the stream name where it
@@ -392,7 +441,11 @@ data class TrackDescription(val name: String, val facts: List<String>, val marks
  * ("German (CR/ASS)(forced)" becomes "CR/ASS"), then the format unless the
  * name has it. Without a language the stream name leads, else the format.
  */
-fun describeTrack(track: Track, subtitle: Boolean, locales: List<Locale>): TrackDescription {
+fun describeTrack(
+    track: Track,
+    subtitle: Boolean,
+    locales: List<Locale>,
+): TrackDescription {
     val languageNames = (locales + Locale.ENGLISH).mapNotNull { Languages.name(track.language, it) }.distinct()
     val marks = buildList {
         if (subtitle && track.forced) add(TrackMark.Forced)
@@ -421,7 +474,10 @@ fun describeTrack(track: Track, subtitle: Boolean, locales: List<Locale>): Track
             (if (track.commentary) COMMENTARY_WORDS else emptyList()) +
             if (track.audioDescription) DESCRIPTION_WORDS else emptyList()
         // Names like "DTS 5.1 @ 768 kbps" only repeat the format.
-        title = cleanTrackTitle(track.title, known)?.takeIf { name -> name.none { it.isDigit() } && name.count { it.isLetter() } >= 3 }
+        title = cleanTrackTitle(
+            track.title,
+            known,
+        )?.takeIf { name -> name.none { it.isDigit() } && name.count { it.isLetter() } >= 3 }
         format = audioFormat(track.codec, track.profile, track.channels)
     }
     var name = Languages.name(track.language, locales.firstOrNull() ?: Locale.getDefault(), track.region)
@@ -441,7 +497,11 @@ fun describeTrack(track: Track, subtitle: Boolean, locales: List<Locale>): Track
  * The audio format as people know it, then the channels: "DTS-HD MA 5.1",
  * "TrueHD Atmos 7.1", "AAC 2.0". DTS names its kind in the profile.
  */
-fun audioFormat(codec: String?, profile: String?, channels: Int?): String? {
+fun audioFormat(
+    codec: String?,
+    profile: String?,
+    channels: Int?,
+): String? {
     val c = codec?.lowercase().orEmpty()
     val p = profile?.trim().orEmpty()
     var name = if (c.startsWith("pcm")) "PCM" else codecName(codec)
@@ -496,7 +556,11 @@ private fun replaceWord(text: String, word: String): String {
  * Case and accents do not count ("forcé" is "FORCE"), and a space or hyphen in
  * [word] also matches other joins or none ("sing along" finds "Sing-Along" and "Singalong").
  */
-private fun wordAt(text: String, word: String, from: Int): IntRange? {
+private fun wordAt(
+    text: String,
+    word: String,
+    from: Int,
+): IntRange? {
     for (start in from until text.length) {
         if (start > 0 && text[start - 1].isLetterOrDigit()) continue
         val end = matchAt(text, start, word) ?: continue
@@ -506,7 +570,11 @@ private fun wordAt(text: String, word: String, from: Int): IntRange? {
 }
 
 /** The end of [word] matched at [start] in [text], or null where it does not match. */
-private fun matchAt(text: String, start: Int, word: String): Int? {
+private fun matchAt(
+    text: String,
+    start: Int,
+    word: String,
+): Int? {
     var t = start
     var w = 0
     while (w < word.length) {
@@ -531,7 +599,11 @@ private fun foldAll(text: String): String = String(CharArray(text.length) { fold
 private fun fold(c: Char): Char {
     if (c.code < 128) return c.lowercaseChar()
     val base = Normalizer.normalize(c.toString(), Normalizer.Form.NFD)
-    val plain = base.takeIf { it.length > 1 && it.drop(1).all { m -> Character.getType(m) == Character.NON_SPACING_MARK.toInt() } }?.first() ?: c
+    val plain = base.takeIf {
+        it.length > 1 && it.drop(
+            1,
+        ).all { m -> Character.getType(m) == Character.NON_SPACING_MARK.toInt() }
+    }?.first() ?: c
     return plain.lowercaseChar()
 }
 

@@ -2,7 +2,7 @@ package io.github.glacier_jellyfin.androidtv.player
 
 import android.content.Context
 import android.os.SystemClock
-import io.github.glacier_jellyfin.androidtv.core.log.Log
+import androidx.annotation.OptIn
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,21 +10,21 @@ import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.common.util.Util
-import androidx.annotation.OptIn
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.CastMember
 import io.github.glacier_jellyfin.androidtv.core.data.media.Chapter
+import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.Track
@@ -32,51 +32,55 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelection
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelections
 import io.github.glacier_jellyfin.androidtv.core.data.media.forVersion
 import io.github.glacier_jellyfin.androidtv.core.data.playback.MediaSegment
+import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackMethod
+import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackPosition
+import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
+import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSubtitle
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentAction
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentPolicy
+import io.github.glacier_jellyfin.androidtv.core.data.playback.SourceFile
+import io.github.glacier_jellyfin.androidtv.core.data.playback.StreamBudget
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SubtitleDelivery
+import io.github.glacier_jellyfin.androidtv.core.data.playback.TranscodeStatus
 import io.github.glacier_jellyfin.androidtv.core.data.settings.LastTracks
-import io.github.glacier_jellyfin.androidtv.core.data.settings.RememberedTracks
+import io.github.glacier_jellyfin.androidtv.core.data.settings.MaxBitrate
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyle
 import io.github.glacier_jellyfin.androidtv.core.data.settings.rememberedTracks
 import io.github.glacier_jellyfin.androidtv.core.data.settings.showKey
 import io.github.glacier_jellyfin.androidtv.core.data.settings.toKey
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.HlsSegments
+import io.github.glacier_jellyfin.androidtv.core.log.DebugOptions
+import io.github.glacier_jellyfin.androidtv.core.log.Log
+import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
+import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.SideloadedSubtitle
+import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
+import io.github.glacier_jellyfin.androidtv.core.player.TitleAudio
 import io.github.glacier_jellyfin.androidtv.core.player.TrackControl
 import io.github.glacier_jellyfin.androidtv.detail.TrackKind
 import io.github.glacier_jellyfin.androidtv.diagnostics.Diagnostics
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogServer
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogShare
-import io.github.glacier_jellyfin.androidtv.ui.UiEvent
-import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
-import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
-import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackMethod
-import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackPosition
-import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
-import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
-import io.github.glacier_jellyfin.androidtv.core.data.playback.SourceFile
-import io.github.glacier_jellyfin.androidtv.core.data.playback.StreamBudget
-import io.github.glacier_jellyfin.androidtv.core.data.settings.MaxBitrate
-import io.github.glacier_jellyfin.androidtv.core.log.DebugOptions
-import io.github.glacier_jellyfin.androidtv.core.data.playback.TranscodeStatus
-import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.HlsSegments
-import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
-import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
-import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
-import io.github.glacier_jellyfin.androidtv.core.player.TitleAudio
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
+import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URI
+import java.net.URL
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -86,12 +90,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URI
-import java.net.URL
-import java.util.UUID
-import javax.inject.Inject
 
 data class PlayerUiState(
     val details: ItemDetails? = null,
@@ -185,14 +183,17 @@ class PlayerViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<PlayerRoute>()
+
     /** Changes when playback moves on to another episode. */
     private var itemId = UUID.fromString(route.itemId)
     private var fromStart = route.fromStart
 
     /** Where the first open starts, given by the caller; later opens use the resume point. */
     private var startOverride = route.startMs
+
     /** The file that plays of a title with several; null until known, and for a single file. */
     private var versionId: String? = null
+
     /** Playlist or artist whose videos play one after another; its list once loaded. */
     private val queueOf = route.queueOf?.let(UUID::fromString)
     private var queue: List<MediaItem>? = null
@@ -219,53 +220,78 @@ class PlayerViewModel @Inject constructor(
     private var closing = false
     private var ticker: Job? = null
     private var opening: Job? = null
+
     /** Segments already skipped automatically; seeking back into one plays it. */
     private val autoSkipped = mutableSetOf<MediaSegment>()
+
     /** Tracks to apply once Media3 knows the file's tracks. */
     private var tracksPending = false
+
     /** Set once fMP4 segments failed for this title: it plays from MPEG-TS segments from then on. */
     private var segments: HlsSegments? = null
+
     /** Output failures already recovered from for this title. */
     private var outputRecoveries = 0
     private val stalls = StallTracker()
+
     /** Times this title already moved to a smaller stream because playback ran dry. */
     private var qualitySteps = 0
+
     /** Times a ladder's segment failed in time and was tried again; counted from the start of the title. */
     private var linkRetries = 0
+
     /** Retries of an open after a step down. */
     private var openRetries = 0
     private var lastSeekMs = 0L
+
     /** Waits out a stall that does not end. */
     private var stallWatch: Job? = null
+
     /** How long the buffer has been nearly empty while playing; draining is a stall that has not happened yet. */
     private var lowBufferMs = 0L
+
     /** When the stream first played, so the filling of the buffer at the start is not mistaken for draining. */
     private var playingSinceMs = 0L
+
     /** Keeps a ladder's tier within what the link carries; null for a stream of one tier. */
     private var tiers: TierController? = null
+
     /** Picture height of each tier by its bitrate, as the player lists them. */
     private var tierHeights: Map<Int, Int> = emptyMap()
+
     /** Height of the tier asked for last; its transcode is the one running now or about to. */
     private var pinnedHeight: Int? = null
+
     /** Heights of tiers left behind whose server job still runs, until the current tier has loaded its first segment. */
     private val retired = mutableSetOf<Int>()
     private var slowLoads = SlowLoads()
+
     /** Waits for the link to recover while a reduced stream plays. */
     private var recovery: Job? = null
+
     /** Times this title went back to the file's quality. */
     private var returns = 0
+
     /** Title position and length from the player's: the one place that knows where the playing stream starts. */
     private val time = TitleTime()
     private val trend = BufferTrend()
     private val throughput = ThroughputWatch()
 
     /** A stream opened to take over from the playing one; see [beginHandover]. */
-    private class Handover(val trigger: HandoverTrigger?, val atMs: Long, val source: PlaybackSource, val lowering: Boolean, val switch: StreamSwitch)
+    private class Handover(
+        val trigger: HandoverTrigger?,
+        val atMs: Long,
+        val source: PlaybackSource,
+        val lowering: Boolean,
+        val switch: StreamSwitch,
+    )
 
     /** Opening the stream for a hand over. */
     private var handoverJob: Job? = null
+
     /** The stream queued in the player, until the player has moved on to it. */
     private var queued: Handover? = null
+
     /** The stream handed over to is not playing yet: no further step to another stream before it does. */
     private var awaitingStart = false
 
@@ -274,17 +300,30 @@ class PlayerViewModel @Inject constructor(
     @OptIn(UnstableApi::class)
     private val decoders = object : AnalyticsListener {
         @OptIn(UnstableApi::class)
-        override fun onVideoDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
+        override fun onVideoDecoderInitialized(
+            eventTime: AnalyticsListener.EventTime,
+            decoderName: String,
+            initializedTimestampMs: Long,
+            initializationDurationMs: Long,
+        ) {
             _state.update { it.copy(videoDecoder = decoderName) }
         }
 
         @OptIn(UnstableApi::class)
-        override fun onAudioDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
+        override fun onAudioDecoderInitialized(
+            eventTime: AnalyticsListener.EventTime,
+            decoderName: String,
+            initializedTimestampMs: Long,
+            initializationDurationMs: Long,
+        ) {
             _state.update { it.copy(audioDecoder = decoderName) }
         }
 
         @OptIn(UnstableApi::class)
-        override fun onAudioTrackInitialized(eventTime: AnalyticsListener.EventTime, audioTrackConfig: AudioSink.AudioTrackConfig) {
+        override fun onAudioTrackInitialized(
+            eventTime: AnalyticsListener.EventTime,
+            audioTrackConfig: AudioSink.AudioTrackConfig,
+        ) {
             _state.update { it.copy(audioOutput = audioOutput(audioTrackConfig)) }
         }
     }
@@ -293,17 +332,25 @@ class PlayerViewModel @Inject constructor(
     @OptIn(UnstableApi::class)
     private val loads = object : AnalyticsListener {
         @OptIn(UnstableApi::class)
-        override fun onLoadCompleted(eventTime: AnalyticsListener.EventTime, loadEventInfo: LoadEventInfo, mediaLoadData: MediaLoadData) {
+        override fun onLoadCompleted(
+            eventTime: AnalyticsListener.EventTime,
+            loadEventInfo: LoadEventInfo,
+            mediaLoadData: MediaLoadData,
+        ) {
             val controller = tiers ?: return
             if (mediaLoadData.dataType != C.DATA_TYPE_MEDIA) return
             val height = mediaLoadData.trackFormat?.height?.takeIf { it > 0 } ?: return
             // The first segment of the new tier is here: the old tier's transcode has nothing left to give.
             if (height == pinnedHeight && retired.isNotEmpty()) endRetiredJobs(height)
             val playMs = mediaLoadData.mediaEndTimeMs - mediaLoadData.mediaStartTimeMs
-            if (mediaLoadData.mediaStartTimeMs != C.TIME_UNSET && mediaLoadData.mediaEndTimeMs != C.TIME_UNSET && playMs > 0 &&
+            if (mediaLoadData.mediaStartTimeMs != C.TIME_UNSET && mediaLoadData.mediaEndTimeMs != C.TIME_UNSET &&
+                playMs > 0 &&
                 slowLoads.record(loadEventInfo.loadDurationMs, playMs, SystemClock.elapsedRealtime())
             ) {
-                Log.w(TAG, "Two segments in a row loaded slower than they play (${loadEventInfo.loadDurationMs} ms for ${playMs} ms), measuring the link")
+                Log.w(
+                    TAG,
+                    "Two segments in a row loaded slower than they play (${loadEventInfo.loadDurationMs} ms for $playMs ms), measuring the link",
+                )
                 viewModelScope.launch { checkLink(controller) }
             }
         }
@@ -313,6 +360,7 @@ class PlayerViewModel @Inject constructor(
         override fun onPlaybackStateChanged(playbackState: Int) {
             when (playbackState) {
                 Player.STATE_BUFFERING -> onBuffering()
+
                 Player.STATE_READY -> {
                     stallWatch?.cancel()
                     if (awaitingStart) {
@@ -324,16 +372,20 @@ class PlayerViewModel @Inject constructor(
                         started = true
                         playingSinceMs = SystemClock.elapsedRealtime()
                         openRetries = 0
-                        if (DebugOptions.segmentLog && DebugOptions.probe) viewModelScope.launch {
-                            delay(PROBE_DELAY_MS)
-                            probeSegments()
+                        if (DebugOptions.segmentLog && DebugOptions.probe) {
+                            viewModelScope.launch {
+                                delay(PROBE_DELAY_MS)
+                                probeSegments()
+                            }
                         }
                         if (DebugOptions.pauseOnStart) _state.value.player?.playWhenReady = false
                         lowBufferMs = 0
                         source?.let { playback.reportStart(it, position()) }
                     }
                 }
+
                 Player.STATE_ENDED -> onEnded()
+
                 else -> Unit
             }
         }
@@ -356,11 +408,22 @@ class PlayerViewModel @Inject constructor(
 
         // Report a seek at once: if the app is killed before the next periodic report,
         // the server would otherwise keep the position from before the jump.
-        override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int,
+        ) {
             if (reason == Player.DISCONTINUITY_REASON_SEEK || reason == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT) {
                 lastSeekMs = SystemClock.elapsedRealtime()
             }
-            if (reason == Player.DISCONTINUITY_REASON_SEEK && started) source?.let { playback.reportProgress(it, position()) }
+            if (reason == Player.DISCONTINUITY_REASON_SEEK && started) {
+                source?.let {
+                    playback.reportProgress(
+                        it,
+                        position(),
+                    )
+                }
+            }
         }
 
         override fun onTracksChanged(tracks: Tracks) {
@@ -399,14 +462,21 @@ class PlayerViewModel @Inject constructor(
                 _state.update { it.copy(loading = true) }
                 viewModelScope.launch {
                     delay(OUTPUT_RECOVERY_DELAY_MS)
-                    if (_state.value.player === player) reopen(audio = _state.value.audioIndex, subtitle = _state.value.subtitleIndex)
+                    if (_state.value.player === player) {
+                        reopen(
+                            audio = _state.value.audioIndex,
+                            subtitle = _state.value.subtitleIndex,
+                        )
+                    }
                 }
                 return
             }
             // The tiers of a ladder: a segment that did not come in time is tried again, and the link is measured, before it
             // is an error. A move to another tier waits for that measurement.
             val controller = tiers
-            if (controller != null && player != null && error.errorCode in LINK_ERRORS && linkRetries < MAX_LINK_RETRIES) {
+            if (controller != null && player != null && error.errorCode in LINK_ERRORS &&
+                linkRetries < MAX_LINK_RETRIES
+            ) {
                 linkRetries++
                 Log.w(TAG, "A segment did not come in time, trying again ($linkRetries)", error)
                 viewModelScope.launch { checkLink(controller) }
@@ -456,7 +526,13 @@ class PlayerViewModel @Inject constructor(
         val selection = trackSelections.get(itemId)
         versionId = selection?.versionId
         // A choice made on the detail page wins; "off" there is sent as -1 so the server does not pick one.
-        open(startMs = startOverride, audio = selection?.audio, subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE }, fromLastTitle = selection == null, snapStart = true)
+        open(
+            startMs = startOverride,
+            audio = selection?.audio,
+            subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE },
+            fromLastTitle = selection == null,
+            snapStart = true,
+        )
         startOverride = null
     }
 
@@ -465,12 +541,27 @@ class PlayerViewModel @Inject constructor(
      * the file's seek point before it (see [StreamRequest.snapStart]); not for a reopen or a retry.
      * [fromLastTitle]: no tracks were chosen for this title, so the last title's may be taken over.
      */
-    private fun open(startMs: Long?, audio: Int?, subtitle: Int?, fromLastTitle: Boolean = false, retry: Boolean = false, snapStart: Boolean = false) {
+    private fun open(
+        startMs: Long?,
+        audio: Int?,
+        subtitle: Int?,
+        fromLastTitle: Boolean = false,
+        retry: Boolean = false,
+        snapStart: Boolean = false,
+    ) {
         opening?.cancel()
         opening = viewModelScope.launch {
             releasePlayer()
             closeLogShare()
-            _state.update { it.copy(loading = true, failed = false, failedOnDevice = false, failureCode = null, trackPanel = null) }
+            _state.update {
+                it.copy(
+                    loading = true,
+                    failed = false,
+                    failedOnDevice = false,
+                    failureCode = null,
+                    trackPanel = null,
+                )
+            }
             try {
                 val item = _state.value.details ?: details.details(itemId).let { loaded ->
                     // The file the detail page showed, else the one picked for the title or show.
@@ -483,11 +574,25 @@ class PlayerViewModel @Inject constructor(
                 val start = startMs ?: if (fromStart) 0 else item.item.resumePositionMs
                 val remembered = if (fromLastTitle) {
                     val preferences = serverPreferences.preferences.value ?: serverPreferences.refresh()
-                    preferences?.let { rememberedTracks(settings.current().showTracks[item.showKey()], it, item.tracks) }
+                    preferences?.let {
+                        rememberedTracks(
+                            settings.current().showTracks[item.showKey()],
+                            it,
+                            item.tracks,
+                        )
+                    }
                 } else {
                     null
                 }
-                val opened = playback.open(itemId, start, remembered?.audio ?: audio, remembered?.subtitle ?: subtitle, segments, versionId, reuse = retry)
+                val opened = playback.open(
+                    itemId,
+                    start,
+                    remembered?.audio ?: audio,
+                    remembered?.subtitle ?: subtitle,
+                    segments,
+                    versionId,
+                    reuse = retry,
+                )
                 source = opened
                 recordTracks(opened.audioIndex, opened.subtitleIndex)
                 val request = streamRequest(opened, start).copy(snapStart = snapStart)
@@ -514,7 +619,10 @@ class PlayerViewModel @Inject constructor(
                 watchRecovery()
                 if (!opened.live && opened.ladder == null) {
                     // A transcode takes its time to start: a 4K source needs well over 20 s before the first segment.
-                    watchStartup(player, if (opened.method == PlaybackMethod.DirectPlay) STARTUP_MS else TRANSCODE_STARTUP_MS)
+                    watchStartup(
+                        player,
+                        if (opened.method == PlaybackMethod.DirectPlay) STARTUP_MS else TRANSCODE_STARTUP_MS,
+                    )
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -638,7 +746,11 @@ class PlayerViewModel @Inject constructor(
     private fun onEnded() {
         val state = _state.value
         val next = state.next
-        if (next != null && !state.upNextDismissed && policy.upNextAtMs(state.segments, _progress.value.durationMs) != null) {
+        if (next != null && !state.upNextDismissed && policy.upNextAtMs(
+                state.segments,
+                _progress.value.durationMs,
+            ) != null
+        ) {
             switchTo(next)
         } else {
             finish()
@@ -670,7 +782,13 @@ class PlayerViewModel @Inject constructor(
         _progress.value = PlayerProgress()
         val selection = trackSelections.get(item.id)
         versionId = selection?.versionId
-        open(startMs = item.resumePositionMs, audio = selection?.audio, subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE }, fromLastTitle = selection == null, snapStart = true)
+        open(
+            startMs = item.resumePositionMs,
+            audio = selection?.audio,
+            subtitle = selection?.let { it.subtitle ?: NO_SUBTITLE },
+            fromLastTitle = selection == null,
+            snapStart = true,
+        )
     }
 
     fun openTracks(kind: TrackKind) = _state.update { it.copy(trackPanel = kind, chaptersOpen = false) }
@@ -741,7 +859,13 @@ class PlayerViewModel @Inject constructor(
         // new stream gets at the start, then the title is opened again.
         queued?.takeIf { !awaitingStart }?.let { handover ->
             if (currentPositionMs() >= handover.atMs - HANDOVER_EDGE_MS && stallWatch?.isActive != true) {
-                val timeout = if (handover.source.method == PlaybackMethod.DirectPlay) STARTUP_MS else TRANSCODE_STARTUP_MS
+                val timeout = if (handover.source.method ==
+                    PlaybackMethod.DirectPlay
+                ) {
+                    STARTUP_MS
+                } else {
+                    TRANSCODE_STARTUP_MS
+                }
                 Log.i(TAG, "Waiting for the stream handed over to, up to ${timeout / 1000} s")
                 stallWatch = viewModelScope.launch {
                     delay(timeout)
@@ -800,11 +924,16 @@ class PlayerViewModel @Inject constructor(
         // ladder to follow the link, and Media3's own estimate does not move during its one long transfer.
         val playback = _state.value.playback
         val streamBps = (source?.streamBitrate ?: source?.file?.bitrate)?.toLong() ?: 0L
-        if (playback != null && started && player.isPlaying && now - playingSinceMs > THROUGHPUT_SETTLE_MS && now - lastSeekMs > THROUGHPUT_SETTLE_MS) {
+        if (playback != null && started && player.isPlaying && now - playingSinceMs > THROUGHPUT_SETTLE_MS &&
+            now - lastSeekMs > THROUGHPUT_SETTLE_MS
+        ) {
             val rate = playback.downloadRate(ThroughputWatch.WINDOW_MS)
             val full = ahead >= playback.maxBufferMs - ThroughputWatch.FULL_MARGIN_MS
             if (throughput.check(now, player.isLoading, rate, streamBps, full)) {
-                Log.w(TAG, "The link loads ${rate / 1000} kbit/s, the stream asks ${streamBps / 1000} kbit/s, ${ahead / 1000} s buffered")
+                Log.w(
+                    TAG,
+                    "The link loads ${rate / 1000} kbit/s, the stream asks ${streamBps / 1000} kbit/s, ${ahead / 1000} s buffered",
+                )
                 lowerQuality(HandoverTrigger.Throughput, linkBps = rate.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
                 return
             }
@@ -825,6 +954,7 @@ class PlayerViewModel @Inject constructor(
         }
         when {
             !settled || !player.isPlaying || ahead >= BUFFER_RECOVERED_MS -> lowBufferMs = 0
+
             ahead < BUFFER_LOW_MS -> {
                 lowBufferMs += TICK_MS
                 if (lowBufferMs >= BUFFER_DRAIN_MS) {
@@ -861,25 +991,57 @@ class PlayerViewModel @Inject constructor(
         val reduced = streamBitrate < wanted
         if (current.live || current.ladder != null) return
         // The file as it is: only a step down is possible. A reduced stream: only the way back.
-        if (if (reduced) returns >= MAX_RETURNS else qualitySteps >= MAX_QUALITY_STEPS || streamBitrate <= StreamBudget.FLOOR) return
+        if (if (reduced) {
+                returns >= MAX_RETURNS
+            } else {
+                qualitySteps >= MAX_QUALITY_STEPS ||
+                    streamBitrate <= StreamBudget.FLOOR
+            }
+        ) {
+            return
+        }
         recovery = viewModelScope.launch {
             while (isActive) {
                 delay(RECOVERY_CHECK_MS)
                 val player = _state.value.player ?: return@launch
                 if (settings.settings.value.playback.maxBitrate != MaxBitrate.Auto) return@launch
                 val ahead = player.bufferedPosition - player.currentPosition
-                if (!player.isPlaying || handoverActive || ahead < if (reduced) HandoverPlanner.RETURN_MIN_BUFFER_MS else RECOVERY_BUFFER_MS) continue
+                if (!player.isPlaying || handoverActive ||
+                    ahead < if (reduced) HandoverPlanner.RETURN_MIN_BUFFER_MS else RECOVERY_BUFFER_MS
+                ) {
+                    continue
+                }
                 val budget = playback.probeBudget() ?: continue
-                Log.i(TAG, "The link carries ${budget / 1_000_000} Mbit/s, the stream asks ${streamBitrate / 1_000_000}")
+                Log.i(
+                    TAG,
+                    "The link carries ${budget / 1_000_000} Mbit/s, the stream asks ${streamBitrate / 1_000_000}",
+                )
                 if (!reduced) {
                     // The measurement before the start is old by now: a link that carries less than the file is no news at a stall.
-                    if (StreamBudget.exceeds(streamBitrate, budget) && lowerQuality(HandoverTrigger.Link, linkBps = budget) && qualitySteps >= MAX_QUALITY_STEPS) return@launch
+                    if (StreamBudget.exceeds(
+                            streamBitrate,
+                            budget,
+                        ) && lowerQuality(
+                            HandoverTrigger.Link,
+                            linkBps = budget,
+                        ) && qualitySteps >= MAX_QUALITY_STEPS
+                    ) {
+                        return@launch
+                    }
                 } else if (StreamBudget.returnsTo(wanted, budget)) {
                     val plan = HandoverPlanner.back(ahead, currentPositionMs(), titleDuration())
                     if (plan is HandoverPlan.At) {
                         returns++
-                        Log.i(TAG, "The link carries ${budget / 1_000_000} Mbit/s again, back to the file's ${wanted / 1_000_000}")
-                        beginHandover(plan, trigger = null, lowering = false, reason = switchReason(null, linkBps = budget))
+                        Log.i(
+                            TAG,
+                            "The link carries ${budget / 1_000_000} Mbit/s again, back to the file's ${wanted / 1_000_000}",
+                        )
+                        beginHandover(
+                            plan,
+                            trigger = null,
+                            lowering = false,
+                            reason = switchReason(null, linkBps = budget),
+                        )
                         return@launch
                     }
                     Log.i(TAG, "Back to the file would have to wait: ${ahead / 1000} s buffered")
@@ -898,7 +1060,12 @@ class PlayerViewModel @Inject constructor(
      * that plays then goes on, and after a stall ([trigger]) the title is opened again as it was before hand overs. [reason]
      * is what the info panel tells about it.
      */
-    private fun beginHandover(plan: HandoverPlan.At, trigger: HandoverTrigger?, lowering: Boolean, reason: SwitchReason) {
+    private fun beginHandover(
+        plan: HandoverPlan.At,
+        trigger: HandoverTrigger?,
+        lowering: Boolean,
+        reason: SwitchReason,
+    ) {
         val player = _state.value.player ?: return
         val handOver = _state.value.playback ?: return
         val before = source ?: return
@@ -920,8 +1087,15 @@ class PlayerViewModel @Inject constructor(
                 if (!lowering) atMs = movedToSyncPoint(player, handOver, opened, atMs, now)
                 val problem = when {
                     _state.value.player !== player || lastSeekMs != seekMark -> "playback moved on meanwhile"
+
                     lowering && (opened.streamBitrate ?: 0) >= (before.streamBitrate ?: Int.MAX_VALUE) -> "the server did not give a smaller stream"
-                    !HandoverPlanner.stillWorks(lowering, atMs, now) -> "the stream took too long to open (${(atMs - now) / 1000} s of the lead left)"
+
+                    !HandoverPlanner.stillWorks(
+                        lowering,
+                        atMs,
+                        now,
+                    ) -> "the stream took too long to open (${(atMs - now) / 1000} s of the lead left)"
+
                     else -> null
                 }
                 if (problem == null && handOver.handOver(atMs, streamRequest(opened, atMs))) {
@@ -951,12 +1125,21 @@ class PlayerViewModel @Inject constructor(
      * starts between two cue points first decodes and discards up to 40 s, and the switch stalls for seconds. The playing stream
      * must have the data to bridge the extra wait, else the point stays as planned.
      */
-    private suspend fun movedToSyncPoint(player: ExoPlayer, handOver: GlacierPlayback, opened: PlaybackSource, atMs: Long, nowMs: Long): Long {
+    private suspend fun movedToSyncPoint(
+        player: ExoPlayer,
+        handOver: GlacierPlayback,
+        opened: PlaybackSource,
+        atMs: Long,
+        nowMs: Long,
+    ): Long {
         if (opened.method != PlaybackMethod.DirectPlay) return atMs
         val bufferedToMs = nowMs + (player.bufferedPosition - player.currentPosition)
         val limit = HandoverPlanner.syncShiftLimit(bufferedToMs - atMs, handOver.handOverLoadAheadMs)
         if (limit < 0) {
-            Log.i(TAG, "Hand over point stays at $atMs ms: the playing stream has too little buffered beyond it to wait for the file's sync point")
+            Log.i(
+                TAG,
+                "Hand over point stays at $atMs ms: the playing stream has too little buffered beyond it to wait for the file's sync point",
+            )
             return atMs
         }
         val point = handOver.syncPointAtOrAfter(streamRequest(opened, atMs), atMs, limit)
@@ -1001,10 +1184,15 @@ class PlayerViewModel @Inject constructor(
             )
         }
         recordTracks(opened.audioIndex, opened.subtitleIndex)
-        Log.i(TAG, "Handed over at ${handover.atMs / 1000} s to ${opened.method}, ${(opened.streamBitrate ?: 0) / 1_000_000} Mbit/s")
+        Log.i(
+            TAG,
+            "Handed over at ${handover.atMs / 1000} s to ${opened.method}, ${(opened.streamBitrate ?: 0) / 1_000_000} Mbit/s",
+        )
         if (old != null) playback.reportHandOver(old, opened, position()) else playback.reportStart(opened, position())
         viewModelScope.launch {
-            _events.send(UiEvent.Toast(if (handover.lowering) R.string.player_lower_quality else R.string.player_full_quality))
+            _events.send(
+                UiEvent.Toast(if (handover.lowering) R.string.player_lower_quality else R.string.player_full_quality),
+            )
         }
         tracksPending = true
         awaitingStart = player.playbackState != Player.STATE_READY
@@ -1038,8 +1226,10 @@ class PlayerViewModel @Inject constructor(
     }
 
     /** What the info panel calls [source]; [tierHeight] is the tier a ladder plays now, if it has left the tier it started with. */
-    private fun labelOf(source: PlaybackSource, tierHeight: Int? = null): StreamLabel =
-        streamLabel(source.method, if (source.ladder != null) tierHeight ?: source.pictureHeight else source.pictureHeight)
+    private fun labelOf(source: PlaybackSource, tierHeight: Int? = null): StreamLabel = streamLabel(
+        source.method,
+        if (source.ladder != null) tierHeight ?: source.pictureHeight else source.pictureHeight,
+    )
 
     /**
      * Debug: asks the server for the next segments of the playing tier all at once and logs when each answers. If they answer
@@ -1057,27 +1247,33 @@ class PlayerViewModel @Inject constructor(
         val buffered = player.bufferedPosition - player.currentPosition
         try {
             withContext(Dispatchers.IO) {
-            fun open(url: String) = (URL(url).openConnection() as HttpURLConnection).apply {
-                current.headers.forEach { (name, value) -> setRequestProperty(name, value) }
-                connectTimeout = 15_000
-                readTimeout = 60_000
-            }
-            val segments = open(variant).run { inputStream.bufferedReader().use { it.readLines() } }
-                .filter { it.isNotBlank() && !it.startsWith("#") }
-            val base = URI(variant)
-            val t0 = SystemClock.elapsedRealtime()
-            Log.i("Probe", "asking for ${if (DebugOptions.probeOld) "old " else ""}segments $next to ${next + PROBE_COUNT - 1} at once, buffered $buffered ms")
-            coroutineScope {
-                (0 until PROBE_COUNT).map { k ->
-                    async {
-                        val connection = open(base.resolve(segments[next + k]).toString())
-                        val code = connection.responseCode
-                        val answered = SystemClock.elapsedRealtime() - t0
-                        val bytes = connection.inputStream.use { it.readBytes().size }
-                        Log.i("Probe", "segment ${next + k}: answered after $answered ms, ${bytes / 1024} KiB, done after ${SystemClock.elapsedRealtime() - t0} ms (code $code)")
-                    }
-                }.awaitAll()
-            }
+                fun open(url: String) = (URL(url).openConnection() as HttpURLConnection).apply {
+                    current.headers.forEach { (name, value) -> setRequestProperty(name, value) }
+                    connectTimeout = 15_000
+                    readTimeout = 60_000
+                }
+                val segments = open(variant).run { inputStream.bufferedReader().use { it.readLines() } }
+                    .filter { it.isNotBlank() && !it.startsWith("#") }
+                val base = URI(variant)
+                val t0 = SystemClock.elapsedRealtime()
+                Log.i(
+                    "Probe",
+                    "asking for ${if (DebugOptions.probeOld) "old " else ""}segments $next to ${next + PROBE_COUNT - 1} at once, buffered $buffered ms",
+                )
+                coroutineScope {
+                    (0 until PROBE_COUNT).map { k ->
+                        async {
+                            val connection = open(base.resolve(segments[next + k]).toString())
+                            val code = connection.responseCode
+                            val answered = SystemClock.elapsedRealtime() - t0
+                            val bytes = connection.inputStream.use { it.readBytes().size }
+                            Log.i(
+                                "Probe",
+                                "segment ${next + k}: answered after $answered ms, ${bytes / 1024} KiB, done after ${SystemClock.elapsedRealtime() - t0} ms (code $code)",
+                            )
+                        }
+                    }.awaitAll()
+                }
             }
         } catch (e: CancellationException) {
             throw e
@@ -1104,13 +1300,22 @@ class PlayerViewModel @Inject constructor(
         // Only the periodic check goes back to the file ([current] given); a check after a stall or a slow load never does.
         val wanted = current?.file?.bitrate
         if (current != null && wanted != null && HandoverPlanner.backToFile(
-                current.fileFitsDevice, wanted, budget, ahead, handoverActive, returns, MAX_RETURNS,
+                current.fileFitsDevice,
+                wanted,
+                budget,
+                ahead,
+                handoverActive,
+                returns,
+                MAX_RETURNS,
             )
         ) {
             val plan = HandoverPlanner.back(ahead, currentPositionMs(), titleDuration())
             if (plan is HandoverPlan.At) {
                 returns++
-                Log.i(TAG, "The link carries ${budget / 1_000_000} Mbit/s again, back to the file's ${wanted / 1_000_000}")
+                Log.i(
+                    TAG,
+                    "The link carries ${budget / 1_000_000} Mbit/s again, back to the file's ${wanted / 1_000_000}",
+                )
                 beginHandover(plan, trigger = null, lowering = false, reason = switchReason(null, linkBps = budget))
                 return
             }
@@ -1147,16 +1352,34 @@ class PlayerViewModel @Inject constructor(
             .sortedBy { it.bitrate }
         if (formats.size < 2) {
             // None at all: the tracks are still those of the stream just left; the new stream's come with onTracksChanged.
-            if (formats.isNotEmpty()) Log.i(TAG, "Video formats listed so far: ${formats.joinToString { "${it.height}p" }}")
+            if (formats.isNotEmpty()) {
+                Log.i(
+                    TAG,
+                    "Video formats listed so far: ${formats.joinToString { "${it.height}p" }}",
+                )
+            }
             return
         }
         val bitrates = formats.map { it.bitrate }
-        val start = bitrates.indexOfLast { it <= (current.streamBitrate ?: bitrates.last()) * 105L / 100 }.coerceAtLeast(0)
-        val controller = TierController(bitrates, formats.map { current.tierDemand[it.height] ?: StreamBudget.expectedBitrate(it.height) }, start)
+        val start = bitrates.indexOfLast {
+            it <= (current.streamBitrate ?: bitrates.last()) * 105L / 100
+        }.coerceAtLeast(
+            0,
+        )
+        val controller = TierController(
+            bitrates,
+            formats.map { current.tierDemand[it.height] ?: StreamBudget.expectedBitrate(it.height) },
+            start,
+        )
         tiers = controller
         tierHeights = formats.associate { it.bitrate to it.height }
         slowLoads = SlowLoads()
-        Log.i(TAG, "Tiers ${formats.joinToString { "${it.height}p (${it.bitrate / 1000} kbit/s)" }}, starting at ${controller.bitrate / 1000}")
+        Log.i(
+            TAG,
+            "Tiers ${formats.joinToString {
+                "${it.height}p (${it.bitrate / 1000} kbit/s)"
+            }}, starting at ${controller.bitrate / 1000}",
+        )
         pinTier(controller.bitrate)
     }
 
@@ -1164,7 +1387,10 @@ class PlayerViewModel @Inject constructor(
      * Asks the player for the tier of [bitrate]; it switches at the next segment, the buffer already loaded plays on.
      */
     private fun pinTier(bitrate: Int) {
-        Log.i(TAG, "Tier ${bitrate / 1000} kbit/s" + tiers?.reason?.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty())
+        Log.i(
+            TAG,
+            "Tier ${bitrate / 1000} kbit/s" + tiers?.reason?.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty(),
+        )
         val height = tierHeights[bitrate]
         val before = pinnedHeight
         // The tier left behind keeps its job until the new one has a segment; one that is asked for again stays.
@@ -1194,7 +1420,12 @@ class PlayerViewModel @Inject constructor(
         val player = _state.value.player
         val canHand = player != null && started && _state.value.playback?.canHandOver == true
         val plan = if (canHand) {
-            HandoverPlanner.lower(trigger, player.bufferedPosition - player.currentPosition, currentPositionMs(), titleDuration())
+            HandoverPlanner.lower(
+                trigger,
+                player.bufferedPosition - player.currentPosition,
+                currentPositionMs(),
+                titleDuration(),
+            )
         } else {
             HandoverPlan.Reopen
         }
@@ -1229,7 +1460,11 @@ class PlayerViewModel @Inject constructor(
     }
 
     /** Opens the title again, at [at] (a position of the title) or where it plays now. */
-    private fun reopen(audio: Int?, subtitle: Int?, at: Long? = null) {
+    private fun reopen(
+        audio: Int?,
+        subtitle: Int?,
+        at: Long? = null,
+    ) {
         val position = at ?: currentPositionMs()
         source?.let { playback.reportStopped(it, position) }
         source = null
@@ -1242,11 +1477,19 @@ class PlayerViewModel @Inject constructor(
         val current = source ?: return false
         if (player.currentTracks.isEmpty) return false
         val audio = _state.value.audioIndex
-        if (audio != null && current.allAudioInStream) current.audioOrdinal(audio)?.let { TrackControl.selectAudio(player, it) }
+        if (audio != null && current.allAudioInStream) {
+            current.audioOrdinal(
+                audio,
+            )?.let { TrackControl.selectAudio(player, it) }
+        }
         val subtitle = current.subtitles.firstOrNull { it.track.index == _state.value.subtitleIndex }
         when (subtitle?.delivery) {
-            SubtitleDelivery.Embedded -> current.subtitleOrdinal(subtitle.track.index)?.let { TrackControl.selectEmbeddedText(player, it) }
+            SubtitleDelivery.Embedded -> current.subtitleOrdinal(
+                subtitle.track.index,
+            )?.let { TrackControl.selectEmbeddedText(player, it) }
+
             SubtitleDelivery.External -> TrackControl.selectExternalText(player, subtitle.track.index)
+
             // Off, or burned into the picture: no text track.
             SubtitleDelivery.BurnIn, null -> TrackControl.disableText(player)
         }
@@ -1292,11 +1535,13 @@ class PlayerViewModel @Inject constructor(
                 reopen(audio = _state.value.audioIndex, subtitle = _state.value.subtitleIndex, at = to.atMs)
                 return
             }
+
             is SeekTarget.Here -> {
                 // A stream still being opened for a hand over was planned from where the title played.
                 if (handoverJob?.isActive == true) handoverJob?.cancel()
                 player.seekTo(to.positionMs)
             }
+
             // Into the stream waiting to take over: the playback goes there at its start first, which is how it takes over what that
             // has loaded (see GlacierPlayback.enterNext).
             is SeekTarget.Next -> _state.value.playback?.enterNext(to.positionMs) ?: player.seekTo(1, to.positionMs)
@@ -1368,7 +1613,11 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch { _events.send(UiEvent.Toast(segment.kind.skippedMessage(), emptyList())) }
     }
 
-    private fun currentPositionMs(): Long = _state.value.player?.let { time.position(it.currentPosition) } ?: _progress.value.positionMs
+    private fun currentPositionMs(): Long = _state.value.player?.let {
+        time.position(
+            it.currentPosition,
+        )
+    } ?: _progress.value.positionMs
 
     private fun position() = PlaybackPosition(currentPositionMs(), paused = _state.value.player?.isPlaying != true)
 
@@ -1397,7 +1646,16 @@ class PlayerViewModel @Inject constructor(
             it.removeListener(listener)
             it.release()
         }
-        _state.update { it.copy(player = null, playback = null, videoDecoder = null, audioDecoder = null, audioOutput = null, switch = null) }
+        _state.update {
+            it.copy(
+                player = null,
+                playback = null,
+                videoDecoder = null,
+                audioDecoder = null,
+                audioOutput = null,
+                switch = null,
+            )
+        }
         started = false
     }
 
@@ -1452,23 +1710,32 @@ class PlayerViewModel @Inject constructor(
         const val TAG = "Player"
         const val TICK_MS = 500L
         const val REPORT_INTERVAL_MS = 10_000L
+
         /** Credits ending this close to the end count as running to the end. */
         const val END_TOLERANCE_MS = 2_000L
+
         /** The server's "no subtitles". */
         const val NO_SUBTITLE = -1
+
         /** How Media3 reports a segment it cannot parse; the negative start time arrives as an unexpected loader failure. */
         const val MAX_OUTPUT_RECOVERIES = 3
+
         /** Long enough for the TV to finish switching its picture mode. */
         const val OUTPUT_RECOVERY_DELAY_MS = 1_500L
+
         /** A stall this long moves to a smaller stream at once. */
         const val LONG_STALL_MS = 8_000L
+
         /** Buffering this soon after a jump is the jump, not the link. */
         const val SEEK_BUFFERING_MS = 3_000L
         const val MAX_OPEN_RETRIES = 3
+
         /** Playing this close to the point of a hand over, the wait for the new stream is the hand over, not a stall. */
         const val HANDOVER_EDGE_MS = 2_000L
+
         /** Media3 tries a segment several times itself before an error reaches here, each with the long timeout. */
         const val MAX_LINK_RETRIES = 3
+
         /** The segment probe (debug): when it runs after the first picture, how long a segment is, how many it asks for. */
         const val PROBE_DELAY_MS = 25_000L
         const val PROBE_SEGMENT_MS = 10_000L
@@ -1476,9 +1743,11 @@ class PlayerViewModel @Inject constructor(
         const val PROBE_OLD_BEHIND = 6
         const val OPEN_RETRY_DELAY_MS = 3_000L
         /** A ladder's buffer is judged from this long after the start. */
+
         /** A new stream must show a picture within this time. */
         const val STARTUP_MS = 20_000L
         const val TRANSCODE_STARTUP_MS = 75_000L
+
         /** Errors of a connection that cannot keep up. */
         val LINK_ERRORS = setOf(
             PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
@@ -1489,33 +1758,36 @@ class PlayerViewModel @Inject constructor(
         /** Seconds ahead below which the buffer counts as nearly empty, and above which as recovered. */
         const val BUFFER_LOW_MS = 4_000L
         const val BUFFER_RECOVERED_MS = 10_000L
+
         /** Nearly empty for this long while playing: the stream drains the buffer. */
         const val BUFFER_DRAIN_MS = 5_000L
+
         /** The buffer of a stream that just started, or just jumped, fills first. */
         const val BUFFER_SETTLE_MS = 30_000L
 
         /** After a start or a seek the throughput is left alone this long: the player loads its first seconds in a burst. */
         const val THROUGHPUT_SETTLE_MS = 10_000L
+
         /** A reduced stream checks the link this often, and only with this much buffer ahead. */
         const val RECOVERY_CHECK_MS = 120_000L
         const val RECOVERY_BUFFER_MS = 20_000L
         const val MAX_RETURNS = 2
+
         /** Smaller streams one title may move to: 70 %, 49 %, 34 % of the first. */
         const val MAX_QUALITY_STEPS = 3
 
         /** A dead AudioTrack, or a runtime error such as a decoder refusing its new surface or a player stuck after either. */
         @OptIn(UnstableApi::class)
-        fun PlaybackException.isOutputFailure() =
-            errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED ||
-                errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED ||
-                (this is ExoPlaybackException && type == ExoPlaybackException.TYPE_UNEXPECTED)
+        fun PlaybackException.isOutputFailure() = errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED ||
+            errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED ||
+            (this is ExoPlaybackException && type == ExoPlaybackException.TYPE_UNEXPECTED)
 
         /** E.g. "DECODER_INIT_FAILED (4001)". */
         fun PlaybackException.failureCode() = "${errorCodeName.removePrefix("ERROR_CODE_")} ($errorCode)"
 
         /** A decoder or the audio output failed (Media3's 4xxx and 5xxx codes), not the network or the server. */
-        fun PlaybackException.isDeviceFailure() =
-            errorCode in PlaybackException.ERROR_CODE_DECODER_INIT_FAILED until PlaybackException.ERROR_CODE_DRM_UNSPECIFIED
+        fun PlaybackException.isDeviceFailure() = errorCode in
+            PlaybackException.ERROR_CODE_DECODER_INIT_FAILED until PlaybackException.ERROR_CODE_DRM_UNSPECIFIED
         val FMP4_ERRORS = setOf(
             PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
             PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,

@@ -14,7 +14,10 @@ class BufferSizingTest {
 
     @Test
     fun midHeapTakesFortyPercent() {
-        assertEquals((512 * mb / 100 * 50).toInt(), BufferSizing.targetBytes(512 * mb, floor).also { assert(it > floor) })
+        assertEquals(
+            (512 * mb / 100 * 50).toInt(),
+            BufferSizing.targetBytes(512 * mb, floor).also { assert(it > floor) },
+        )
     }
 
     @Test

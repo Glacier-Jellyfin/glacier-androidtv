@@ -6,20 +6,26 @@ import org.junit.Test
 
 class VersionsTest {
 
-    private fun version(id: String, width: Int, height: Int, hdr: HdrFormat? = null, edition: String? = null, runtimeMs: Long? = null) =
-        MediaVersion(
-            id = id,
-            name = edition,
-            edition = edition,
-            width = width,
-            height = height,
-            quality = VideoQuality(uhd = width >= 3200, hdr = hdr).takeIf { it.uhd || hdr != null },
-            videoCodec = "hevc",
-            sizeBytes = null,
-            runtimeMs = runtimeMs,
-            tracks = null,
-            trickplay = null,
-        )
+    private fun version(
+        id: String,
+        width: Int,
+        height: Int,
+        hdr: HdrFormat? = null,
+        edition: String? = null,
+        runtimeMs: Long? = null,
+    ) = MediaVersion(
+        id = id,
+        name = edition,
+        edition = edition,
+        width = width,
+        height = height,
+        quality = VideoQuality(uhd = width >= 3200, hdr = hdr).takeIf { it.uhd || hdr != null },
+        videoCodec = "hevc",
+        sizeBytes = null,
+        runtimeMs = runtimeMs,
+        tracks = null,
+        trickplay = null,
+    )
 
     private val uhd = version("uhd", 3840, 2160, HdrFormat.Hdr10)
     private val fullHd = version("fhd", 1920, 1080)
@@ -93,9 +99,15 @@ class VersionsTest {
 
     @Test
     fun `a movie keeps the very file picked`() {
-        assertEquals(noir, pickVersion(cuts, VersionKey(Resolution.FullHd, edition = "Noir", id = "noir"), null, Resolution.Uhd))
+        assertEquals(
+            noir,
+            pickVersion(cuts, VersionKey(Resolution.FullHd, edition = "Noir", id = "noir"), null, Resolution.Uhd),
+        )
         // Two 1080p cuts: the kind alone finds the right one too.
-        assertEquals(cut, pickVersion(cuts, VersionKey(Resolution.FullHd, edition = "Director's Cut"), null, Resolution.Uhd))
+        assertEquals(
+            cut,
+            pickVersion(cuts, VersionKey(Resolution.FullHd, edition = "Director's Cut"), null, Resolution.Uhd),
+        )
     }
 
     @Test
@@ -103,19 +115,36 @@ class VersionsTest {
         val extended = version("ext", 3840, 2160, edition = "Extended")
         val extendedHd = version("exthd", 1920, 1080, edition = "Extended")
         val episode = listOf(uhd, extended, extendedHd)
-        assertEquals(extendedHd, pickVersion(episode, VersionKey(Resolution.FullHd, edition = "Extended"), null, Resolution.Uhd))
+        assertEquals(
+            extendedHd,
+            pickVersion(episode, VersionKey(Resolution.FullHd, edition = "Extended"), null, Resolution.Uhd),
+        )
         // This episode has the cut only in another size: still the cut.
-        assertEquals(extended, pickVersion(listOf(uhd, extended), VersionKey(Resolution.FullHd, edition = "extended"), null, Resolution.Uhd))
+        assertEquals(
+            extended,
+            pickVersion(
+                listOf(uhd, extended),
+                VersionKey(Resolution.FullHd, edition = "extended"),
+                null,
+                Resolution.Uhd,
+            ),
+        )
     }
 
     @Test
     fun `sizes alone name the versions in lines`() {
         assertEquals(mapOf("uhd" to "2160p", "fhd" to "1080p", "hd" to "720p"), versionLabels(all, "Theatrical"))
-        assertEquals(mapOf("dvd" to "576p", "fhd" to "1080p"), versionLabels(listOf(version("dvd", 720, 576), fullHd), "Theatrical"))
+        assertEquals(
+            mapOf("dvd" to "576p", "fhd" to "1080p"),
+            versionLabels(listOf(version("dvd", 720, 576), fullHd), "Theatrical"),
+        )
         val sdr = version("sdr", 3840, 2160)
         assertEquals(mapOf("uhd" to "2160p HDR", "sdr" to "2160p SDR"), versionLabels(listOf(uhd, sdr), "Theatrical"))
         val twin = version("twin", 1920, 1080)
-        assertEquals(mapOf("fhd" to "1080p SDR 1", "twin" to "1080p SDR 2"), versionLabels(listOf(fullHd, twin), "Theatrical"))
+        assertEquals(
+            mapOf("fhd" to "1080p SDR 1", "twin" to "1080p SDR 2"),
+            versionLabels(listOf(fullHd, twin), "Theatrical"),
+        )
     }
 
     @Test

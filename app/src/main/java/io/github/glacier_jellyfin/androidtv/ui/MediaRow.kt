@@ -40,15 +40,34 @@ fun MediaRow(
 ) {
     // The row's 26px vertical content padding leaves room for focus scale and ring;
     // pulling it up by 8px keeps the design's 18px between title and cards.
-    Column(modifier.fillMaxWidth().padding(top = 12.dp, bottom = ((bottomPadding ?: LocalCardSizes.current.rowBottom) - 26).coerceAtLeast(0).dp)) {
-        if (title != null) Row(
-            Modifier.padding(start = PageEdge.dp, end = PageEdge.dp),
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            // Both texts share one baseline, so the count sits on the title's line.
-            Text(title, style = GlacierText.display(28), color = GlacierColors.Ice, modifier = Modifier.alignByBaseline())
-            if (subtitle != null) Text(subtitle, style = GlacierText.body(17), color = GlacierColors.Mist, modifier = Modifier.alignByBaseline())
+    Column(
+        modifier.fillMaxWidth().padding(
+            top = 12.dp,
+            bottom = ((bottomPadding ?: LocalCardSizes.current.rowBottom) - 26).coerceAtLeast(0).dp,
+        ),
+    ) {
+        if (title != null) {
+            Row(
+                Modifier.padding(start = PageEdge.dp, end = PageEdge.dp),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                // Both texts share one baseline, so the count sits on the title's line.
+                Text(
+                    title,
+                    style = GlacierText.display(28),
+                    color = GlacierColors.Ice,
+                    modifier = Modifier.alignByBaseline(),
+                )
+                if (subtitle != null) {
+                    Text(
+                        subtitle,
+                        style = GlacierText.body(17),
+                        color = GlacierColors.Mist,
+                        modifier = Modifier.alignByBaseline(),
+                    )
+                }
+            }
         }
         CompositionLocalProvider(LocalBringIntoViewSpec provides rememberCardPivotSpec()) {
             LazyRow(
@@ -61,4 +80,3 @@ fun MediaRow(
         }
     }
 }
-

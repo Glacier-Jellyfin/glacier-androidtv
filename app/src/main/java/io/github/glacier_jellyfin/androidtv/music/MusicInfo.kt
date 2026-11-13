@@ -19,11 +19,11 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -32,8 +32,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
-import io.github.glacier_jellyfin.androidtv.core.data.media.AudioFormat
 import io.github.glacier_jellyfin.androidtv.core.data.media.ArtistInfo
+import io.github.glacier_jellyfin.androidtv.core.data.media.AudioFormat
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.data.media.SongDetails
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackMethod
@@ -45,28 +45,28 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.detail.CastPortrait
+import io.github.glacier_jellyfin.androidtv.player.BufferRow
 import io.github.glacier_jellyfin.androidtv.player.DeliveryHeader
+import io.github.glacier_jellyfin.androidtv.player.FactRow
 import io.github.glacier_jellyfin.androidtv.player.InfoCard
 import io.github.glacier_jellyfin.androidtv.player.InfoPanelFrame
-import io.github.glacier_jellyfin.androidtv.player.FactRow
 import io.github.glacier_jellyfin.androidtv.player.InfoSurface
-import io.github.glacier_jellyfin.androidtv.player.BufferRow
 import io.github.glacier_jellyfin.androidtv.player.OsdSecondary
-import io.github.glacier_jellyfin.androidtv.player.StreamStats
 import io.github.glacier_jellyfin.androidtv.player.StreamRow
 import io.github.glacier_jellyfin.androidtv.player.StreamRowsTable
+import io.github.glacier_jellyfin.androidtv.player.StreamStats
 import io.github.glacier_jellyfin.androidtv.player.Tone
 import io.github.glacier_jellyfin.androidtv.player.TranscodeCard
-import io.github.glacier_jellyfin.androidtv.player.formatTime
 import io.github.glacier_jellyfin.androidtv.player.audioDetails
 import io.github.glacier_jellyfin.androidtv.player.audioHeadline
 import io.github.glacier_jellyfin.androidtv.player.bitrateText
+import io.github.glacier_jellyfin.androidtv.player.formatTime
 import io.github.glacier_jellyfin.androidtv.player.streamStats
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.audioFormatText
-import kotlinx.coroutines.delay
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import kotlinx.coroutines.delay
 
 /** Lossless as it reaches the TV: a transcode turns it into AAC. */
 internal fun MusicUiState.playsLossless(track: MusicTrack): Boolean =
@@ -109,7 +109,11 @@ internal fun MusicInfoPanel(
 }
 
 @Composable
-private fun SongTab(track: MusicTrack, lossless: Boolean, songDetails: suspend (MusicTrack) -> SongDetails?) {
+private fun SongTab(
+    track: MusicTrack,
+    lossless: Boolean,
+    songDetails: suspend (MusicTrack) -> SongDetails?,
+) {
     // Fetched in the background: the panel is there at once and the extra lines follow.
     val details by produceState<SongDetails?>(null, track.id) {
         value = null
@@ -123,12 +127,35 @@ private fun SongTab(track: MusicTrack, lossless: Boolean, songDetails: suspend (
             val isVideo = track.isVideo
             val pictureWidth = if (isVideo) VIDEO_STILL_WIDTH else COVER
             val pictureHeight = if (isVideo) VIDEO_STILL_HEIGHT else COVER
-            Artwork(track.largeCoverUrl, Modifier.size(pictureWidth.dp, pictureHeight.dp).clip(shape).border(1.dp, GlacierColors.GlassBorder, shape))
+            Artwork(
+                track.largeCoverUrl,
+                Modifier.size(
+                    pictureWidth.dp,
+                    pictureHeight.dp,
+                ).clip(shape).border(1.dp, GlacierColors.GlassBorder, shape),
+            )
             // At least as tall as the picture, so the pill at the bottom ends level with it.
-            Column(Modifier.weight(1f).heightIn(min = pictureHeight.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Column(
+                Modifier.weight(1f).heightIn(min = pictureHeight.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text(track.title, style = GlacierText.display(44), color = GlacierColors.Ice, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    track.artist?.let { Text(it, style = GlacierText.body(24), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    Text(
+                        track.title,
+                        style = GlacierText.display(44),
+                        color = GlacierColors.Ice,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    track.artist?.let {
+                        Text(
+                            it,
+                            style = GlacierText.body(24),
+                            color = GlacierColors.Ice,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                     if (lossless) LosslessBadge(Modifier.padding(top = 2.dp))
                     val trackValue = track.number?.let { n ->
                         val base = details?.albumTrackCount?.takeIf { it >= n }
@@ -143,7 +170,11 @@ private fun SongTab(track: MusicTrack, lossless: Boolean, songDetails: suspend (
                         track.year?.let { stringResource(R.string.music_info_year) to it.toString() },
                         trackValue?.takeIf { !isVideo }?.let { stringResource(R.string.music_info_track) to it },
                         genres?.let { stringResource(R.string.music_info_genre) to it },
-                        track.durationMs.takeIf { isVideo && it > 0 }?.let { stringResource(R.string.sort_runtime) to formatTime(it) },
+                        track.durationMs.takeIf { isVideo && it > 0 }?.let {
+                            stringResource(
+                                R.string.sort_runtime,
+                            ) to formatTime(it)
+                        },
                     )
                     if (facts.isNotEmpty()) {
                         Column(Modifier.padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -153,12 +184,22 @@ private fun SongTab(track: MusicTrack, lossless: Boolean, songDetails: suspend (
                 }
                 val plays = details?.playCount?.takeIf { it > 0 }
                 if (plays != null) {
-                    val last = details?.lastPlayed?.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))
+                    val last = details?.lastPlayed?.format(
+                        DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale),
+                    )
                     val text = listOfNotNull(
-                        pluralStringResource(if (isVideo) R.plurals.music_info_watched else R.plurals.music_info_played, plays, plays),
+                        pluralStringResource(
+                            if (isVideo) R.plurals.music_info_watched else R.plurals.music_info_played,
+                            plays,
+                            plays,
+                        ),
                         last?.let { stringResource(R.string.music_info_last_played, it) },
                     ).joinToString(" · ")
-                    PlayCountPill(text, if (isVideo) GlacierIcons.PlayOutline else GlacierIcons.Headphones, Modifier.padding(top = 14.dp))
+                    PlayCountPill(
+                        text,
+                        if (isVideo) GlacierIcons.PlayOutline else GlacierIcons.Headphones,
+                        Modifier.padding(top = 14.dp),
+                    )
                 }
             }
         }
@@ -172,7 +213,11 @@ private const val VIDEO_STILL_HEIGHT = 270
 
 /** How often and when the song was last played: one quiet pill, level with the picture's bottom edge. */
 @Composable
-private fun PlayCountPill(text: String, icon: ImageVector, modifier: Modifier = Modifier) {
+private fun PlayCountPill(
+    text: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+) {
     Row(
         modifier
             .clip(PillShape)
@@ -182,7 +227,13 @@ private fun PlayCountPill(text: String, icon: ImageVector, modifier: Modifier = 
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(icon, contentDescription = null, tint = GlacierColors.Mist, modifier = Modifier.size(20.dp))
-        Text(text, style = GlacierText.body(18), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            text,
+            style = GlacierText.body(18),
+            color = GlacierColors.Mist,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -193,16 +244,34 @@ private fun ArtistCard(artist: ArtistInfo) {
         Row(horizontalArrangement = Arrangement.spacedBy(28.dp), verticalAlignment = Alignment.CenterVertically) {
             CastPortrait(artist.name, artist.imageUrl, 112)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(artist.name, style = GlacierText.body(24, FontWeight.SemiBold), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    artist.name,
+                    style = GlacierText.body(24, FontWeight.SemiBold),
+                    color = GlacierColors.Ice,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 val bio = artist.overview
-                if (bio != null) Text(bio, style = GlacierText.body(18), color = GlacierColors.Mist, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                if (bio != null) {
+                    Text(
+                        bio,
+                        style = GlacierText.body(18),
+                        color = GlacierColors.Mist,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun TechnicalTab(state: MusicUiState, track: MusicTrack, stats: StreamStats?) {
+private fun TechnicalTab(
+    state: MusicUiState,
+    track: MusicTrack,
+    stats: StreamStats?,
+) {
     val format = track.format
     val lossless = state.playsLossless(track)
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -216,14 +285,23 @@ private fun TechnicalTab(state: MusicUiState, track: MusicTrack, stats: StreamSt
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             ) {
                 if (!lossless && format?.lossless == true && state.method == PlaybackMethod.Transcode) {
-                    Text(stringResource(R.string.music_info_not_lossless), style = GlacierText.body(18), color = OsdSecondary)
+                    Text(
+                        stringResource(R.string.music_info_not_lossless),
+                        style = GlacierText.body(18),
+                        color = OsdSecondary,
+                    )
                 }
             }
             InfoCard(
                 label = stringResource(R.string.music_info_file),
                 status = format?.takeIf { it.lossless }?.let { stringResource(R.string.music_lossless) to Tone.Ok },
                 headline = audioFormatText(format),
-                details = format?.let { listOfNotNull(containerText(it), it.bitrate?.let(::bitrateText)).joinToString(" · ").ifEmpty { null } },
+                details = format?.let {
+                    listOfNotNull(
+                        containerText(it),
+                        it.bitrate?.let(::bitrateText),
+                    ).joinToString(" · ").ifEmpty { null }
+                },
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             )
         }
@@ -234,7 +312,12 @@ private fun TechnicalTab(state: MusicUiState, track: MusicTrack, stats: StreamSt
 /** Like the video player's: the file on the server against what reaches this device. */
 @OptIn(UnstableApi::class)
 @Composable
-private fun ServerTab(state: MusicUiState, track: MusicTrack, stats: StreamStats?, transcodeStatus: suspend () -> TranscodeStatus?) {
+private fun ServerTab(
+    state: MusicUiState,
+    track: MusicTrack,
+    stats: StreamStats?,
+    transcodeStatus: suspend () -> TranscodeStatus?,
+) {
     val method = state.method ?: return
     val direct = method == PlaybackMethod.DirectPlay
     val status by produceState<TranscodeStatus?>(null, method, track.id) {
@@ -263,17 +346,38 @@ private fun ServerTab(state: MusicUiState, track: MusicTrack, stats: StreamStats
             StreamRow(
                 stringResource(R.string.player_audio),
                 audioFormatText(format) ?: "–",
-                if (direct) directLabel else stringResource(if (audioCopied) R.string.player_info_copied else R.string.player_info_converted),
+                if (direct) {
+                    directLabel
+                } else {
+                    stringResource(
+                        if (audioCopied) R.string.player_info_copied else R.string.player_info_converted,
+                    )
+                },
                 if (direct || audioCopied) Tone.Ok else Tone.Warn,
                 when {
                     direct -> null
+
                     audioCopied -> stringResource(R.string.player_info_unchanged)
-                    else -> streamed?.let { listOfNotNull(audioHeadline(it), bitrateText(it.bitrate)).joinToString(" · ") }
+
+                    else -> streamed?.let {
+                        listOfNotNull(
+                            audioHeadline(it),
+                            bitrateText(it.bitrate),
+                        ).joinToString(" · ")
+                    }
                 },
             ),
         )
         format?.bitrate?.let(::bitrateText)?.let { source ->
-            add(StreamRow(stringResource(R.string.player_info_bitrate), source, null, Tone.Plain, streamed?.bitrate?.takeIf { !direct }?.let(::bitrateText)))
+            add(
+                StreamRow(
+                    stringResource(R.string.player_info_bitrate),
+                    source,
+                    null,
+                    Tone.Plain,
+                    streamed?.bitrate?.takeIf { !direct }?.let(::bitrateText),
+                ),
+            )
         }
     }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(24.dp)) {

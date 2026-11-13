@@ -15,7 +15,11 @@ data class AudioFormat(
     val container: String? = null,
 ) {
     /** Stored without loss: FLAC, ALAC, WAV and the like. */
-    val lossless: Boolean get() = codec?.lowercase()?.let { it in LosslessCodecs || it.startsWith("pcm") || it.startsWith("dsd") } == true
+    val lossless: Boolean get() = codec?.lowercase()?.let {
+        it in LosslessCodecs || it.startsWith(
+            "pcm",
+        ) || it.startsWith("dsd")
+    } == true
 }
 
 private val LosslessCodecs = setOf("flac", "alac", "ape", "wavpack", "tta", "truehd", "mlp", "wav", "aiff")
@@ -55,12 +59,21 @@ data class SongDetails(
 )
 
 /** The song's artist: photo and the start of the biography. */
-data class ArtistInfo(val id: UUID, val name: String, val imageUrl: String?, val overview: String?)
+data class ArtistInfo(
+    val id: UUID,
+    val name: String,
+    val imageUrl: String?,
+    val overview: String?,
+)
 
 /**
  * A song's lyrics; [synced] when the lines carry start times. An
  * [instrumental] song has none, as its lyrics file says ("[au: instrumental]").
  */
-data class Lyrics(val lines: List<LyricLine>, val synced: Boolean, val instrumental: Boolean = false)
+data class Lyrics(
+    val lines: List<LyricLine>,
+    val synced: Boolean,
+    val instrumental: Boolean = false,
+)
 
 data class LyricLine(val text: String, val startMs: Long?)

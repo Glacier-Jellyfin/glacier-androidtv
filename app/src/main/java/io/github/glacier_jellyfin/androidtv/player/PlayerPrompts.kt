@@ -33,9 +33,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,13 +69,15 @@ private fun rememberSmoothPosition(sampleMs: Long, playing: Boolean): LongState 
     LaunchedEffect(Unit) {
         val clock = SmoothClock()
         var seen: Long? = null
-        while (true) withFrameMillis { now ->
-            val sample = latest
-            if (sample != seen) {
-                seen = sample
-                clock.onSample(sample, now)
+        while (true) {
+            withFrameMillis { now ->
+                val sample = latest
+                if (sample != seen) {
+                    seen = sample
+                    clock.onSample(sample, now)
+                }
+                display.longValue = clock.onFrame(now, isPlaying)
             }
-            display.longValue = clock.onFrame(now, isPlaying)
         }
     }
     return display
@@ -87,7 +89,13 @@ private fun rememberSmoothPosition(sampleMs: Long, playing: Boolean): LongState 
 
  */
 @Composable
-fun SkipButton(segment: MediaSegment, positionMs: Long, playing: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun SkipButton(
+    segment: MediaSegment,
+    positionMs: Long,
+    playing: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val accent = LocalAccent.current.main
     val position = rememberSmoothPosition(positionMs, playing)
     // The label recomposes once a second; the ring reads the position while drawing.
@@ -108,16 +116,31 @@ fun SkipButton(segment: MediaSegment, positionMs: Long, playing: Boolean, onClic
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(GlacierIcons.SkipForward, contentDescription = null, tint = color, modifier = Modifier.size(22.dp))
-                Text(stringResource(segment.kind.skipLabel()), style = GlacierText.body(22, FontWeight.SemiBold), color = color)
+                Text(
+                    stringResource(segment.kind.skipLabel()),
+                    style = GlacierText.body(22, FontWeight.SemiBold),
+                    color = color,
+                )
             }
             Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxSize()) {
-                    val played = ((position.longValue - segment.startMs).toFloat() / (segment.endMs - segment.startMs)).coerceIn(0f, 1f)
+                    val played = ((position.longValue - segment.startMs).toFloat() / (segment.endMs - segment.startMs)).coerceIn(
+                        0f,
+                        1f,
+                    )
                     val stroke = 4.dp.toPx()
                     val inset = stroke / 2 + 1.5.dp.toPx()
                     val arcSize = Size(size.width - 2 * inset, size.height - 2 * inset)
                     val topLeft = Offset(inset, inset)
-                    drawArc(color.copy(alpha = 0.22f), 0f, 360f, useCenter = false, topLeft = topLeft, size = arcSize, style = Stroke(stroke))
+                    drawArc(
+                        color.copy(alpha = 0.22f),
+                        0f,
+                        360f,
+                        useCenter = false,
+                        topLeft = topLeft,
+                        size = arcSize,
+                        style = Stroke(stroke),
+                    )
                     drawArc(
                         color,
                         startAngle = -90f,
@@ -185,7 +208,12 @@ fun UpNextCard(
                     .drawBehind {
                         val width = size.width * upNextFraction(-elapsed.longValue, countdown.leadMs)
                         val from = if (layoutDirection == LayoutDirection.Rtl) size.width - width else 0f
-                        drawRoundRect(accent, topLeft = Offset(from, 0f), size = size.copy(width = width), cornerRadius = CornerRadius(size.height / 2))
+                        drawRoundRect(
+                            accent,
+                            topLeft = Offset(from, 0f),
+                            size = size.copy(width = width),
+                            cornerRadius = CornerRadius(size.height / 2),
+                        )
                     },
             )
         }
@@ -200,7 +228,11 @@ fun UpNextCard(
                 val season = next.seasonNumber
                 val episode = next.episodeNumber
                 if (season != null && episode != null) {
-                    Text(stringResource(R.string.up_next_episode, season, episode), style = GlacierText.body(17), color = GlacierColors.Mist)
+                    Text(
+                        stringResource(R.string.up_next_episode, season, episode),
+                        style = GlacierText.body(17),
+                        color = GlacierColors.Mist,
+                    )
                 }
                 Text(
                     next.title,
@@ -212,7 +244,12 @@ fun UpNextCard(
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            CardButton(stringResource(R.string.up_next_play), onClick = onPlay, primary = true, modifier = Modifier.focusRequester(playFocus))
+            CardButton(
+                stringResource(R.string.up_next_play),
+                onClick = onPlay,
+                primary = true,
+                modifier = Modifier.focusRequester(playFocus),
+            )
             CardButton(stringResource(R.string.up_next_credits), onClick = onDismiss)
         }
     }
@@ -223,7 +260,11 @@ fun UpNextCard(
  * empties like the card's bar, inside it the seconds until the next episode starts.
  */
 @Composable
-fun UpNextRing(countdown: UpNextCountdown, playing: Boolean, modifier: Modifier = Modifier) {
+fun UpNextRing(
+    countdown: UpNextCountdown,
+    playing: Boolean,
+    modifier: Modifier = Modifier,
+) {
     val accent = LocalAccent.current.main
     val elapsed = rememberSmoothPosition(-countdown.remainingMs, playing)
     val remainingMs by remember {
@@ -243,7 +284,15 @@ fun UpNextRing(countdown: UpNextCountdown, playing: Boolean, modifier: Modifier 
             val stroke = 4.dp.toPx()
             val arcSize = Size(size.width - stroke, size.height - stroke)
             val topLeft = Offset(stroke / 2, stroke / 2)
-            drawArc(accent.copy(alpha = 0.22f), 0f, 360f, useCenter = false, topLeft = topLeft, size = arcSize, style = Stroke(stroke))
+            drawArc(
+                accent.copy(alpha = 0.22f),
+                0f,
+                360f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(stroke),
+            )
             drawArc(
                 accent,
                 startAngle = -90f,
@@ -269,14 +318,27 @@ private fun upNextFraction(remainingMs: Long, leadMs: Long): Float =
 
 /** The card's buttons: smaller than [io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton] (design: 56 high, 19 px). */
 @Composable
-private fun CardButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = false) {
+private fun CardButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    primary: Boolean = false,
+) {
     val accent = LocalAccent.current
     GlacierClickable(onClick = onClick, shape = PillShape, modifier = modifier) { focused ->
         Box(
             Modifier
                 .height(56.dp)
                 .clip(PillShape)
-                .background(if (focused) accent.main else if (primary) accent.deep else Color.Transparent)
+                .background(
+                    if (focused) {
+                        accent.main
+                    } else if (primary) {
+                        accent.deep
+                    } else {
+                        Color.Transparent
+                    },
+                )
                 .border(2.dp, if (focused) accent.main else GlacierColors.GlassBorder2, PillShape)
                 .padding(horizontal = 24.dp),
             contentAlignment = Alignment.Center,

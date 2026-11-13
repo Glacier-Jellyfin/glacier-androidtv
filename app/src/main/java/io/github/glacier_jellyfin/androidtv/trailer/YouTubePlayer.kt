@@ -6,7 +6,6 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
@@ -21,16 +20,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.graphics.createBitmap
+import io.github.glacier_jellyfin.androidtv.core.log.Log
+import java.util.Locale
 import kotlinx.coroutines.flow.Flow
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.Locale
 
 /** What the view model asks of the embedded player. */
 sealed interface YouTubeCommand {
     data object Play : YouTubeCommand
     data object Pause : YouTubeCommand
     data class SeekTo(val positionMs: Long) : YouTubeCommand
+
     /** A language code, or "" for off. */
     data class Subtitles(val language: String) : YouTubeCommand
 }
@@ -42,9 +43,19 @@ sealed interface YouTubeCommand {
 interface YouTubeListener {
     /** The IFrame API's player state: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued. */
     fun onYouTubeState(videoId: String, state: Int)
-    fun onYouTubeProgress(videoId: String, positionMs: Long, durationMs: Long)
+    fun onYouTubeProgress(
+        videoId: String,
+        positionMs: Long,
+        durationMs: Long,
+    )
+
     /** The video's subtitle languages and the one shown (null: off). */
-    fun onYouTubeSubtitles(videoId: String, tracks: List<TrailerSubtitle>, shown: String?)
+    fun onYouTubeSubtitles(
+        videoId: String,
+        tracks: List<TrailerSubtitle>,
+        shown: String?,
+    )
+
     /** The IFrame API's error code (101/150: embedding not allowed), or [YOUTUBE_NO_WEBVIEW]. */
     fun onYouTubeError(videoId: String, code: Int)
 }
@@ -100,7 +111,12 @@ fun YouTubePlayer(
 }
 
 @SuppressLint("SetJavaScriptEnabled")
-private fun createWebView(context: Context, videoId: String, subtitles: String, listener: YouTubeListener): WebView {
+private fun createWebView(
+    context: Context,
+    videoId: String,
+    subtitles: String,
+    listener: YouTubeListener,
+): WebView {
     val webView = WebView(context)
     // The page only needs the network: no files or content providers of the device.
     // Set on the variable, not inside apply: CodeQL does not follow the WebView into the lambda.

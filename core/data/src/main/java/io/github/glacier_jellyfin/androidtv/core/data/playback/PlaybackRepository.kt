@@ -1,9 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.core.data.playback
 
-import io.github.glacier_jellyfin.androidtv.core.log.DebugOptions
-import io.github.glacier_jellyfin.androidtv.core.log.DebugThrottle
 import android.content.res.Resources
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
@@ -17,11 +14,23 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferences
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleMode
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.DeviceCapabilities
-import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.VideoCodecSupport
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.DeviceProfiles
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.HlsSegments
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.MediaCapabilityDetector
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.VideoCodecSupport
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
+import io.github.glacier_jellyfin.androidtv.core.log.DebugOptions
+import io.github.glacier_jellyfin.androidtv.core.log.DebugThrottle
+import io.github.glacier_jellyfin.androidtv.core.log.Log
+import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
+import java.net.URI
+import java.net.URL
+import java.net.URLEncoder
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.time.Duration.Companion.minutes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -47,12 +56,11 @@ import org.jellyfin.sdk.api.client.extensions.sessionApi
 import org.jellyfin.sdk.api.client.extensions.userDataApi
 import org.jellyfin.sdk.api.client.extensions.videoApi
 import org.jellyfin.sdk.model.api.HardwareAccelerationType
+import org.jellyfin.sdk.model.api.MediaSegmentType
 import org.jellyfin.sdk.model.api.MediaSourceInfo
 import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaStreamProtocol
-import org.jellyfin.sdk.model.api.MediaSegmentType
 import org.jellyfin.sdk.model.api.MediaStreamType
-import org.jellyfin.sdk.model.api.SubtitleDeliveryMethod
 import org.jellyfin.sdk.model.api.PlayMethod
 import org.jellyfin.sdk.model.api.PlaybackInfoDto
 import org.jellyfin.sdk.model.api.PlaybackInfoResponse
@@ -61,15 +69,7 @@ import org.jellyfin.sdk.model.api.PlaybackProgressInfo
 import org.jellyfin.sdk.model.api.PlaybackStartInfo
 import org.jellyfin.sdk.model.api.PlaybackStopInfo
 import org.jellyfin.sdk.model.api.RepeatMode
-import java.net.HttpURLConnection
-import java.net.SocketTimeoutException
-import java.net.URI
-import java.net.URL
-import java.net.URLEncoder
-import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
-import kotlin.time.Duration.Companion.minutes
+import org.jellyfin.sdk.model.api.SubtitleDeliveryMethod
 
 /** How the server delivers the stream; shown as a badge in the player. */
 enum class PlaybackMethod { DirectPlay, DirectStream, Transcode }
@@ -277,7 +277,10 @@ class PlaybackRepository @Inject constructor(
         val (displayWidth, displayHeight) = displaySize()
         val height = minOf(displayHeight, heightCap ?: displayHeight)
         val width = if (heightCap == null) displayWidth else minOf(displayWidth, height * 16 / 9)
-        fun VideoCodecSupport?.fit() = this?.copy(maxWidth = minOf(maxWidth, width), maxHeight = minOf(maxHeight, height))
+        fun VideoCodecSupport?.fit() = this?.copy(
+            maxWidth = minOf(maxWidth, width),
+            maxHeight = minOf(maxHeight, height),
+        )
         return copy(h264 = h264.fit(), hevc = hevc.fit(), av1 = av1.fit(), vp9 = vp9.fit())
     }
 
@@ -310,7 +313,12 @@ class PlaybackRepository @Inject constructor(
                 maxAudioChannels = device.maxAudioChannels,
                 // The picture decides; a subtitle burned in would make every file look converted.
                 subtitleStreamIndex = -1,
-                deviceProfile = DeviceProfiles.build(device, AUTO_BITRATE, playback.subtitleBurnIn, HlsSegments.preferredFor(device)),
+                deviceProfile = DeviceProfiles.build(
+                    device,
+                    AUTO_BITRATE,
+                    playback.subtitleBurnIn,
+                    HlsSegments.preferredFor(device),
+                ),
                 enableDirectPlay = true,
                 enableDirectStream = true,
                 enableTranscoding = true,
@@ -347,7 +355,11 @@ class PlaybackRepository @Inject constructor(
                 openNow(itemId, startMs, audioIndex, subtitleIndex, segments, versionId)
             }.also { started ->
                 inflight[key] = started
-                started.invokeOnCompletion { synchronized(inflight) { if (inflight[key] === started) inflight.remove(key) } }
+                started.invokeOnCompletion {
+                    synchronized(
+                        inflight,
+                    ) { if (inflight[key] === started) inflight.remove(key) }
+                }
             }
         }
         val opened = try {
@@ -379,6 +391,7 @@ class PlaybackRepository @Inject constructor(
     /** What a stream may use of the link, and until when [budget] counts. */
     private var budget: Int? = null
     private var budgetUntilMs = 0L
+
     /** A stall set [budget]: the next open measures the link again, and the lower of the two counts. */
     private var verify = false
 
@@ -386,7 +399,11 @@ class PlaybackRepository @Inject constructor(
     private fun currentBudget(): Int? = budget?.takeIf { System.currentTimeMillis() < budgetUntilMs }
 
     @Synchronized
-    private fun keepBudget(value: Int, forMs: Long, afterStall: Boolean = false) {
+    private fun keepBudget(
+        value: Int,
+        forMs: Long,
+        afterStall: Boolean = false,
+    ) {
         verify = afterStall
         budget = value
         budgetUntilMs = System.currentTimeMillis() + forMs
@@ -429,8 +446,13 @@ class PlaybackRepository @Inject constructor(
         val second = if (measured >= PROBE_FAST_BPS) PROBE_BYTES else PROBE_SMALL_BYTES
         downloadBps(api, second)?.let { measured = maxOf(measured, it) }
         // After a stall the stream's own numbers count too: the link may carry less than a short test shows.
-        val value = synchronized(this) { StreamBudget.of(measured.toLong()).let { if (verify) minOf(it, budget ?: it) else it } }
-        Log.i(TAG, "Bandwidth to the server ${(measured / 1e6).toInt()} Mbit/s, streams may use ${value / 1_000_000} Mbit/s")
+        val value = synchronized(
+            this,
+        ) { StreamBudget.of(measured.toLong()).let { if (verify) minOf(it, budget ?: it) else it } }
+        Log.i(
+            TAG,
+            "Bandwidth to the server ${(measured / 1e6).toInt()} Mbit/s, streams may use ${value / 1_000_000} Mbit/s",
+        )
         keepBudget(value, PROBE_VALID_MS)
         return value
     }
@@ -455,7 +477,16 @@ class PlaybackRepository @Inject constructor(
         val tiers = resolutions.map { resolution ->
             async {
                 runSuspendCatching {
-                    transcodingUrl(resolution)?.let { fetchTier(session, baseUrl + it, main = resolution == resolutions.first(), label = "${resolution.height}p") }
+                    transcodingUrl(
+                        resolution,
+                    )?.let {
+                        fetchTier(
+                            session,
+                            baseUrl + it,
+                            main = resolution == resolutions.first(),
+                            label = "${resolution.height}p",
+                        )
+                    }
                 }.onFailure { Log.w(TAG, "Tier of ${resolution.height}p failed", it) }.getOrNull()
             }
         }.awaitAll().filterNotNull()
@@ -465,17 +496,32 @@ class PlaybackRepository @Inject constructor(
             Log.i(TAG, "No tiers for this stream: ${tiers.size} answered, ${fitting.size} with the main codec")
             return@coroutineScope null
         }
-        Log.i(TAG, "Tiers: " + fitting.joinToString { "${RESOLUTION.find(it.info)?.groupValues?.get(1) ?: "?"} (${it.bandwidth / 1_000_000} Mbit/s)" })
+        Log.i(
+            TAG,
+            "Tiers: " + fitting.joinToString {
+                "${RESOLUTION.find(
+                    it.info,
+                )?.groupValues?.get(1) ?: "?"} (${it.bandwidth / 1_000_000} Mbit/s)"
+            },
+        )
         // Segments start on a keyframe (the server forces one at every segment), which Media3 only assumes with this tag:
         // without it the first segment of a new tier overlaps the last of the old one and is loaded twice.
         val playlist = "#EXTM3U\n#EXT-X-INDEPENDENT-SEGMENTS\n" + fitting.joinToString("") { "${it.info}\n${it.url}\n" }
-        BuiltLadder(playlist, fitting.mapNotNull { tier -> tier.height?.let { h -> tier.playSessionId?.let { h to it } } }.toMap())
+        BuiltLadder(
+            playlist,
+            fitting.mapNotNull { tier -> tier.height?.let { h -> tier.playSessionId?.let { h to it } } }.toMap(),
+        )
     }
 
     private class BuiltLadder(val playlist: String, val sessions: Map<Int, String>)
 
     /** The one variant of the server's master playlist at [masterUrl], with its address made absolute. */
-    private fun fetchTier(session: Session, masterUrl: String, main: Boolean = false, label: String = "?"): Tier? {
+    private fun fetchTier(
+        session: Session,
+        masterUrl: String,
+        main: Boolean = false,
+        label: String = "?",
+    ): Tier? {
         val connection = (URL(masterUrl).openConnection() as HttpURLConnection).apply {
             setRequestProperty("Authorization", session.authorization())
             connectTimeout = TIER_TIMEOUT_MS
@@ -489,7 +535,12 @@ class PlaybackRepository @Inject constructor(
         val at = lines.indexOfFirst { it.startsWith("#EXT-X-STREAM-INF:") }
         val uri = lines.drop(at + 1).firstOrNull { it.isNotBlank() && !it.startsWith("#") }
         if (at < 0 || uri == null) {
-            Log.w(TAG, "Tier of $label dropped: master playlist without a variant, first lines: " + lines.take(6).joinToString(" | ").take(400))
+            Log.w(
+                TAG,
+                "Tier of $label dropped: master playlist without a variant, first lines: " + lines.take(
+                    6,
+                ).joinToString(" | ").take(400),
+            )
             return null
         }
         // The subtitle group the line names is not part of the joined playlist.
@@ -525,8 +576,15 @@ class PlaybackRepository @Inject constructor(
         runSuspendCatching {
             val base = checkNotNull(session.api.baseUrl).trimEnd('/')
             val deviceId = URLEncoder.encode(session.api.deviceInfo.id, "UTF-8")
-            val connection = (URL("$base/Videos/ActiveEncodings?deviceId=$deviceId&playSessionId=${URLEncoder.encode(playSessionId, "UTF-8")}")
-                .openConnection() as HttpURLConnection).apply {
+            val connection = (
+                URL(
+                    "$base/Videos/ActiveEncodings?deviceId=$deviceId&playSessionId=${URLEncoder.encode(
+                        playSessionId,
+                        "UTF-8",
+                    )}",
+                )
+                    .openConnection() as HttpURLConnection
+                ).apply {
                 requestMethod = "DELETE"
                 setRequestProperty("Authorization", session.authorization())
                 connectTimeout = TIER_TIMEOUT_MS
@@ -547,7 +605,10 @@ class PlaybackRepository @Inject constructor(
     fun lowerBudget(streamBitrate: Int): Int {
         val value = StreamBudget.afterStall(streamBitrate, currentBudget())
         keepBudget(value, STALL_VALID_MS, afterStall = true)
-        Log.w(TAG, "Playback stalled at ${streamBitrate / 1_000_000} Mbit/s, streams may use ${value / 1_000_000} Mbit/s")
+        Log.w(
+            TAG,
+            "Playback stalled at ${streamBitrate / 1_000_000} Mbit/s, streams may use ${value / 1_000_000} Mbit/s",
+        )
         return value
     }
 
@@ -563,7 +624,10 @@ class PlaybackRepository @Inject constructor(
                 accessToken = api.accessToken,
                 clientInfo = api.clientInfo,
                 deviceInfo = api.deviceInfo,
-                httpClientOptions = api.httpClientOptions.copy(requestTimeout = PATIENT_TIMEOUT, socketTimeout = PATIENT_TIMEOUT),
+                httpClientOptions = api.httpClientOptions.copy(
+                    requestTimeout = PATIENT_TIMEOUT,
+                    socketTimeout = PATIENT_TIMEOUT,
+                ),
             ).also { patient = api to it }
     }
 
@@ -582,7 +646,11 @@ class PlaybackRepository @Inject constructor(
         // The server only takes the streams asked for when the source is named too
         // (MediaInfoHelper.SetDeviceSpecificData); otherwise a transcode carries its own default
         // audio. A title's main source has the item's id.
-        var sourceId = versionId ?: itemId.toString().replace("-", "").takeIf { audioIndex != null || subtitleIndex != null }
+        var sourceId = versionId ?: itemId.toString().replace(
+            "-",
+            "",
+        ).takeIf { audioIndex != null || subtitleIndex != null }
+
         // forLadder: for the tiers of a ladder the transcode is no bigger than the display shows, so the server spends the
         // bitrate on the detail of that picture, not on pixels the display throws away.
         suspend fun playbackInfo(
@@ -622,7 +690,16 @@ class PlaybackRepository @Inject constructor(
         // "Auto" measures the link while the server answers: a file that needs more than the link
         // carries stalls, so the server converts it to what fits.
         val verifying = synchronized(this) { verify }
-        val measuring = if (cap == null && (currentBudget() == null || verifying)) reportScope.async { measureBudget(api, fresh = verifying) } else null
+        val measuring = if (cap == null && (currentBudget() == null || verifying)) {
+            reportScope.async {
+                measureBudget(
+                    api,
+                    fresh = verifying,
+                )
+            }
+        } else {
+            null
+        }
         var info = playbackInfo(AUTO_BITRATE)
         // What a transcode was held to, null while the stream is not limited.
         var limit: Int? = null
@@ -641,18 +718,39 @@ class PlaybackRepository @Inject constructor(
                 limit = bitrate.takeIf { it < AUTO_BITRATE }
                 closeLiveStreams(api, unused)
             }
+
             // The picture fits the device (the first answer allowed direct play or stream) and the link carries it: ask for
             // a transcode of the audio only. The server copies the picture when its bitrate is within the video share of
             // the request. Segments as short as the link allows with room for peaks (every request waits about 3 s). False: nothing changed, ask as before.
-            suspend fun keepPicture(first: MediaSourceInfo, fileBitrate: Int, budget: Int): Boolean {
+            suspend fun keepPicture(
+                first: MediaSourceInfo,
+                fileBitrate: Int,
+                budget: Int,
+            ): Boolean {
                 val firstReasons = first.transcodingUrl?.let { TRANSCODE_REASONS.find(it)?.groupValues?.get(1) }
-                if (!StreamBudget.pictureFits(first.supportsDirectPlay || first.supportsDirectStream, first.transcodingUrl != null, firstReasons)) return false
+                if (!StreamBudget.pictureFits(
+                        first.supportsDirectPlay || first.supportsDirectStream,
+                        first.transcodingUrl != null,
+                        firstReasons,
+                    )
+                ) {
+                    return false
+                }
                 val streams = first.mediaStreams.orEmpty()
                 // Only the subtitle that shows counts: a burned-in one needs a new picture.
                 val subtitle = (subtitleIndex ?: first.defaultSubtitleStreamIndex)?.takeIf { it >= 0 }
-                if (streams.any { it.type == MediaStreamType.SUBTITLE && it.index == subtitle && it.deliveryMethod == SubtitleDeliveryMethod.ENCODE }) return false
+                if (streams.any {
+                        it.type == MediaStreamType.SUBTITLE && it.index == subtitle &&
+                            it.deliveryMethod == SubtitleDeliveryMethod.ENCODE
+                    }
+                ) {
+                    return false
+                }
                 val videoBitrate = streams.firstOrNull { it.type == MediaStreamType.VIDEO }?.bitRate ?: return false
-                val audio = streams.firstOrNull { it.type == MediaStreamType.AUDIO && it.index == (audioIndex ?: first.defaultAudioStreamIndex) }
+                val audio = streams.firstOrNull {
+                    it.type == MediaStreamType.AUDIO &&
+                        it.index == (audioIndex ?: first.defaultAudioStreamIndex)
+                }
                 val channels = minOf(audio?.channels ?: 2, device.maxAudioChannels)
                 val demand = StreamBudget.copyDemand(videoBitrate, channels)
                 val segmentSeconds = StreamBudget.copySegmentSeconds(demand, budget) ?: return false
@@ -663,7 +761,8 @@ class PlaybackRepository @Inject constructor(
                 val source = answer.mediaSources.firstOrNull()
                 val url = source?.transcodingUrl
                 val asked = url?.let { VIDEO_BITRATE.find(it)?.groupValues?.get(1)?.toIntOrNull() }
-                if (answer.errorCode != null || source == null || source.supportsDirectPlay || url == null || asked == null ||
+                if (answer.errorCode != null || source == null || source.supportsDirectPlay || url == null ||
+                    asked == null ||
                     asked < videoBitrate || "SubtitleMethod=Encode" in url
                 ) {
                     closeLiveStreams(api, answer)
@@ -692,13 +791,22 @@ class PlaybackRepository @Inject constructor(
                 val first = info.mediaSources.firstOrNull()
                 // A live channel has no file bitrate worth comparing.
                 if (first != null && first.liveStreamId == null && first.bitrate != null) {
-                    val budget = if (verifying) measuring?.await() ?: currentBudget() else currentBudget() ?: measuring?.await()
+                    val budget = if (verifying) {
+                        measuring?.await() ?: currentBudget()
+                    } else {
+                        currentBudget()
+                            ?: measuring?.await()
+                    }
                     if (budget != null && StreamBudget.exceeds(first.bitrate, budget)) {
-                        Log.i(TAG, "The file takes ${first.bitrate!! / 1_000_000} Mbit/s, the link carries ${budget / 1_000_000}: asking for a stream that fits")
+                        Log.i(
+                            TAG,
+                            "The file takes ${first.bitrate!! / 1_000_000} Mbit/s, the link carries ${budget / 1_000_000}: asking for a stream that fits",
+                        )
                         // Judged on the unlimited answer, before it is replaced. A burned-in subtitle needs a new picture whatever the link.
                         val subtitle = (subtitleIndex ?: first.defaultSubtitleStreamIndex)?.takeIf { it >= 0 }
                         val burnedIn = first.mediaStreams.orEmpty().any {
-                            it.type == MediaStreamType.SUBTITLE && it.index == subtitle && it.deliveryMethod == SubtitleDeliveryMethod.ENCODE
+                            it.type == MediaStreamType.SUBTITLE && it.index == subtitle &&
+                                it.deliveryMethod == SubtitleDeliveryMethod.ENCODE
                         }
                         fileFits = (first.supportsDirectPlay || first.supportsDirectStream) && !burnedIn
                         if (!keepPicture(first, first.bitrate!!, budget)) askAgain(budget)
@@ -712,7 +820,10 @@ class PlaybackRepository @Inject constructor(
                 val video = first.mediaStreams.orEmpty().firstOrNull { it.type == MediaStreamType.VIDEO }
                 val (displayWidth, displayHeight) = displaySize()
                 val bigger = (video?.width ?: 0) > displayWidth || (video?.height ?: 0) > displayHeight
-                if (info.errorCode == null && copyDemand == null && bigger && !first.supportsDirectPlay && !first.supportsDirectStream && first.liveStreamId == null) {
+                if (info.errorCode == null && copyDemand == null && bigger && !first.supportsDirectPlay &&
+                    !first.supportsDirectStream &&
+                    first.liveStreamId == null
+                ) {
                     askAgain(limit ?: AUTO_BITRATE, fitDisplay = true)
                 }
             }
@@ -724,7 +835,10 @@ class PlaybackRepository @Inject constructor(
             // The server's own audio pick may be a commentary the file marked as default: ask again with the main track.
             if (audioIndex == null) {
                 val serverPick = source.defaultAudioStreamIndex
-                val main = mainInsteadOfExtra(serverPick, streams.filter { it.type == MediaStreamType.AUDIO }.map { it.toTrack() })
+                val main = mainInsteadOfExtra(
+                    serverPick,
+                    streams.filter { it.type == MediaStreamType.AUDIO }.map { it.toTrack() },
+                )
                 if (main != null && main != serverPick) {
                     Log.i(TAG, "Audio of $itemId: main track $main instead of extra track $serverPick")
                     handedOn = true
@@ -738,8 +852,13 @@ class PlaybackRepository @Inject constructor(
             // The server's own pick may be a forced track that shows next to nothing: ask again with the full one.
             if (subtitleIndex == null) {
                 val serverPick = source.defaultSubtitleStreamIndex?.takeIf { it >= 0 }
-                val audio = streams.firstOrNull { it.type == MediaStreamType.AUDIO && it.index == (audioIndex ?: source.defaultAudioStreamIndex) }
-                val onlyForced = (serverPreferences.preferences.value ?: serverPreferences.refresh())?.subtitleMode == SubtitleMode.OnlyForced
+                val audio = streams.firstOrNull {
+                    it.type == MediaStreamType.AUDIO &&
+                        it.index == (audioIndex ?: source.defaultAudioStreamIndex)
+                }
+                val onlyForced =
+                    (serverPreferences.preferences.value ?: serverPreferences.refresh())?.subtitleMode ==
+                        SubtitleMode.OnlyForced
                 val subtitles = streams.filter { it.type == MediaStreamType.SUBTITLE }.map { it.toTrack() }
                 val full = fullInsteadOfForced(serverPick, subtitles, audio?.toTrack(), onlyForced)
                 if (full != null && full != serverPick) {
@@ -760,8 +879,10 @@ class PlaybackRepository @Inject constructor(
                     playSessionId = info.playSessionId,
                     liveStreamId = source.liveStreamId,
                 ) to PlaybackMethod.DirectPlay
+
                 source.transcodingUrl != null -> (baseUrl + source.transcodingUrl) to
                     if (source.supportsDirectStream) PlaybackMethod.DirectStream else PlaybackMethod.Transcode
+
                 else -> error("Server offered neither direct play nor a transcode")
             }
             // A video the server transcodes comes in tiers of its size (4K, 1080p, 720p; none bigger than the display or the
@@ -769,16 +890,26 @@ class PlaybackRepository @Inject constructor(
             // stream) stays as it is: tiers would be transcodes of it.
             val (displayWidth, displayHeight) = displaySize()
             Log.i(TAG, "Transcodes for a display of ${displayWidth}x$displayHeight, fit: ${DebugOptions.fitDisplay}")
-            val resolutions = if (cap == null && copyDemand == null && method == PlaybackMethod.Transcode && source.liveStreamId == null &&
+            val resolutions = if (cap == null && copyDemand == null && method == PlaybackMethod.Transcode &&
+                source.liveStreamId == null &&
                 source.transcodingSubProtocol == MediaStreamProtocol.HLS
             ) {
-                StreamBudget.resolutions(displayHeight, streams.firstOrNull { it.type == MediaStreamType.VIDEO }?.height ?: displayHeight)
+                StreamBudget.resolutions(
+                    displayHeight,
+                    streams.firstOrNull { it.type == MediaStreamType.VIDEO }?.height ?: displayHeight,
+                )
             } else {
                 emptyList()
             }
             // The reasons of each tier's own answer: a tier of the source's height whose reasons all leave the picture alone is a copy.
             val tierPictureFits = java.util.concurrent.ConcurrentHashMap<Int, Boolean>()
-            val mainReasons = source.transcodingUrl?.takeIf { method != PlaybackMethod.DirectPlay }?.let { TRANSCODE_REASONS.find(it)?.groupValues?.get(1) }
+            val mainReasons = source.transcodingUrl?.takeIf {
+                method != PlaybackMethod.DirectPlay
+            }?.let {
+                TRANSCODE_REASONS.find(
+                    it,
+                )?.groupValues?.get(1)
+            }
             val ladder = if (resolutions.size >= 2) {
                 buildLadder(session, resolutions, baseUrl) { tier ->
                     val answer = playbackInfo(tier.bitrate, forLadder = true, maxHeight = tier.height)
@@ -790,9 +921,15 @@ class PlaybackRepository @Inject constructor(
                                 "sources ${answer.mediaSources.size}, direct play ${tierSource?.supportsDirectPlay}, direct stream ${tierSource?.supportsDirectStream})",
                         )
                     } else {
-                        val tierReasons = TRANSCODE_REASONS.find(tierSource.transcodingUrl!!)?.groupValues?.get(1) ?: mainReasons
+                        val tierReasons = TRANSCODE_REASONS.find(
+                            tierSource.transcodingUrl!!,
+                        )?.groupValues?.get(1) ?: mainReasons
                         tierPictureFits[tier.height] =
-                            StreamBudget.pictureFits(tierSource.supportsDirectPlay || tierSource.supportsDirectStream, true, tierReasons)
+                            StreamBudget.pictureFits(
+                                tierSource.supportsDirectPlay || tierSource.supportsDirectStream,
+                                true,
+                                tierReasons,
+                            )
                     }
                     tierSource?.transcodingUrl
                 }
@@ -802,27 +939,67 @@ class PlaybackRepository @Inject constructor(
             // What each tier asks of the link; a copy of the source's picture is as big as that picture.
             val sourceVideo = streams.firstOrNull { it.type == MediaStreamType.VIDEO }
             val tierAudioChannels = minOf(
-                streams.firstOrNull { it.type == MediaStreamType.AUDIO && it.index == (audioIndex ?: source.defaultAudioStreamIndex) }?.channels ?: 2,
+                streams.firstOrNull {
+                    it.type == MediaStreamType.AUDIO &&
+                        it.index == (audioIndex ?: source.defaultAudioStreamIndex)
+                }?.channels
+                    ?: 2,
                 device.maxAudioChannels,
             )
             val tierDemand = resolutions.associate { tier ->
-                tier.height to StreamBudget.tierDemand(tier.height, sourceVideo?.height, tierPictureFits[tier.height] == true, sourceVideo?.bitRate, tierAudioChannels)
+                tier.height to StreamBudget.tierDemand(
+                    tier.height,
+                    sourceVideo?.height,
+                    tierPictureFits[tier.height] == true,
+                    sourceVideo?.bitRate,
+                    tierAudioChannels,
+                )
             }
-            if (ladder != null) Log.i(TAG, "Demand of the tiers: " + resolutions.joinToString { "${it.height}p ${tierDemand.getValue(it.height) / 100_000 / 10.0} Mbit/s" })
+            if (ladder != null) {
+                Log.i(
+                    TAG,
+                    "Demand of the tiers: " + resolutions.joinToString {
+                        "${it.height}p ${tierDemand.getValue(
+                            it.height,
+                        ) / 100_000 / 10.0} Mbit/s"
+                    },
+                )
+            }
             // The biggest picture the link carries: its measured speed against what a stream of that size takes.
             val linkBudget = currentBudget()
-            val startTier = resolutions.indexOfFirst { linkBudget == null || tierDemand.getValue(it.height) <= linkBudget }
+            val startTier = resolutions.indexOfFirst {
+                linkBudget == null || tierDemand.getValue(
+                    it.height,
+                ) <= linkBudget
+            }
                 .takeIf { it >= 0 } ?: resolutions.lastIndex
-            val reasons = source.transcodingUrl?.takeIf { method != PlaybackMethod.DirectPlay }?.let { TRANSCODE_REASONS.find(it)?.groupValues?.get(1) }
+            val reasons = source.transcodingUrl?.takeIf {
+                method != PlaybackMethod.DirectPlay
+            }?.let {
+                TRANSCODE_REASONS.find(
+                    it,
+                )?.groupValues?.get(1)
+            }
             // The tracks asked for, and for a stream the server builds the audio it was told to put in.
-            val streamAudio = source.transcodingUrl?.takeIf { method != PlaybackMethod.DirectPlay }?.let { AUDIO_STREAM_INDEX.find(it)?.groupValues?.get(1) }
+            val streamAudio = source.transcodingUrl?.takeIf {
+                method != PlaybackMethod.DirectPlay
+            }?.let {
+                AUDIO_STREAM_INDEX.find(
+                    it,
+                )?.groupValues?.get(1)
+            }
             // What the file holds, so a bug report shows the formats without detailed logging.
             val video = streams.firstOrNull { it.type == MediaStreamType.VIDEO }
-            val audio = streams.firstOrNull { it.type == MediaStreamType.AUDIO && it.index == (audioIndex ?: source.defaultAudioStreamIndex) }
+            val audio = streams.firstOrNull {
+                it.type == MediaStreamType.AUDIO &&
+                    it.index == (audioIndex ?: source.defaultAudioStreamIndex)
+            }
             Log.i(
                 TAG,
-                "Playing $itemId: $method, container ${source.container}, ${source.bitrate} bit/s" + reasons?.let { ", because $it" }.orEmpty() +
-                    video?.let { ", video ${it.describe()}" }.orEmpty() + audio?.let { ", audio track ${it.describe()}" }.orEmpty() +
+                "Playing $itemId: $method, container ${source.container}, ${source.bitrate} bit/s" +
+                    reasons?.let { ", because $it" }.orEmpty() +
+                    video?.let { ", video ${it.describe()}" }.orEmpty() +
+                    audio?.let { ", audio track ${it.describe()}" }.orEmpty() +
                     ", audio ${audioIndex ?: "default " + source.defaultAudioStreamIndex}, subtitles ${subtitleIndex ?: "default " + source.defaultSubtitleStreamIndex}" +
                     streamAudio?.let { ", stream audio $it" }.orEmpty(),
             )
@@ -833,8 +1010,9 @@ class PlaybackRepository @Inject constructor(
                 playSessionId = info.playSessionId,
                 url = url,
                 isHls = method != PlaybackMethod.DirectPlay && source.transcodingSubProtocol == MediaStreamProtocol.HLS,
-                fmp4Segments = method != PlaybackMethod.DirectPlay && source.transcodingSubProtocol == MediaStreamProtocol.HLS &&
-                    source.transcodingContainer.equals("mp4", ignoreCase = true),
+                fmp4Segments =
+                    method != PlaybackMethod.DirectPlay && source.transcodingSubProtocol == MediaStreamProtocol.HLS &&
+                        source.transcodingContainer.equals("mp4", ignoreCase = true),
                 liveStreamId = source.liveStreamId,
                 ladder = ladder?.playlist,
                 tierSessions = ladder?.sessions.orEmpty(),
@@ -843,8 +1021,13 @@ class PlaybackRepository @Inject constructor(
                 streamBitrate = when {
                     // The picture as it is, plus the converted audio.
                     copyDemand != null -> copyDemand
+
                     ladder != null -> resolutions[startTier].bitrate
-                    else -> listOfNotNull(source.bitrate, limit.takeIf { method != PlaybackMethod.DirectPlay }).minOrNull()
+
+                    else -> listOfNotNull(
+                        source.bitrate,
+                        limit.takeIf { method != PlaybackMethod.DirectPlay },
+                    ).minOrNull()
                 },
                 videoCopied = copyDemand != null,
                 // Only a stream the budget reduced: the file itself (direct play) has nothing to go back to.
@@ -852,8 +1035,11 @@ class PlaybackRepository @Inject constructor(
                 pictureHeight = when {
                     // A copied picture keeps the source's height, even where the server calls the stream a direct stream.
                     copyDemand != null -> sourceVideo?.height
+
                     ladder != null -> resolutions[startTier].height
+
                     method == PlaybackMethod.Transcode -> sourceVideo?.height?.let { minOf(it, displayHeight) }
+
                     else -> null
                 },
                 method = method,
@@ -862,23 +1048,39 @@ class PlaybackRepository @Inject constructor(
                 audioIndex = streamAudio?.toIntOrNull() ?: audioIndex ?: source.defaultAudioStreamIndex,
                 // The server's default follows the user's subtitle mode; -1 means off.
                 subtitleIndex = (subtitleIndex ?: source.defaultSubtitleStreamIndex)?.takeIf { it >= 0 },
-                audioTracks = streams.filter { it.type == MediaStreamType.AUDIO && !it.isExternal }.map { it.toTrack() },
+                audioTracks = streams.filter {
+                    it.type == MediaStreamType.AUDIO && !it.isExternal
+                }.map { it.toTrack() },
                 subtitles = streams.filter { it.type == MediaStreamType.SUBTITLE }.mapNotNull { stream ->
                     val delivery = when (stream.deliveryMethod) {
                         SubtitleDeliveryMethod.EMBED -> SubtitleDelivery.Embedded
+
                         SubtitleDeliveryMethod.EXTERNAL, SubtitleDeliveryMethod.HLS -> SubtitleDelivery.External
+
                         SubtitleDeliveryMethod.ENCODE -> SubtitleDelivery.BurnIn
+
                         // Drop and unknown methods cannot be shown.
                         else -> return@mapNotNull null
                     }
                     val url = stream.deliveryUrl?.let { if (it.startsWith("http")) it else baseUrl + it }
-                    if (delivery == SubtitleDelivery.External && url == null) null else PlaybackSubtitle(stream.toTrack(), delivery, url)
+                    if (delivery == SubtitleDelivery.External && url == null) {
+                        null
+                    } else {
+                        PlaybackSubtitle(
+                            stream.toTrack(),
+                            delivery,
+                            url,
+                        )
+                    }
                 },
                 file = SourceFile(
                     container = source.container,
                     sizeBytes = source.size,
                     bitrate = source.bitrate,
-                    streamContainer = source.transcodingContainer?.uppercase()?.takeIf { method != PlaybackMethod.DirectPlay }?.let {
+                    streamContainer = source.transcodingContainer?.uppercase()?.takeIf {
+                        method !=
+                            PlaybackMethod.DirectPlay
+                    }?.let {
                         if (source.transcodingSubProtocol == MediaStreamProtocol.HLS) "HLS · $it" else it
                     },
                     video = streams.firstOrNull { it.type == MediaStreamType.VIDEO }?.let {
@@ -990,12 +1192,18 @@ class PlaybackRepository @Inject constructor(
                     MediaSegmentType.OUTRO -> SegmentKind.Outro
                     else -> return@mapNotNull null
                 }
-                MediaSegment(kind, dto.startTicks / TICKS_PER_MS, dto.endTicks / TICKS_PER_MS).takeIf { it.endMs > it.startMs }
+                MediaSegment(
+                    kind,
+                    dto.startTicks / TICKS_PER_MS,
+                    dto.endTicks / TICKS_PER_MS,
+                ).takeIf { it.endMs > it.startMs }
             }
             .let(::mergeOverlapping)
     }
 
-    fun reportStart(source: PlaybackSource, position: PlaybackPosition) = report("start") { sendStart(source, position) }
+    fun reportStart(source: PlaybackSource, position: PlaybackPosition) = report(
+        "start",
+    ) { sendStart(source, position) }
 
     private suspend fun ApiClient.sendStart(source: PlaybackSource, position: PlaybackPosition) {
         sessionApi.reportPlaybackStart(
@@ -1021,7 +1229,11 @@ class PlaybackRepository @Inject constructor(
      * The player moved on from [old] to [new] without stopping: the old session ends at [position], the new one starts there.
      * Both go out one after the other, since the server would take a start that arrives before the stop for the end of it.
      */
-    fun reportHandOver(old: PlaybackSource, new: PlaybackSource, position: PlaybackPosition) {
+    fun reportHandOver(
+        old: PlaybackSource,
+        new: PlaybackSource,
+        position: PlaybackPosition,
+    ) {
         report("hand over") {
             sendStopped(old, position.positionMs, failed = false, watched = false)
             sendStart(new, position)
@@ -1035,7 +1247,11 @@ class PlaybackRepository @Inject constructor(
      */
     fun discard(source: PlaybackSource) {
         if (source.method == PlaybackMethod.DirectPlay) return
-        (source.tierSessions.values + listOfNotNull(source.playSessionId)).toSet().forEach { id -> reportScope.launch { stopTierJob(id) } }
+        (
+            source.tierSessions.values + listOfNotNull(
+                source.playSessionId,
+            )
+            ).toSet().forEach { id -> reportScope.launch { stopTierJob(id) } }
     }
 
     fun reportProgress(source: PlaybackSource, position: PlaybackPosition) = report("progress") {
@@ -1062,12 +1278,21 @@ class PlaybackRepository @Inject constructor(
      * The server stores the resume point from this, and marks the title watched near its end.
      * [watched] marks it watched in any case, after the stop so the stop cannot undo it.
      */
-    fun reportStopped(source: PlaybackSource, positionMs: Long, failed: Boolean = false, watched: Boolean = false) =
-        report("stopped", onDone = { if (!source.live) _stopped.tryEmit(source.itemId) }) {
-            sendStopped(source, positionMs, failed, watched)
-        }.also { endTierJobs(source) }
+    fun reportStopped(
+        source: PlaybackSource,
+        positionMs: Long,
+        failed: Boolean = false,
+        watched: Boolean = false,
+    ) = report("stopped", onDone = { if (!source.live) _stopped.tryEmit(source.itemId) }) {
+        sendStopped(source, positionMs, failed, watched)
+    }.also { endTierJobs(source) }
 
-    private suspend fun ApiClient.sendStopped(source: PlaybackSource, positionMs: Long, failed: Boolean, watched: Boolean) {
+    private suspend fun ApiClient.sendStopped(
+        source: PlaybackSource,
+        positionMs: Long,
+        failed: Boolean,
+        watched: Boolean,
+    ) {
         sessionApi.reportPlaybackStopped(
             PlaybackStopInfo(
                 itemId = source.itemId,
@@ -1083,10 +1308,22 @@ class PlaybackRepository @Inject constructor(
 
     /** The stop report ends the job of its own PlaySessionId only; the other tiers' jobs would run until the idle timeout. */
     private fun endTierJobs(source: PlaybackSource) {
-        source.tierSessions.values.filter { it != source.playSessionId }.forEach { id -> reportScope.launch { stopTierJob(id) } }
+        source.tierSessions.values.filter {
+            it != source.playSessionId
+        }.forEach { id ->
+            reportScope.launch {
+                stopTierJob(
+                    id,
+                )
+            }
+        }
     }
 
-    private fun report(what: String, onDone: () -> Unit = {}, call: suspend ApiClient.() -> Unit) {
+    private fun report(
+        what: String,
+        onDone: () -> Unit = {},
+        call: suspend ApiClient.() -> Unit,
+    ) {
         val api = sessions.session.value?.api ?: return
         reportScope.launch {
             // Reporting is best effort: playback goes on if the server misses one.
@@ -1174,6 +1411,7 @@ class PlaybackRepository @Inject constructor(
 
         /** The server's reasons in a transcode URL, e.g. "VideoCodecNotSupported,AudioChannelsNotSupported". */
         val TRANSCODE_REASONS = Regex("[?&]TranscodeReasons=([^&]+)")
+
         /** The audio stream a transcode URL tells the server to use. */
         val AUDIO_STREAM_INDEX = Regex("[?&]AudioStreamIndex=([^&]+)", RegexOption.IGNORE_CASE)
     }

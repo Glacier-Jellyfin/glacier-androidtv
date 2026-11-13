@@ -1,9 +1,9 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
+import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.util.UUID
 
 class SeerrRepositoryTest {
 
@@ -24,9 +24,15 @@ class SeerrRepositoryTest {
 
     @Test
     fun readsRefusals() {
-        assertEquals(SeerrRequestResult.NotAllowed, requestFailure(403, """{"code":"no_request_permission","message":"You do not have permission"}"""))
+        assertEquals(
+            SeerrRequestResult.NotAllowed,
+            requestFailure(403, """{"code":"no_request_permission","message":"You do not have permission"}"""),
+        )
         assertEquals(SeerrRequestResult.QuotaUsedUp, requestFailure(403, """{"message":"Movie Quota exceeded."}"""))
-        assertEquals(SeerrRequestResult.AlreadyRequested, requestFailure(409, """{"message":"Request for this media already exists."}"""))
+        assertEquals(
+            SeerrRequestResult.AlreadyRequested,
+            requestFailure(409, """{"message":"Request for this media already exists."}"""),
+        )
         assertEquals(SeerrRequestResult.Failed, requestFailure(500, ""))
     }
 }

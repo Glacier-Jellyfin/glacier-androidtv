@@ -45,7 +45,11 @@ enum class SwitchCause {
 }
 
 /** A [cause] with the numbers behind it, bit/s: what the link carries ([linkBps]) against what the stream asks ([needBps]). */
-data class SwitchReason(val cause: SwitchCause, val linkBps: Int? = null, val needBps: Int? = null) {
+data class SwitchReason(
+    val cause: SwitchCause,
+    val linkBps: Int? = null,
+    val needBps: Int? = null,
+) {
     /** "15 von 37 Mbit/s" as the two whole numbers of Mbit/s, or null when the cause has none to show. */
     val mbit: Pair<Int, Int>?
         get() {
@@ -57,7 +61,11 @@ data class SwitchReason(val cause: SwitchCause, val linkBps: Int? = null, val ne
 }
 
 /** The reason of a step to another stream; no trigger is the way back, which the recovered link allows. */
-internal fun switchReason(trigger: HandoverTrigger?, linkBps: Int? = null, needBps: Int? = null) = SwitchReason(
+internal fun switchReason(
+    trigger: HandoverTrigger?,
+    linkBps: Int? = null,
+    needBps: Int? = null,
+) = SwitchReason(
     when (trigger) {
         HandoverTrigger.Link -> SwitchCause.LinkSlow
         HandoverTrigger.Draining -> SwitchCause.Draining
@@ -72,20 +80,34 @@ internal fun switchReason(trigger: HandoverTrigger?, linkBps: Int? = null, needB
 /**
  * A pending change of stream: a hand over between the file and a transcode. [atMs] is where in the title it happens.
  */
-data class StreamSwitch(val from: StreamLabel, val to: StreamLabel, val reason: SwitchReason, val atMs: Long)
+data class StreamSwitch(
+    val from: StreamLabel,
+    val to: StreamLabel,
+    val reason: SwitchReason,
+    val atMs: Long,
+)
 
 /**
  * The buffer bar while a hand over is pending, all as fractions of the bar (the scale is [maxMs] from the position): the
  * playing stream's buffer reaches [playing], the point where the next stream takes over is at [point], and what the next stream
  * has loaded fills the bar from there to [nextEnd].
  */
-data class BufferSplit(val playing: Float, val point: Float, val nextEnd: Float)
+data class BufferSplit(
+    val playing: Float,
+    val point: Float,
+    val nextEnd: Float,
+)
 
 /**
  * [bufferedMs]: what the playing stream holds ahead of the position; [pointInMs]: how far ahead the hand over point is;
  * [nextLoadedMs]: what the next stream has loaded beyond the point.
  */
-fun bufferSplit(bufferedMs: Long, pointInMs: Long, nextLoadedMs: Long, maxMs: Long): BufferSplit {
+fun bufferSplit(
+    bufferedMs: Long,
+    pointInMs: Long,
+    nextLoadedMs: Long,
+    maxMs: Long,
+): BufferSplit {
     if (maxMs <= 0) return BufferSplit(0f, 0f, 0f)
     fun part(ms: Long) = (ms.coerceAtLeast(0).toDouble() / maxMs).toFloat().coerceIn(0f, 1f)
     val point = part(pointInMs)

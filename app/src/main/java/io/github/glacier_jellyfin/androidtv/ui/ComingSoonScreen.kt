@@ -41,7 +41,12 @@ fun ComingSoonScreen(
         Text(title, style = GlacierText.display(44), color = GlacierColors.Ice)
         Text(stringResource(R.string.coming_soon), style = GlacierText.body(21), color = GlacierColors.Mist)
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            PillButton(stringResource(R.string.action_back), onClick = onBack, primary = true, modifier = Modifier.focusRequester(focus))
+            PillButton(
+                stringResource(R.string.action_back),
+                onClick = onBack,
+                primary = true,
+                modifier = Modifier.focusRequester(focus),
+            )
             actions()
         }
     }

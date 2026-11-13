@@ -1,6 +1,5 @@
 package io.github.glacier_jellyfin.androidtv.detail
 
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -27,10 +26,11 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferences
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.closestTrack
 import io.github.glacier_jellyfin.androidtv.core.data.settings.lastTracksOf
-import io.github.glacier_jellyfin.androidtv.core.data.settings.toKey
 import io.github.glacier_jellyfin.androidtv.core.data.settings.rememberedTracks
 import io.github.glacier_jellyfin.androidtv.core.data.settings.showKey
+import io.github.glacier_jellyfin.androidtv.core.data.settings.toKey
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.music.MusicActions
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.music.MusicTarget
@@ -39,9 +39,12 @@ import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PersonRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.TrailerRoute
+import io.github.glacier_jellyfin.androidtv.navigation.routeFor
 import io.github.glacier_jellyfin.androidtv.player.VersionChooser
 import io.github.glacier_jellyfin.androidtv.ui.PinGate
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
@@ -51,9 +54,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.UUID
-import javax.inject.Inject
-import io.github.glacier_jellyfin.androidtv.navigation.routeFor
 
 enum class TrackKind { Audio, Subtitles, Version }
 
@@ -133,7 +133,13 @@ class DetailViewModel @Inject constructor(
         controller = musicPlayback,
         music = music,
         toast = { _events.send(it) },
-        onPlaylistChanged = { id -> if (id == itemId && _state.value.item?.kind == ItemKind.Playlist) reloadPlaylist() },
+        onPlaylistChanged = { id ->
+            if (id == itemId &&
+                _state.value.item?.kind == ItemKind.Playlist
+            ) {
+                reloadPlaylist()
+            }
+        },
     )
 
     init {
@@ -162,22 +168,43 @@ class DetailViewModel @Inject constructor(
                 _state.update { it.copy(details = details, selection = selection) }
                 when (details.item.kind) {
                     ItemKind.Series -> loadSeries(details)
+
                     ItemKind.Episode -> loadSeasonOf(details)
+
                     ItemKind.Collection -> loadCollection(details)
+
                     ItemKind.Album -> _state.update { it.copy(musicTracks = music.albumTracks(itemId)) }
+
                     ItemKind.Playlist -> {
                         val videos = runSuspendCatching { repository.playlistVideos(itemId) }.getOrDefault(emptyList())
-                        _state.update { it.copy(musicTracks = music.playlistQueue(itemId), playlistVideos = videos.filterNot { v -> v.kind == ItemKind.MusicVideo }) }
+                        _state.update {
+                            it.copy(
+                                musicTracks = music.playlistQueue(itemId),
+                                playlistVideos = videos.filterNot { v -> v.kind == ItemKind.MusicVideo },
+                            )
+                        }
                     }
+
                     ItemKind.Artist -> {
                         val videos = runSuspendCatching { repository.artistVideos(itemId) }.getOrDefault(emptyList())
                         _state.update { it.copy(artistAlbums = music.artistAlbums(itemId), artistVideos = videos) }
                     }
+
                     else -> Unit
                 }
                 if (details.item.kind == ItemKind.Movie || details.item.kind == ItemKind.Series) loadThemeSong()
-                val withSimilar = details.item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Album, ItemKind.MusicVideo)
-                _state.update { it.copy(loading = false, similar = if (withSimilar) similarAsync.await() else emptyList()) }
+                val withSimilar = details.item.kind in setOf(
+                    ItemKind.Movie,
+                    ItemKind.Series,
+                    ItemKind.Album,
+                    ItemKind.MusicVideo,
+                )
+                _state.update {
+                    it.copy(
+                        loading = false,
+                        similar = if (withSimilar) similarAsync.await() else emptyList(),
+                    )
+                }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -205,12 +232,20 @@ class DetailViewModel @Inject constructor(
         trackSelections.get(details.item.id)?.let { return it }
         val tracks = details.tracks ?: return versionId?.let { TrackSelection(null, null, it) }
         val preferences = serverPreferences.preferences.value ?: serverPreferences.refresh()
-        val remembered = preferences?.let { rememberedTracks(settings.current().showTracks[details.showKey()], it, tracks) }
+        val remembered = preferences?.let {
+            rememberedTracks(
+                settings.current().showTracks[details.showKey()],
+                it,
+                tracks,
+            )
+        }
         val audio = remembered?.audio ?: tracks.defaultAudio
         val subtitle = when (val index = remembered?.subtitle) {
             // Under the last title's audio, not the server's default: a forced pick stays forced under its own language.
             null -> tracks.subtitleFor(audio)
+
             RememberedTracks.SUBTITLES_OFF -> null
+
             else -> index
         }
         return TrackSelection(audio, subtitle, versionId)
@@ -249,8 +284,11 @@ class DetailViewModel @Inject constructor(
                             ?: seasons.firstOrNull { it.id == _state.value.season?.id }
                         season?.let { selectSeason(it, details.item.id, focusId = target?.item?.id) }
                     }
+
                     ItemKind.Episode -> loadSeasonOf(details)
+
                     ItemKind.Collection -> loadCollection(details)
+
                     else -> Unit
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -321,7 +359,13 @@ class DetailViewModel @Inject constructor(
     private suspend fun loadCollection(details: ItemDetails) {
         val items = repository.collectionItems(details.item.id)
         // The PIN given for the collection counts for its movies too.
-        if (details.item.id.toString() in parental.unlockedItems.value) items.forEach { parental.unlock(it.id.toString()) }
+        if (details.item.id.toString() in parental.unlockedItems.value) {
+            items.forEach {
+                parental.unlock(
+                    it.id.toString(),
+                )
+            }
+        }
         _state.update { it.copy(collectionItems = items) }
     }
 
@@ -367,7 +411,9 @@ class DetailViewModel @Inject constructor(
         navigate(DetailRoute(seriesId.toString(), themeArea = seriesId.toString(), seasonId = season.id.toString()))
     }
 
-    fun openPerson(person: MediaItem) = navigate(PersonRoute(person.id.toString(), fromTitle = _state.value.item?.title))
+    fun openPerson(person: MediaItem) = navigate(
+        PersonRoute(person.id.toString(), fromTitle = _state.value.item?.title),
+    )
 
     fun selectSeason(season: Season) {
         val seriesId = _state.value.item?.id ?: return
@@ -375,7 +421,11 @@ class DetailViewModel @Inject constructor(
     }
 
     /** The episode row lands on [focusId] if given, else on the first unwatched episode. */
-    private suspend fun selectSeason(season: Season, seriesId: UUID, focusId: UUID? = null) {
+    private suspend fun selectSeason(
+        season: Season,
+        seriesId: UUID,
+        focusId: UUID? = null,
+    ) {
         _state.update { it.copy(season = season) }
         val episodes = runSuspendCatching { repository.episodes(seriesId, season.id) }
             .onFailure { Log.w(TAG, "Loading episodes failed", it) }
@@ -407,7 +457,15 @@ class DetailViewModel @Inject constructor(
         val item = current.item ?: return
         val target = when (item.kind) {
             ItemKind.Series -> current.nextEpisode ?: current.episodes.firstOrNull() ?: return
-            ItemKind.Collection -> collectionNext()?.also { if (it.kind == ItemKind.Series) return playShow(it) } ?: return playCollectionMusic()
+
+            ItemKind.Collection -> collectionNext()?.also {
+                if (it.kind == ItemKind.Series) {
+                    return playShow(
+                        it,
+                    )
+                }
+            } ?: return playCollectionMusic()
+
             else -> item
         }
         // The tracks the chips show are the ones that play: the player takes them instead of working them out again.
@@ -443,7 +501,11 @@ class DetailViewModel @Inject constructor(
     /** Options for a video of the page (holding OK, or the menu key). */
     fun videoOptions(video: MediaItem) {
         val item = _state.value.item ?: return
-        val target = MusicTarget(title = video.title, subtitle = video.parentTitle, tracks = { music.tracks(listOf(video.id)) })
+        val target = MusicTarget(
+            title = video.title,
+            subtitle = video.parentTitle,
+            tracks = { music.tracks(listOf(video.id)) },
+        )
         if (item.kind != ItemKind.Playlist) return musicActions.open(target)
         // On a playlist's page it can leave the playlist: its entries there are asked for first.
         viewModelScope.launch {
@@ -523,9 +585,21 @@ class DetailViewModel @Inject constructor(
     /** After songs went in or out: the songs and the item's counts. */
     private fun reloadPlaylist() {
         viewModelScope.launch {
-            runSuspendCatching { Triple(repository.details(itemId), music.playlistQueue(itemId), repository.playlistVideos(itemId)) }
+            runSuspendCatching {
+                Triple(
+                    repository.details(itemId),
+                    music.playlistQueue(itemId),
+                    repository.playlistVideos(itemId),
+                )
+            }
                 .onSuccess { (details, tracks, videos) ->
-                    _state.update { it.copy(details = details, musicTracks = tracks, playlistVideos = videos.filterNot { v -> v.kind == ItemKind.MusicVideo }) }
+                    _state.update {
+                        it.copy(
+                            details = details,
+                            musicTracks = tracks,
+                            playlistVideos = videos.filterNot { v -> v.kind == ItemKind.MusicVideo },
+                        )
+                    }
                 }
         }
     }
@@ -576,7 +650,11 @@ class DetailViewModel @Inject constructor(
             markSeasonsAndEpisodes(played)
         } else {
             val marked = playedMark(played)
-            _state.update { state -> state.copy(episodes = state.episodes.map { if (it.id == item.id) marked(it) else it }) }
+            _state.update { state ->
+                state.copy(
+                    episodes = state.episodes.map { if (it.id == item.id) marked(it) else it },
+                )
+            }
         }
         viewModelScope.launch {
             runSuspendCatching { repository.setPlayed(item.id, played) }
@@ -598,7 +676,11 @@ class DetailViewModel @Inject constructor(
                     if (item.kind == ItemKind.Series) {
                         restoreSeasonsAndEpisodes(before)
                     } else {
-                        _state.update { state -> state.copy(episodes = state.episodes.map { if (it.id == item.id) item else it }) }
+                        _state.update { state ->
+                            state.copy(
+                                episodes = state.episodes.map { if (it.id == item.id) item else it },
+                            )
+                        }
                     }
                 }
         }
@@ -699,16 +781,39 @@ class DetailViewModel @Inject constructor(
         val played = !watchable.all { it.played }
         val mixed = watchable.size < items.size
         _state.update { state ->
-            state.copy(collectionItems = state.collectionItems.map { if (it.kind in WatchableInCollection) it.copy(played = played) else it })
+            state.copy(
+                collectionItems = state.collectionItems.map {
+                    if (it.kind in WatchableInCollection) {
+                        it.copy(
+                            played = played,
+                        )
+                    } else {
+                        it
+                    }
+                },
+            )
         }
         viewModelScope.launch {
             runSuspendCatching {
-                if (mixed) watchable.forEach { repository.setPlayed(it.id, played) } else repository.setPlayed(collection.id, played)
+                if (mixed) {
+                    watchable.forEach {
+                        repository.setPlayed(
+                            it.id,
+                            played,
+                        )
+                    }
+                } else {
+                    repository.setPlayed(collection.id, played)
+                }
             }
                 .onSuccess { toast(if (played) R.string.marked_watched else R.string.marked_unwatched) }
                 .onFailure { Log.w(TAG, "Marking the collection failed", it) }
             val details = _state.value.details ?: return@launch
-            runSuspendCatching { loadCollection(details) }.onFailure { Log.w(TAG, "Reloading the collection failed", it) }
+            runSuspendCatching {
+                loadCollection(
+                    details,
+                )
+            }.onFailure { Log.w(TAG, "Reloading the collection failed", it) }
         }
     }
 
@@ -716,14 +821,23 @@ class DetailViewModel @Inject constructor(
 
     fun closeTracks() = _state.update { it.copy(trackPanel = null) }
 
-    fun pickTrack(kind: TrackKind, index: Int?, label: String) {
+    fun pickTrack(
+        kind: TrackKind,
+        index: Int?,
+        label: String,
+    ) {
         val current = _state.value.selection ?: TrackSelection(null, null)
         val selection = if (kind == TrackKind.Audio) current.copy(audio = index) else current.copy(subtitle = index)
         trackSelections.set(itemId, selection)
         _state.update { it.copy(selection = selection, trackPanel = null) }
         recordTracks(selection)
         viewModelScope.launch {
-            _events.send(UiEvent.Toast(if (kind == TrackKind.Audio) R.string.track_audio_set else R.string.track_subtitles_set, listOf(label)))
+            _events.send(
+                UiEvent.Toast(
+                    if (kind == TrackKind.Audio) R.string.track_audio_set else R.string.track_subtitles_set,
+                    listOf(label),
+                ),
+            )
         }
     }
 
@@ -753,10 +867,12 @@ class DetailViewModel @Inject constructor(
             ?: shown.tracks?.defaultAudio
         val subtitle = when {
             old != null && old.subtitle == null -> null
-            else -> old?.subtitle
-                ?.let { index -> details.tracks?.subtitles?.firstOrNull { it.index == index } }
-                ?.let { closestTrack(it.toKey(), shown.tracks?.subtitles.orEmpty()) }?.index
-                ?: shown.tracks?.subtitleFor(audio)
+
+            else ->
+                old?.subtitle
+                    ?.let { index -> details.tracks?.subtitles?.firstOrNull { it.index == index } }
+                    ?.let { closestTrack(it.toKey(), shown.tracks?.subtitles.orEmpty()) }?.index
+                    ?: shown.tracks?.subtitleFor(audio)
         }
         val selection = TrackSelection(audio, subtitle, id)
         trackSelections.set(itemId, selection)
@@ -767,7 +883,9 @@ class DetailViewModel @Inject constructor(
         }
     }
 
-    fun openEpisode(episode: MediaItem) = navigate(DetailRoute(episode.id.toString(), themeArea = episode.seriesId?.toString()))
+    fun openEpisode(episode: MediaItem) = navigate(
+        DetailRoute(episode.id.toString(), themeArea = episode.seriesId?.toString()),
+    )
 
     fun openItem(item: MediaItem) = navigate(routeFor(item))
 

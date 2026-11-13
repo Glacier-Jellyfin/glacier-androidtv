@@ -74,7 +74,10 @@ fun BoxScope.ToastHost(toaster: Toaster) {
         modifier = Modifier
             .align(Alignment.TopEnd)
             // Below the mini player while it shows (same corner).
-            .padding(top = if (MiniPlayerOnScreen.shown) (MINI_PLAYER_TOP + MINI_PLAYER_HEIGHT + 12).dp else MINI_PLAYER_TOP.dp, end = MINI_PLAYER_END.dp),
+            .padding(
+                top = if (MiniPlayerOnScreen.shown) (MINI_PLAYER_TOP + MINI_PLAYER_HEIGHT + 12).dp else MINI_PLAYER_TOP.dp,
+                end = MINI_PLAYER_END.dp,
+            ),
     ) {
         val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
         Row(
@@ -94,7 +97,11 @@ fun BoxScope.ToastHost(toaster: Toaster) {
                 Text("!", style = GlacierText.body(20, FontWeight.Bold), color = GlacierColors.Void)
             }
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(stringResource(R.string.toast_notice).uppercase(), style = GlacierText.label(15, 0.04), color = GlacierColors.Mist)
+                Text(
+                    stringResource(R.string.toast_notice).uppercase(),
+                    style = GlacierText.label(15, 0.04),
+                    color = GlacierColors.Mist,
+                )
                 Text(toaster.message.orEmpty(), style = GlacierText.body(20), color = GlacierColors.Ice)
             }
         }

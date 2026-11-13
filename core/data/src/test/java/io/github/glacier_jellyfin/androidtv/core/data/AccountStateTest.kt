@@ -3,12 +3,12 @@ package io.github.glacier_jellyfin.androidtv.core.data
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.PublicUser
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.ServerInfo
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.SignedInUser
+import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.UUID
 
 class AccountStateTest {
 
@@ -17,8 +17,11 @@ class AccountStateTest {
     private val jonas = UUID.fromString("00000000-0000-0000-0000-00000000000b")
     private val hidden = UUID.fromString("00000000-0000-0000-0000-00000000000c")
 
-    private fun signIn(id: UUID, name: String, token: String = "t-$name") =
-        SignedInUser(serverId = "s1", userId = id, name = name, primaryImageTag = null, accessToken = token)
+    private fun signIn(
+        id: UUID,
+        name: String,
+        token: String = "t-$name",
+    ) = SignedInUser(serverId = "s1", userId = id, name = name, primaryImageTag = null, accessToken = token)
 
     @Test
     fun `remembering a server replaces the previous entry and selects it`() {
@@ -30,7 +33,10 @@ class AccountStateTest {
     @Test
     fun `a new server at a saved address replaces the old one and its profiles`() {
         val reset = server.copy(id = "s2", address = "http://HOME:8096/")
-        val state = AccountState().withServer(server, now = 1).withSignIn(signIn(anna, "Anna"), now = 2).withServer(reset, now = 3)
+        val state = AccountState().withServer(
+            server,
+            now = 1,
+        ).withSignIn(signIn(anna, "Anna"), now = 2).withServer(reset, now = 3)
         assertEquals(listOf("s2"), state.servers.map { it.id })
         assertTrue(state.users.isEmpty())
         assertEquals("s2", state.lastServerId)
@@ -70,7 +76,10 @@ class AccountStateTest {
     fun `signing in again keeps parental control`() {
         val state = AccountState()
             .withSignIn(signIn(anna, "Anna"), now = 1)
-            .updateUser("s1", anna.toString()) { it.copy(protection = Protection(maxAge = AgeLimit.A12, pinForLocked = true)) }
+            .updateUser(
+                "s1",
+                anna.toString(),
+            ) { it.copy(protection = Protection(maxAge = AgeLimit.A12, pinForLocked = true)) }
             .withSignIn(signIn(anna, "Anna", token = "new"), now = 2)
         assertEquals(Protection(maxAge = AgeLimit.A12, pinForLocked = true), state.users.single().protection)
     }
@@ -113,7 +122,10 @@ class AccountStateTest {
 
     @Test
     fun `removing a server drops its users`() {
-        val state = AccountState().withServer(server, now = 1).withSignIn(signIn(anna, "Anna"), now = 2).withoutServer("s1")
+        val state = AccountState().withServer(
+            server,
+            now = 1,
+        ).withSignIn(signIn(anna, "Anna"), now = 2).withoutServer("s1")
         assertTrue(state.servers.isEmpty())
         assertTrue(state.users.isEmpty())
         assertNull(state.lastServerId)
@@ -152,7 +164,10 @@ class AccountStateTest {
     @Test
     fun `single mode counts profiles the server lists but nobody signed in to`() {
         val state = AccountState().withSignIn(signIn(anna, "Anna"), now = 1)
-        val public = listOf(PublicUser(anna, "Anna", primaryImageTag = null), PublicUser(jonas, "Jonas", primaryImageTag = null))
+        val public = listOf(
+            PublicUser(anna, "Anna", primaryImageTag = null),
+            PublicUser(jonas, "Jonas", primaryImageTag = null),
+        )
         assertEquals(StartChoice.Pick, state.startChoice("s1", state.profilesFor("s1", public)))
     }
 
@@ -174,7 +189,10 @@ class AccountStateTest {
     fun `a profile with a pin on switching is focused instead of opened`() {
         val pin = Pins.hash("1234", salt = ByteArray(16), iterations = 1)
         val state = twoProfiles(StartMode.Fixed)
-            .updateUser("s1", anna.toString()) { it.copy(pin = pin, protection = Protection(pinOnProfileSwitch = true)) }
+            .updateUser(
+                "s1",
+                anna.toString(),
+            ) { it.copy(pin = pin, protection = Protection(pinOnProfileSwitch = true)) }
         assertEquals(StartChoice.Focus(anna.toString()), state.choice())
     }
 
@@ -184,8 +202,14 @@ class AccountStateTest {
         val profiles = state.profilesFor("s1", publicUsers = null)
         assertEquals(StartChoice.Open(anna.toString()), profileChoice(anna.toString(), profiles))
         val pin = Pins.hash("1234", salt = ByteArray(16), iterations = 1)
-        val locked = state.updateUser("s1", anna.toString()) { it.copy(pin = pin, protection = Protection(pinOnProfileSwitch = true)) }
-        assertEquals(StartChoice.Focus(anna.toString()), profileChoice(anna.toString(), locked.profilesFor("s1", publicUsers = null)))
+        val locked = state.updateUser(
+            "s1",
+            anna.toString(),
+        ) { it.copy(pin = pin, protection = Protection(pinOnProfileSwitch = true)) }
+        assertEquals(
+            StartChoice.Focus(anna.toString()),
+            profileChoice(anna.toString(), locked.profilesFor("s1", publicUsers = null)),
+        )
         val signedOut = state.updateUser("s1", anna.toString()) { it.copy(accessToken = null) }
         assertEquals(StartChoice.Pick, profileChoice(anna.toString(), signedOut.profilesFor("s1", publicUsers = null)))
     }

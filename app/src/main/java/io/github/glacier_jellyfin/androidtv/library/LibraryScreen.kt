@@ -35,39 +35,38 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -82,14 +81,14 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.AlphabetLetters
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderMedia
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
-import io.github.glacier_jellyfin.androidtv.core.data.settings.MusicVideoView
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryScope
-import io.github.glacier_jellyfin.androidtv.core.data.media.ListGroup
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
+import io.github.glacier_jellyfin.androidtv.core.data.media.ListGroup
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.NameOrder
 import io.github.glacier_jellyfin.androidtv.core.data.media.railLetter
+import io.github.glacier_jellyfin.androidtv.core.data.settings.MusicVideoView
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
@@ -101,6 +100,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
 import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
 import io.github.glacier_jellyfin.androidtv.music.MusicActionsSheet
 import io.github.glacier_jellyfin.androidtv.player.formatTime
+import io.github.glacier_jellyfin.androidtv.ui.BackFromTop
 import io.github.glacier_jellyfin.androidtv.ui.CardShape
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.FilterChip
@@ -114,7 +114,6 @@ import io.github.glacier_jellyfin.androidtv.ui.SortButton
 import io.github.glacier_jellyfin.androidtv.ui.SortMenu
 import io.github.glacier_jellyfin.androidtv.ui.ToggleChip
 import io.github.glacier_jellyfin.androidtv.ui.ToolbarButton
-import io.github.glacier_jellyfin.androidtv.ui.BackFromTop
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
@@ -132,6 +131,7 @@ import kotlinx.coroutines.launch
 private const val HEADER_ITEMS = 2
 private const val ROW_PIVOT = 330
 private const val ROW_TOLERANCE = 48
+
 /** Where the A–Z rail sits until the first row of cards is known. */
 internal const val RAIL_TOP = 150
 
@@ -211,15 +211,25 @@ fun LibraryScreen(
     }
     val songsTitle = stringResource(R.string.scope_songs)
     // A music video queue is named after the folder it comes from, else after the tab.
-    val videosTitle = state.folderPath.lastOrNull()?.name?.takeIf { state.inFolders } ?: stringResource(R.string.scope_music_videos)
+    val videosTitle = state.folderPath.lastOrNull()?.name?.takeIf { state.inFolders } ?: stringResource(
+        R.string.scope_music_videos,
+    )
     // Songs are a one-column list: title, artist and album need the width.
     val songList = state.query.scope == LibraryScope.Songs
     // Music videos are 16:9 cards, fewer to a row.
     val wide = state.query.scope == LibraryScope.MusicVideos
-    val columns = if (songList) 1 else if (wide) sizes.wideColumns else sizes.gridColumns
+    val columns = if (songList) {
+        1
+    } else if (wide) {
+        sizes.wideColumns
+    } else {
+        sizes.gridColumns
+    }
     // Where each title sits in the grid: after the title and toolbar, and after the heading of its group and those before.
     val positions = remember(state.items) { gridPositions(state.items) }
-    val gridCount = HEADER_ITEMS + state.items.size + (positions.lastOrNull()?.let { it - HEADER_ITEMS - state.items.lastIndex } ?: 0)
+    val gridCount =
+        HEADER_ITEMS + state.items.size +
+            (positions.lastOrNull()?.let { it - HEADER_ITEMS - state.items.lastIndex } ?: 0)
     val showRail = state.query.railed && state.letters.isNotEmpty()
     // Back among the cards or on the A–Z rail first goes up to the tabs, from there to the navigation bar.
     // Pressed there, it goes home. A library opened from another page goes back to that page.
@@ -244,7 +254,12 @@ fun LibraryScreen(
     var leftFolderId by remember { mutableStateOf<String?>(null) }
     BackFromTop(inToolbar, viewModel.inNavBar, navFocus, viewModel::onNav) {
         val left = state.folderPath.lastOrNull()?.id?.toString()
-        (state.inFolders && viewModel.folderUp()).also { if (it) { leftFolderId = left; enteredFolder = true } }
+        (state.inFolders && viewModel.folderUp()).also {
+            if (it) {
+                leftFolderId = left
+                enteredFolder = true
+            }
+        }
     }
 
     // The folder view: an entry's focus is kept like a card's. Into a subfolder, the focus goes to its first entry.
@@ -269,24 +284,38 @@ fun LibraryScreen(
         leftFolderId = null
         // Back through the navigation bar: the entry focused when the library was left, if still in this folder.
         val restored = (cameFrom ?: viewModel.restoredFocus.takeIf { !initialFocusDone && !keyPressed })
-            ?.takeIf { id -> folder.folders.any { it.id.toString() == id } || folder.media.any { it is FolderMedia.Video && it.item.id.toString() == id } }
+            ?.takeIf { id ->
+                folder.folders.any { it.id.toString() == id } ||
+                    folder.media.any { it is FolderMedia.Video && it.item.id.toString() == id }
+            }
         if (restored != null) {
             lastFocusId = restored
             // Further down than what is composed: scroll there first (after the title, toolbar and headings).
             val videos = folder.media.filterIsInstance<FolderMedia.Video>()
             val folderIndex = folder.folders.indexOfFirst { it.id.toString() == restored }
-            val position = if (folderIndex >= 0) HEADER_ITEMS + 1 + folderIndex
-            else HEADER_ITEMS + (if (folder.folders.isEmpty()) 0 else folder.folders.size + 1) + 1 + videos.indexOfFirst { it.item.id.toString() == restored }
+            val position = if (folderIndex >= 0) {
+                HEADER_ITEMS + 1 + folderIndex
+            } else {
+                HEADER_ITEMS + (if (folder.folders.isEmpty()) 0 else folder.folders.size + 1) + 1 +
+                    videos.indexOfFirst { it.item.id.toString() == restored }
+            }
             gridState.scrollToItem(position)
         }
         withFrameNanos { }
-        initialFocusDone = runCatching { (if (restored != null) restoreFocus else firstCardFocus).requestFocus() }.isSuccess
+        initialFocusDone =
+            runCatching { (if (restored != null) restoreFocus else firstCardFocus).requestFocus() }.isSuccess
     }
 
     // Load the next page when the grid gets within three rows of the end.
     LaunchedEffect(gridState, gridCount, songList) {
         snapshotFlow { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
-            .collect { last -> if (last >= gridCount - (if (songList) SONG_LOOKAHEAD else 3 * columns)) viewModel.loadMore() }
+            .collect { last ->
+                if (last >=
+                    gridCount - (if (songList) SONG_LOOKAHEAD else 3 * columns)
+                ) {
+                    viewModel.loadMore()
+                }
+            }
     }
 
     // Once per composition: a filter change later empties and refills the grid, and the
@@ -335,7 +364,9 @@ fun LibraryScreen(
         jumpTarget = state.items.getOrNull(index)?.id?.toString()
         focusedId = jumpTarget
         // A group's first title: its heading comes into view with it.
-        val position = positions.getOrNull(index)?.let { if (startsGroup(state.items, index)) it - 1 else it } ?: return@LaunchedEffect
+        val position = positions.getOrNull(
+            index,
+        )?.let { if (startsGroup(state.items, index)) it - 1 else it } ?: return@LaunchedEffect
         gridState.scrollToItem(position)
         withFrameNanos { }
         // Settle the row where focused rows sit, not under the nav.
@@ -349,7 +380,10 @@ fun LibraryScreen(
 
     // The first load covers the page: the remote must not reach the toolbar or the navigation behind it.
     Box(
-        Modifier.fillMaxSize().blockKeysWhile(!state.failed && state.loading && state.items.isEmpty() && folder == null, takeFocus = true).onPreviewKeyEvent {
+        Modifier.fillMaxSize().blockKeysWhile(
+            !state.failed && state.loading && state.items.isEmpty() && folder == null,
+            takeFocus = true,
+        ).onPreviewKeyEvent {
             if (it.type == KeyEventType.KeyDown) keyPressed = true
             false
         },
@@ -360,9 +394,22 @@ fun LibraryScreen(
                     state = gridState,
                     // Cells as wide as the cards, packed from the left like the design's rows.
                     // The song list is as wide as the cards' rows, so the toolbar ends in the same place on every tab.
-                    columns = GridCells.FixedSize(if (songList) (sizes.gridColumns * sizes.posterWidth + (sizes.gridColumns - 1) * sizes.gridGap).dp else if (wide) sizes.wideWidth.dp else sizes.posterWidth.dp),
+                    columns = GridCells.FixedSize(
+                        if (songList) {
+                            (sizes.gridColumns * sizes.posterWidth + (sizes.gridColumns - 1) * sizes.gridGap).dp
+                        } else if (wide) {
+                            sizes.wideWidth.dp
+                        } else {
+                            sizes.posterWidth.dp
+                        },
+                    ),
                     // Without the A–Z rail the list keeps its width, so the toolbar and songs stay where they are.
-                    contentPadding = PaddingValues(start = 80.dp, end = if (showRail) 22.dp else RAIL_SPACE.dp, top = 150.dp, bottom = 120.dp),
+                    contentPadding = PaddingValues(
+                        start = 80.dp,
+                        end = if (showRail) 22.dp else RAIL_SPACE.dp,
+                        top = 150.dp,
+                        bottom = 120.dp,
+                    ),
                     horizontalArrangement = Arrangement.spacedBy(sizes.gridGap.dp),
                     verticalArrangement = Arrangement.spacedBy(if (songList) SONG_ROW_GAP.dp else 38.dp),
                     modifier = Modifier
@@ -371,7 +418,16 @@ fun LibraryScreen(
                         .focusRequester(gridFocus)
                         // Moving in with the D-pad (Down from the bar) lands on the card left last. Not a focus
                         // restorer: it would also take a request for another card, such as Left from the A–Z rail.
-                        .focusProperties { onEnter = { if (requestedFocusDirection != FocusDirection.Enter) runCatching { restoreFocus.requestFocus() } } }
+                        .focusProperties {
+                            onEnter =
+                                {
+                                    if (requestedFocusDirection !=
+                                        FocusDirection.Enter
+                                    ) {
+                                        runCatching { restoreFocus.requestFocus() }
+                                    }
+                                }
+                        }
                         .focusGroup(),
                 ) {
                     item(span = { GridItemSpan(maxLineSpan) }, key = "title") { Header(state) }
@@ -379,7 +435,9 @@ fun LibraryScreen(
                         val toolbarScope = rememberCoroutineScope()
                         Toolbar(
                             // The song rows sit closer together than cards: the toolbar keeps the cards' distance.
-                            modifier = Modifier.padding(vertical = if (songList) (38 - SONG_ROW_GAP).dp else 0.dp).onFocusChanged {
+                            modifier = Modifier.padding(
+                                vertical = if (songList) (38 - SONG_ROW_GAP).dp else 0.dp,
+                            ).onFocusChanged {
                                 inToolbar = it.hasFocus
                                 if (it.hasFocus) {
                                     inContent = false
@@ -407,7 +465,10 @@ fun LibraryScreen(
                     if (folder != null) {
                         // Folders and videos each in rows of their own, always under their heading, as in a home video folder.
                         if (folder.folders.isNotEmpty()) {
-                            item(span = { GridItemSpan(maxLineSpan) }, key = "section-folders") { SectionHeading(stringResource(R.string.folder_section_folders)) }
+                            item(
+                                span = { GridItemSpan(maxLineSpan) },
+                                key = "section-folders",
+                            ) { SectionHeading(stringResource(R.string.folder_section_folders)) }
                         }
                         folder.folders.forEachIndexed { index, sub ->
                             item(key = "folder-${sub.id}") {
@@ -419,12 +480,26 @@ fun LibraryScreen(
                                     },
                                     onLongClick = { viewModel.folderOptions(sub) },
                                     modifier = entryFocus(sub.id.toString(), first = index == 0)
-                                        .then(if (index == folder.folders.lastIndex) Modifier.focusProperties { end = FocusRequester.Cancel } else Modifier),
+                                        .then(
+                                            if (index ==
+                                                folder.folders.lastIndex
+                                            ) {
+                                                Modifier.focusProperties {
+                                                    end =
+                                                        FocusRequester.Cancel
+                                                }
+                                            } else {
+                                                Modifier
+                                            },
+                                        ),
                                 )
                             }
                         }
                         if (folder.media.isNotEmpty()) {
-                            item(span = { GridItemSpan(maxLineSpan) }, key = "section-videos") { SectionHeading(stringResource(R.string.folder_section_videos)) }
+                            item(
+                                span = { GridItemSpan(maxLineSpan) },
+                                key = "section-videos",
+                            ) { SectionHeading(stringResource(R.string.folder_section_videos)) }
                         }
                         folder.media.filterIsInstance<FolderMedia.Video>().forEachIndexed { index, video ->
                             val media = video.item
@@ -437,7 +512,10 @@ fun LibraryScreen(
                                     onLongClick = { viewModel.videoOptions(media) },
                                     shape = CardShape.Wide,
                                     locked = media.showsLock(),
-                                    modifier = entryFocus(media.id.toString(), first = folder.folders.isEmpty() && index == 0),
+                                    modifier = entryFocus(
+                                        media.id.toString(),
+                                        first = folder.folders.isEmpty() && index == 0,
+                                    ),
                                 )
                             }
                         }
@@ -457,14 +535,32 @@ fun LibraryScreen(
                                 else -> Modifier
                             }.then(if (id == lastFocusId) Modifier.focusRequester(restoreFocus) else Modifier)
                                 // A group's last row is often short: Right goes to the rail, not up to the row above.
-                                .then(if (showRail && group != null && (index == state.items.lastIndex || startsGroup(state.items, index + 1))) Modifier.focusProperties { end = railFocus } else Modifier)
+                                .then(
+                                    if (showRail && group != null && (
+                                            index == state.items.lastIndex || startsGroup(
+                                                state.items,
+                                                index + 1,
+                                            )
+                                            )
+                                    ) {
+                                        Modifier.focusProperties { end = railFocus }
+                                    } else {
+                                        Modifier
+                                    },
+                                )
                             val onFocus = Modifier.onFocusChanged {
                                 if (it.isFocused) {
                                     inContent = true
                                     focusedId = id
                                     lastFocusId = id
                                     // After a jump far down the list starts there: the titles before it load on the way back up.
-                                    if (state.offset > 0 && index < (if (songList) SONG_LOOKAHEAD else 3 * columns)) viewModel.loadBefore(columns)
+                                    if (state.offset > 0 &&
+                                        index < (if (songList) SONG_LOOKAHEAD else 3 * columns)
+                                    ) {
+                                        viewModel.loadBefore(
+                                            columns,
+                                        )
+                                    }
                                 }
                             }
                             if (item.kind == ItemKind.Song) {
@@ -481,34 +577,80 @@ fun LibraryScreen(
                                     onOptions = { viewModel.songOptions(item) },
                                     modifier = focus.then(onFocus),
                                 )
-                            } else GridCard(
-                                imageUrl = if (item.kind == ItemKind.MusicVideo) item.thumbUrl ?: item.posterUrl else item.posterUrl,
-                                title = item.title,
-                                caption = captionFor(item, sort = state.query.sort.takeUnless { state.query.listedByName }),
-                                // Music videos play in the music player, like songs.
-                                onClick = { if (item.kind == ItemKind.MusicVideo) viewModel.playVideo(item, videosTitle) else viewModel.open(item) },
-                                onLongClick = if (item.kind == ItemKind.MusicVideo) ({ viewModel.videoOptions(item) }) else null,
-                                shape = when (item.kind) {
-                                    ItemKind.Album, ItemKind.Playlist -> CardShape.Square
-                                    ItemKind.Artist -> CardShape.Round
-                                    ItemKind.MusicVideo -> CardShape.Wide
-                                    else -> CardShape.Poster
-                                },
-                                // Played means nothing for music: music videos carry no check.
-                                watched = item.played && item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode, ItemKind.Collection),
-                                // Collections and shows count what is left to watch; a collection's size is in the caption.
-                                count = item.unwatchedCount.takeIf { item.kind == ItemKind.Collection || item.kind == ItemKind.Series },
-                                locked = item.showsLock(),
-                                modifier = focus.then(onFocus),
-                            )
+                            } else {
+                                GridCard(
+                                    imageUrl = if (item.kind ==
+                                        ItemKind.MusicVideo
+                                    ) {
+                                        item.thumbUrl ?: item.posterUrl
+                                    } else {
+                                        item.posterUrl
+                                    },
+                                    title = item.title,
+                                    caption = captionFor(
+                                        item,
+                                        sort = state.query.sort.takeUnless { state.query.listedByName },
+                                    ),
+                                    // Music videos play in the music player, like songs.
+                                    onClick = {
+                                        if (item.kind == ItemKind.MusicVideo) {
+                                            viewModel.playVideo(
+                                                item,
+                                                videosTitle,
+                                            )
+                                        } else {
+                                            viewModel.open(item)
+                                        }
+                                    },
+                                    onLongClick = if (item.kind == ItemKind.MusicVideo) {
+                                        (
+                                            {
+                                                viewModel.videoOptions(
+                                                    item,
+                                                )
+                                            }
+                                            )
+                                    } else {
+                                        null
+                                    },
+                                    shape = when (item.kind) {
+                                        ItemKind.Album, ItemKind.Playlist -> CardShape.Square
+                                        ItemKind.Artist -> CardShape.Round
+                                        ItemKind.MusicVideo -> CardShape.Wide
+                                        else -> CardShape.Poster
+                                    },
+                                    // Played means nothing for music: music videos carry no check.
+                                    watched = item.played && item.kind in setOf(
+                                        ItemKind.Movie,
+                                        ItemKind.Series,
+                                        ItemKind.Episode,
+                                        ItemKind.Collection,
+                                    ),
+                                    // Collections and shows count what is left to watch; a collection's size is in the caption.
+                                    count = item.unwatchedCount.takeIf {
+                                        item.kind == ItemKind.Collection ||
+                                            item.kind == ItemKind.Series
+                                    },
+                                    locked = item.showsLock(),
+                                    modifier = focus.then(onFocus),
+                                )
+                            }
                         }
                     }
                     when {
                         state.failed -> item(span = { GridItemSpan(maxLineSpan) }, key = "error") {
                             // Where the titles would be; below titles already there it only needs its own height.
                             InFreeSpace(gridState, "error", fill = state.items.isEmpty()) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                                    Text(stringResource(R.string.library_error), style = GlacierText.body(21), color = GlacierColors.Mist, textAlign = TextAlign.Center)
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                                ) {
+                                    Text(
+                                        stringResource(R.string.library_error),
+                                        style = GlacierText.body(21),
+                                        color = GlacierColors.Mist,
+                                        textAlign = TextAlign.Center,
+                                    )
                                     PillButton(
                                         stringResource(R.string.action_retry),
                                         // The button goes away with the error: the titles take the focus, as on a first load.
@@ -521,15 +663,29 @@ fun LibraryScreen(
                                 }
                             }
                         }
-                        state.loading && state.items.isEmpty() && folder == null -> item(span = { GridItemSpan(maxLineSpan) }, key = "loading") {
+
+                        state.loading && state.items.isEmpty() && folder == null -> item(
+                            span = { GridItemSpan(maxLineSpan) },
+                            key = "loading",
+                        ) {
                             InFreeSpace(gridState, "loading", screenCentred = true) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(28.dp)) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(28.dp),
+                                ) {
                                     SpinningDiamond(90)
                                     // A big list takes a while the first time: say how far it has come.
                                     progress?.takeIf { it.isFor(state.query) }?.let {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
                                             Text(
-                                                stringResource(R.string.library_loading_progress, it.loaded, countText(state.query.scope, state.query.kind, it.total)),
+                                                stringResource(
+                                                    R.string.library_loading_progress,
+                                                    it.loaded,
+                                                    countText(state.query.scope, state.query.kind, it.total),
+                                                ),
                                                 style = GlacierText.body(21),
                                                 color = GlacierColors.Mist,
                                                 textAlign = TextAlign.Center,
@@ -545,7 +701,11 @@ fun LibraryScreen(
                                 }
                             }
                         }
-                        state.complete && state.items.isEmpty() -> item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
+
+                        state.complete && state.items.isEmpty() -> item(
+                            span = { GridItemSpan(maxLineSpan) },
+                            key = "empty",
+                        ) {
                             InFreeSpace(gridState, "empty", screenCentred = true) {
                                 Text(
                                     stringResource(
@@ -564,6 +724,7 @@ fun LibraryScreen(
                                 )
                             }
                         }
+
                         else -> Unit
                     }
                 }
@@ -640,7 +801,13 @@ fun LibraryScreen(
  * in the middle of the screen across, wherever the grid ends (with or without the A–Z rail).
  */
 @Composable
-private fun InFreeSpace(gridState: LazyGridState, key: String, fill: Boolean = true, screenCentred: Boolean = false, content: @Composable () -> Unit) {
+private fun InFreeSpace(
+    gridState: LazyGridState,
+    key: String,
+    fill: Boolean = true,
+    screenCentred: Boolean = false,
+    content: @Composable () -> Unit,
+) {
     val density = LocalDensity.current
     // Read in a derived state: the layout info changes with every scrolled pixel.
     val height by remember(gridState, key) {
@@ -659,7 +826,10 @@ private fun InFreeSpace(gridState: LazyGridState, key: String, fill: Boolean = t
             .then(if (fill) Modifier.height((height ?: min).coerceAtLeast(min)) else Modifier)
             .then(
                 if (screenCentred) {
-                    Modifier.onGloballyPositioned { shift = screenWidth / 2f - (it.positionInRoot().x + it.size.width / 2f) }
+                    Modifier.onGloballyPositioned {
+                        shift =
+                            screenWidth / 2f - (it.positionInRoot().x + it.size.width / 2f)
+                    }
                 } else {
                     Modifier
                 },
@@ -670,7 +840,11 @@ private fun InFreeSpace(gridState: LazyGridState, key: String, fill: Boolean = t
 
 /** The small heading over a group of a list sorted by something else than the title. */
 @Composable
-private fun GroupHeading(group: ListGroup, sort: LibrarySort, cards: Boolean) {
+private fun GroupHeading(
+    group: ListGroup,
+    sort: LibrarySort,
+    cards: Boolean,
+) {
     Text(
         groupLabel(group, sort),
         style = GlacierText.body(19, FontWeight.SemiBold),
@@ -678,28 +852,50 @@ private fun GroupHeading(group: ListGroup, sort: LibrarySort, cards: Boolean) {
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         // The grid keeps its row gap below the heading too: drawn lower, it sits with its cards.
-        modifier = if (cards) Modifier.offset(y = GROUP_HEADING_DROP.dp) else Modifier.padding(start = 24.dp, top = 8.dp),
+        modifier = if (cards) {
+            Modifier.offset(
+                y = GROUP_HEADING_DROP.dp,
+            )
+        } else {
+            Modifier.padding(start = 24.dp, top = 8.dp)
+        },
     )
 }
 
 /** The heading over a music video folder's subfolders or videos, drawn like a group heading. */
 @Composable
 private fun SectionHeading(text: String) {
-    Text(text, style = GlacierText.body(19, FontWeight.SemiBold), color = GlacierColors.Mist, modifier = Modifier.offset(y = GROUP_HEADING_DROP.dp))
+    Text(
+        text,
+        style = GlacierText.body(19, FontWeight.SemiBold),
+        color = GlacierColors.Mist,
+        modifier = Modifier.offset(y = GROUP_HEADING_DROP.dp),
+    )
 }
 
 @Composable
 private fun groupLabel(group: ListGroup, sort: LibrarySort): String = when (group) {
     is ListGroup.Month -> {
         val locale = LocalLocale.current.platformLocale
-        YearMonth.of(group.year, group.month).format(DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "LLLLyyyy"), locale))
+        YearMonth.of(
+            group.year,
+            group.month,
+        ).format(DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "LLLLyyyy"), locale))
     }
+
     is ListGroup.Year -> group.year.toString()
+
     is ListGroup.Stars -> stringResource(R.string.group_stars, group.stars)
+
     is ListGroup.Length ->
-        if (group.toMinutes <= 60) stringResource(R.string.group_minutes, group.fromMinutes, group.toMinutes)
-        else stringResource(R.string.group_hours, hoursText(group.fromMinutes), hoursText(group.toMinutes))
+        if (group.toMinutes <= 60) {
+            stringResource(R.string.group_minutes, group.fromMinutes, group.toMinutes)
+        } else {
+            stringResource(R.string.group_hours, hoursText(group.fromMinutes), hoursText(group.toMinutes))
+        }
+
     is ListGroup.Name -> group.name
+
     ListGroup.Unknown -> stringResource(
         when (sort) {
             LibrarySort.DateAdded -> R.string.group_unknown_date
@@ -726,8 +922,14 @@ private fun Header(state: LibraryState) {
         // In the folder view, the way down to the folder shown instead.
         Text(
             when {
-                state.inFolders -> (listOf(stringResource(R.string.scope_music_videos)) + state.folderPath.map { it.name }).joinToString(" › ")
+                state.inFolders -> (
+                    listOf(
+                        stringResource(R.string.scope_music_videos),
+                    ) + state.folderPath.map { it.name }
+                    ).joinToString(" › ")
+
                 total != null -> countText(state.query.scope, state.query.kind, total)
+
                 else -> " "
             },
             style = GlacierText.body(19),
@@ -758,7 +960,10 @@ private fun Toolbar(
         modifier
             // Moving into the toolbar lands on the active filter, not the geometrically nearest chip.
             // A request for one control (the sort button after its menu closes) is left alone.
-            .focusProperties { onEnter = { if (requestedFocusDirection != FocusDirection.Enter) activeChip.requestFocus() } }
+            .focusProperties {
+                onEnter =
+                    { if (requestedFocusDirection != FocusDirection.Enter) activeChip.requestFocus() }
+            }
             .focusGroup(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -789,7 +994,9 @@ private fun Toolbar(
                     open = state.viewMenuOpen,
                     onClick = { onViewMenu(!state.viewMenuOpen) },
                     icon = GlacierIcons.Grid,
-                    modifier = Modifier.focusRequester(viewButtonFocus).onGloballyPositioned { onViewAnchor(it.boundsInRoot()) },
+                    modifier = Modifier.focusRequester(
+                        viewButtonFocus,
+                    ).onGloballyPositioned { onViewAnchor(it.boundsInRoot()) },
                 )
             }
         } else if (state.query.filterable) {
@@ -817,7 +1024,9 @@ private fun Toolbar(
                 open = state.sortMenuOpen,
                 descending = state.query.descending,
                 onClick = { onSortMenu(!state.sortMenuOpen) },
-                modifier = Modifier.focusRequester(sortButtonFocus).onGloballyPositioned { onSortAnchor(it.boundsInRoot()) },
+                modifier = Modifier.focusRequester(
+                    sortButtonFocus,
+                ).onGloballyPositioned { onSortAnchor(it.boundsInRoot()) },
             )
         }
     }
@@ -872,7 +1081,13 @@ internal fun AlphabetRail(
 }
 
 @Composable
-private fun RailLetter(letter: Char, available: Boolean, current: Boolean, onClick: () -> Unit, modifier: Modifier) {
+private fun RailLetter(
+    letter: Char,
+    available: Boolean,
+    current: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -918,7 +1133,11 @@ internal fun rememberGridPivotSpec(gridState: LazyGridState, headerItems: Int = 
         val pivot = with(density) { ROW_PIVOT.dp.toPx() }
         val tolerance = with(density) { ROW_TOLERANCE.dp.toPx() }
         object : BringIntoViewSpec {
-            override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+            override fun calculateScrollDistance(
+                offset: Float,
+                size: Float,
+                containerSize: Float,
+            ): Float {
                 if (gridState.firstVisibleItemIndex < headerItems && offset < pivot) return 0f
                 val distance = offset - pivot
                 return if (abs(distance) < tolerance) 0f else distance
@@ -967,10 +1186,16 @@ private fun captionFor(item: MediaItem, sort: LibrarySort?): String? {
     val showsYear = item.kind in setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode)
     val sorted = when (sort) {
         LibrarySort.Year -> item.year?.takeUnless { showsYear }?.toString()
+
         LibrarySort.Runtime ->
-            if (item.kind == ItemKind.Song) item.runtimeMs?.let(::formatTime)
-            else item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }
+            if (item.kind == ItemKind.Song) {
+                item.runtimeMs?.let(::formatTime)
+            } else {
+                item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }
+            }
+
         LibrarySort.Rating -> item.communityRating?.let { "★ ${ratingText(it)}" }
+
         else -> null
     }
     return listOfNotNull(baseCaption(item), sorted).joinToString(" · ").ifEmpty { null }
@@ -979,22 +1204,51 @@ private fun captionFor(item: MediaItem, sort: LibrarySort?): String? {
 @Composable
 private fun baseCaption(item: MediaItem): String? = when (item.kind) {
     ItemKind.Album, ItemKind.Song -> item.parentTitle
+
     ItemKind.MusicVideo -> item.parentTitle
-    ItemKind.Collection, ItemKind.Genre, ItemKind.Playlist -> item.childCount?.let { pluralStringResource(R.plurals.count_titles, it, it) }
+
+    ItemKind.Collection, ItemKind.Genre, ItemKind.Playlist -> item.childCount?.let {
+        pluralStringResource(
+            R.plurals.count_titles,
+            it,
+            it,
+        )
+    }
+
     ItemKind.Artist -> item.childCount?.let { pluralStringResource(R.plurals.count_albums, it, it) }
+
     else -> yearText(item)
 }
 
 @Composable
-private fun countText(scope: LibraryScope, kind: LibraryKind, count: Int): String = when (scope) {
+private fun countText(
+    scope: LibraryScope,
+    kind: LibraryKind,
+    count: Int,
+): String = when (scope) {
     LibraryScope.Collections -> pluralStringResource(R.plurals.count_collections, count, count)
+
     LibraryScope.Genres -> pluralStringResource(R.plurals.count_genres, count, count)
+
     LibraryScope.Artists -> pluralStringResource(R.plurals.count_artists, count, count)
+
     LibraryScope.Playlists -> pluralStringResource(R.plurals.count_playlists, count, count)
+
     LibraryScope.Albums -> pluralStringResource(R.plurals.count_albums, count, count)
+
     LibraryScope.Songs -> pluralStringResource(R.plurals.count_songs, count, count)
+
     LibraryScope.MusicVideos -> pluralStringResource(R.plurals.count_videos, count, count)
-    else -> if (kind == LibraryKind.Music) pluralStringResource(R.plurals.count_albums, count, count) else pluralStringResource(R.plurals.count_titles, count, count)
+
+    else -> if (kind == LibraryKind.Music) {
+        pluralStringResource(
+            R.plurals.count_albums,
+            count,
+            count,
+        )
+    } else {
+        pluralStringResource(R.plurals.count_titles, count, count)
+    }
 }
 
 private val LibraryScope.label: Int

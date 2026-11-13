@@ -12,7 +12,11 @@ package io.github.glacier_jellyfin.androidtv.player
  * [bitrates] are the tiers as the player lists them, smallest first; [expected] what each asks of the link; the stream
  * starts at [start].
  */
-internal class TierController(val bitrates: List<Int>, val expected: List<Int>, start: Int) {
+internal class TierController(
+    val bitrates: List<Int>,
+    val expected: List<Int>,
+    start: Int,
+) {
 
     var index = start.coerceIn(0, bitrates.lastIndex)
         private set
@@ -43,10 +47,15 @@ internal class TierController(val bitrates: List<Int>, val expected: List<Int>, 
      * null. All must hold: the buffer carries the run-up of the new transcode, the link has [UP_MARGIN] times what the bigger
      * tier asks, the last move (either way) is [UP_PAUSE_MS] ago, and the tier is not already the top of the ladder.
      */
-    fun raiseTo(budget: Int, bufferedMs: Long, nowMs: Long): Int? {
+    fun raiseTo(
+        budget: Int,
+        bufferedMs: Long,
+        nowMs: Long,
+    ): Int? {
         if (index >= bitrates.lastIndex || bufferedMs < UP_BUFFER_MS || nowMs - changedAtMs < UP_PAUSE_MS) return null
         if (budget < expected[index + 1] * UP_MARGIN) return null
-        reason = "the link carries ${budget / 1_000_000} Mbit/s, the next tier asks ${expected[index + 1] / 1_000_000}, ${bufferedMs / 1000} s buffered"
+        reason =
+            "the link carries ${budget / 1_000_000} Mbit/s, the next tier asks ${expected[index + 1] / 1_000_000}, ${bufferedMs / 1000} s buffered"
         index++
         changedAtMs = nowMs
         return bitrates[index]
@@ -80,7 +89,11 @@ internal class SlowLoads {
     private var alarmAtMs = Long.MIN_VALUE / 2
 
     /** One loaded segment; true when the link should be measured now. */
-    fun record(loadMs: Long, playMs: Long, nowMs: Long): Boolean {
+    fun record(
+        loadMs: Long,
+        playMs: Long,
+        nowMs: Long,
+    ): Boolean {
         if (loadMs <= playMs) {
             inARow = 0
             return false

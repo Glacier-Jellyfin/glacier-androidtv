@@ -10,10 +10,10 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -74,7 +74,15 @@ fun SortButton(
             .focusScale(focused)
             .height(52.dp)
             .clip(PillShape)
-            .background(if (focused) accent else if (open) accent.copy(alpha = 0.18f) else GlacierColors.GlassFill2)
+            .background(
+                if (focused) {
+                    accent
+                } else if (open) {
+                    accent.copy(alpha = 0.18f)
+                } else {
+                    GlacierColors.GlassFill2
+                },
+            )
             .border(2.dp, if (focused) accent else GlacierColors.GlassBorder2, PillShape)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .padding(horizontal = 24.dp),
@@ -86,18 +94,31 @@ fun SortButton(
         if (descending != null) {
             Icon(
                 GlacierIcons.ArrowDown,
-                contentDescription = stringResource(if (descending) R.string.sort_descending else R.string.sort_ascending),
+                contentDescription = stringResource(
+                    if (descending) R.string.sort_descending else R.string.sort_ascending,
+                ),
                 tint = foreground,
                 modifier = Modifier.size(19.dp).rotate(if (descending) 0f else 180f),
             )
         }
-        Icon(GlacierIcons.ChevronDown, contentDescription = null, tint = foreground, modifier = Modifier.size(18.dp).rotate(if (open) 180f else 0f))
+        Icon(
+            GlacierIcons.ChevronDown,
+            contentDescription = null,
+            tint = foreground,
+            modifier = Modifier.size(18.dp).rotate(if (open) 180f else 0f),
+        )
     }
 }
 
 /** A toolbar button drawn like the [SortButton], that acts at once: Play, say. Without [label] only its icon, named by [contentDescription]. */
 @Composable
-fun ToolbarButton(label: String?, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier, contentDescription: String? = null) {
+fun ToolbarButton(
+    label: String?,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -114,7 +135,12 @@ fun ToolbarButton(label: String?, icon: ImageVector, onClick: () -> Unit, modifi
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Icon(icon, contentDescription = if (label == null) contentDescription else null, tint = foreground, modifier = Modifier.size(20.dp))
+        Icon(
+            icon,
+            contentDescription = if (label == null) contentDescription else null,
+            tint = foreground,
+            modifier = Modifier.size(20.dp),
+        )
         if (label != null) Text(label, style = GlacierText.body(19, FontWeight.SemiBold), color = foreground)
     }
 }
@@ -173,7 +199,13 @@ fun <T> SortMenu(
 }
 
 @Composable
-private fun SortOption(label: String, active: Boolean, descending: Boolean?, onClick: () -> Unit, modifier: Modifier) {
+private fun SortOption(
+    label: String,
+    active: Boolean,
+    descending: Boolean?,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -187,7 +219,15 @@ private fun SortOption(label: String, active: Boolean, descending: Boolean?, onC
             .fillMaxWidth()
             .height(56.dp)
             .clip(RoundedCornerShape(GlacierShapes.RadiusSm))
-            .background(if (focused) accent else if (active) accent.copy(alpha = 0.16f) else Color.Transparent)
+            .background(
+                if (focused) {
+                    accent
+                } else if (active) {
+                    accent.copy(alpha = 0.16f)
+                } else {
+                    Color.Transparent
+                },
+            )
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .padding(horizontal = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -195,7 +235,12 @@ private fun SortOption(label: String, active: Boolean, descending: Boolean?, onC
     ) {
         Text(label, style = GlacierText.body(19, FontWeight.SemiBold), color = foreground)
         if (active && descending != null) {
-            Icon(GlacierIcons.ArrowDown, contentDescription = null, tint = foreground, modifier = Modifier.size(20.dp).rotate(if (descending) 0f else 180f))
+            Icon(
+                GlacierIcons.ArrowDown,
+                contentDescription = null,
+                tint = foreground,
+                modifier = Modifier.size(20.dp).rotate(if (descending) 0f else 180f),
+            )
         }
     }
 }

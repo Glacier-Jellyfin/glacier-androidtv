@@ -3,28 +3,35 @@ package io.github.glacier_jellyfin.androidtv.core.updater
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
 
 /** Why an update could not be downloaded or installed. */
 enum class UpdateError {
     /** The release feed or the download could not be reached. */
     Network,
+
     /** The release carries no SHA-256 digest, or the file does not match it. */
     Checksum,
+
     /** The file is not this app, or not the version the release promised. */
     Package,
+
     /** Android refused or failed the installation. */
     Install,
 }
 
-class UpdateException(val error: UpdateError, message: String, cause: Throwable? = null) : IOException(message, cause)
+class UpdateException(
+    val error: UpdateError,
+    message: String,
+    cause: Throwable? = null,
+) : IOException(message, cause)
 
 /**
  * Downloads a release APK into the cache and checks it before anyone installs
@@ -46,7 +53,12 @@ internal class ApkDownloader(private val context: Context) {
         val target = File(dir, candidate.apk.name)
         val partial = File(dir, candidate.apk.name + ".part")
         // A finished download from earlier is reused when it still matches.
-        if (target.exists() && sha256(target) == expected) return@withContext target.also { verifyPackage(it, candidate.version) }
+        if (target.exists() && sha256(
+                target,
+            ) == expected
+        ) {
+            return@withContext target.also { verifyPackage(it, candidate.version) }
+        }
 
         val digest = MessageDigest.getInstance("SHA-256")
         // Like the feed, a local test release may use file:// addresses.
@@ -61,7 +73,12 @@ internal class ApkDownloader(private val context: Context) {
                 } catch (e: IOException) {
                     throw UpdateException(UpdateError.Network, "Download failed", e)
                 }
-                if (status != HttpURLConnection.HTTP_OK) throw UpdateException(UpdateError.Network, "Download answered $status")
+                if (status != HttpURLConnection.HTTP_OK) {
+                    throw UpdateException(
+                        UpdateError.Network,
+                        "Download answered $status",
+                    )
+                }
             }
             var done = 0L
             try {
@@ -116,13 +133,19 @@ internal class ApkDownloader(private val context: Context) {
             throw UpdateException(UpdateError.Package, "APK is ${info.packageName}, expected ${context.packageName}")
         }
         if (info.longVersionCode != version.versionCode.toLong()) {
-            throw UpdateException(UpdateError.Package, "APK has versionCode ${info.longVersionCode}, expected ${version.versionCode}")
+            throw UpdateException(
+                UpdateError.Package,
+                "APK has versionCode ${info.longVersionCode}, expected ${version.versionCode}",
+            )
         }
     }
 
     private fun expectedSha256(asset: ReleaseAsset): String {
         val digest = asset.digest?.takeIf { it.startsWith(SHA256_PREFIX) }?.removePrefix(SHA256_PREFIX)?.lowercase()
-        return digest?.takeIf { it.length == 64 } ?: throw UpdateException(UpdateError.Checksum, "Release has no SHA-256 digest for ${asset.name}")
+        return digest?.takeIf { it.length == 64 } ?: throw UpdateException(
+            UpdateError.Checksum,
+            "Release has no SHA-256 digest for ${asset.name}",
+        )
     }
 
     private fun sha256(file: File): String {

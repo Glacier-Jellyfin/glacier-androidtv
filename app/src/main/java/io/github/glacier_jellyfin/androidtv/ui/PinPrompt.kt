@@ -8,7 +8,11 @@ sealed interface PinReason {
     data object Settings : PinReason
 
     /** A title above the profile's age limit; [rating] null when it has none. */
-    data class Title(val itemId: String, val name: String, val rating: String?) : PinReason
+    data class Title(
+        val itemId: String,
+        val name: String,
+        val rating: String?,
+    ) : PinReason
 
     /** Current PIN, then the new one twice. */
     data object Change : PinReason
@@ -51,7 +55,9 @@ data class PinPrompt(
             reason == PinReason.Change -> PinOutcome.Continue(copy(step = PinStep.New, digits = "", error = null))
             else -> PinOutcome.Unlocked
         }
+
         PinStep.New -> PinOutcome.Continue(copy(step = PinStep.Confirm, digits = "", newPin = digits, error = null))
+
         PinStep.Confirm -> if (digits == newPin) {
             PinOutcome.NewPin(digits)
         } else {

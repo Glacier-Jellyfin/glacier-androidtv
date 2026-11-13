@@ -12,10 +12,10 @@ import io.github.glacier_jellyfin.androidtv.core.data.StartChoice
 import io.github.glacier_jellyfin.androidtv.core.data.StartMode
 import io.github.glacier_jellyfin.androidtv.core.data.StoredServer
 import io.github.glacier_jellyfin.androidtv.core.data.profileChoice
+import io.github.glacier_jellyfin.androidtv.core.data.profilesFor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AccentColor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AppearanceSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
-import io.github.glacier_jellyfin.androidtv.core.data.profilesFor
 import io.github.glacier_jellyfin.androidtv.core.data.startChoice
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinKey
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.Authenticator
@@ -29,6 +29,8 @@ import io.github.glacier_jellyfin.androidtv.navigation.SignInRoute
 import io.github.glacier_jellyfin.androidtv.setup.ServerConnector
 import io.github.glacier_jellyfin.androidtv.setup.ServerReachability
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,11 +40,13 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.UUID
-import javax.inject.Inject
 
 /** [accent]: the profile's own accent, the surface behind its initial when it has no picture. */
-data class ProfileCard(val profile: Profile, val imageUrl: String?, val accent: AccentColor = AppearanceSettings().accent)
+data class ProfileCard(
+    val profile: Profile,
+    val imageUrl: String?,
+    val accent: AccentColor = AppearanceSettings().accent,
+)
 
 data class ProfilesState(
     val server: StoredServer? = null,
@@ -91,13 +95,21 @@ class ProfilesViewModel @Inject constructor(
             val answering = finder.identify(server.address)
             if (answering != null && answering.id != serverId) {
                 val moved = connector.adopt(answering)
-                val next = ProfilesRoute(answering.id, appStart = route.appStart, userId = route.userId?.let(moved::get))
+                val next = ProfilesRoute(
+                    answering.id,
+                    appStart = route.appStart,
+                    userId = route.userId?.let(moved::get),
+                )
                 _events.send(UiEvent.Navigate(next, replace = true))
                 return@launch
             }
             _state.update { it.copy(server = server) }
             // Only "the single profile" needs the server's list; the other start modes decide right away.
-            if (route.appStart && (route.userId != null || accounts.current().startProfile.mode != StartMode.Single) && start(publicUsers = null)) {
+            if (route.appStart && (route.userId != null || accounts.current().startProfile.mode != StartMode.Single) &&
+                start(
+                    publicUsers = null,
+                )
+            ) {
                 return@launch
             }
             val users = runSuspendCatching { authenticator.publicUsers(server.address) }
@@ -138,7 +150,9 @@ class ProfilesViewModel @Inject constructor(
         val choice = route.userId?.let { profileChoice(it, profiles) } ?: state.startChoice(serverId, profiles)
         when (choice) {
             StartChoice.Pick -> Unit
+
             is StartChoice.Focus -> _state.update { it.copy(focusUserId = choice.userId) }
+
             // Stays hidden on the way to Home; a revoked token lands on sign-in, and Back shows the profiles.
             is StartChoice.Open -> if (open(profiles.first { it.userId == choice.userId })) return true
         }
@@ -188,7 +202,9 @@ class ProfilesViewModel @Inject constructor(
     /** Returns true when this screen is left: the profile opened (and Home is on its way), or the server did not answer. */
     private suspend fun open(profile: Profile): Boolean {
         val server = _state.value.server ?: return false
-        val token = accounts.current().users.firstOrNull { it.serverId == serverId && it.userId == profile.userId }?.accessToken
+        val token = accounts.current().users.firstOrNull {
+            it.serverId == serverId && it.userId == profile.userId
+        }?.accessToken
         // A revoked token sends the user to sign-in, an unreachable server to the server list.
         val check = token?.let { runSuspendCatching { authenticator.isTokenValid(server.address, it) } }
         if (check?.isFailure == true) {

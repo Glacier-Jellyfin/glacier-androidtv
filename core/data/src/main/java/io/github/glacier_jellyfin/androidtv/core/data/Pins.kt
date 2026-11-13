@@ -19,7 +19,11 @@ object Pins {
 
     fun isValid(pin: String): Boolean = PIN_FORMAT.matches(pin)
 
-    fun hash(pin: String, salt: ByteArray = randomSalt(), iterations: Int = ITERATIONS): PinHash {
+    fun hash(
+        pin: String,
+        salt: ByteArray = randomSalt(),
+        iterations: Int = ITERATIONS,
+    ): PinHash {
         require(isValid(pin)) { "A PIN has exactly four digits" }
         return PinHash(
             salt = Base64.getEncoder().encodeToString(salt),
@@ -38,7 +42,11 @@ object Pins {
         return MessageDigest.isEqual(derive(pin, salt, stored.iterations), expected)
     }
 
-    private fun derive(pin: String, salt: ByteArray, iterations: Int): ByteArray {
+    private fun derive(
+        pin: String,
+        salt: ByteArray,
+        iterations: Int,
+    ): ByteArray {
         val spec = PBEKeySpec(pin.toCharArray(), salt, iterations, KEY_BITS)
         return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
     }

@@ -28,7 +28,11 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
  * Players already hold focus on their controls and leave it off.
  */
 @Composable
-fun Modifier.blockKeysWhile(active: Boolean, takeFocus: Boolean = false, pass: Set<Key> = emptySet()): Modifier {
+fun Modifier.blockKeysWhile(
+    active: Boolean,
+    takeFocus: Boolean = false,
+    pass: Set<Key> = emptySet(),
+): Modifier {
     if (!active) return this
     val requester = remember { FocusRequester() }
     // Taking focus from a control the user already holds would drop it for good

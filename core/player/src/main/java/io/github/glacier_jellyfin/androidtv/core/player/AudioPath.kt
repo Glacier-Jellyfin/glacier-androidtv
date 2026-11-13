@@ -1,6 +1,5 @@
 package io.github.glacier_jellyfin.androidtv.core.player
 
-import androidx.media3.common.C
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
@@ -55,8 +54,11 @@ internal object AudioPath {
      * ([ffmpegDecodes]) can decode is left to FFmpeg: it keeps all the channels and applies no processing of its own, like
      * the file's PCM path, while a platform decoder (e.g. OMX.dolby.ac3.decoder) would downmix to stereo on its own terms.
      */
-    fun platformMayDecode(mime: String?, decodeCompressed: Boolean, ffmpegDecodes: Boolean): Boolean =
-        !(decodeCompressed && mime != null && mime in COMPRESSED && ffmpegDecodes)
+    fun platformMayDecode(
+        mime: String?,
+        decodeCompressed: Boolean,
+        ffmpegDecodes: Boolean,
+    ): Boolean = !(decodeCompressed && mime != null && mime in COMPRESSED && ffmpegDecodes)
 
     /** What the audio track reports: any linear PCM is decoded sound, a compressed encoding is a bitstream. */
     fun isDecoded(encoding: Int): Boolean = Util.isEncodingLinearPcm(encoding)
@@ -64,11 +66,33 @@ internal object AudioPath {
     /** The MIME type of the file's audio from the server's codec name and profile, null when unknown. */
     fun mimeOf(codec: String?, profile: String?): String? = when (codec?.lowercase()) {
         null, "" -> null
+
         "ac3" -> MimeTypes.AUDIO_AC3
-        "eac3" -> if (profile?.contains("atmos", ignoreCase = true) == true) MimeTypes.AUDIO_E_AC3_JOC else MimeTypes.AUDIO_E_AC3
+
+        "eac3" -> if (profile?.contains(
+                "atmos",
+                ignoreCase = true,
+            ) == true
+        ) {
+            MimeTypes.AUDIO_E_AC3_JOC
+        } else {
+            MimeTypes.AUDIO_E_AC3
+        }
+
         "truehd" -> MimeTypes.AUDIO_TRUEHD
+
         "ac4" -> MimeTypes.AUDIO_AC4
-        "dts", "dca" -> if (profile?.contains("DTS-HD", ignoreCase = true) == true) MimeTypes.AUDIO_DTS_HD else MimeTypes.AUDIO_DTS
+
+        "dts", "dca" -> if (profile?.contains(
+                "DTS-HD",
+                ignoreCase = true,
+            ) == true
+        ) {
+            MimeTypes.AUDIO_DTS_HD
+        } else {
+            MimeTypes.AUDIO_DTS
+        }
+
         // AAC, FLAC, PCM and the rest are never passed through: they are always decoded here.
         else -> MimeTypes.AUDIO_RAW
     }
@@ -78,7 +102,11 @@ internal object AudioPath {
      * transcode and so has not played its file yet. [passthrough]: the sink's output takes [mime] as it is; [iec61937]: Glacier
      * packs TrueHD and DTS for HDMI itself. Null when the file's audio is not known.
      */
-    fun predictDecoded(mime: String?, passthrough: Boolean, iec61937: Boolean): Boolean? = when {
+    fun predictDecoded(
+        mime: String?,
+        passthrough: Boolean,
+        iec61937: Boolean,
+    ): Boolean? = when {
         mime == null -> null
         mime !in COMPRESSED -> true
         iec61937 && mime in PACKED -> false

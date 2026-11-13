@@ -4,11 +4,11 @@ import android.content.Context
 import androidx.core.content.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.glacier_jellyfin.androidtv.core.log.Log
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The changes since [previous], newest first, for the "What's new" dialog;
@@ -29,10 +29,7 @@ data class WhatsNewPrompt(
  * installation shows nothing. Applies to the whole device, like the updater.
  */
 @Singleton
-class WhatsNew @Inject constructor(
-    @ApplicationContext private val context: Context,
-    config: UpdaterConfig,
-) {
+class WhatsNew @Inject constructor(@ApplicationContext private val context: Context, config: UpdaterConfig) {
     private val prefs = context.getSharedPreferences("whats_new", Context.MODE_PRIVATE)
     private val running: AppVersion? = AppVersion.parse(config.versionName)
 
@@ -79,12 +76,15 @@ class WhatsNew @Inject constructor(
         if (!on) running?.let(::remember)
     }
 
-    private fun changesBetween(asset: String, last: AppVersion, current: AppVersion): List<ChangelogEntry> =
-        runCatching { context.assets.open(asset).bufferedReader().use { it.readText() } }
-            .onFailure { Log.w(TAG, "No $asset in this build", it) }
-            .getOrNull()
-            ?.let { Changelog.between(Changelog.parse(it), last, current) }
-            .orEmpty()
+    private fun changesBetween(
+        asset: String,
+        last: AppVersion,
+        current: AppVersion,
+    ): List<ChangelogEntry> = runCatching { context.assets.open(asset).bufferedReader().use { it.readText() } }
+        .onFailure { Log.w(TAG, "No $asset in this build", it) }
+        .getOrNull()
+        ?.let { Changelog.between(Changelog.parse(it), last, current) }
+        .orEmpty()
 
     private fun remember(version: AppVersion) {
         prefs.edit { putString(KEY_LAST, version.toString()) }
@@ -93,6 +93,7 @@ class WhatsNew @Inject constructor(
     private companion object {
         const val TAG = "WhatsNew"
         const val ASSET = "CHANGELOG.md"
+
         /** Languages with a CHANGELOG.<language>.md besides the English one. */
         val TRANSLATIONS = listOf("de", "es")
         const val KEY_LAST = "last_version"

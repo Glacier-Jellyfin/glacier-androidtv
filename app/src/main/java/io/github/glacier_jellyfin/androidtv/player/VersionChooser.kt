@@ -12,10 +12,10 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepositor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.showKey
 import io.github.glacier_jellyfin.androidtv.core.log.Log
-import kotlinx.coroutines.CancellationException
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 
 /**
  * Which file of a title with several plays (#8): the one picked for the movie

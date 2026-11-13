@@ -53,16 +53,13 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinDots
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
-import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.PinEntry
 import io.github.glacier_jellyfin.androidtv.ui.TvPlatform
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 
 @Composable
-fun ProfilesScreen(
-    onNavigate: (UiEvent.Navigate) -> Unit,
-    viewModel: ProfilesViewModel = hiltViewModel(),
-) {
+fun ProfilesScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: ProfilesViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val platform = remember { TvPlatform.of(context) }
@@ -82,7 +79,10 @@ fun ProfilesScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(64.dp),
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
                 GlacierMark(size = 62)
                 Text(
                     stringResource(R.string.app_name).uppercase(),
@@ -92,27 +92,40 @@ fun ProfilesScreen(
                 Text(stringResource(platform.label), style = GlacierText.body(19), color = GlacierColors.Mist)
             }
             // While the start profile opens only the brand shows, so the profiles do not flash up.
-            if (!state.starting) Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(36.dp)) {
-                Text(stringResource(R.string.profiles_title), style = GlacierText.display(38), color = GlacierColors.Ice)
-                val focusIndex = state.profiles.indexOfFirst { it.profile.userId == state.focusUserId }.coerceAtLeast(0)
-                Row(horizontalArrangement = Arrangement.spacedBy(52.dp)) {
-                    state.profiles.forEachIndexed { index, card ->
-                        ProfileTile(
-                            card = card,
-                            onClick = { viewModel.select(card.profile) },
-                            focusRequester = firstFocus.takeIf { index == focusIndex },
-                        )
+            if (!state.starting) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(36.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.profiles_title),
+                        style = GlacierText.display(38),
+                        color = GlacierColors.Ice,
+                    )
+                    val focusIndex = state.profiles.indexOfFirst {
+                        it.profile.userId == state.focusUserId
+                    }.coerceAtLeast(
+                        0,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(52.dp)) {
+                        state.profiles.forEachIndexed { index, card ->
+                            ProfileTile(
+                                card = card,
+                                onClick = { viewModel.select(card.profile) },
+                                focusRequester = firstFocus.takeIf { index == focusIndex },
+                            )
+                        }
                     }
+                    PillButton(
+                        text = stringResource(R.string.profiles_other_user),
+                        onClick = viewModel::otherUser,
+                        icon = GlacierIcons.Plus,
+                        height = 56,
+                        modifier = Modifier
+                            .padding(top = 12.dp)
+                            .then(if (state.profiles.isEmpty()) Modifier.focusRequester(firstFocus) else Modifier),
+                    )
                 }
-                PillButton(
-                    text = stringResource(R.string.profiles_other_user),
-                    onClick = viewModel::otherUser,
-                    icon = GlacierIcons.Plus,
-                    height = 56,
-                    modifier = Modifier
-                        .padding(top = 12.dp)
-                        .then(if (state.profiles.isEmpty()) Modifier.focusRequester(firstFocus) else Modifier),
-                )
             }
         }
 
@@ -125,7 +138,12 @@ fun ProfilesScreen(
                 contentAlignment = Alignment.Center,
             ) { focused ->
                 Text(
-                    stringResource(R.string.profiles_server_line, server.address, server.version.orEmpty(), BuildConfig.VERSION_NAME),
+                    stringResource(
+                        R.string.profiles_server_line,
+                        server.address,
+                        server.version.orEmpty(),
+                        BuildConfig.VERSION_NAME,
+                    ),
                     style = GlacierText.body(17),
                     color = if (focused) LocalAccent.current.main else GlacierColors.Mist,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
@@ -136,8 +154,15 @@ fun ProfilesScreen(
 
     state.pinFor?.let { profile ->
         ModalSheet(onDismiss = viewModel::dismissPin) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.pin_title, profile.name), style = GlacierText.display(28), color = GlacierColors.Ice)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    stringResource(R.string.pin_title, profile.name),
+                    style = GlacierText.display(28),
+                    color = GlacierColors.Ice,
+                )
                 Text(
                     stringResource(if (state.pinWrong) R.string.pin_wrong else R.string.pin_hint),
                     style = GlacierText.body(17),
@@ -153,7 +178,11 @@ fun ProfilesScreen(
 }
 
 @Composable
-private fun ProfileTile(card: ProfileCard, onClick: () -> Unit, focusRequester: FocusRequester? = null) {
+private fun ProfileTile(
+    card: ProfileCard,
+    onClick: () -> Unit,
+    focusRequester: FocusRequester? = null,
+) {
     val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
     var focused by remember { mutableStateOf(false) }
     Column(
@@ -185,7 +214,9 @@ private fun ProfileTile(card: ProfileCard, onClick: () -> Unit, focusRequester: 
                     if (!imageLoaded) {
                         Text(
                             card.profile.name.take(1).uppercase(),
-                            style = GlacierText.display(64).copy(shadow = Shadow(Color.Black.copy(alpha = 0.5f), blurRadius = 18f)),
+                            style = GlacierText.display(
+                                64,
+                            ).copy(shadow = Shadow(Color.Black.copy(alpha = 0.5f), blurRadius = 18f)),
                             color = GlacierColors.Ice,
                         )
                     }
@@ -209,12 +240,22 @@ private fun ProfileTile(card: ProfileCard, onClick: () -> Unit, focusRequester: 
                                 .border(1.dp, GlacierColors.GlassBorder2, PillShape),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(GlacierIcons.Lock, contentDescription = null, tint = GlacierColors.Ice, modifier = Modifier.size(18.dp))
+                            Icon(
+                                GlacierIcons.Lock,
+                                contentDescription = null,
+                                tint = GlacierColors.Ice,
+                                modifier = Modifier.size(18.dp),
+                            )
                         }
                     }
                 }
             }
         }
-        Text(card.profile.name, style = GlacierText.body(21, FontWeight.SemiBold), color = if (focused) profileAccent.main else GlacierColors.Ice, maxLines = 1)
+        Text(
+            card.profile.name,
+            style = GlacierText.body(21, FontWeight.SemiBold),
+            color = if (focused) profileAccent.main else GlacierColors.Ice,
+            maxLines = 1,
+        )
     }
 }

@@ -81,12 +81,30 @@ fun ActionButton(
         if (icon != null) {
             val iconSize = if (label != null) 20.dp else 26.dp
             Box(contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = if (label == null) contentDescription else null, tint = foreground, modifier = Modifier.size(iconSize))
+                Icon(
+                    icon,
+                    contentDescription = if (label == null) contentDescription else null,
+                    tint = foreground,
+                    modifier = Modifier.size(iconSize),
+                )
                 if (iconMark != null) {
-                    Icon(iconMark, contentDescription = null, tint = if (focused) accent.main else GlacierColors.Void, modifier = Modifier.size(iconSize))
+                    Icon(
+                        iconMark,
+                        contentDescription = null,
+                        tint = if (focused) accent.main else GlacierColors.Void,
+                        modifier = Modifier.size(iconSize),
+                    )
                 }
             }
         }
-        if (label != null) Text(label, style = GlacierText.body(21, FontWeight.SemiBold), color = foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (label != null) {
+            Text(
+                label,
+                style = GlacierText.body(21, FontWeight.SemiBold),
+                color = foreground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }

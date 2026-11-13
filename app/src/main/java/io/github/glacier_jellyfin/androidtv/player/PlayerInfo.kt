@@ -12,8 +12,8 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -38,11 +38,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -87,10 +87,10 @@ import io.github.glacier_jellyfin.androidtv.ui.FactBadge
 import io.github.glacier_jellyfin.androidtv.ui.FactsRow
 import io.github.glacier_jellyfin.androidtv.ui.episodeText
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
-import kotlinx.coroutines.delay
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 
 /** Good news on the sheet: hardware decoding, direct play, a track passed on as it is. */
 internal val InfoOk = Color(0xFF8FD6B0)
@@ -130,7 +130,9 @@ fun InfoPanel(
     }
     InfoPanelFrame(
         tabs = listOf(
-            stringResource(if (details.item.kind == ItemKind.Episode) R.string.player_info_episode else R.string.player_info_movie),
+            stringResource(
+                if (details.item.kind == ItemKind.Episode) R.string.player_info_episode else R.string.player_info_movie,
+            ),
             stringResource(R.string.player_info_technical),
             stringResource(R.string.player_info_server),
         ),
@@ -191,12 +193,14 @@ internal fun InfoPanelFrame(
                             if (event.type == KeyEventType.KeyUp) onDismiss()
                             true
                         }
+
                         Key.DirectionLeft, Key.DirectionRight -> {
                             if (event.type == KeyEventType.KeyDown) {
                                 tab = (tab + (direction.horizontalStep(event.key) ?: 0)).coerceIn(0, tabs.lastIndex)
                             }
                             true
                         }
+
                         else -> false
                     }
                 }
@@ -217,7 +221,11 @@ internal fun InfoPanelFrame(
 // Title
 
 @Composable
-private fun TitleTab(details: ItemDetails, progress: PlayerProgress, cast: List<CastMember>) {
+private fun TitleTab(
+    details: ItemDetails,
+    progress: PlayerProgress,
+    cast: List<CastMember>,
+) {
     val item = details.item
     val episode = item.kind == ItemKind.Episode
     val locale = LocalConfiguration.current.locales[0]
@@ -227,7 +235,9 @@ private fun TitleTab(details: ItemDetails, progress: PlayerProgress, cast: List<
             val art = if (episode) Modifier.width(320.dp).height(180.dp) else Modifier.width(230.dp).height(345.dp)
             Artwork(
                 if (episode) item.thumbUrl else item.posterUrl,
-                art.clip(RoundedCornerShape(GlacierShapes.RadiusMd)).border(1.dp, GlacierColors.GlassBorder, RoundedCornerShape(GlacierShapes.RadiusMd)),
+                art.clip(
+                    RoundedCornerShape(GlacierShapes.RadiusMd),
+                ).border(1.dp, GlacierColors.GlassBorder, RoundedCornerShape(GlacierShapes.RadiusMd)),
             )
             Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 val crumb = if (episode) {
@@ -235,10 +245,30 @@ private fun TitleTab(details: ItemDetails, progress: PlayerProgress, cast: List<
                 } else {
                     item.genres.take(3)
                 }.joinToString(" · ")
-                if (crumb.isNotEmpty()) Text(crumb, style = GlacierText.body(18), color = OsdSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(item.title, style = GlacierText.display(44), color = GlacierColors.Ice, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (crumb.isNotEmpty()) {
+                    Text(
+                        crumb,
+                        style = GlacierText.body(18),
+                        color = OsdSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Text(
+                    item.title,
+                    style = GlacierText.display(44),
+                    color = GlacierColors.Ice,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 details.tagline?.let {
-                    Text(it, style = GlacierText.body(20).copy(fontStyle = FontStyle.Italic), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        it,
+                        style = GlacierText.body(20).copy(fontStyle = FontStyle.Italic),
+                        color = GlacierColors.Mist,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
                 val runtime = (progress.durationMs / 60_000).toInt().takeIf { it > 0 } ?: item.runtimeMinutes
                 FactsRow(
@@ -258,10 +288,20 @@ private fun TitleTab(details: ItemDetails, progress: PlayerProgress, cast: List<
                     )
                 }
                 val facts = listOfNotNull(
-                    details.directors.takeIf { it.isNotEmpty() }?.let { stringResource(R.string.player_info_directors) to it.take(2).joinToString(", ") },
-                    details.studios.takeIf { it.isNotEmpty() }?.let { stringResource(R.string.player_info_studios) to it.take(3).joinToString(", ") },
+                    details.directors.takeIf { it.isNotEmpty() }?.let {
+                        stringResource(
+                            R.string.player_info_directors,
+                        ) to it.take(2).joinToString(", ")
+                    },
+                    details.studios.takeIf { it.isNotEmpty() }?.let {
+                        stringResource(
+                            R.string.player_info_studios,
+                        ) to it.take(3).joinToString(", ")
+                    },
                     details.premiereDate?.takeIf { episode }?.let {
-                        stringResource(R.string.player_info_premiere) to it.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(locale))
+                        stringResource(
+                            R.string.player_info_premiere,
+                        ) to it.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(locale))
                     },
                 )
                 if (facts.isNotEmpty()) {
@@ -342,12 +382,25 @@ private fun TechnicalTab(state: PlayerUiState, stats: StreamStats?) {
 
 /** What this device decodes of the picture, and with what; also Live TV's. */
 @Composable
-internal fun VideoCard(decoder: String?, stats: StreamStats?, modifier: Modifier) {
+internal fun VideoCard(
+    decoder: String?,
+    stats: StreamStats?,
+    modifier: Modifier,
+) {
     val format = stats?.video
     InfoCard(
         label = stringResource(R.string.player_info_video),
         status = decoder?.let {
-            if (isSoftwareDecoder(it)) stringResource(R.string.player_info_software) to Tone.Plain else stringResource(R.string.player_info_hardware) to Tone.Ok
+            if (isSoftwareDecoder(
+                    it,
+                )
+            ) {
+                stringResource(
+                    R.string.player_info_software,
+                ) to Tone.Plain
+            } else {
+                stringResource(R.string.player_info_hardware) to Tone.Ok
+            }
         },
         headline = format?.let(::videoHeadline),
         details = format?.let(::videoDetails),
@@ -360,13 +413,22 @@ internal fun VideoCard(decoder: String?, stats: StreamStats?, modifier: Modifier
 
 /** The sound as this device plays it: decoded, or passed on to the TV or receiver; also Live TV's. */
 @Composable
-internal fun AudioCard(language: String?, decoder: String?, output: AudioOutput?, stats: StreamStats?, modifier: Modifier) {
+internal fun AudioCard(
+    language: String?,
+    decoder: String?,
+    output: AudioOutput?,
+    stats: StreamStats?,
+    modifier: Modifier,
+) {
     val locale = LocalConfiguration.current.locales[0]
     val format = stats?.audio
     InfoCard(
         label = stringResource(R.string.player_audio),
         status = output?.passthrough?.let { stringResource(R.string.player_info_passthrough) to Tone.Ok },
-        headline = listOfNotNull(Languages.name(language, locale), format?.let(::audioHeadline)).joinToString(" · ").ifEmpty { null },
+        headline = listOfNotNull(
+            Languages.name(language, locale),
+            format?.let(::audioHeadline),
+        ).joinToString(" · ").ifEmpty { null },
         details = format?.let(::audioDetails)?.ifEmpty { null },
         modifier = modifier,
     ) {
@@ -375,7 +437,13 @@ internal fun AudioCard(language: String?, decoder: String?, output: AudioOutput?
                 ?: stringResource(R.string.player_info_decoded_to, channelLayout(it.channels).orEmpty())
             FactRow(stringResource(R.string.player_info_output), text)
         }
-        decoder?.takeIf { output?.passthrough == null }?.let { FactRow(stringResource(R.string.player_info_decoder), it, mono = true) }
+        decoder?.takeIf { output?.passthrough == null }?.let {
+            FactRow(
+                stringResource(R.string.player_info_decoder),
+                it,
+                mono = true,
+            )
+        }
     }
 }
 
@@ -407,14 +475,25 @@ private fun SubtitleCard(state: PlayerUiState, modifier: Modifier) {
 }
 
 @Composable
-private fun DisplayCard(state: PlayerUiState, stats: StreamStats?, display: DisplayInfo, modifier: Modifier) {
+private fun DisplayCard(
+    state: PlayerUiState,
+    stats: StreamStats?,
+    display: DisplayInfo,
+    modifier: Modifier,
+) {
     val fps = stats?.video?.frameRate?.takeIf { it > 0 } ?: state.file?.video?.frameRate
     val matches = fps?.let { frameRateMatches(display.refreshRate, it) }
     val accent = LocalAccent.current
     InfoCard(
         label = stringResource(R.string.player_info_tv),
         status = matches?.let {
-            if (it) stringResource(R.string.player_info_refresh_ok) to Tone.Ok else stringResource(R.string.player_info_refresh_off) to Tone.Warn
+            if (it) {
+                stringResource(
+                    R.string.player_info_refresh_ok,
+                ) to Tone.Ok
+            } else {
+                stringResource(R.string.player_info_refresh_off) to Tone.Warn
+            }
         },
         headline = "${display.width}×${display.height} @ ${refreshText(display.refreshRate)}",
         details = fps?.let {
@@ -427,7 +506,12 @@ private fun DisplayCard(state: PlayerUiState, stats: StreamStats?, display: Disp
         modifier = modifier,
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.player_info_hdr), style = GlacierText.body(17), color = GlacierColors.Mist, modifier = Modifier.width(150.dp))
+            Text(
+                stringResource(R.string.player_info_hdr),
+                style = GlacierText.body(17),
+                color = GlacierColors.Mist,
+                modifier = Modifier.width(150.dp),
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 HdrFormat.entries.forEach { format ->
                     val on = format in display.hdr
@@ -469,7 +553,12 @@ internal fun BufferRow(stats: StreamStats?, switch: StreamSwitch? = null) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (handOver != null && switch != null) {
                         SplitInfoBar(
-                            bufferSplit(handOver.bufferedMs, handOver.pointInMs, handOver.nextLoadedMs, maxSeconds * 1000L),
+                            bufferSplit(
+                                handOver.bufferedMs,
+                                handOver.pointInMs,
+                                handOver.nextLoadedMs,
+                                maxSeconds * 1000L,
+                            ),
                             accent.main,
                             accent.main.copy(alpha = 0.4f),
                             thickness = 8,
@@ -485,17 +574,37 @@ internal fun BufferRow(stats: StreamStats?, switch: StreamSwitch? = null) {
                     softWrap = false,
                 )
                 stats?.bandwidth?.let(::bitrateText)?.let {
-                    Text(stringResource(R.string.player_info_bandwidth, it), style = GlacierText.body(18), color = OsdSecondary, softWrap = false)
+                    Text(
+                        stringResource(R.string.player_info_bandwidth, it),
+                        style = GlacierText.body(18),
+                        color = OsdSecondary,
+                        softWrap = false,
+                    )
                 }
             }
             if (switch != null) {
                 if (handOver != null) {
-                    val until = stringResource(R.string.player_info_buffer_until, switch.from.labelText(), formatTime(switch.atMs + handOver.postponedMs))
-                    val loaded = stringResource(R.string.player_info_buffer_loaded, switch.to.labelText(), handOver.nextLoadedMs / 1000)
+                    val until = stringResource(
+                        R.string.player_info_buffer_until,
+                        switch.from.labelText(),
+                        formatTime(switch.atMs + handOver.postponedMs),
+                    )
+                    val loaded = stringResource(
+                        R.string.player_info_buffer_loaded,
+                        switch.to.labelText(),
+                        handOver.nextLoadedMs / 1000,
+                    )
                     // Under the bar, in the column of the bar.
                     Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
                         Spacer(labelModifier)
-                        Text("$until │ $loaded", style = GlacierText.body(16), color = OsdSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Text(
+                            "$until │ $loaded",
+                            style = GlacierText.body(16),
+                            color = OsdSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                 }
                 val from = switch.from.labelText()
@@ -507,10 +616,27 @@ internal fun BufferRow(stats: StreamStats?, switch: StreamSwitch? = null) {
                         val headline = if (handOver != null && handOver.postponedMs > 0) {
                             stringResource(R.string.player_info_switch_waiting, from, to)
                         } else {
-                            stringResource(R.string.player_info_switch_in, from, to, ((handOver?.pointInMs ?: 0L) / 1000).toInt())
+                            stringResource(
+                                R.string.player_info_switch_in,
+                                from,
+                                to,
+                                ((handOver?.pointInMs ?: 0L) / 1000).toInt(),
+                            )
                         }
-                        Text(headline, style = GlacierText.body(18, FontWeight.SemiBold), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(switch.reason.text(), style = GlacierText.body(16), color = OsdSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            headline,
+                            style = GlacierText.body(18, FontWeight.SemiBold),
+                            color = GlacierColors.Ice,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            switch.reason.text(),
+                            style = GlacierText.body(16),
+                            color = OsdSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 }
             }
@@ -531,11 +657,31 @@ private fun SwitchReason.text(): String {
     val numbers = mbit
     return when (cause) {
         SwitchCause.LinkSlow ->
-            if (numbers != null) stringResource(R.string.player_info_reason_link_numbers, numbers.first, numbers.second) else stringResource(R.string.player_info_reason_link)
+            if (numbers != null) {
+                stringResource(
+                    R.string.player_info_reason_link_numbers,
+                    numbers.first,
+                    numbers.second,
+                )
+            } else {
+                stringResource(R.string.player_info_reason_link)
+            }
+
         SwitchCause.Draining -> stringResource(R.string.player_info_reason_draining)
+
         SwitchCause.Stalls -> stringResource(R.string.player_info_reason_stalls)
+
         SwitchCause.Throughput ->
-            if (numbers != null) stringResource(R.string.player_info_reason_throughput_numbers, numbers.first, numbers.second) else stringResource(R.string.player_info_reason_throughput)
+            if (numbers != null) {
+                stringResource(
+                    R.string.player_info_reason_throughput_numbers,
+                    numbers.first,
+                    numbers.second,
+                )
+            } else {
+                stringResource(R.string.player_info_reason_throughput)
+            }
+
         SwitchCause.LinkRecovered -> stringResource(R.string.player_info_reason_recovered)
     }
 }
@@ -543,7 +689,11 @@ private fun SwitchReason.text(): String {
 // Server
 
 @Composable
-private fun ServerTab(state: PlayerUiState, stats: StreamStats?, transcodeStatus: suspend () -> TranscodeStatus?) {
+private fun ServerTab(
+    state: PlayerUiState,
+    stats: StreamStats?,
+    transcodeStatus: suspend () -> TranscodeStatus?,
+) {
     val method = state.method ?: return
     val file = state.file
     val direct = method == PlaybackMethod.DirectPlay
@@ -589,7 +739,10 @@ internal fun DeliveryHeader(method: PlaybackMethod, reasons: List<String>) {
             modifier = Modifier.padding(end = 14.dp).align(Alignment.CenterVertically),
         )
         if (!direct && reasons.isNotEmpty()) {
-            SectionLabel(stringResource(R.string.player_info_why), Modifier.align(Alignment.CenterVertically).padding(end = 4.dp))
+            SectionLabel(
+                stringResource(R.string.player_info_why),
+                Modifier.align(Alignment.CenterVertically).padding(end = 4.dp),
+            )
             reasons.forEach { StatusPill(reasonText(it), Tone.Plain, Modifier.align(Alignment.CenterVertically)) }
         }
     }
@@ -632,12 +785,25 @@ internal fun StreamTable(
                 StreamRow(
                     stringResource(R.string.player_info_video),
                     listOfNotNull(sourceVideoHeadline(video), rangeText(video)).joinToString(" · "),
-                    if (direct) directLabel else if (videoCopied) copied else converted,
+                    if (direct) {
+                        directLabel
+                    } else if (videoCopied) {
+                        copied
+                    } else {
+                        converted
+                    },
                     if (direct || videoCopied) Tone.Ok else Tone.Warn,
                     when {
                         direct -> null
+
                         videoCopied -> unchanged
-                        else -> stats?.video?.let { listOfNotNull(videoHeadline(it), bitrateText(it.bitrate)).joinToString(" · ") }
+
+                        else -> stats?.video?.let {
+                            listOfNotNull(
+                                videoHeadline(it),
+                                bitrateText(it.bitrate),
+                            ).joinToString(" · ")
+                        }
                     },
                 ),
             )
@@ -650,12 +816,25 @@ internal fun StreamTable(
                 StreamRow(
                     stringResource(R.string.player_audio),
                     listOfNotNull(sourceAudioText(audio), Languages.name(language, locale)).joinToString(" · "),
-                    if (direct) directLabel else if (audioCopied) copied else converted,
+                    if (direct) {
+                        directLabel
+                    } else if (audioCopied) {
+                        copied
+                    } else {
+                        converted
+                    },
                     if (direct || audioCopied) Tone.Ok else Tone.Warn,
                     when {
                         direct -> null
+
                         audioCopied -> unchanged
-                        else -> stats?.audio?.let { listOfNotNull(audioHeadline(it), bitrateText(it.bitrate)).joinToString(" · ") }
+
+                        else -> stats?.audio?.let {
+                            listOfNotNull(
+                                audioHeadline(it),
+                                bitrateText(it.bitrate),
+                            ).joinToString(" · ")
+                        }
                     },
                 ),
             )
@@ -663,7 +842,15 @@ internal fun StreamTable(
         if (subtitle != null) add(subtitleRow(subtitle, direct))
         file.bitrate?.let(::bitrateText)?.let { source ->
             val streamBitrate = stats?.video?.bitrate?.takeIf { !direct && it > 0 }
-            add(StreamRow(stringResource(R.string.player_info_bitrate), source, null, Tone.Plain, streamBitrate?.let(::bitrateText)))
+            add(
+                StreamRow(
+                    stringResource(R.string.player_info_bitrate),
+                    source,
+                    null,
+                    Tone.Plain,
+                    streamBitrate?.let(::bitrateText),
+                ),
+            )
         }
     }
 
@@ -688,7 +875,13 @@ internal fun StreamRowsTable(rows: List<StreamRow>, direct: Boolean) {
                     Text(row.label, style = GlacierText.body(18), color = GlacierColors.Mist, maxLines = 1)
                 }
                 TableCell(Modifier.weight(1f)) {
-                    Text(row.source, style = GlacierText.body(18), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        row.source,
+                        style = GlacierText.body(18),
+                        color = GlacierColors.Ice,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
                 TableCell(Modifier.width(STREAM_MID_WIDTH.dp)) {
                     row.change?.let { StatusPill(it, row.tone) }
@@ -710,18 +903,39 @@ internal fun StreamRowsTable(rows: List<StreamRow>, direct: Boolean) {
 private const val STREAM_LABEL_WIDTH = 170
 private const val STREAM_MID_WIDTH = 190
 
-internal data class StreamRow(val label: String, val source: String, val change: String?, val tone: Tone, val stream: String?)
+internal data class StreamRow(
+    val label: String,
+    val source: String,
+    val change: String?,
+    val tone: Tone,
+    val stream: String?,
+)
 
 @Composable
 private fun subtitleRow(subtitle: PlaybackSubtitle, direct: Boolean): StreamRow {
     val locale = LocalConfiguration.current.locales[0]
-    val source = listOfNotNull(subtitleFormat(subtitle.track.codec), Languages.name(subtitle.track.language, locale)).joinToString(" · ")
+    val source = listOfNotNull(
+        subtitleFormat(subtitle.track.codec),
+        Languages.name(subtitle.track.language, locale),
+    ).joinToString(" · ")
     val (change, tone, stream) = when (subtitle.delivery) {
         SubtitleDelivery.BurnIn -> Triple(R.string.player_info_burned, Tone.Warn, R.string.player_info_sub_burned)
+
         SubtitleDelivery.External -> Triple(R.string.player_info_sent, Tone.Ok, R.string.player_info_sub_external)
-        SubtitleDelivery.Embedded -> Triple(if (direct) R.string.player_info_direct else R.string.player_info_copied, Tone.Ok, R.string.player_info_sub_drawn)
+
+        SubtitleDelivery.Embedded -> Triple(
+            if (direct) R.string.player_info_direct else R.string.player_info_copied,
+            Tone.Ok,
+            R.string.player_info_sub_drawn,
+        )
     }
-    return StreamRow(stringResource(R.string.player_subtitles), source, stringResource(change), tone, stringResource(stream).takeIf { !direct })
+    return StreamRow(
+        stringResource(R.string.player_subtitles),
+        source,
+        stringResource(change),
+        tone,
+        stringResource(stream).takeIf { !direct },
+    )
 }
 
 @Composable
@@ -733,7 +947,10 @@ internal fun TranscodeCard(status: TranscodeStatus, sourceFrameRate: Float?) {
                 val speed = sourceFps?.let { String.format(java.util.Locale.ROOT, "%.1f×", fps / it) } ?: fpsText(fps)
                 Stat(speed, stringResource(R.string.player_info_speed))
             }
-            Stat(status.hardware ?: stringResource(R.string.player_info_software), stringResource(R.string.player_info_acceleration))
+            Stat(
+                status.hardware ?: stringResource(R.string.player_info_software),
+                stringResource(R.string.player_info_acceleration),
+            )
             status.completion?.let { completion ->
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionLabel(stringResource(R.string.player_info_progress, completion.roundToInt()))
@@ -747,7 +964,13 @@ internal fun TranscodeCard(status: TranscodeStatus, sourceFrameRate: Float?) {
 @Composable
 internal fun Stat(value: String, label: String) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(value, style = GlacierText.body(30, FontWeight.Bold), color = GlacierColors.Ice, maxLines = 1, softWrap = false)
+        Text(
+            value,
+            style = GlacierText.body(30, FontWeight.Bold),
+            color = GlacierColors.Ice,
+            maxLines = 1,
+            softWrap = false,
+        )
         Text(label, style = GlacierText.body(15), color = GlacierColors.Mist, maxLines = 1, softWrap = false)
     }
 }
@@ -789,7 +1012,11 @@ internal fun reasonText(reason: String): String = when (reason) {
 // Building blocks
 
 @Composable
-internal fun InfoSurface(modifier: Modifier, padding: Int = 24, content: @Composable () -> Unit) {
+internal fun InfoSurface(
+    modifier: Modifier,
+    padding: Int = 24,
+    content: @Composable () -> Unit,
+) {
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     Box(
         modifier
@@ -816,17 +1043,42 @@ internal fun InfoCard(
                 SectionLabel(label, Modifier.weight(1f))
                 status?.let { (text, tone) -> StatusPill(text, tone) }
             }
-            Text(headline ?: "–", style = GlacierText.body(28, FontWeight.Bold), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            details?.let { Text(it, style = GlacierText.body(18), color = OsdSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            Text(
+                headline ?: "–",
+                style = GlacierText.body(28, FontWeight.Bold),
+                color = GlacierColors.Ice,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            details?.let {
+                Text(
+                    it,
+                    style = GlacierText.body(18),
+                    color = OsdSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             Column(Modifier.padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = rows)
         }
     }
 }
 
 @Composable
-internal fun FactRow(label: String, value: String, labelWidth: Int = 150, mono: Boolean = false) {
+internal fun FactRow(
+    label: String,
+    value: String,
+    labelWidth: Int = 150,
+    mono: Boolean = false,
+) {
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = GlacierText.body(17), color = GlacierColors.Mist, maxLines = 1, modifier = Modifier.width(labelWidth.dp))
+        Text(
+            label,
+            style = GlacierText.body(17),
+            color = GlacierColors.Mist,
+            maxLines = 1,
+            modifier = Modifier.width(labelWidth.dp),
+        )
         Text(
             value,
             style = if (mono) GlacierText.mono(16) else GlacierText.body(17, FontWeight.Medium),
@@ -839,11 +1091,23 @@ internal fun FactRow(label: String, value: String, labelWidth: Int = 150, mono: 
 
 @Composable
 internal fun SectionLabel(text: String, modifier: Modifier = Modifier) {
-    Text(text.uppercase(), style = GlacierText.label(14, 0.08), color = GlacierColors.Mist, maxLines = 1, softWrap = false, modifier = modifier)
+    Text(
+        text.uppercase(),
+        style = GlacierText.label(14, 0.08),
+        color = GlacierColors.Mist,
+        maxLines = 1,
+        softWrap = false,
+        modifier = modifier,
+    )
 }
 
 @Composable
-internal fun StatusPill(text: String, tone: Tone, modifier: Modifier = Modifier, large: Boolean = false) {
+internal fun StatusPill(
+    text: String,
+    tone: Tone,
+    modifier: Modifier = Modifier,
+    large: Boolean = false,
+) {
     val color = tone.color()
     Row(
         modifier
@@ -854,7 +1118,13 @@ internal fun StatusPill(text: String, tone: Tone, modifier: Modifier = Modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (tone != Tone.Plain) Box(Modifier.size(8.dp).clip(CircleShape).background(color))
-        Text(text, style = GlacierText.body(if (large) 20 else 16, FontWeight.SemiBold), color = color, maxLines = 1, softWrap = false)
+        Text(
+            text,
+            style = GlacierText.body(if (large) 20 else 16, FontWeight.SemiBold),
+            color = color,
+            maxLines = 1,
+            softWrap = false,
+        )
     }
 }
 
@@ -866,7 +1136,12 @@ internal fun Tone.color(): Color = when (this) {
 }
 
 @Composable
-internal fun InfoBar(fraction: Float, color: Color, modifier: Modifier = Modifier, thickness: Int = 6) {
+internal fun InfoBar(
+    fraction: Float,
+    color: Color,
+    modifier: Modifier = Modifier,
+    thickness: Int = 6,
+) {
     Box(modifier.fillMaxWidth().height(thickness.dp).clip(PillShape).background(GlacierColors.GlassFill2)) {
         Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).fillMaxHeight().clip(PillShape).background(color))
     }
@@ -877,7 +1152,13 @@ internal fun InfoBar(fraction: Float, color: Color, modifier: Modifier = Modifie
  * divider at the point, then what the next stream has loaded in [nextColor].
  */
 @Composable
-internal fun SplitInfoBar(split: BufferSplit, color: Color, nextColor: Color, modifier: Modifier = Modifier, thickness: Int = 6) {
+internal fun SplitInfoBar(
+    split: BufferSplit,
+    color: Color,
+    nextColor: Color,
+    modifier: Modifier = Modifier,
+    thickness: Int = 6,
+) {
     Box(
         modifier
             .fillMaxWidth()
@@ -887,9 +1168,17 @@ internal fun SplitInfoBar(split: BufferSplit, color: Color, nextColor: Color, mo
             .drawBehind {
                 val width = size.width
                 drawRect(color, size = Size(width * split.playing, size.height))
-                drawRect(nextColor, topLeft = Offset(width * split.point, 0f), size = Size(width * (split.nextEnd - split.point), size.height))
+                drawRect(
+                    nextColor,
+                    topLeft = Offset(width * split.point, 0f),
+                    size = Size(width * (split.nextEnd - split.point), size.height),
+                )
                 val divider = 2.dp.toPx()
-                drawRect(GlacierColors.Ice, topLeft = Offset((width * split.point - divider / 2).coerceAtLeast(0f), 0f), size = Size(divider, size.height))
+                drawRect(
+                    GlacierColors.Ice,
+                    topLeft = Offset((width * split.point - divider / 2).coerceAtLeast(0f), 0f),
+                    size = Size(divider, size.height),
+                )
             },
     )
 }
@@ -898,4 +1187,3 @@ internal fun SplitInfoBar(split: BufferSplit, color: Color, nextColor: Color, mo
 private fun RowScope.TableCell(modifier: Modifier, content: @Composable () -> Unit) {
     Box(modifier.padding(horizontal = 22.dp)) { content() }
 }
-

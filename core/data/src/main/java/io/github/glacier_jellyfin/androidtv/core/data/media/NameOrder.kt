@@ -43,10 +43,12 @@ object NameOrder : Comparator<String> {
                     inNumber = true
                     out.append(c)
                 }
+
                 c.isLetter() -> {
                     inNumber = false
                     out.append(c)
                 }
+
                 else -> inNumber = false
             }
         }

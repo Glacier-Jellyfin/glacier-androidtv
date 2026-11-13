@@ -4,17 +4,15 @@ import androidx.datastore.core.DataStore
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.ServerInfo
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.SignedInUser
 import io.github.glacier_jellyfin.androidtv.core.log.Log
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
-class AccountRepository @Inject constructor(
-    private val store: DataStore<AccountState>,
-) {
+class AccountRepository @Inject constructor(private val store: DataStore<AccountState>) {
     val state: Flow<AccountState> = store.data
 
     suspend fun current(): AccountState = store.data.first()
@@ -40,7 +38,11 @@ class AccountRepository @Inject constructor(
         store.updateData { it.withoutUser(serverId, userId) }
     }
 
-    suspend fun setPin(serverId: String, userId: String, pin: String) {
+    suspend fun setPin(
+        serverId: String,
+        userId: String,
+        pin: String,
+    ) {
         val hash = withContext(Dispatchers.Default) { Pins.hash(pin) }
         store.updateData { it.updateUser(serverId, userId) { user -> user.copy(pin = hash, pinChangedAt = now()) } }
     }
@@ -52,17 +54,34 @@ class AccountRepository @Inject constructor(
                 user.copy(
                     pin = null,
                     pinChangedAt = null,
-                    protection = user.protection.copy(pinOnProfileSwitch = false, pinForLocked = false, pinForSettings = false),
+                    protection = user.protection.copy(
+                        pinOnProfileSwitch = false,
+                        pinForLocked = false,
+                        pinForSettings = false,
+                    ),
                 )
             }
         }
     }
 
-    suspend fun updateProtection(serverId: String, userId: String, transform: (Protection) -> Protection) {
-        store.updateData { it.updateUser(serverId, userId) { user -> user.copy(protection = transform(user.protection)) } }
+    suspend fun updateProtection(
+        serverId: String,
+        userId: String,
+        transform: (Protection) -> Protection,
+    ) {
+        store.updateData {
+            it.updateUser(
+                serverId,
+                userId,
+            ) { user -> user.copy(protection = transform(user.protection)) }
+        }
     }
 
-    suspend fun verifyPin(serverId: String, userId: String, pin: String): Boolean {
+    suspend fun verifyPin(
+        serverId: String,
+        userId: String,
+        pin: String,
+    ): Boolean {
         val stored = current().users.firstOrNull { it.serverId == serverId && it.userId == userId }?.pin ?: return true
         // Hashing takes a moment on slow TVs; off the main thread the keys keep coming.
         val ok = withContext(Dispatchers.Default) { Pins.verify(pin, stored) }
@@ -79,7 +98,11 @@ class AccountRepository @Inject constructor(
     }
 
     /** [server] was set up again at the address of [oldId]; see [withServerReplaced]. */
-    suspend fun replaceServer(oldId: String, server: ServerInfo, kept: Map<String, String>) {
+    suspend fun replaceServer(
+        oldId: String,
+        server: ServerInfo,
+        kept: Map<String, String>,
+    ) {
         store.updateData { it.withServerReplaced(oldId, server, kept, now()) }
     }
 

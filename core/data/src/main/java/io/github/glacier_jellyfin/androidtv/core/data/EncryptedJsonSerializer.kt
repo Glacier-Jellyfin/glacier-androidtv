@@ -2,11 +2,11 @@ package io.github.glacier_jellyfin.androidtv.core.data
 
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.Serializer
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
 import java.io.InputStream
 import java.io.OutputStream
 import java.security.GeneralSecurityException
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
 
 /** Symmetric encryption of whole payloads, see [KeystoreCipher]. */
 interface PayloadCipher {

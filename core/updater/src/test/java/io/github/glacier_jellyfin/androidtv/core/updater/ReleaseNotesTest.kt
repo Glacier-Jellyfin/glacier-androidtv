@@ -76,7 +76,10 @@ class ReleaseNotesTest {
         )
         assertEquals(
             listOf(
-                NotesSection("New", listOf(NotesItem("Trickplay preview while seeking", "#142"), NotesItem("New accent Firn", null))),
+                NotesSection(
+                    "New",
+                    listOf(NotesItem("Trickplay preview while seeking", "#142"), NotesItem("New accent Firn", null)),
+                ),
                 NotesSection("Fixed", listOf(NotesItem("Rendering of ASS subtitles", "#151"))),
             ),
             notes,
@@ -85,7 +88,10 @@ class ReleaseNotesTest {
 
     @Test
     fun `lines before any heading get the fallback heading, empty sections are dropped`() {
-        val notes = ReleaseNotes.parse("Intro text\n- First\n\n## Known issues\n\n## Fixed\n- Crash (#9)\n", fallbackHeading = "Changes")
+        val notes = ReleaseNotes.parse(
+            "Intro text\n- First\n\n## Known issues\n\n## Fixed\n- Crash (#9)\n",
+            fallbackHeading = "Changes",
+        )
         assertEquals(listOf("Changes", "Fixed"), notes.map { it.heading })
         assertEquals(NotesItem("First", null), notes[0].items.single())
     }
@@ -103,7 +109,10 @@ class ReleaseNotesTest {
             "Changes",
         )
         assertEquals(
-            listOf(NotesItem("The first update no longer stops on the installing screen", "#7"), NotesItem("Short", null)),
+            listOf(
+                NotesItem("The first update no longer stops on the installing screen", "#7"),
+                NotesItem("Short", null),
+            ),
             notes.single().items,
         )
     }

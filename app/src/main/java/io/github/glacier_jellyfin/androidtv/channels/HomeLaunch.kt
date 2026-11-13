@@ -3,12 +3,16 @@ package io.github.glacier_jellyfin.androidtv.channels
 import android.content.Context
 import android.content.Intent
 import io.github.glacier_jellyfin.androidtv.MainActivity
-import org.jellyfin.sdk.model.serializer.toUUIDOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
+import org.jellyfin.sdk.model.serializer.toUUIDOrNull
 
 /** A title picked on the Android TV home screen: opens its page in the profile it came from. */
-data class HomeLaunch(val serverId: String, val userId: String, val itemId: String) {
+data class HomeLaunch(
+    val serverId: String,
+    val userId: String,
+    val itemId: String,
+) {
 
     /** Explicit, so test and release builds installed side by side never open each other. */
     fun intent(context: Context): Intent = Intent(context, MainActivity::class.java)

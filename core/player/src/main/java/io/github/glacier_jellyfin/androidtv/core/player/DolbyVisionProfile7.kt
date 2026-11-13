@@ -62,7 +62,12 @@ internal class DolbyVisionProfile7Extractors(
         override fun init(output: ExtractorOutput) {
             val tracks = Profile7Output(output).also { this.output = it }
             // A dual layer MKV can keep its RPUs in block additions.
-            (inner.underlyingImplementation as? BlockAdditionSource)?.blockAdditions ={ tracks.byId[it.trackNumber]?.onBlockAddition(it) }
+            (inner.underlyingImplementation as? BlockAdditionSource)?.blockAdditions =
+                {
+                    tracks.byId[it.trackNumber]?.onBlockAddition(
+                        it,
+                    )
+                }
             inner.init(tracks)
         }
 
@@ -83,13 +88,17 @@ internal class DolbyVisionProfile7Extractors(
     private inner class Profile7Output(private val inner: ExtractorOutput) : ExtractorOutput by inner {
         val byId = mutableMapOf<Int, Profile7Track>()
 
-        override fun track(id: Int, type: Int): TrackOutput = Profile7Track(inner.track(id, type), mode).also { byId[id] = it }
+        override fun track(id: Int, type: Int): TrackOutput = Profile7Track(
+            inner.track(id, type),
+            mode,
+        ).also { byId[id] = it }
     }
 
     /** RPUs met by a converted track, for the log. */
     class RpuCounts {
         var seen = 0
         var converted = 0
+
         /** Unreadable ones; they are dropped, the decoder keeps the metadata before them. */
         var failed = 0
 
@@ -101,13 +110,16 @@ internal class DolbyVisionProfile7Extractors(
      * until the first sample shows whether it converts, and its samples wait
      * in [pending] until complete, with every part Media3 writes.
      */
-    private class Profile7Track(private val inner: TrackOutput, private val mode: DolbyVisionProfile7) : TrackOutput by inner {
+    private class Profile7Track(private val inner: TrackOutput, private val mode: DolbyVisionProfile7) :
+        TrackOutput by inner {
         private var converting = false
+
         /** The profile 7 format, until the first sample decides how it plays. */
         private var held: Format? = null
         private var pending = ByteArray(0)
         private var pendingSize = 0
         private val counts = RpuCounts()
+
         /** The RPU from the block addition of the coming sample, a NAL unit with its header. */
         private var additionRpu = ByteArray(0)
         private var additionRpuSize = 0
@@ -116,17 +128,26 @@ internal class DolbyVisionProfile7Extractors(
             val profile7 = format.sampleMimeType == MimeTypes.VIDEO_DOLBY_VISION && format.codecs.isProfile7()
             when {
                 !profile7 -> inner.format(format)
+
                 mode == DolbyVisionProfile7.BaseLayer -> inner.format(baseLayer(format))
+
                 mode == DolbyVisionProfile7.Profile81 && converting -> inner.format(profile81(format))
+
                 mode == DolbyVisionProfile7.Profile81 -> {
                     held = format
                     converting = true
                 }
+
                 else -> inner.format(format)
             }
         }
 
-        override fun sampleData(input: DataReader, length: Int, allowEndOfInput: Boolean, sampleDataPart: Int): Int {
+        override fun sampleData(
+            input: DataReader,
+            length: Int,
+            allowEndOfInput: Boolean,
+            sampleDataPart: Int,
+        ): Int {
             if (!converting) return inner.sampleData(input, length, allowEndOfInput, sampleDataPart)
             ensureCapacity(pendingSize + length)
             val read = input.read(pending, pendingSize, length)
@@ -138,7 +159,11 @@ internal class DolbyVisionProfile7Extractors(
             return read
         }
 
-        override fun sampleData(data: ParsableByteArray, length: Int, sampleDataPart: Int) {
+        override fun sampleData(
+            data: ParsableByteArray,
+            length: Int,
+            sampleDataPart: Int,
+        ) {
             if (!converting) {
                 inner.sampleData(data, length, sampleDataPart)
                 return
@@ -149,7 +174,13 @@ internal class DolbyVisionProfile7Extractors(
             pendingSize += length
         }
 
-        override fun sampleMetadata(timeUs: Long, flags: Int, size: Int, offset: Int, cryptoData: TrackOutput.CryptoData?) {
+        override fun sampleMetadata(
+            timeUs: Long,
+            flags: Int,
+            size: Int,
+            offset: Int,
+            cryptoData: TrackOutput.CryptoData?,
+        ) {
             if (!converting) {
                 inner.sampleMetadata(timeUs, flags, size, offset, cryptoData)
                 return
@@ -172,7 +203,11 @@ internal class DolbyVisionProfile7Extractors(
                     Log.i(TAG, "Dolby Vision profile 7 plays as its HDR10 base layer: $reason")
                     converting = false
                     inner.format(baseLayer(format))
-                    inner.sampleData(ParsableByteArray(pending.copyOfRange(start, pendingSize)), pendingSize - start, TrackOutput.SAMPLE_DATA_PART_MAIN)
+                    inner.sampleData(
+                        ParsableByteArray(pending.copyOfRange(start, pendingSize)),
+                        pendingSize - start,
+                        TrackOutput.SAMPLE_DATA_PART_MAIN,
+                    )
                     inner.sampleMetadata(timeUs, flags, size, offset, cryptoData)
                     pendingSize = 0
                     return
@@ -192,7 +227,11 @@ internal class DolbyVisionProfile7Extractors(
          * sample with block additions ([C.BUFFER_FLAG_HAS_SUPPLEMENTAL_DATA])
          * starts with the length of its video data, and their data follows.
          */
-        private fun convert(start: Int, end: Int, flags: Int): ByteArray {
+        private fun convert(
+            start: Int,
+            end: Int,
+            flags: Int,
+        ): ByteArray {
             val wrapped = flags and C.BUFFER_FLAG_HAS_SUPPLEMENTAL_DATA != 0
             val dataStart = if (wrapped) start + 4 else start
             val dataEnd = if (wrapped) dataStart + readLength(pending, start) else end
@@ -251,15 +290,21 @@ internal class DolbyVisionProfile7Extractors(
         private fun String?.isProfile7() = this?.split('.')?.getOrNull(1)?.toIntOrNull() == 7
 
         /** "dvhe.07.06" → "dvhe.08.06": same level, profile 8. */
-        private fun profile81(format: Format): Format =
-            format.buildUpon().setCodecs(format.codecs!!.split('.').toMutableList().also { it[1] = "08" }.joinToString(".")).build()
+        private fun profile81(format: Format): Format = format.buildUpon().setCodecs(
+            format.codecs!!.split('.').toMutableList().also { it[1] = "08" }.joinToString("."),
+        ).build()
 
         /**
          * One Annex B sample (start codes, as Media3's extractors write H.265)
          * without the enhancement layer and with profile 8.1 RPUs; an RPU that
          * does not read goes too. [counts] learns what it met.
          */
-        fun toProfile81(data: ByteArray, offset: Int, length: Int, counts: RpuCounts = RpuCounts()): ByteArray {
+        fun toProfile81(
+            data: ByteArray,
+            offset: Int,
+            length: Int,
+            counts: RpuCounts = RpuCounts(),
+        ): ByteArray {
             val end = offset + length
             val out = ByteArrayOutputStream(length)
             var nal = nextNal(data, offset, end) ?: return data.copyOfRange(offset, end)
@@ -271,6 +316,7 @@ internal class DolbyVisionProfile7Extractors(
                 val payloadEnd = next?.first ?: end
                 when ((data[payloadStart].toInt() shr 1) and 0x3f) {
                     NAL_ENHANCEMENT_LAYER -> Unit
+
                     NAL_RPU -> {
                         counts.seen++
                         val rpu = DolbyVisionRpu.toProfile81(data, payloadStart, payloadEnd - payloadStart)
@@ -282,6 +328,7 @@ internal class DolbyVisionProfile7Extractors(
                             if (counts.failed++ == 0) Log.w(TAG, "Dropped an RPU that does not read as profile 7")
                         }
                     }
+
                     else -> out.write(data, codeStart, payloadEnd - codeStart)
                 }
                 nal = next ?: break
@@ -290,7 +337,11 @@ internal class DolbyVisionProfile7Extractors(
         }
 
         /** The next start code from [from]: where it starts and where its NAL unit begins; null if none. */
-        private fun nextNal(data: ByteArray, from: Int, end: Int): Pair<Int, Int>? {
+        private fun nextNal(
+            data: ByteArray,
+            from: Int,
+            end: Int,
+        ): Pair<Int, Int>? {
             var i = from
             while (i + 3 <= end) {
                 if (data[i].toInt() == 0 && data[i + 1].toInt() == 0 && data[i + 2].toInt() == 1) {
@@ -307,7 +358,11 @@ internal class DolbyVisionProfile7Extractors(
          * that each follow a length of [lengthSize] bytes, as a block addition
          * holds them; null without one or when the lengths do not add up.
          */
-        fun findRpu(data: ByteArray, size: Int, lengthSize: Int): IntRange? {
+        fun findRpu(
+            data: ByteArray,
+            size: Int,
+            lengthSize: Int,
+        ): IntRange? {
             if (lengthSize !in 1..4) return null
             var position = 0
             while (position + lengthSize <= size) {
@@ -326,7 +381,12 @@ internal class DolbyVisionProfile7Extractors(
             (data[offset].toInt() and 0xff shl 24) or (data[offset + 1].toInt() and 0xff shl 16) or
                 (data[offset + 2].toInt() and 0xff shl 8) or (data[offset + 3].toInt() and 0xff)
 
-        private fun lengthOf(length: Int) = byteArrayOf((length ushr 24).toByte(), (length ushr 16).toByte(), (length ushr 8).toByte(), length.toByte())
+        private fun lengthOf(length: Int) = byteArrayOf(
+            (length ushr 24).toByte(),
+            (length ushr 16).toByte(),
+            (length ushr 8).toByte(),
+            length.toByte(),
+        )
 
         private val START_CODE = byteArrayOf(0, 0, 0, 1)
         private const val TAG = "DolbyVision"
@@ -344,7 +404,12 @@ internal class DolbyVisionProfile7Extractors(
             while (start < csd.size) {
                 val next = NalUnitUtil.findNalUnit(csd, start + 3, csd.size, BooleanArray(3))
                 if (NalUnitUtil.getH265NalUnitType(csd, start) == NalUnitUtil.H265_NAL_UNIT_TYPE_SPS) {
-                    val level = NalUnitUtil.parseH265SpsNalUnit(csd, start + 3, next, null).profileTierLevel ?: return null
+                    val level = NalUnitUtil.parseH265SpsNalUnit(
+                        csd,
+                        start + 3,
+                        next,
+                        null,
+                    ).profileTierLevel ?: return null
                     return CodecSpecificDataUtil.buildHevcCodecString(
                         level.generalProfileSpace,
                         level.generalTierFlag,

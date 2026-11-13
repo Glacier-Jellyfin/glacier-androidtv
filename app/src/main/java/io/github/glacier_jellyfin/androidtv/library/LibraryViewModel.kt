@@ -1,15 +1,13 @@
 package io.github.glacier_jellyfin.androidtv.library
 
-import io.github.glacier_jellyfin.androidtv.R
-import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
-import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderContent
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderMedia
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderRepository
@@ -19,41 +17,43 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryQuery
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryScope
-import io.github.glacier_jellyfin.androidtv.core.data.settings.LibraryFilterChoice
-import io.github.glacier_jellyfin.androidtv.core.data.settings.LibrarySortChoice
-import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
 import io.github.glacier_jellyfin.androidtv.core.data.media.LoadProgress
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaFolder
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
-import io.github.glacier_jellyfin.androidtv.core.data.media.NameOrder
-import io.github.glacier_jellyfin.androidtv.core.data.settings.MusicVideoView
-import org.jellyfin.sdk.model.api.CollectionType
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.NameOrder
+import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.LibraryFilterChoice
+import io.github.glacier_jellyfin.androidtv.core.data.settings.LibrarySortChoice
+import io.github.glacier_jellyfin.androidtv.core.data.settings.MusicVideoView
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.music.MusicActions
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.music.MusicTarget
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
+import io.github.glacier_jellyfin.androidtv.navigation.routeFor
 import io.github.glacier_jellyfin.androidtv.ui.BrowseMemory
 import io.github.glacier_jellyfin.androidtv.ui.LibraryMemory
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import java.util.UUID
-import javax.inject.Inject
-import io.github.glacier_jellyfin.androidtv.navigation.routeFor
+import org.jellyfin.sdk.model.api.CollectionType
 
 data class LibraryState(
     val query: LibraryQuery,
@@ -87,7 +87,11 @@ data class LibraryState(
     /** The music videos tab shows folders instead of the paged grid. */
     val inFolders: Boolean get() = query.scope == LibraryScope.MusicVideos && musicVideoView == MusicVideoView.Folders
 
-    val scopes: List<LibraryScope> get() = LibraryQuery.scopes(query.kind, inGenre = query.genreId != null, musicVideos = musicVideos)
+    val scopes: List<LibraryScope> get() = LibraryQuery.scopes(
+        query.kind,
+        inGenre = query.genreId != null,
+        musicVideos = musicVideos,
+    )
     val complete: Boolean get() = total != null && offset + items.size >= total
 }
 
@@ -177,14 +181,27 @@ class LibraryViewModel @Inject constructor(
                 }
             }
             val view = runSuspendCatching { settings.current().musicVideoView }.getOrNull()
-            _state.update { it.copy(musicVideoView = view, folderPath = it.folderPath.takeIf { view == MusicVideoView.Folders }.orEmpty()) }
+            _state.update {
+                it.copy(
+                    musicVideoView = view,
+                    folderPath = it.folderPath.takeIf { view == MusicVideoView.Folders }.orEmpty(),
+                )
+            }
             reload()
         }
         // Marked watched (here, on a detail page or by watching it): the grid shows it at once,
         // also while it waits behind the detail page.
         viewModelScope.launch { details.playedChanged.collect { refresh() } }
         viewModelScope.launch { playback.stopped.collect { refresh() } }
-        viewModelScope.launch { home.kinds.collect { kinds -> _state.update { it.copy(musicVideos = LibraryKind.MusicVideos in kinds) } } }
+        viewModelScope.launch {
+            home.kinds.collect { kinds ->
+                _state.update {
+                    it.copy(
+                        musicVideos = LibraryKind.MusicVideos in kinds,
+                    )
+                }
+            }
+        }
     }
 
     /**
@@ -199,7 +216,18 @@ class LibraryViewModel @Inject constructor(
         refreshJob = viewModelScope.launch {
             try {
                 val page = repository.page(query, start = current.offset, limit = current.items.size)
-                _state.update { if (it.query == query && it.offset == current.offset && loadJob?.isActive != true) it.copy(items = page.items, total = page.total) else it }
+                _state.update {
+                    if (it.query == query && it.offset == current.offset &&
+                        loadJob?.isActive != true
+                    ) {
+                        it.copy(
+                            items = page.items,
+                            total = page.total,
+                        )
+                    } else {
+                        it
+                    }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -232,8 +260,11 @@ class LibraryViewModel @Inject constructor(
                 val start = repository.rowStart(query, (current.offset - PAGE_SIZE).coerceAtLeast(0), columns)
                 val page = repository.page(query, start = start, limit = current.offset - start)
                 _state.update {
-                    if (it.query != query || it.offset != current.offset) it.copy(loading = false)
-                    else it.copy(items = page.items + it.items, offset = start, total = page.total, loading = false)
+                    if (it.query != query || it.offset != current.offset) {
+                        it.copy(loading = false)
+                    } else {
+                        it.copy(items = page.items + it.items, offset = start, total = page.total, loading = false)
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -270,7 +301,13 @@ class LibraryViewModel @Inject constructor(
         val query = _state.value.query
         val choice = LibraryFilterChoice(query.favoritesOnly, query.unwatchedOnly)
         viewModelScope.launch {
-            runSuspendCatching { settings.update { it.copy(libraryFilters = it.libraryFilters + (kind.name to choice)) } }
+            runSuspendCatching {
+                settings.update {
+                    it.copy(
+                        libraryFilters = it.libraryFilters + (kind.name to choice),
+                    )
+                }
+            }
                 .onFailure { Log.w(TAG, "Saving the library filters failed", it) }
         }
     }
@@ -312,13 +349,22 @@ class LibraryViewModel @Inject constructor(
     fun setSort(sort: LibrarySort) {
         _state.update { it.copy(sortMenuOpen = false) }
         update { query ->
-            if (query.sort == sort) query.copy(descending = !query.descending)
-            else query.copy(sort = sort, descending = sort !in AscendingFirst)
+            if (query.sort == sort) {
+                query.copy(descending = !query.descending)
+            } else {
+                query.copy(sort = sort, descending = sort !in AscendingFirst)
+            }
         }
         val query = _state.value.query
         val choice = LibrarySortChoice(query.sort, query.descending)
         viewModelScope.launch {
-            runSuspendCatching { settings.update { it.copy(librarySorts = it.librarySorts + (query.sortKey to choice)) } }
+            runSuspendCatching {
+                settings.update {
+                    it.copy(
+                        librarySorts = it.librarySorts + (query.sortKey to choice),
+                    )
+                }
+            }
                 .onFailure { Log.w(TAG, "Saving the library sort failed", it) }
         }
     }
@@ -361,7 +407,13 @@ class LibraryViewModel @Inject constructor(
             loadUpTo(index + PAGE_SIZE / 2)?.join()
             return true
         }
-        val start = runSuspendCatching { repository.rowStart(state.query, (index - JUMP_ROWS_BEFORE * columns).coerceAtLeast(0), columns) }
+        val start = runSuspendCatching {
+            repository.rowStart(
+                state.query,
+                (index - JUMP_ROWS_BEFORE * columns).coerceAtLeast(0),
+                columns,
+            )
+        }
             .getOrElse { return false }
         loadJob?.cancel()
         refreshJob?.cancel()
@@ -370,7 +422,18 @@ class LibraryViewModel @Inject constructor(
             _state.update { it.copy(loading = true, failed = false) }
             try {
                 val page = repository.page(query, start = start, limit = PAGE_SIZE)
-                _state.update { if (it.query == query) it.copy(items = page.items, offset = start, total = page.total, loading = false) else it }
+                _state.update {
+                    if (it.query == query) {
+                        it.copy(
+                            items = page.items,
+                            offset = start,
+                            total = page.total,
+                            loading = false,
+                        )
+                    } else {
+                        it
+                    }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -386,7 +449,13 @@ class LibraryViewModel @Inject constructor(
     fun open(item: MediaItem) {
         val query = _state.value.query
         val route = when (item.kind) {
-            ItemKind.Genre -> LibraryRoute(query.kind.name, query.libraryId?.toString(), title = item.title, genreId = item.id.toString())
+            ItemKind.Genre -> LibraryRoute(
+                query.kind.name,
+                query.libraryId?.toString(),
+                title = item.title,
+                genreId = item.id.toString(),
+            )
+
             else -> routeFor(item)
         }
         viewModelScope.launch { _events.send(UiEvent.Navigate(route)) }
@@ -410,7 +479,9 @@ class LibraryViewModel @Inject constructor(
      */
     fun playVideo(item: MediaItem, title: String) {
         val state = _state.value
-        val videos = state.folder?.takeIf { state.inFolders }?.media?.filterIsInstance<FolderMedia.Video>()?.map { it.item } ?: state.items
+        val videos =
+            state.folder?.takeIf { state.inFolders }?.media?.filterIsInstance<FolderMedia.Video>()?.map { it.item }
+                ?: state.items
         val start = videos.indexOfFirst { it.id == item.id }.takeIf { it >= 0 } ?: return
         music.playSongs(title, videos.drop(start).map { it.id }, startTrackId = item.id.toString())
         viewModelScope.launch { _events.send(UiEvent.Navigate(MusicRoute())) }
@@ -423,7 +494,11 @@ class LibraryViewModel @Inject constructor(
     fun playVideos(title: String, shuffled: Boolean) = playVideos(title, shuffled) { shownVideoIds() }
 
     /** The videos [load] brings, in its order or [shuffled], in the music player; [title] names the queue. */
-    private fun playVideos(title: String, shuffled: Boolean, load: suspend () -> List<UUID>) {
+    private fun playVideos(
+        title: String,
+        shuffled: Boolean,
+        load: suspend () -> List<UUID>,
+    ) {
         viewModelScope.launch {
             val ids = runSuspendCatching { load() }.getOrElse {
                 Log.w(TAG, "Loading the music videos to play failed", it)
@@ -451,7 +526,9 @@ class LibraryViewModel @Inject constructor(
 
     /** Options for a music video of the tab (holding OK, or the menu key). */
     fun videoOptions(item: MediaItem) {
-        musicActions.open(MusicTarget(title = item.title, subtitle = item.parentTitle, tracks = { songs.tracks(listOf(item.id)) }))
+        musicActions.open(
+            MusicTarget(title = item.title, subtitle = item.parentTitle, tracks = { songs.tracks(listOf(item.id)) }),
+        )
     }
 
     /** Options for a folder of the folder view, as for an album: its videos and those of the folders below it. */
@@ -491,7 +568,10 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun onNav(target: NavTarget) {
-        val event = sessions.navEvent(target, current = NavTarget.Library(_state.value.query.kind).takeIf { inNavBar }) ?: return
+        val event = sessions.navEvent(
+            target,
+            current = NavTarget.Library(_state.value.query.kind).takeIf { inNavBar },
+        ) ?: return
         viewModelScope.launch { _events.send(event) }
     }
 
@@ -513,7 +593,17 @@ class LibraryViewModel @Inject constructor(
 
     private fun reload() {
         loadJob?.cancel()
-        _state.update { it.copy(items = emptyList(), offset = 0, total = null, loading = false, failed = false, letters = emptySet(), jumpTo = null) }
+        _state.update {
+            it.copy(
+                items = emptyList(),
+                offset = 0,
+                total = null,
+                loading = false,
+                failed = false,
+                letters = emptySet(),
+                jumpTo = null,
+            )
+        }
         val current = _state.value
         if (current.query.scope == LibraryScope.MusicVideos) {
             if (current.musicVideoView == null) return chooseMusicVideoView()
@@ -525,7 +615,17 @@ class LibraryViewModel @Inject constructor(
         if (query.railed) {
             lettersJob = viewModelScope.launch {
                 runSuspendCatching { repository.availableLetters(query) }
-                    .onSuccess { letters -> _state.update { if (it.query == query) it.copy(letters = letters) else it } }
+                    .onSuccess { letters ->
+                        _state.update {
+                            if (it.query == query) {
+                                it.copy(
+                                    letters = letters,
+                                )
+                            } else {
+                                it
+                            }
+                        }
+                    }
                     .onFailure { Log.w(TAG, "Loading A-Z letters failed", it) }
             }
         }
@@ -543,7 +643,13 @@ class LibraryViewModel @Inject constructor(
                 .onFailure { Log.w(TAG, "Counting the music videos' artists failed", it) }
                 .getOrDefault(1f)
             val view = if (share >= TAGGED_SHARE) MusicVideoView.All else MusicVideoView.Folders
-            _state.update { it.copy(musicVideoView = view, loading = false, folderPath = it.folderPath.takeIf { view == MusicVideoView.Folders }.orEmpty()) }
+            _state.update {
+                it.copy(
+                    musicVideoView = view,
+                    loading = false,
+                    folderPath = it.folderPath.takeIf { view == MusicVideoView.Folders }.orEmpty(),
+                )
+            }
             reload()
         }
     }
@@ -558,12 +664,18 @@ class LibraryViewModel @Inject constructor(
             _state.update { it.copy(loading = true, failed = false) }
             try {
                 val content = folders.load(path.lastOrNull()?.id, CollectionType.MUSICVIDEOS)
-                val sorted = content.copy(folders = content.folders.foldersFor(query), media = content.media.filterIsInstance<FolderMedia.Video>().videosFor(query))
+                val sorted = content.copy(
+                    folders = content.folders.foldersFor(query),
+                    media = content.media.filterIsInstance<FolderMedia.Video>().videosFor(query),
+                )
                 if (restoredPath && content.isEmpty) return@launch backToTop()
                 restoredPath = false
                 _state.update {
-                    if (it.query != query || it.folderPath != path) it
-                    else it.copy(folder = sorted, total = sorted.folders.size + sorted.media.size, loading = false)
+                    if (it.query != query || it.folderPath != path) {
+                        it
+                    } else {
+                        it.copy(folder = sorted, total = sorted.folders.size + sorted.media.size, loading = false)
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -621,12 +733,16 @@ class LibraryViewModel @Inject constructor(
     companion object {
         /** From this share of music videos naming their artist on, their tab starts with all of them in one grid. */
         private const val TAGGED_SHARE = 0.5f
+
         /** Ten rows of seven posters. */
         const val PAGE_SIZE = 70
+
         /** Names sort A to Z first; dates, years, ratings and runtimes newest or largest first. */
         private val AscendingFirst = setOf(LibrarySort.Title, LibrarySort.Artist, LibrarySort.Album)
+
         /** Rows kept above the title an A–Z jump lands on, when the list starts anew there. */
         private const val JUMP_ROWS_BEFORE = 3
+
         /** Songs queued from the songs tab; their ids go into one request. */
         private const val SONG_QUEUE = 100
         private const val TAG = "Library"
@@ -650,12 +766,15 @@ private fun List<FolderMedia.Video>.videosFor(query: LibraryQuery): List<FolderM
     }
     return when (query.sort) {
         LibrarySort.DateAdded -> by { it.added }
+
         LibrarySort.Year -> by { it.item.year }
+
         LibrarySort.Artist -> {
             val (known, unknown) = partition { it.item.parentTitle != null }
             val order = compareBy<FolderMedia.Video, String>(NameOrder) { it.item.parentTitle.orEmpty() }.then(byTitle)
             known.sortedWith(if (query.descending) order.reversed() else order) + unknown.sortedWith(byTitle)
         }
+
         else -> sortedWith(if (query.descending) byTitle.reversed() else byTitle)
     }
 }

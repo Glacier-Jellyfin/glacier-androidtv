@@ -43,42 +43,40 @@ style:
     max: 4
     excludeGuardClauses: true
   MaxLineLength:
-    maxLineLength: 160
+    maxLineLength: 120
     excludeCommentStatements: true
 
-# ktlint rules (detekt-rules-ktlint-wrapper). The wrapping and signature layout
-# rules are off: the existing code follows its own layout and they would only
-# produce noise. Line length is checked by style>MaxLineLength.
+# ktlint rules (detekt-rules-ktlint-wrapper), including the layout rules that
+# ./gradlew detekt -PdetektAutoCorrect fixes. The code style comes from
+# .editorconfig (the wrapper does not read it, so code_style and the limits
+# are repeated here). Line length is checked by style>MaxLineLength.
 ktlint:
+  code_style: 'android_studio'
   MaximumLineLength:
     active: false
   PackageName:
     active: false
   FunctionNaming:
     active: false
-  FunctionLiteral:
-    active: false
-  PropertyWrapping:
-    active: false
-  EnumWrapping:
-    active: false
-  MultiLineIfElse:
-    active: false
-  FunctionSignature:
-    active: false
   ArgumentListWrapping:
-    active: false
-  ParameterListWrapping:
-    active: false
+    maxLineLength: 120
   BinaryExpressionWrapping:
-    active: false
-  Wrapping:
-    active: false
-  StatementWrapping:
-    active: false
+    maxLineLength: 120
   ClassSignature:
-    active: false
-  BlankLineBetweenWhenConditions:
-    active: false
-  SpacingBetweenDeclarationsWithComments:
-    active: false
+    maxLineLength: 120
+    forceMultilineWhenParameterCountGreaterOrEqualThan: '3'
+  FunctionLiteral:
+    maxLineLength: 120
+  FunctionSignature:
+    maxLineLength: 120
+    forceMultilineWhenParameterCountGreaterOrEqualThan: 3
+  ParameterListWrapping:
+    maxLineLength: 120
+  PropertyWrapping:
+    maxLineLength: 120
+  Wrapping:
+    maxLineLength: 120
+  TrailingCommaOnCallSite:
+    useTrailingCommaOnCallSite: true
+  TrailingCommaOnDeclarationSite:
+    useTrailingCommaOnDeclarationSite: true

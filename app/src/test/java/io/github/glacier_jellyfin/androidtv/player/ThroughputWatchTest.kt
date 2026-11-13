@@ -8,8 +8,14 @@ import org.junit.Test
 class ThroughputWatchTest {
     private val stream = 37_000_000L
 
-    private fun fires(watch: ThroughputWatch, from: Long, to: Long, rate: Long, loading: Boolean = true, full: Boolean = false): List<Long> =
-        (from..to step 2_000).filter { watch.check(it, loading, rate, stream, full) }
+    private fun fires(
+        watch: ThroughputWatch,
+        from: Long,
+        to: Long,
+        rate: Long,
+        loading: Boolean = true,
+        full: Boolean = false,
+    ): List<Long> = (from..to step 2_000).filter { watch.check(it, loading, rate, stream, full) }
 
     @Test
     fun `a slow link while loading for ten seconds fires`() {
@@ -25,8 +31,28 @@ class ThroughputWatchTest {
 
     @Test
     fun `the limit is 95 percent of the stream`() {
-        assertFalse(ThroughputWatch().apply { check(0, true, 35_150_000, stream, false) }.check(10_000, true, 35_150_000, stream, false))
-        assertTrue(ThroughputWatch().apply { check(0, true, 35_149_999, stream, false) }.check(10_000, true, 35_149_999, stream, false))
+        assertFalse(
+            ThroughputWatch().apply {
+                check(
+                    0,
+                    true,
+                    35_150_000,
+                    stream,
+                    false,
+                )
+            }.check(10_000, true, 35_150_000, stream, false),
+        )
+        assertTrue(
+            ThroughputWatch().apply {
+                check(
+                    0,
+                    true,
+                    35_149_999,
+                    stream,
+                    false,
+                )
+            }.check(10_000, true, 35_149_999, stream, false),
+        )
     }
 
     @Test

@@ -5,8 +5,8 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,8 +20,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,8 +40,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -51,6 +49,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalConfiguration
@@ -60,6 +59,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -81,41 +81,41 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
-import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
-import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
-import io.github.glacier_jellyfin.androidtv.ui.seasonLabel
+import io.github.glacier_jellyfin.androidtv.player.serverCodecText
 import io.github.glacier_jellyfin.androidtv.ui.ActionButton
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
-import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
-import io.github.glacier_jellyfin.androidtv.ui.LocalNowPlaying
-import io.github.glacier_jellyfin.androidtv.ui.MINI_PLAYER_END
-import io.github.glacier_jellyfin.androidtv.ui.MINI_PLAYER_TOP
-import io.github.glacier_jellyfin.androidtv.ui.MiniPlayer
 import io.github.glacier_jellyfin.androidtv.ui.ComingSoonScreen
 import io.github.glacier_jellyfin.androidtv.ui.DetailBackdrop
 import io.github.glacier_jellyfin.androidtv.ui.FactsRow
 import io.github.glacier_jellyfin.androidtv.ui.FilterChip
 import io.github.glacier_jellyfin.androidtv.ui.GridCard
+import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
+import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
+import io.github.glacier_jellyfin.androidtv.ui.LocalNowPlaying
+import io.github.glacier_jellyfin.androidtv.ui.MINI_PLAYER_END
+import io.github.glacier_jellyfin.androidtv.ui.MINI_PLAYER_TOP
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
+import io.github.glacier_jellyfin.androidtv.ui.MiniPlayer
 import io.github.glacier_jellyfin.androidtv.ui.OptionRow
 import io.github.glacier_jellyfin.androidtv.ui.OptionsPanel
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
-import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 import io.github.glacier_jellyfin.androidtv.ui.PinDialog
+import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
-import io.github.glacier_jellyfin.androidtv.player.serverCodecText
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.ui.qualityText
 import io.github.glacier_jellyfin.androidtv.ui.rememberEdgeSpec
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
+import io.github.glacier_jellyfin.androidtv.ui.seasonLabel
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import io.github.glacier_jellyfin.androidtv.ui.yearText
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.UUID
 import kotlinx.coroutines.delay
-import java.time.format.FormatStyle
 
 private const val MEDIA_BACKDROP = 760
 private const val EPISODE_BACKDROP = 720
@@ -152,17 +152,28 @@ fun DetailScreen(
 
     // A locked title asks for its PIN with no details yet: the dialog must stay operable.
     // A loader covers the page: the remote must not reach the navigation or anything else behind it.
-    Box(Modifier.fillMaxSize().blockKeysWhile(details == null && !state.failed && pinPrompt == null, takeFocus = true)) {
+    Box(
+        Modifier.fillMaxSize().blockKeysWhile(details == null && !state.failed && pinPrompt == null, takeFocus = true),
+    ) {
         // Down from the mini player lands where Up left.
         Box(Modifier.fillMaxSize().focusRequester(pageFocus).focusRestorer()) {
             CompositionLocalProvider(LocalMiniPlayerFocus provides miniFocus.takeIf { nowPlaying != null }) {
                 when {
                     details == null && state.failed -> ErrorState(onRetry = viewModel::load)
-                    details == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
+
+                    details == null -> Box(
+                        Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) { SpinningDiamond(110) }
+
                     details.item.kind in VideoKinds -> MediaDetail(state, details, viewModel)
+
                     details.item.kind == ItemKind.Episode -> EpisodeDetail(state, details, viewModel)
+
                     details.item.kind == ItemKind.Collection -> CollectionDetail(state, details, viewModel)
+
                     details.item.kind in MusicKinds -> MusicDetail(state, details, viewModel)
+
                     else -> ComingSoonScreen(details.item.title, onBack = onBack)
                 }
             }
@@ -191,8 +202,9 @@ fun DetailScreen(
             )
         }
         // A show and its episode pages share one theme song, so moving between them keeps it going.
-        val themeArea = details?.let { d -> ((if (d.item.kind == ItemKind.Episode) d.seriesId else null) ?: d.item.id).toString() }
-            ?: viewModel.routeThemeArea
+        val themeArea =
+            details?.let { d -> ((if (d.item.kind == ItemKind.Episode) d.seriesId else null) ?: d.item.id).toString() }
+                ?: viewModel.routeThemeArea
         if (themeArea != null) ThemeSong(themeArea, source = state.themeSong)
         pinPrompt?.let { PinDialog(it, onKey = viewModel.pin::key, onDismiss = viewModel::dismissPin) }
     }
@@ -206,7 +218,11 @@ internal fun Modifier.upTo(mini: FocusRequester?): Modifier = if (mini == null) 
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MediaDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewModel) {
+private fun MediaDetail(
+    state: DetailState,
+    details: ItemDetails,
+    viewModel: DetailViewModel,
+) {
     val item = details.item
     val listState = rememberLazyListState()
     val playFocus = remember { FocusRequester() }
@@ -223,24 +239,49 @@ private fun MediaDetail(state: DetailState, details: ItemDetails, viewModel: Det
                     ) {
                         Crumb(
                             listOfNotNull(
-                                stringResource(if (item.kind == ItemKind.Series) R.string.library_shows else R.string.library_movies),
+                                stringResource(
+                                    if (item.kind ==
+                                        ItemKind.Series
+                                    ) {
+                                        R.string.library_shows
+                                    } else {
+                                        R.string.library_movies
+                                    },
+                                ),
                                 state.season?.number?.let { seasonLabel(it) }.takeIf { item.kind == ItemKind.Series },
                             ).joinToString(" · "),
                         )
                         Title(item.title, size = 84, maxWidth = 1180)
                         FactsRow(item, mediaFacts(details), tech = techLine(details))
                         item.overview?.let { Overview(it, maxWidth = 900) }
-                        Row(Modifier.padding(top = 10.dp).upTo(LocalMiniPlayerFocus.current), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Row(
+                            Modifier.padding(top = 10.dp).upTo(LocalMiniPlayerFocus.current),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
                             PlayButtons(state, item, viewModel, playFocus)
                             ActionButton(
                                 onClick = viewModel::toggleFavorite,
                                 icon = if (item.isFavorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
                                 on = item.isFavorite,
-                                contentDescription = stringResource(if (item.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
+                                contentDescription = stringResource(
+                                    if (item.isFavorite) R.string.action_unfavorite else R.string.action_favorite,
+                                ),
                             )
                             SeenButton(item.played, onClick = viewModel::togglePlayed)
-                            if (details.trailers.any) ActionButton(onClick = viewModel::playTrailer, label = stringResource(R.string.detail_trailer))
-                            if (item.kind == ItemKind.Movie || item.kind == ItemKind.MusicVideo) TrackChips(state, details, viewModel)
+                            if (details.trailers.any) {
+                                ActionButton(
+                                    onClick = viewModel::playTrailer,
+                                    label = stringResource(R.string.detail_trailer),
+                                )
+                            }
+                            if (item.kind == ItemKind.Movie || item.kind == ItemKind.MusicVideo) {
+                                TrackChips(
+                                    state,
+                                    details,
+                                    viewModel,
+                                )
+                            }
                         }
                     }
                     LaunchedEffect(item.id) {
@@ -266,8 +307,15 @@ private fun MediaDetail(state: DetailState, details: ItemDetails, viewModel: Det
                 }
                 if (details.cast.isNotEmpty()) {
                     item(key = "cast") {
-                        MediaRow(title = stringResource(R.string.detail_cast), gap = LocalCardSizes.current.castGap, modifier = Modifier.padding(top = FIRST_ROW_TOP.dp)) {
-                            items(details.cast, key = { it.id }) { person -> CastCard(person, onClick = { viewModel.openPerson(person) }) }
+                        MediaRow(
+                            title = stringResource(R.string.detail_cast),
+                            gap = LocalCardSizes.current.castGap,
+                            modifier = Modifier.padding(top = FIRST_ROW_TOP.dp),
+                        ) {
+                            items(
+                                details.cast,
+                                key = { it.id },
+                            ) { person -> CastCard(person, onClick = { viewModel.openPerson(person) }) }
                         }
                     }
                 }
@@ -299,7 +347,11 @@ private fun MediaDetail(state: DetailState, details: ItemDetails, viewModel: Det
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun EpisodeDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewModel) {
+private fun EpisodeDetail(
+    state: DetailState,
+    details: ItemDetails,
+    viewModel: DetailViewModel,
+) {
     val episode = details.item
     val listState = rememberLazyListState()
     val playFocus = remember { FocusRequester() }
@@ -321,16 +373,27 @@ private fun EpisodeDetail(state: DetailState, details: ItemDetails, viewModel: D
                             val number = episode.episodeNumber
                             Crumb(
                                 if (season != null && number != null) {
-                                    stringResource(R.string.episode_crumb, episode.parentTitle.orEmpty(), season, number)
+                                    stringResource(
+                                        R.string.episode_crumb,
+                                        episode.parentTitle.orEmpty(),
+                                        season,
+                                        number,
+                                    )
                                 } else {
                                     episode.parentTitle.orEmpty()
                                 },
                             )
                             Title(episode.title, size = 64, maxWidth = 1000)
-                            val aired = details.premiereDate?.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))
+                            val aired = details.premiereDate?.format(
+                                DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale),
+                            )
                             FactsRow(
                                 episode,
-                                listOfNotNull(episode.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }, endsAtText(episode), aired),
+                                listOfNotNull(
+                                    episode.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) },
+                                    endsAtText(episode),
+                                    aired,
+                                ),
                                 tech = techLine(details),
                                 size = 19,
                             )
@@ -344,14 +407,20 @@ private fun EpisodeDetail(state: DetailState, details: ItemDetails, viewModel: D
                                     color = LocalAccent.current.main,
                                 )
                             }
-                            Row(Modifier.padding(top = 6.dp).upTo(LocalMiniPlayerFocus.current), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Row(
+                                Modifier.padding(top = 6.dp).upTo(LocalMiniPlayerFocus.current),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            ) {
                                 PlayButtons(state, episode, viewModel, playFocus, episodeLabel = true)
                                 SeenButton(episode.played, onClick = viewModel::togglePlayed)
                                 ActionButton(
                                     onClick = viewModel::toggleFavorite,
                                     icon = if (episode.isFavorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
                                     on = episode.isFavorite,
-                                    contentDescription = stringResource(if (episode.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
+                                    contentDescription = stringResource(
+                                        if (episode.isFavorite) R.string.action_unfavorite else R.string.action_favorite,
+                                    ),
                                 )
                                 TrackChips(state, details, viewModel)
                             }
@@ -388,12 +457,23 @@ private fun EpisodeDetail(state: DetailState, details: ItemDetails, viewModel: D
 
 /** The backdrop scrolls away with the page, as it sits at the top of the design's scroll container. */
 @Composable
-internal fun ScrollingBackdrop(url: String?, height: Int, listState: LazyListState) {
+internal fun ScrollingBackdrop(
+    url: String?,
+    height: Int,
+    listState: LazyListState,
+) {
     DetailBackdrop(
         url = url,
         height = height,
         modifier = Modifier.graphicsLayer {
-            translationY = if (listState.firstVisibleItemIndex == 0) -listState.firstVisibleItemScrollOffset.toFloat() else -size.height
+            translationY =
+                if (listState.firstVisibleItemIndex ==
+                    0
+                ) {
+                    -listState.firstVisibleItemScrollOffset.toFloat()
+                } else {
+                    -size.height
+                }
         },
     )
 }
@@ -402,16 +482,33 @@ internal fun ScrollingBackdrop(url: String?, height: Int, listState: LazyListSta
 @Composable
 internal fun Crumb(text: String, overflow: TextOverflow = TextOverflow.Ellipsis) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Icon(GlacierIcons.ChevronLeft, contentDescription = null, tint = GlacierColors.Mist, modifier = Modifier.size(16.dp))
-        Text(text.uppercase(), style = GlacierText.body(17).copy(letterSpacing = 0.06.em), color = GlacierColors.Mist, maxLines = 1, overflow = overflow)
+        Icon(
+            GlacierIcons.ChevronLeft,
+            contentDescription = null,
+            tint = GlacierColors.Mist,
+            modifier = Modifier.size(16.dp),
+        )
+        Text(
+            text.uppercase(),
+            style = GlacierText.body(17).copy(letterSpacing = 0.06.em),
+            color = GlacierColors.Mist,
+            maxLines = 1,
+            overflow = overflow,
+        )
     }
 }
 
 @Composable
-internal fun Title(text: String, size: Int, maxWidth: Int) {
+internal fun Title(
+    text: String,
+    size: Int,
+    maxWidth: Int,
+) {
     Text(
         text,
-        style = GlacierText.display(size).copy(lineHeight = (size * 1.03).sp, shadow = Shadow(Color(0x99000000), blurRadius = 30f)),
+        style = GlacierText.display(
+            size,
+        ).copy(lineHeight = (size * 1.03).sp, shadow = Shadow(Color(0x99000000), blurRadius = 30f)),
         color = GlacierColors.Ice,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
@@ -448,8 +545,11 @@ private fun PlayButtons(
         label = when {
             // The episode page already shows "x % watched · y min left" above the buttons.
             left != null && episodeLabel -> stringResource(R.string.hero_resume)
+
             left != null -> stringResource(R.string.detail_resume_left, left)
+
             episodeLabel -> stringResource(R.string.episode_play)
+
             else -> stringResource(R.string.hero_play)
         },
         icon = GlacierIcons.Play,
@@ -468,12 +568,18 @@ internal fun SeenButton(played: Boolean, onClick: () -> Unit) {
         icon = if (played) GlacierIcons.SeenFilled else GlacierIcons.Seen,
         iconMark = if (played) GlacierIcons.SeenMark else null,
         on = played,
-        contentDescription = stringResource(if (played) R.string.action_mark_unwatched else R.string.action_mark_watched),
+        contentDescription = stringResource(
+            if (played) R.string.action_mark_unwatched else R.string.action_mark_watched,
+        ),
     )
 }
 
 @Composable
-private fun RowScope.TrackChips(state: DetailState, details: ItemDetails, viewModel: DetailViewModel) {
+private fun RowScope.TrackChips(
+    state: DetailState,
+    details: ItemDetails,
+    viewModel: DetailViewModel,
+) {
     val tracks = details.tracks
     val versions = details.versions
     if (tracks == null && versions.isEmpty()) return
@@ -508,19 +614,39 @@ private fun RowScope.TrackChips(state: DetailState, details: ItemDetails, viewMo
     val audio = tracks?.audio?.takeIf { it.isNotEmpty() }?.let { list ->
         trackChipContent(list.firstOrNull { it.index == state.selection?.audio }, subtitle = false)
     }
-    val subtitles = tracks?.let { trackChipContent(it.subtitles.firstOrNull { track -> track.index == state.selection?.subtitle }, subtitle = true) }
+    val subtitles = tracks?.let {
+        trackChipContent(
+            it.subtitles.firstOrNull { track -> track.index == state.selection?.subtitle },
+            subtitle = true,
+        )
+    }
     // The row may be short (episodes): the chips keep their width while they fit, else they share the rest in halves.
     // The version chip ("2160p") is short and keeps its width: the track chips give way. A cut's name stops at a width.
     Layout(
         content = {
             if (version != null) {
-                TrackChip(TrackChipContent(version, null), icon = null, onClick = { viewModel.openTracks(TrackKind.Version) }, modifier = Modifier.focusRequester(versionFocus))
+                TrackChip(
+                    TrackChipContent(version, null),
+                    icon = null,
+                    onClick = { viewModel.openTracks(TrackKind.Version) },
+                    modifier = Modifier.focusRequester(versionFocus),
+                )
             }
             if (audio != null) {
-                TrackChip(audio, icon = GlacierIcons.Speaker, onClick = { viewModel.openTracks(TrackKind.Audio) }, modifier = Modifier.focusRequester(audioFocus))
+                TrackChip(
+                    audio,
+                    icon = GlacierIcons.Speaker,
+                    onClick = { viewModel.openTracks(TrackKind.Audio) },
+                    modifier = Modifier.focusRequester(audioFocus),
+                )
             }
             if (subtitles != null) {
-                TrackChip(subtitles, icon = GlacierIcons.Subtitles, onClick = { viewModel.openTracks(TrackKind.Subtitles) }, modifier = Modifier.focusRequester(subtitleFocus))
+                TrackChip(
+                    subtitles,
+                    icon = GlacierIcons.Subtitles,
+                    onClick = { viewModel.openTracks(TrackKind.Subtitles) },
+                    modifier = Modifier.focusRequester(subtitleFocus),
+                )
             }
         },
         modifier = Modifier.weight(1f, fill = false),
@@ -556,7 +682,12 @@ private val VERSION_CHIP_MAX = 240.dp
 private val CHIP_GAP = 14.dp
 
 @Composable
-private fun TrackSheet(kind: TrackKind, state: DetailState, details: ItemDetails, viewModel: DetailViewModel) {
+private fun TrackSheet(
+    kind: TrackKind,
+    state: DetailState,
+    details: ItemDetails,
+    viewModel: DetailViewModel,
+) {
     if (kind == TrackKind.Version) return VersionSheet(state, details, viewModel)
     val tracks = details.tracks ?: return
     val audio = kind == TrackKind.Audio
@@ -576,19 +707,22 @@ private fun TrackSheet(kind: TrackKind, state: DetailState, details: ItemDetails
 
 /** The sheets name the title, an episode with its number. */
 @Composable
-private fun sheetPrefix(item: MediaItem): String =
-    if (item.kind == ItemKind.Episode && item.episodeNumber != null) {
-        stringResource(R.string.episode_badge, item.episodeNumber!!) + " · " + item.title
-    } else {
-        item.title
-    }
+private fun sheetPrefix(item: MediaItem): String = if (item.kind == ItemKind.Episode && item.episodeNumber != null) {
+    stringResource(R.string.episode_badge, item.episodeNumber!!) + " · " + item.title
+} else {
+    item.title
+}
 
 /**
  * The title's files: "2160p", below it "HEVC · HDR · 58 GB". Cuts show their
  * name with the size as a pill: "Director's Cut" [1080p], "H.264 · 2 h 15 min · 20 GB".
  */
 @Composable
-private fun VersionSheet(state: DetailState, details: ItemDetails, viewModel: DetailViewModel) {
+private fun VersionSheet(
+    state: DetailState,
+    details: ItemDetails,
+    viewModel: DetailViewModel,
+) {
     val versions = details.versions
     val theatrical = stringResource(R.string.version_theatrical)
     val labels = remember(versions, theatrical) { versionLabels(versions, theatrical) }
@@ -618,7 +752,9 @@ private fun VersionSheet(state: DetailState, details: ItemDetails, viewModel: De
     val show = details.item.kind == ItemKind.Episode
     TrackPanel(
         title = stringResource(R.string.version),
-        subtitle = sheetPrefix(details.item) + " · " + stringResource(if (show) R.string.version_for_show else R.string.version_for_movie),
+        subtitle = sheetPrefix(
+            details.item,
+        ) + " · " + stringResource(if (show) R.string.version_for_show else R.string.version_for_movie),
         options = rows,
         selected = versions.indexOfFirst { it.id == state.selection?.versionId }.coerceAtLeast(0),
         onPick = { i -> viewModel.pickVersion(versions[i].id, rows[i].full) },
@@ -664,7 +800,10 @@ private fun SeasonChips(state: DetailState, viewModel: DetailViewModel) {
         Row(
             Modifier
                 .padding(top = 54.dp, bottom = 20.dp)
-                .focusProperties { onEnter = { (restoreTarget ?: state.season?.id)?.let { id -> chips[id]?.requestFocus() } } }
+                .focusProperties {
+                    onEnter =
+                        { (restoreTarget ?: state.season?.id)?.let { id -> chips[id]?.requestFocus() } }
+                }
                 .focusGroup()
                 .horizontalScroll(scroll)
                 .padding(horizontal = PageEdge.dp),
@@ -691,7 +830,10 @@ private fun SeasonChips(state: DetailState, viewModel: DetailViewModel) {
                             .then(
                                 if (selected) {
                                     // Relative to the row's padded content; add the padding for scroll offsets.
-                                    Modifier.onPlaced { activeBounds = (it.positionInParent().x.toInt() + edge).let { x -> x..x + it.size.width } }
+                                    Modifier.onPlaced {
+                                        activeBounds =
+                                            (it.positionInParent().x.toInt() + edge).let { x -> x..x + it.size.width }
+                                    }
                                 } else {
                                     Modifier
                                 },
@@ -705,7 +847,12 @@ private fun SeasonChips(state: DetailState, viewModel: DetailViewModel) {
 
 /** A season's options (holding OK on its chip): for now marking it watched or unwatched. */
 @Composable
-private fun SeasonSheet(season: Season, showTitle: String, onToggle: () -> Unit, onDismiss: () -> Unit) {
+private fun SeasonSheet(
+    season: Season,
+    showTitle: String,
+    onToggle: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     val first = remember(season.id) { FocusRequester() }
     OptionsPanel(
         title = season.number?.let { seasonLabel(it) } ?: season.name,
@@ -715,7 +862,9 @@ private fun SeasonSheet(season: Season, showTitle: String, onToggle: () -> Unit,
     ) {
         OptionRow(
             label = stringResource(if (season.played) R.string.season_mark_unwatched else R.string.season_mark_watched),
-            description = stringResource(if (season.played) R.string.season_mark_unwatched_desc else R.string.season_mark_watched_desc),
+            description = stringResource(
+                if (season.played) R.string.season_mark_unwatched_desc else R.string.season_mark_watched_desc,
+            ),
             onClick = onToggle,
             icon = GlacierIcons.Seen,
             modifier = Modifier.focusRequester(first),
@@ -768,7 +917,11 @@ private fun EpisodeStill(episode: MediaItem) {
             .border(1.dp, GlacierColors.GlassBorder2, shape),
     ) {
         Artwork(episode.thumbUrl, Modifier.fillMaxSize())
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.42f to Color.Transparent, 1f to Color(0xB805090F))))
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(0.42f to Color.Transparent, 1f to Color(0xB805090F)),
+            ),
+        )
         episode.episodeNumber?.let {
             Box(
                 Modifier
@@ -781,19 +934,36 @@ private fun EpisodeStill(episode: MediaItem) {
                     .padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(stringResource(R.string.episode_badge, it), style = GlacierText.body(16, FontWeight.Bold), color = GlacierColors.Ice)
+                Text(
+                    stringResource(R.string.episode_badge, it),
+                    style = GlacierText.body(16, FontWeight.Bold),
+                    color = GlacierColors.Ice,
+                )
             }
         }
         if (episode.played) {
             Box(
-                Modifier.align(Alignment.TopEnd).padding(end = 20.dp, top = 18.dp).size(36.dp).clip(PillShape).background(accent),
+                Modifier.align(
+                    Alignment.TopEnd,
+                ).padding(end = 20.dp, top = 18.dp).size(36.dp).clip(PillShape).background(accent),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(GlacierIcons.Check, contentDescription = null, tint = GlacierColors.Void, modifier = Modifier.size(20.dp))
+                Icon(
+                    GlacierIcons.Check,
+                    contentDescription = null,
+                    tint = GlacierColors.Void,
+                    modifier = Modifier.size(20.dp),
+                )
             }
         }
         episode.progress?.let {
-            ProgressBar(it, track = Color(0x42E8F4F7), modifier = Modifier.align(Alignment.BottomCenter).padding(start = 20.dp, end = 20.dp, bottom = 20.dp).height(6.dp))
+            ProgressBar(
+                it,
+                track = Color(0x42E8F4F7),
+                modifier = Modifier.align(
+                    Alignment.BottomCenter,
+                ).padding(start = 20.dp, end = 20.dp, bottom = 20.dp).height(6.dp),
+            )
         }
     }
 }
@@ -817,7 +987,8 @@ private fun mediaFacts(details: ItemDetails): List<String> {
 /** When the item would end if played now, from the resume point if there is one. Ticks with the clock. */
 @Composable
 private fun endsAtText(item: MediaItem): String? {
-    val minutes = (if (item.progress != null) item.remainingMinutes else item.runtimeMinutes)?.takeIf { it > 0 } ?: return null
+    val minutes =
+        (if (item.progress != null) item.remainingMinutes else item.runtimeMinutes)?.takeIf { it > 0 } ?: return null
     val now by produceState(LocalTime.now()) {
         while (true) {
             delay(CLOCK_TICK_MS)
@@ -843,6 +1014,11 @@ internal fun ErrorState(onRetry: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterVertically),
     ) {
         Text(stringResource(R.string.detail_error), style = GlacierText.display(30), color = GlacierColors.Ice)
-        PillButton(stringResource(R.string.action_retry), onClick = onRetry, primary = true, modifier = Modifier.focusRequester(focus))
+        PillButton(
+            stringResource(R.string.action_retry),
+            onClick = onRetry,
+            primary = true,
+            modifier = Modifier.focusRequester(focus),
+        )
     }
 }

@@ -2,9 +2,9 @@ package io.github.glacier_jellyfin.androidtv.detail
 
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
+import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.util.UUID
 
 class CollectionRowsTest {
 
@@ -44,7 +44,10 @@ class CollectionRowsTest {
         item(ItemKind.Album, "Album"),
     )
 
-    private fun titles(rows: List<Pair<CollectionRow, List<MediaItem>>>) = rows.map { (row, items) -> row to items.map { it.title } }
+    private fun titles(rows: List<Pair<CollectionRow, List<MediaItem>>>) = rows.map { (row, items) ->
+        row to
+            items.map { it.title }
+    }
 
     @Test
     fun `one row per kind, videos first, each in the given order`() {
@@ -76,6 +79,9 @@ class CollectionRowsTest {
     @Test
     fun `movies alone stay movies when sharing is on`() {
         val movies = listOf(item(ItemKind.Movie, "First"), item(ItemKind.Movie, "Second"))
-        assertEquals(listOf(CollectionRow.Movies to listOf("First", "Second")), titles(collectionRows(movies, moviesWithShows = true)))
+        assertEquals(
+            listOf(CollectionRow.Movies to listOf("First", "Second")),
+            titles(collectionRows(movies, moviesWithShows = true)),
+        )
     }
 }

@@ -1,12 +1,5 @@
 package io.github.glacier_jellyfin.androidtv.favorites
 
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.SharingStarted
-import io.github.glacier_jellyfin.androidtv.core.data.settings.arranged
-import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
-import io.github.glacier_jellyfin.androidtv.core.data.settings.NavigationSettings
-import io.github.glacier_jellyfin.androidtv.core.data.settings.FavoriteRow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,22 +10,29 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.FavoritesRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.FavoriteRow
+import io.github.glacier_jellyfin.androidtv.core.data.settings.NavigationSettings
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.arranged
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
+import io.github.glacier_jellyfin.androidtv.navigation.routeFor
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import io.github.glacier_jellyfin.androidtv.navigation.routeFor
 
 data class FavoritesState(
     val loading: Boolean = true,
@@ -56,8 +56,9 @@ class FavoritesViewModel @Inject constructor(
         .map { profile -> shownRows(profile.navigation) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, shownRows(settings.settings.value.navigation))
 
-    private fun shownRows(navigation: NavigationSettings): List<FavoriteRow> =
-        navigation.favoriteRows.arranged(FavoriteRow.entries.map { it.name }).filter { it.shown }.map { FavoriteRow.valueOf(it.id) }
+    private fun shownRows(navigation: NavigationSettings): List<FavoriteRow> = navigation.favoriteRows.arranged(
+        FavoriteRow.entries.map { it.name },
+    ).filter { it.shown }.map { FavoriteRow.valueOf(it.id) }
 
     private val _state = MutableStateFlow(FavoritesState(userName = sessions.session.value?.user?.name.orEmpty()))
     val state: StateFlow<FavoritesState> = _state.asStateFlow()

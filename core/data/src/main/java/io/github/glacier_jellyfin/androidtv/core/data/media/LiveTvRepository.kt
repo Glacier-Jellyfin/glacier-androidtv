@@ -5,6 +5,12 @@ import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ChannelSort
 import io.github.glacier_jellyfin.androidtv.core.data.settings.LiveTvSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -28,12 +34,6 @@ import org.jellyfin.sdk.model.api.RecordingStatus
 import org.jellyfin.sdk.model.api.SeriesTimerInfoDto
 import org.jellyfin.sdk.model.api.SortOrder
 import org.jellyfin.sdk.model.api.TimerInfoDto
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** A Live TV channel with what runs on it now, as far as the guide knows. */
 data class LiveChannel(
@@ -150,7 +150,11 @@ fun nowAndNext(programs: List<LiveProgram>, timeMs: Long): Pair<LiveProgram?, Li
 }
 
 /** The channel after (or before, [by] -1) [current] in [channels], wrapping around at either end. */
-fun channelAfter(channels: List<LiveChannel>, current: UUID, by: Int): LiveChannel? {
+fun channelAfter(
+    channels: List<LiveChannel>,
+    current: UUID,
+    by: Int,
+): LiveChannel? {
     if (channels.isEmpty()) return null
     val index = channels.indexOfFirst { it.id == current }
     if (index < 0) return channels.first()
@@ -160,22 +164,36 @@ fun channelAfter(channels: List<LiveChannel>, current: UUID, by: Int): LiveChann
 /** The channel a typed number picks: the exact number, else none. */
 fun channelByNumber(channels: List<LiveChannel>, number: String): LiveChannel? =
     channels.firstOrNull { it.number == number }
-        ?: number.trimStart('0').takeIf { it.isNotEmpty() }?.let { trimmed -> channels.firstOrNull { it.number?.trimStart('0') == trimmed } }
+        ?: number.trimStart(
+            '0',
+        ).takeIf { it.isNotEmpty() }?.let { trimmed -> channels.firstOrNull { it.number?.trimStart('0') == trimmed } }
 
 /**
  * [channels] in [sort] order. By number: numbered channels first, a number like "5.1" after "5"
  * and "10" after "9"; channels without a number follow by name. The server puts those first.
  * [descending] turns both round, but channels without a number stay at the end.
  */
-fun sortedChannels(channels: List<LiveChannel>, sort: ChannelSort, descending: Boolean = false): List<LiveChannel> {
+fun sortedChannels(
+    channels: List<LiveChannel>,
+    sort: ChannelSort,
+    descending: Boolean = false,
+): List<LiveChannel> {
     fun Comparator<LiveChannel>.directed() = if (descending) reversed() else this
     val byName = compareBy(NameOrder) { channel: LiveChannel -> channel.name }.directed()
     return when (sort) {
         ChannelSort.Number -> channels.sortedWith(
             compareBy<LiveChannel> { it.number == null }
-                .then(Comparator<LiveChannel> { a, b -> compareChannelNumbers(a.number.orEmpty(), b.number.orEmpty()) }.directed())
+                .then(
+                    Comparator<LiveChannel> { a, b ->
+                        compareChannelNumbers(
+                            a.number.orEmpty(),
+                            b.number.orEmpty(),
+                        )
+                    }.directed(),
+                )
                 .then(byName),
         )
+
         ChannelSort.Name -> channels.sortedWith(byName)
     }
 }
@@ -274,7 +292,13 @@ class LiveTvRepository @Inject constructor(
     }
 
     /** The guide of [channelIds] from [fromMs] to [toMs], by channel; channels without data are missing. */
-    suspend fun guide(channelIds: List<UUID>, fromMs: Long, toMs: Long): Map<UUID, List<LiveProgram>> = withContext(Dispatchers.IO) {
+    suspend fun guide(
+        channelIds: List<UUID>,
+        fromMs: Long,
+        toMs: Long,
+    ): Map<UUID, List<LiveProgram>> = withContext(
+        Dispatchers.IO,
+    ) {
         if (channelIds.isEmpty()) return@withContext emptyMap()
         val session = requireSession()
         val api = session.api
@@ -391,7 +415,15 @@ class LiveTvRepository @Inject constructor(
             startMs = startMs,
             endMs = endDate?.toEpochMs() ?: (startMs + (runTimeTicks ?: 0L) / TICKS_PER_MS),
             imageUrl = imageOf(api, id, imageTags)
-                ?: seriesId?.let { show -> seriesPrimaryImageTag?.let { imageOf(api, show, mapOf(ImageType.PRIMARY to it)) } },
+                ?: seriesId?.let { show ->
+                    seriesPrimaryImageTag?.let {
+                        imageOf(
+                            api,
+                            show,
+                            mapOf(ImageType.PRIMARY to it),
+                        )
+                    }
+                },
             recording = status.equals("InProgress", ignoreCase = true),
             timerId = timerId?.takeIf { it.isNotBlank() },
         )
@@ -422,11 +454,22 @@ class LiveTvRepository @Inject constructor(
         overview = plainText(overview)?.takeIf { it.isNotBlank() },
         channelName = channelName?.takeIf { it.isNotBlank() && recordAnyChannel != true },
         imageUrl = parentPrimaryImageItemId?.let { item ->
-            parentPrimaryImageTag?.let { api.imageApi.getItemImageUrl(itemId = item, imageType = ImageType.PRIMARY, tag = it, maxWidth = PROGRAM_WIDTH) }
+            parentPrimaryImageTag?.let {
+                api.imageApi.getItemImageUrl(
+                    itemId = item,
+                    imageType = ImageType.PRIMARY,
+                    tag = it,
+                    maxWidth = PROGRAM_WIDTH,
+                )
+            }
         },
     )
 
-    private fun imageOf(api: ApiClient, item: UUID, tags: Map<ImageType, String>?): String? {
+    private fun imageOf(
+        api: ApiClient,
+        item: UUID,
+        tags: Map<ImageType, String>?,
+    ): String? {
         val (type, tag) = tags?.get(ImageType.PRIMARY)?.let { ImageType.PRIMARY to it }
             ?: tags?.get(ImageType.THUMB)?.let { ImageType.THUMB to it }
             ?: return null
@@ -459,7 +502,12 @@ class LiveTvRepository @Inject constructor(
             startMs = start.toEpochMs(),
             endMs = end.toEpochMs(),
             imageUrl = image?.let { (item, typeAndTag) ->
-                api.imageApi.getItemImageUrl(itemId = item, imageType = typeAndTag.first, tag = typeAndTag.second, maxWidth = PROGRAM_WIDTH)
+                api.imageApi.getItemImageUrl(
+                    itemId = item,
+                    imageType = typeAndTag.first,
+                    tag = typeAndTag.second,
+                    maxWidth = PROGRAM_WIDTH,
+                )
             },
             category = when {
                 isMovie == true -> ProgramCategory.Movie
@@ -490,7 +538,10 @@ class LiveTvRepository @Inject constructor(
 /** The SDK reads server times into the device's time zone. */
 private fun LocalDateTime.toEpochMs(): Long = atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
-private fun Long.toLocalDateTime(): LocalDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(this), ZoneId.systemDefault())
+private fun Long.toLocalDateTime(): LocalDateTime = LocalDateTime.ofInstant(
+    Instant.ofEpochMilli(this),
+    ZoneId.systemDefault(),
+)
 
 /**
  * A channel tuned to at [atMs]. Each time counts on its own: back on the same

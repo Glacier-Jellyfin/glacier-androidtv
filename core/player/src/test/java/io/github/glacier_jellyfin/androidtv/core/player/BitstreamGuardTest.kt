@@ -20,7 +20,11 @@ class BitstreamGuardTest {
     }
 
     /** Reports [positionUs] every 10 ms for [ms]; true if the guard asked for a new track. */
-    private fun standStill(ms: Long, positionUs: Long = 1_000_000, pendingData: Boolean = true): Boolean {
+    private fun standStill(
+        ms: Long,
+        positionUs: Long = 1_000_000,
+        pendingData: Boolean = true,
+    ): Boolean {
         var stalled = false
         repeat((ms / 10).toInt()) {
             now += 10

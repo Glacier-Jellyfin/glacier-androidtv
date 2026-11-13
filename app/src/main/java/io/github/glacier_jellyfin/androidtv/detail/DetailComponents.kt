@@ -2,7 +2,6 @@ package io.github.glacier_jellyfin.androidtv.detail
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,12 +11,8 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,26 +20,27 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.layout.ContentScale
-import coil3.compose.AsyncImage
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -54,13 +50,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
+import coil3.compose.AsyncImage
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.CastMember
 import io.github.glacier_jellyfin.androidtv.core.data.media.Languages
-import io.github.glacier_jellyfin.androidtv.core.data.media.TrackMark
-import io.github.glacier_jellyfin.androidtv.core.data.media.describeTrack
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.Track
+import io.github.glacier_jellyfin.androidtv.core.data.media.TrackMark
+import io.github.glacier_jellyfin.androidtv.core.data.media.describeTrack
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierCard
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
@@ -133,7 +130,11 @@ private val TrackMark.label: Int
 fun trackLabel(track: Track, subtitle: Boolean): String = trackRow(track, subtitle).full
 
 /** What a track chip shows: the language (or the track's name) with its flag, the marks as icons. */
-data class TrackChipContent(val label: String, val flag: String?, val marks: List<TrackMark> = emptyList())
+data class TrackChipContent(
+    val label: String,
+    val flag: String?,
+    val marks: List<TrackMark> = emptyList(),
+)
 
 @Composable
 fun trackChipContent(track: Track?, subtitle: Boolean): TrackChipContent {
@@ -159,7 +160,12 @@ private val TrackMark.icon: ImageVector
  * matching inner radius would be under 1.
  */
 @Composable
-fun LanguageFlag(flag: String, modifier: Modifier = Modifier, width: Int = 24, height: Int = 16) {
+fun LanguageFlag(
+    flag: String,
+    modifier: Modifier = Modifier,
+    width: Int = 24,
+    height: Int = 16,
+) {
     Box(
         modifier
             .padding(2.dp)
@@ -183,7 +189,12 @@ fun LanguageFlag(flag: String, modifier: Modifier = Modifier, width: Int = 24, h
  * light glass with a clear edge so it stays readable over a bright backdrop.
  */
 @Composable
-fun TrackChip(content: TrackChipContent, icon: ImageVector?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun TrackChip(
+    content: TrackChipContent,
+    icon: ImageVector?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -212,7 +223,12 @@ fun TrackChip(content: TrackChipContent, icon: ImageVector?, onClick: () -> Unit
             modifier = Modifier.weight(1f, fill = false),
         )
         content.marks.forEach { mark ->
-            Icon(mark.icon, contentDescription = stringResource(mark.label), tint = foreground, modifier = Modifier.size(19.dp))
+            Icon(
+                mark.icon,
+                contentDescription = stringResource(mark.label),
+                tint = foreground,
+                modifier = Modifier.size(19.dp),
+            )
         }
     }
 }
@@ -287,7 +303,12 @@ fun TrackPanel(
 }
 
 @Composable
-private fun TrackOption(row: TrackRow, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
+private fun TrackOption(
+    row: TrackRow,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -327,7 +348,14 @@ private fun TrackOption(row: TrackRow, selected: Boolean, onClick: () -> Unit, m
         row.marks.forEach { TrackBadge(it, focused) }
         // The check keeps its place on every row, so the badges line up whether a row is selected or not.
         Box(Modifier.size(22.dp)) {
-            if (selected) Icon(GlacierIcons.Check, contentDescription = null, tint = foreground, modifier = Modifier.size(22.dp))
+            if (selected) {
+                Icon(
+                    GlacierIcons.Check,
+                    contentDescription = null,
+                    tint = foreground,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
         }
     }
 }
@@ -344,7 +372,12 @@ private fun TrackBadge(text: String, focused: Boolean) {
             .padding(horizontal = 11.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, style = GlacierText.body(15, FontWeight.SemiBold), color = if (focused) GlacierColors.Void else GlacierColors.Mist, maxLines = 1)
+        Text(
+            text,
+            style = GlacierText.body(15, FontWeight.SemiBold),
+            color = if (focused) GlacierColors.Void else GlacierColors.Mist,
+            maxLines = 1,
+        )
     }
 }
 
@@ -367,7 +400,11 @@ fun EpisodeCard(
                 .clip(shape),
         ) {
             Artwork(episode.thumbUrl, Modifier.fillMaxSize())
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.4f to Color.Transparent, 1f to Color(0xCC05090F))))
+            Box(
+                Modifier.fillMaxSize().background(
+                    Brush.verticalGradient(0.4f to Color.Transparent, 1f to Color(0xCC05090F)),
+                ),
+            )
             if (episode.played) Box(Modifier.fillMaxSize().background(Color(0x8505090F)))
             episode.episodeNumber?.let {
                 Pill(
@@ -379,7 +416,10 @@ fun EpisodeCard(
                 )
             }
             episode.runtimeMinutes?.takeIf { it > 0 }?.let {
-                Pill(stringResource(R.string.runtime_minutes, it), Modifier.align(Alignment.TopEnd).padding(end = 16.dp, top = 14.dp))
+                Pill(
+                    stringResource(R.string.runtime_minutes, it),
+                    Modifier.align(Alignment.TopEnd).padding(end = 16.dp, top = 14.dp),
+                )
             }
             when {
                 episode.played -> Box(
@@ -391,17 +431,30 @@ fun EpisodeCard(
                         .background(accent.main),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(GlacierIcons.Check, contentDescription = null, tint = GlacierColors.Void, modifier = Modifier.size(18.dp))
+                    Icon(
+                        GlacierIcons.Check,
+                        contentDescription = null,
+                        tint = GlacierColors.Void,
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
+
                 episode.progress != null -> ProgressBar(
                     episode.progress ?: 0f,
                     track = Color(0x42E8F4F7),
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(start = 16.dp, end = 16.dp, bottom = 16.dp).height(5.dp),
+                    modifier = Modifier.align(
+                        Alignment.BottomCenter,
+                    ).padding(start = 16.dp, end = 16.dp, bottom = 16.dp).height(5.dp),
                 )
             }
         }
         Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            MarqueeText(episode.title, style = GlacierText.body(19, FontWeight.SemiBold), color = if (focused) accent.main else GlacierColors.Ice, active = focused)
+            MarqueeText(
+                episode.title,
+                style = GlacierText.body(19, FontWeight.SemiBold),
+                color = if (focused) accent.main else GlacierColors.Ice,
+                active = focused,
+            )
             Text(
                 episode.overview.orEmpty(),
                 style = GlacierText.body(16).copy(lineHeight = 24.sp),
@@ -415,7 +468,13 @@ fun EpisodeCard(
 }
 
 @Composable
-private fun Pill(text: String, modifier: Modifier, background: Color = GlacierColors.GlassFill, color: Color = GlacierColors.Ice, bold: Boolean = false) {
+private fun Pill(
+    text: String,
+    modifier: Modifier,
+    background: Color = GlacierColors.GlassFill,
+    color: Color = GlacierColors.Ice,
+    bold: Boolean = false,
+) {
     Box(
         modifier
             .height(32.dp)
@@ -435,7 +494,13 @@ fun CastCard(person: CastMember, onClick: () -> Unit) = CastCard(person.name, pe
 
 /** Round portrait of a person: the [imageUrl] over a gradient with the name's initial. [decoration] sits between size and clip. */
 @Composable
-fun CastPortrait(name: String, imageUrl: String?, size: Int, modifier: Modifier = Modifier, decoration: Modifier = Modifier) {
+fun CastPortrait(
+    name: String,
+    imageUrl: String?,
+    size: Int,
+    modifier: Modifier = Modifier,
+    decoration: Modifier = Modifier,
+) {
     val accent = LocalAccent.current
     Box(
         modifier
@@ -451,12 +516,20 @@ fun CastPortrait(name: String, imageUrl: String?, size: Int, modifier: Modifier 
 }
 
 @Composable
-fun CastCard(name: String, role: String?, imageUrl: String?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun CastCard(
+    name: String,
+    role: String?,
+    imageUrl: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val accent = LocalAccent.current
     val size = LocalCardSizes.current.castSize
     GlacierCard(onClick = onClick, modifier = modifier.width((size + 18).dp)) { focused ->
         CastPortrait(
-            name, imageUrl, size,
+            name,
+            imageUrl,
+            size,
             Modifier.align(Alignment.CenterHorizontally),
             decoration = Modifier.focusFrame(focused, PillShape),
         )
@@ -469,7 +542,14 @@ fun CastCard(name: String, role: String?, imageUrl: String?, onClick: () -> Unit
             modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
         )
         role?.let {
-            Text(it, style = GlacierText.body(15), color = GlacierColors.Mist, textAlign = TextAlign.Center, maxLines = 2, modifier = Modifier.fillMaxWidth())
+            Text(
+                it,
+                style = GlacierText.body(15),
+                color = GlacierColors.Mist,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }

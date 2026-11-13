@@ -54,7 +54,11 @@ object ReleaseSelector {
      * A release is ignored when its tag does not parse, when GitHub's
      * pre-release flag disagrees with the tag, or when it lacks the APK asset.
      */
-    fun select(releases: List<Release>, installed: AppVersion, channel: UpdateChannel): UpdateCandidate? {
+    fun select(
+        releases: List<Release>,
+        installed: AppVersion,
+        channel: UpdateChannel,
+    ): UpdateCandidate? {
         val newer = releases.asSequence()
             .filterNot { it.isDraft }
             .mapNotNull { release ->

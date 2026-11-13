@@ -3,8 +3,8 @@ package io.github.glacier_jellyfin.androidtv.update
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.MainActivity
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 
 /**
  * Android ends Glacier while it installs an update of itself; once the new

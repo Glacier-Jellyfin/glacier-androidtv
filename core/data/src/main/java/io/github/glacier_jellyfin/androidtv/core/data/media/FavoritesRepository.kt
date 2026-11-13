@@ -3,6 +3,9 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -11,9 +14,6 @@ import org.jellyfin.sdk.api.client.extensions.libraryApi
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
-import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** Everything the profile marked with the heart, by kind, each sorted by name. */
 data class Favorites(
@@ -27,10 +27,7 @@ data class Favorites(
 
 /** The favorites page: one query for titles, one for songs. */
 @Singleton
-class FavoritesRepository @Inject constructor(
-    private val sessions: SessionManager,
-    private val ageFilter: AgeFilter,
-) {
+class FavoritesRepository @Inject constructor(private val sessions: SessionManager, private val ageFilter: AgeFilter) {
     suspend fun load(): Favorites = withContext(Dispatchers.IO) {
         val session = checkNotNull(sessions.session.value) { "No profile is signed in" }
         val mapper = MediaMapper(session.api)
@@ -49,23 +46,22 @@ class FavoritesRepository @Inject constructor(
         }
     }
 
-    private suspend fun titles(session: Session) =
-        session.api.libraryApi.getItems(
-            userId = session.userId,
-            includeItemTypes = listOf(
-                BaseItemKind.MOVIE,
-                BaseItemKind.SERIES,
-                BaseItemKind.EPISODE,
-                BaseItemKind.MUSIC_ALBUM,
-                BaseItemKind.MUSIC_ARTIST,
-            ),
-            recursive = true,
-            isFavorite = true,
-            sortBy = listOf(ItemSortBy.SORT_NAME),
-            fields = listOf(ItemFields.OVERVIEW, ItemFields.GENRES, ItemFields.MEDIA_STREAMS),
-            enableUserData = true,
-            limit = TITLES,
-        ).content.items
+    private suspend fun titles(session: Session) = session.api.libraryApi.getItems(
+        userId = session.userId,
+        includeItemTypes = listOf(
+            BaseItemKind.MOVIE,
+            BaseItemKind.SERIES,
+            BaseItemKind.EPISODE,
+            BaseItemKind.MUSIC_ALBUM,
+            BaseItemKind.MUSIC_ARTIST,
+        ),
+        recursive = true,
+        isFavorite = true,
+        sortBy = listOf(ItemSortBy.SORT_NAME),
+        fields = listOf(ItemFields.OVERVIEW, ItemFields.GENRES, ItemFields.MEDIA_STREAMS),
+        enableUserData = true,
+        limit = TITLES,
+    ).content.items
 
     private suspend fun songs(session: Session, mapper: MediaMapper): List<MusicTrack> =
         session.api.libraryApi.getItems(

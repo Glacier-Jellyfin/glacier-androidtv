@@ -77,7 +77,11 @@ class NameIndexStore @Inject constructor(@ApplicationContext context: Context) {
                         entry.id, entry.name, entry.addedMonth, entry.year, entry.rating, entry.runtimeMs,
                         entry.artist, entry.albumId, entry.album, entry.disc, entry.track,
                     )
-                    out.write(fields.joinToString("\t") { it?.toString().orEmpty().replace('\t', ' ').replace('\n', ' ').replace('\r', ' ') })
+                    out.write(
+                        fields.joinToString(
+                            "\t",
+                        ) { it?.toString().orEmpty().replace('\t', ' ').replace('\n', ' ').replace('\r', ' ') },
+                    )
                     out.write("\n")
                 }
             }
@@ -94,6 +98,7 @@ class NameIndexStore @Inject constructor(@ApplicationContext context: Context) {
 
     private companion object {
         const val TAG = "NameIndex"
+
         /** Values per line: id, name and the values of the other sorts (see [IndexEntry]). */
         const val FIELDS = 11
     }

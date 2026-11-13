@@ -4,6 +4,9 @@ import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleMode
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -17,20 +20,17 @@ import org.jellyfin.sdk.api.client.extensions.showApi
 import org.jellyfin.sdk.api.client.extensions.trickPlayApi
 import org.jellyfin.sdk.api.client.extensions.userDataApi
 import org.jellyfin.sdk.model.api.BaseItemDto
-import org.jellyfin.sdk.model.api.BaseItemPerson
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.sdk.model.api.BaseItemPerson
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.MediaSourceInfo
 import org.jellyfin.sdk.model.api.MediaStream
-import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.MediaStreamType
+import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.PersonKind
 import org.jellyfin.sdk.model.api.SortOrder
-import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class DetailRepository @Inject constructor(
@@ -61,7 +61,11 @@ class DetailRepository @Inject constructor(
             trailers = Trailers(
                 localCount = dto.localTrailerCount ?: 0,
                 youTube = dto.remoteTrailers.orEmpty()
-                    .mapNotNull { link -> link.url?.let(::youTubeId)?.let { YouTubeTrailer(it, link.name?.takeIf(String::isNotBlank)) } }
+                    .mapNotNull { link ->
+                        link.url?.let(
+                            ::youTubeId,
+                        )?.let { YouTubeTrailer(it, link.name?.takeIf(String::isNotBlank)) }
+                    }
                     // Metadata providers often list the same video twice.
                     .distinctBy { it.videoId },
             ),
@@ -112,15 +116,27 @@ class DetailRepository @Inject constructor(
                 name = chapter.name.orEmpty(),
                 startMs = chapter.startPositionTicks / TICKS_PER_MS,
                 imageUrl = chapter.imageTag?.let { tag ->
-                    session.api.imageApi.getItemImageUrl(itemId = dto.id, imageType = ImageType.CHAPTER, imageIndex = index, tag = tag, maxWidth = 600)
+                    session.api.imageApi.getItemImageUrl(
+                        itemId = dto.id,
+                        imageType = ImageType.CHAPTER,
+                        imageIndex = index,
+                        tag = tag,
+                        maxWidth = 600,
+                    )
                 },
             )
         }
 
     /** The resolution closest to the design's 340-wide preview; of the first file unless [sourceId] names one. */
-    private fun trickplay(session: Session, dto: BaseItemDto, sourceId: String? = null): Trickplay? {
+    private fun trickplay(
+        session: Session,
+        dto: BaseItemDto,
+        sourceId: String? = null,
+    ): Trickplay? {
         val source = sourceId ?: dto.mediaSources?.firstOrNull()?.id ?: dto.id.toString().replace("-", "")
-        val sizes = dto.trickplay?.get(source) ?: dto.trickplay?.values?.firstOrNull().takeIf { sourceId == null } ?: return null
+        val sizes = dto.trickplay?.get(
+            source,
+        ) ?: dto.trickplay?.values?.firstOrNull().takeIf { sourceId == null } ?: return null
         val info = sizes.values.minByOrNull { kotlin.math.abs(it.width - TRICKPLAY_WIDTH) } ?: return null
         val perTile = (info.tileWidth * info.tileHeight).coerceAtLeast(1)
         val tiles = (info.thumbnailCount + perTile - 1) / perTile
@@ -133,7 +149,12 @@ class DetailRepository @Inject constructor(
             count = info.thumbnailCount,
             intervalMs = info.interval.toLong(),
             tileUrls = (0 until tiles).map { index ->
-                session.api.trickPlayApi.getTrickplayTileImageUrl(itemId = dto.id, width = info.width, index = index, mediaSourceId = sourceId)
+                session.api.trickPlayApi.getTrickplayTileImageUrl(
+                    itemId = dto.id,
+                    width = info.width,
+                    index = index,
+                    mediaSourceId = sourceId,
+                )
             },
         )
     }
@@ -147,7 +168,12 @@ class DetailRepository @Inject constructor(
                 name = dto.name?.takeIf { it.isNotBlank() },
                 durationMs = dto.runTimeTicks?.let { it / TICKS_PER_MS },
                 imageUrl = dto.imageTags?.get(ImageType.PRIMARY)?.let { tag ->
-                    session.api.imageApi.getItemImageUrl(itemId = dto.id, imageType = ImageType.PRIMARY, tag = tag, maxWidth = 600)
+                    session.api.imageApi.getItemImageUrl(
+                        itemId = dto.id,
+                        imageType = ImageType.PRIMARY,
+                        tag = tag,
+                        maxWidth = 600,
+                    )
                 },
             )
         }
@@ -155,7 +181,11 @@ class DetailRepository @Inject constructor(
 
     suspend fun seasons(seriesId: UUID): List<Season> = withContext(Dispatchers.IO) {
         val session = requireSession()
-        session.api.showApi.getSeasons(seriesId = seriesId, userId = session.userId, enableUserData = true).content.items.map {
+        session.api.showApi.getSeasons(
+            seriesId = seriesId,
+            userId = session.userId,
+            enableUserData = true,
+        ).content.items.map {
             Season(
                 id = it.id,
                 number = it.indexNumber,
@@ -221,7 +251,11 @@ class DetailRepository @Inject constructor(
     suspend fun playlistVideos(playlistId: UUID): List<MediaItem> = withContext(Dispatchers.IO) {
         val session = requireSession()
         val mapper = MediaMapper(session.api)
-        session.api.playlistApi.getPlaylistItems(playlistId = playlistId, userId = session.userId, enableUserData = true)
+        session.api.playlistApi.getPlaylistItems(
+            playlistId = playlistId,
+            userId = session.userId,
+            enableUserData = true,
+        )
             .content.items
             .filter { it.mediaType == MediaType.VIDEO }
             .map(mapper::item)
@@ -289,7 +323,12 @@ class DetailRepository @Inject constructor(
             born = dto.premiereDate?.toLocalDate(),
             birthplace = dto.productionLocations?.firstOrNull(),
             imageUrl = dto.imageTags?.get(ImageType.PRIMARY)?.let { tag ->
-                session.api.imageApi.getItemImageUrl(itemId = dto.id, imageType = ImageType.PRIMARY, tag = tag, maxWidth = 600)
+                session.api.imageApi.getItemImageUrl(
+                    itemId = dto.id,
+                    imageType = ImageType.PRIMARY,
+                    tag = tag,
+                    maxWidth = 600,
+                )
             },
             isFavorite = dto.userData?.isFavorite ?: false,
             credits = credits,
@@ -330,21 +369,28 @@ class DetailRepository @Inject constructor(
         _favoriteChanged.tryEmit(id)
     }
 
-    private fun cast(session: Session, dto: BaseItemDto): List<CastMember> =
-        actingPeople(dto.people.orEmpty())
-            .take(CAST_LIMIT)
-            .map { person ->
-                CastMember(
-                    id = person.id,
-                    name = person.name.orEmpty(),
-                    role = person.role?.takeIf { it.isNotBlank() },
-                    imageUrl = person.primaryImageTag?.let { tag ->
-                        session.api.imageApi.getItemImageUrl(itemId = person.id, imageType = ImageType.PRIMARY, tag = tag, maxWidth = 280)
-                    },
-                )
-            }
+    private fun cast(session: Session, dto: BaseItemDto): List<CastMember> = actingPeople(dto.people.orEmpty())
+        .take(CAST_LIMIT)
+        .map { person ->
+            CastMember(
+                id = person.id,
+                name = person.name.orEmpty(),
+                role = person.role?.takeIf { it.isNotBlank() },
+                imageUrl = person.primaryImageTag?.let { tag ->
+                    session.api.imageApi.getItemImageUrl(
+                        itemId = person.id,
+                        imageType = ImageType.PRIMARY,
+                        tag = tag,
+                        maxWidth = 280,
+                    )
+                },
+            )
+        }
 
-    private fun tracks(dto: BaseItemDto): TrackChoices? = tracks(dto.mediaSources?.firstOrNull() ?: return null, dto.mediaStreams)
+    private fun tracks(dto: BaseItemDto): TrackChoices? = tracks(
+        dto.mediaSources?.firstOrNull() ?: return null,
+        dto.mediaStreams,
+    )
 
     /** Tracks of one file; [fallback] when the source lists no streams of its own. */
     private fun tracks(source: MediaSourceInfo, fallback: List<MediaStream>?): TrackChoices? {
@@ -360,7 +406,12 @@ class DetailRepository @Inject constructor(
             audio = audio,
             subtitles = subtitles,
             defaultAudio = defaultAudio,
-            defaultSubtitle = fullInsteadOfForced(serverSubtitle, subtitles, audio.firstOrNull { it.index == defaultAudio }, onlyForced),
+            defaultSubtitle = fullInsteadOfForced(
+                serverSubtitle,
+                subtitles,
+                audio.firstOrNull { it.index == defaultAudio },
+                onlyForced,
+            ),
             serverSubtitle = serverSubtitle,
             onlyForced = onlyForced,
         )
@@ -384,11 +435,10 @@ class DetailRepository @Inject constructor(
  * Actors and guest stars, one entry per person: someone with several roles is listed
  * once, roles joined. The cast row keys its cards by person.
  */
-internal fun actingPeople(people: List<BaseItemPerson>): List<BaseItemPerson> =
-    people
-        .filter { it.type == PersonKind.ACTOR || it.type == PersonKind.GUEST_STAR }
-        .groupBy { it.id }
-        .map { (_, entries) ->
-            val roles = entries.mapNotNull { it.role?.takeIf(String::isNotBlank) }.distinct()
-            entries.first().copy(role = roles.joinToString(" / ").takeIf { it.isNotEmpty() })
-        }
+internal fun actingPeople(people: List<BaseItemPerson>): List<BaseItemPerson> = people
+    .filter { it.type == PersonKind.ACTOR || it.type == PersonKind.GUEST_STAR }
+    .groupBy { it.id }
+    .map { (_, entries) ->
+        val roles = entries.mapNotNull { it.role?.takeIf(String::isNotBlank) }.distinct()
+        entries.first().copy(role = roles.joinToString(" / ").takeIf { it.isNotEmpty() })
+    }

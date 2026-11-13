@@ -6,7 +6,12 @@ import org.junit.Test
 
 class ServerInfoTest {
 
-    private fun server(version: String?) = ServerInfo(id = "id", name = "Home", address = "http://h:8096", version = version)
+    private fun server(version: String?) = ServerInfo(
+        id = "id",
+        name = "Home",
+        address = "http://h:8096",
+        version = version,
+    )
 
     @Test
     fun `12_0 and newer are supported`() {

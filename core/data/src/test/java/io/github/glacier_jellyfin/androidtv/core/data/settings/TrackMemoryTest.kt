@@ -10,7 +10,14 @@ class TrackMemoryTest {
 
     private val german = Track(index = 1, language = "ger", codec = "dts", channels = 6)
     private val japanese = Track(index = 2, language = "jpn", codec = "flac", channels = 2)
-    private val germanForced = Track(index = 3, language = "ger", codec = "ass", channels = null, forced = true, title = "Signs")
+    private val germanForced = Track(
+        index = 3,
+        language = "ger",
+        codec = "ass",
+        channels = null,
+        forced = true,
+        title = "Signs",
+    )
     private val germanFull = Track(index = 4, language = "deu", codec = "ass", channels = null, title = "Full")
     private val englishSdh = Track(index = 5, language = "eng", codec = "srt", channels = null, hearingImpaired = true)
 
@@ -42,7 +49,10 @@ class TrackMemoryTest {
     @Test
     fun `remembered tracks respect the switches`() {
         val last = LastTracks(audio = japanese.toKey(), subtitle = null, subtitlesOff = true)
-        assertEquals(RememberedTracks(2, RememberedTracks.SUBTITLES_OFF), rememberedTracks(last, ServerPreferences(), choices))
+        assertEquals(
+            RememberedTracks(2, RememberedTracks.SUBTITLES_OFF),
+            rememberedTracks(last, ServerPreferences(), choices),
+        )
         assertEquals(
             RememberedTracks(null, null),
             rememberedTracks(last, ServerPreferences(rememberAudio = false, rememberSubtitles = false), choices),
@@ -53,7 +63,10 @@ class TrackMemoryTest {
     fun `an active pick of no subtitles is kept as off`() {
         val off = lastTracksOf(choices, audio = 2, subtitle = null)
         assertEquals(LastTracks(audio = japanese.toKey(), subtitle = null, subtitlesOff = true), off)
-        assertEquals(RememberedTracks(2, RememberedTracks.SUBTITLES_OFF), rememberedTracks(off, ServerPreferences(), choices))
+        assertEquals(
+            RememberedTracks(2, RememberedTracks.SUBTITLES_OFF),
+            rememberedTracks(off, ServerPreferences(), choices),
+        )
     }
 
     @Test

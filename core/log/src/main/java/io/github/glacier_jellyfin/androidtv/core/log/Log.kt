@@ -39,22 +39,38 @@ object Log {
     }
 
     /** Logcat; the file log only while [verbose]. */
-    fun d(tag: String, message: String, error: Throwable? = null) {
+    fun d(
+        tag: String,
+        message: String,
+        error: Throwable? = null,
+    ) {
         android.util.Log.d(tag, message, error)
         if (verbose) file?.append('D', tag, message, error)
     }
 
-    fun i(tag: String, message: String, error: Throwable? = null) {
+    fun i(
+        tag: String,
+        message: String,
+        error: Throwable? = null,
+    ) {
         android.util.Log.i(tag, message, error)
         file?.append('I', tag, message, error)
     }
 
-    fun w(tag: String, message: String, error: Throwable? = null) {
+    fun w(
+        tag: String,
+        message: String,
+        error: Throwable? = null,
+    ) {
         android.util.Log.w(tag, message, error)
         file?.append('W', tag, message, error)
     }
 
-    fun e(tag: String, message: String, error: Throwable? = null) {
+    fun e(
+        tag: String,
+        message: String,
+        error: Throwable? = null,
+    ) {
         android.util.Log.e(tag, message, error)
         file?.append('E', tag, message, error)
     }

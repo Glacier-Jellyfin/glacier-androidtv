@@ -1,14 +1,22 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
+import java.util.UUID
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.util.UUID
 
 class FolderTrailTest {
 
-    private fun item(n: Int, type: BaseItemKind, name: String) = BaseItemDto(id = UUID(0, n.toLong()), type = type, name = name)
+    private fun item(
+        n: Int,
+        type: BaseItemKind,
+        name: String,
+    ) = BaseItemDto(
+        id = UUID(0, n.toLong()),
+        type = type,
+        name = name,
+    )
 
     /** Ancestors of "Summer holiday" as the server sends them: parent first, up to the root. */
     private val ancestors = listOf(
@@ -34,6 +42,9 @@ class FolderTrailTest {
 
     @Test
     fun `no library among the ancestors gives no path`() {
-        assertEquals(emptyList<String>(), trail(listOf(item(3, BaseItemKind.AGGREGATE_FOLDER, "root")), severalLibraries = true))
+        assertEquals(
+            emptyList<String>(),
+            trail(listOf(item(3, BaseItemKind.AGGREGATE_FOLDER, "root")), severalLibraries = true),
+        )
     }
 }

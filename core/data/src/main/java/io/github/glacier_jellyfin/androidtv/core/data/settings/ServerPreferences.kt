@@ -1,9 +1,13 @@
 package io.github.glacier_jellyfin.androidtv.core.data.settings
 
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.Languages
+import io.github.glacier_jellyfin.androidtv.core.log.Log
+import java.text.Collator
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,10 +24,6 @@ import org.jellyfin.sdk.api.client.extensions.localizationApi
 import org.jellyfin.sdk.api.client.extensions.userApi
 import org.jellyfin.sdk.model.api.SubtitlePlaybackMode
 import org.jellyfin.sdk.model.api.UserConfiguration
-import java.text.Collator
-import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** Which subtitles start with playback; the server picks them (Jellyfin subtitle mode). */
 enum class SubtitleMode(internal val api: SubtitlePlaybackMode) {
@@ -55,9 +55,7 @@ data class ServerPreferences(
 data class Language(val code: String, val name: String)
 
 @Singleton
-class ServerPreferencesRepository @Inject constructor(
-    private val sessions: SessionManager,
-) {
+class ServerPreferencesRepository @Inject constructor(private val sessions: SessionManager) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lock = Mutex()
 

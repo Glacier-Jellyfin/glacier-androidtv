@@ -20,7 +20,9 @@ object TrackControl {
 
     /** False while the tracks are not known yet (before the player is prepared). */
     fun selectAudio(player: Player, ordinal: Int): Boolean {
-        val group = player.currentTracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }.getOrNull(ordinal) ?: return false
+        val group = player.currentTracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }.getOrNull(
+            ordinal,
+        ) ?: return false
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
             .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, 0))
             .build()
@@ -30,8 +32,10 @@ object TrackControl {
     fun selectEmbeddedText(player: Player, ordinal: Int): Boolean =
         selectText(player, textGroups(player).filterNot { it.isExternal() }.getOrNull(ordinal))
 
-    fun selectExternalText(player: Player, index: Int): Boolean =
-        selectText(player, textGroups(player).firstOrNull { it.getTrackFormat(0).id?.endsWith(externalId(index)) == true })
+    fun selectExternalText(player: Player, index: Int): Boolean = selectText(
+        player,
+        textGroups(player).firstOrNull { it.getTrackFormat(0).id?.endsWith(externalId(index)) == true },
+    )
 
     /** No subtitles, also when the file marks one as default or forced. */
     fun disableText(player: Player) {

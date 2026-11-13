@@ -41,7 +41,11 @@ data class MediaVersion(
 /** Picture size classes, as people name versions. */
 @Serializable
 enum class Resolution {
-    Sd, Hd, FullHd, Uhd;
+    Sd,
+    Hd,
+    FullHd,
+    Uhd,
+    ;
 
     companion object {
         /** By width first: a 2.39:1 film in 1920×800 is still 1080p. */
@@ -99,22 +103,35 @@ private val SEPARATORS = Regex("""[\s\-_.\[\]()]+""")
  * Of equal ones the server's order wins.
  * [direct]: ids of the versions the device plays as they are; null when not known.
  */
-fun pickVersion(versions: List<MediaVersion>, picked: VersionKey?, direct: Set<String>?, screen: Resolution): MediaVersion? {
+fun pickVersion(
+    versions: List<MediaVersion>,
+    picked: VersionKey?,
+    direct: Set<String>?,
+    screen: Resolution,
+): MediaVersion? {
     if (versions.size < 2) return versions.firstOrNull()
     if (picked != null) {
         picked.id?.let { id -> versions.firstOrNull { it.id == id }?.let { return it } }
         val cut = versions.filter { it.edition.equals(picked.edition, ignoreCase = true) }
         if (cut.isNotEmpty()) {
-            cut.firstOrNull { it.resolution == picked.resolution && (it.quality?.hdr != null) == picked.hdr }?.let { return it }
+            cut.firstOrNull {
+                it.resolution == picked.resolution && (it.quality?.hdr != null) == picked.hdr
+            }?.let { return it }
             cut.firstOrNull { it.resolution == picked.resolution }?.let { return it }
             return bestFitting(cut, direct, screen)
         }
     }
-    val main = versions.filter { it.edition == null }.ifEmpty { versions.filter { it.edition == versions.first().edition } }
+    val main = versions.filter {
+        it.edition == null
+    }.ifEmpty { versions.filter { it.edition == versions.first().edition } }
     return bestFitting(main, direct, screen)
 }
 
-private fun bestFitting(versions: List<MediaVersion>, direct: Set<String>?, screen: Resolution): MediaVersion? {
+private fun bestFitting(
+    versions: List<MediaVersion>,
+    direct: Set<String>?,
+    screen: Resolution,
+): MediaVersion? {
     val candidates = direct?.let { ids -> versions.filter { it.id in ids } }?.ifEmpty { null } ?: versions
     val fitting = candidates.filter { it.resolution <= screen }
     return fitting.maxByOrNull { it.resolution } ?: candidates.minByOrNull { it.resolution }
@@ -170,8 +187,25 @@ fun ItemDetails.forVersion(id: String?): ItemDetails {
             runtimeMs = runtimeMs,
             runtimeMinutes = runtimeMs?.let { (it / MS_PER_MINUTE).toInt() } ?: item.runtimeMinutes,
             // Jellyfin keeps one resume point for all files; how much is left depends on the file.
-            remainingMinutes = if (runtimeMs != null && position > 0) ((runtimeMs - position).coerceAtLeast(0) / MS_PER_MINUTE).toInt() else item.remainingMinutes,
-            progress = if (runtimeMs != null && runtimeMs > 0 && position > 0) (position.toFloat() / runtimeMs).coerceIn(0f, 1f) else item.progress,
+            remainingMinutes = if (runtimeMs != null && position > 0) {
+                (
+                    (runtimeMs - position).coerceAtLeast(
+                        0,
+                    ) / MS_PER_MINUTE
+                    ).toInt()
+            } else {
+                item.remainingMinutes
+            },
+            progress = if (runtimeMs != null && runtimeMs > 0 &&
+                position > 0
+            ) {
+                (position.toFloat() / runtimeMs).coerceIn(
+                    0f,
+                    1f,
+                )
+            } else {
+                item.progress
+            },
         ),
         tracks = version.tracks,
         trickplay = version.trickplay,

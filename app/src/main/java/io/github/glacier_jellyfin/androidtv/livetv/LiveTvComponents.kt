@@ -62,15 +62,24 @@ fun dayText(timeMs: Long): String {
     val today = LocalDate.now(zone)
     return when (day) {
         today -> stringResource(R.string.livetv_today)
+
         today.plusDays(1) -> stringResource(R.string.livetv_tomorrow)
+
         today.minusDays(1) -> stringResource(R.string.livetv_yesterday)
-        else -> day.format(DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(LocalLocale.current.platformLocale, "EEEdMMM")))
+
+        else -> day.format(
+            DateTimeFormatter.ofPattern(
+                DateFormat.getBestDateTimePattern(LocalLocale.current.platformLocale, "EEEdMMM"),
+            ),
+        )
     }
 }
 
 /** "Today · 20:15 – 21:00". */
 @Composable
-fun dayAndTime(startMs: Long, endMs: Long): String = dayText(startMs) + " · " + clockText(startMs) + " – " + clockText(endMs)
+fun dayAndTime(startMs: Long, endMs: Long): String = dayText(
+    startMs,
+) + " · " + clockText(startMs) + " – " + clockText(endMs)
 
 /** "20 min left", rounded up so a programme in its last minute still has one. */
 @Composable
@@ -84,7 +93,11 @@ fun minutesLeft(program: LiveProgram, nowMs: Long): String {
  * first letters of its name) stands in.
  */
 @Composable
-fun ChannelLogo(channel: LiveChannel, modifier: Modifier = Modifier, textSize: Int = 24) {
+fun ChannelLogo(
+    channel: LiveChannel,
+    modifier: Modifier = Modifier,
+    textSize: Int = 24,
+) {
     var failed by remember(channel.logoUrl) { mutableStateOf(false) }
     Box(
         modifier
@@ -116,7 +129,11 @@ fun ChannelLogo(channel: LiveChannel, modifier: Modifier = Modifier, textSize: I
 
 /** A thin bar for how much of a programme ran. */
 @Composable
-fun ProgramProgress(fraction: Float, modifier: Modifier = Modifier, height: Int = 4) {
+fun ProgramProgress(
+    fraction: Float,
+    modifier: Modifier = Modifier,
+    height: Int = 4,
+) {
     Box(
         modifier
             .height(height.dp)
@@ -138,7 +155,12 @@ fun ProgramProgress(fraction: Float, modifier: Modifier = Modifier, height: Int 
  * ("Recording", "Will be recorded", "Series is recorded"); nothing when it is not.
  */
 @Composable
-fun RecordMark(program: LiveProgram, nowMs: Long, modifier: Modifier = Modifier, size: Int = 17) {
+fun RecordMark(
+    program: LiveProgram,
+    nowMs: Long,
+    modifier: Modifier = Modifier,
+    size: Int = 17,
+) {
     if (!program.recorded) return
     val text = when {
         program.airsAt(nowMs) -> R.string.livetv_recording_mark
@@ -198,9 +220,21 @@ val RecordRed = Color(0xFFFF5A5F)
  * accent when focused, a tinted icon when [on].
  */
 @Composable
-fun RowIconButton(icon: ImageVector, description: String, onClick: () -> Unit, modifier: Modifier = Modifier, on: Boolean = false, size: Int = 56) {
+fun RowIconButton(
+    icon: ImageVector,
+    description: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    on: Boolean = false,
+    size: Int = 56,
+) {
     val accent = LocalAccent.current.main
-    GlacierClickable(onClick = onClick, shape = CircleShape, modifier = modifier, contentAlignment = Alignment.Center) { focused ->
+    GlacierClickable(
+        onClick = onClick,
+        shape = CircleShape,
+        modifier = modifier,
+        contentAlignment = Alignment.Center,
+    ) { focused ->
         Box(
             Modifier
                 .size(size.dp)

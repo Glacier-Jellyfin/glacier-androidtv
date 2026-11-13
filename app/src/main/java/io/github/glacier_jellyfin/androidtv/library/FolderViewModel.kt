@@ -29,6 +29,8 @@ import io.github.glacier_jellyfin.androidtv.navigation.navEvent
 import io.github.glacier_jellyfin.androidtv.ui.BrowseMemory
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -39,8 +41,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.UUID
-import javax.inject.Inject
 
 data class FolderState(
     val loading: Boolean = true,
@@ -104,7 +104,8 @@ class FolderViewModel @Inject constructor(
      * The entry to focus first: the one the user left (a folder rebuilt on the back stack carries it in its route),
      * for the top also from the memory when it was left without a folder open.
      */
-    val restoredFocus: String? = route.focus ?: if (folderId == null) memory.folders().takeIf { it.path.isEmpty() }?.focusId else null
+    val restoredFocus: String? =
+        route.focus ?: if (folderId == null) memory.folders().takeIf { it.path.isEmpty() }?.focusId else null
 
     private val _state = MutableStateFlow(FolderState(userName = sessions.session.value?.user?.name.orEmpty()))
     val state: StateFlow<FolderState> = _state.asStateFlow()
@@ -171,6 +172,7 @@ class FolderViewModel @Inject constructor(
                 preview.release()
                 navigate(PlayerRoute(media.id.toString(), queueOf = folder, startMs = startMs))
             }
+
             is FolderMedia.Photo -> {
                 preview.release()
                 navigate(PhotoRoute(folder, media.id.toString()))
@@ -212,7 +214,10 @@ class FolderViewModel @Inject constructor(
     }
 
     fun onNav(target: NavTarget) {
-        val event = sessions.navEvent(target, current = NavTarget.Library(LibraryKind.HomeVideos).takeIf { inNavBar }) ?: return
+        val event = sessions.navEvent(
+            target,
+            current = NavTarget.Library(LibraryKind.HomeVideos).takeIf { inNavBar },
+        ) ?: return
         viewModelScope.launch { _events.send(event) }
     }
 

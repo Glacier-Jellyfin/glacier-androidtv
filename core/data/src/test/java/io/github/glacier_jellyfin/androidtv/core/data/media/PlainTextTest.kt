@@ -19,7 +19,10 @@ class PlainTextTest {
 
     @Test
     fun `entities are decoded`() {
-        assertEquals("Tom & Jerry \"live\" – it's 5 > 3", plainText("Tom &amp; Jerry &quot;live&quot; &ndash; it&#39;s 5 &gt; 3"))
+        assertEquals(
+            "Tom & Jerry \"live\" – it's 5 > 3",
+            plainText("Tom &amp; Jerry &quot;live&quot; &ndash; it&#39;s 5 &gt; 3"),
+        )
         assertEquals("Café", plainText("Caf&#xE9;"))
     }
 

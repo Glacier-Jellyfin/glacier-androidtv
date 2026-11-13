@@ -9,15 +9,19 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import io.github.glacier_jellyfin.androidtv.core.log.Log
+import kotlin.coroutines.resume
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.coroutines.resume
 
 /** A short file the playback check plays, from assets/playback-check (scripts/make-playback-samples.py). */
-data class CheckSample(val file: String, val label: String, val audio: Boolean = false)
+data class CheckSample(
+    val file: String,
+    val label: String,
+    val audio: Boolean = false,
+)
 
 data class CheckResult(
     val sample: CheckSample,
@@ -58,7 +62,9 @@ class PlaybackCheck(private val context: Context, private val setup: PlaybackSet
      * gets the player while it plays (for the preview) and null afterwards.
      */
     @OptIn(UnstableApi::class)
-    suspend fun play(sample: CheckSample, show: (GlacierPlayback?) -> Unit): CheckResult = withContext(Dispatchers.Main) {
+    suspend fun play(sample: CheckSample, show: (GlacierPlayback?) -> Unit): CheckResult = withContext(
+        Dispatchers.Main,
+    ) {
         val playback = GlacierPlayer.create(
             context,
             StreamRequest(
@@ -112,7 +118,15 @@ class PlaybackCheck(private val context: Context, private val setup: PlaybackSet
                 override fun onPlaybackStateChanged(state: Int) {
                     if (state != Player.STATE_ENDED) return
                     val played = if (sample.audio) playback.audioEncoding != null else firstFrame
-                    finish(if (played) result(CheckResult.Outcome.Plays) else result(CheckResult.Outcome.Fails, "nothing reached the screen or the speakers"))
+                    finish(
+                        if (played) {
+                            result(
+                                CheckResult.Outcome.Plays,
+                            )
+                        } else {
+                            result(CheckResult.Outcome.Fails, "nothing reached the screen or the speakers")
+                        },
+                    )
                 }
 
                 override fun onPlayerError(error: PlaybackException) {
@@ -120,7 +134,11 @@ class PlaybackCheck(private val context: Context, private val setup: PlaybackSet
                 }
             })
             player.addAnalyticsListener(object : AnalyticsListener {
-                override fun onDroppedVideoFrames(eventTime: AnalyticsListener.EventTime, droppedFrames: Int, elapsedMs: Long) {
+                override fun onDroppedVideoFrames(
+                    eventTime: AnalyticsListener.EventTime,
+                    droppedFrames: Int,
+                    elapsedMs: Long,
+                ) {
                     dropped += droppedFrames
                 }
 

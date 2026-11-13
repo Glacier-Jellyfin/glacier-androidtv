@@ -14,11 +14,11 @@ import androidx.media3.extractor.ExtractorsFactory
 import androidx.media3.extractor.PositionHolder
 import androidx.media3.extractor.SeekMap
 import androidx.media3.extractor.TrackOutput
+import java.io.ByteArrayOutputStream
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.io.ByteArrayOutputStream
 
 /** Profile 7 as 8.1 from samples the way Media3's Matroska extractor writes them. */
 @OptIn(UnstableApi::class)
@@ -62,7 +62,13 @@ class DolbyVisionDualLayerTest {
         track.sampleData(ParsableByteArray(sample), sample.size, TrackOutput.SAMPLE_DATA_PART_MAIN)
         // Bytes of the next sample, already written.
         track.sampleData(ParsableByteArray(byteArrayOf(1, 2, 3)), 3, TrackOutput.SAMPLE_DATA_PART_MAIN)
-        track.sampleMetadata(0, C.BUFFER_FLAG_KEY_FRAME or C.BUFFER_FLAG_HAS_SUPPLEMENTAL_DATA, 4 + sample.size, 3, null)
+        track.sampleMetadata(
+            0,
+            C.BUFFER_FLAG_KEY_FRAME or C.BUFFER_FLAG_HAS_SUPPLEMENTAL_DATA,
+            4 + sample.size,
+            3,
+            null,
+        )
 
         val converted = START + SLICE + START + RPU_HEADER + convertedRpu
         assertArrayEquals(lengthOf(converted.size) + converted, output.track.samples.single())
@@ -94,15 +100,29 @@ class DolbyVisionDualLayerTest {
     private fun resource(name: String): ByteArray =
         checkNotNull(javaClass.classLoader?.getResourceAsStream("dolby-vision/$name")).use { it.readBytes() }
 
-    private fun lengthOf(length: Int) = byteArrayOf((length ushr 24).toByte(), (length ushr 16).toByte(), (length ushr 8).toByte(), length.toByte())
+    private fun lengthOf(length: Int) = byteArrayOf(
+        (length ushr 24).toByte(),
+        (length ushr 16).toByte(),
+        (length ushr 8).toByte(),
+        length.toByte(),
+    )
 
     /** Stands in for the Matroska extractor: the test writes through its output and hands on block additions. */
-    private class FakeExtractor : Extractor, BlockAdditionSource {
+    private class FakeExtractor :
+        Extractor,
+        BlockAdditionSource {
         override var blockAdditions: ((BlockAddition) -> Unit)? = null
         lateinit var output: ExtractorOutput
 
         fun add(data: ByteArray) {
-            blockAdditions?.invoke(BlockAddition().also { it.trackNumber = 1; it.lengthSize = 4; it.data = data; it.size = data.size })
+            blockAdditions?.invoke(
+                BlockAddition().also {
+                    it.trackNumber = 1
+                    it.lengthSize = 4
+                    it.data = data
+                    it.size = data.size
+                },
+            )
         }
 
         override fun sniff(input: ExtractorInput) = true
@@ -131,19 +151,34 @@ class DolbyVisionDualLayerTest {
             this.format = format
         }
 
-        override fun sampleData(input: DataReader, length: Int, allowEndOfInput: Boolean, sampleDataPart: Int): Int {
+        override fun sampleData(
+            input: DataReader,
+            length: Int,
+            allowEndOfInput: Boolean,
+            sampleDataPart: Int,
+        ): Int {
             val bytes = ByteArray(length)
             val read = input.read(bytes, 0, length)
             data.write(bytes, 0, read)
             return read
         }
 
-        override fun sampleData(data: ParsableByteArray, length: Int, sampleDataPart: Int) {
+        override fun sampleData(
+            data: ParsableByteArray,
+            length: Int,
+            sampleDataPart: Int,
+        ) {
             this.data.write(data.data, data.position, length)
             data.skipBytes(length)
         }
 
-        override fun sampleMetadata(timeUs: Long, flags: Int, size: Int, offset: Int, cryptoData: TrackOutput.CryptoData?) {
+        override fun sampleMetadata(
+            timeUs: Long,
+            flags: Int,
+            size: Int,
+            offset: Int,
+            cryptoData: TrackOutput.CryptoData?,
+        ) {
             val all = data.toByteArray()
             val end = all.size - offset
             samples += all.copyOfRange(end - size, end)
@@ -155,6 +190,7 @@ class DolbyVisionDualLayerTest {
     private companion object {
         val START = byteArrayOf(0, 0, 0, 1)
         val SLICE = byteArrayOf(0x02, 0x01, 0x11, 0x22, 0x33)
+
         /** An enhancement layer slice as a block addition holds it. */
         val EL = byteArrayOf(0x02, 0x01, 0x55, 0x66)
         val RPU_HEADER = byteArrayOf(0x7C, 0x01)

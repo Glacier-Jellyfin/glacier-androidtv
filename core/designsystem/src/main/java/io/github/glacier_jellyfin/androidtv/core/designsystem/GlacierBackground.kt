@@ -24,7 +24,14 @@ fun GlacierBackground(modifier: Modifier = Modifier, content: @Composable BoxSco
             .fillMaxSize()
             .drawBehind {
                 drawRect(Ground)
-                glow(accent.copy(alpha = 0.42f), centerX = 0.42f, centerY = -0.12f, radiusX = 1500f, radiusY = 1000f, stop = 1f)
+                glow(
+                    accent.copy(alpha = 0.42f),
+                    centerX = 0.42f,
+                    centerY = -0.12f,
+                    radiusX = 1500f,
+                    radiusY = 1000f,
+                    stop = 1f,
+                )
                 drawRect(Brush.verticalGradient(0.45f to Color.Transparent, 1f to Ground.copy(alpha = 0.7f)))
             },
         content = content,
@@ -32,7 +39,14 @@ fun GlacierBackground(modifier: Modifier = Modifier, content: @Composable BoxSco
 }
 
 /** CSS `radial-gradient(ellipse rx ry at cx cy, color, transparent stop)`, in design pixels. */
-private fun DrawScope.glow(color: Color, centerX: Float, centerY: Float, radiusX: Float, radiusY: Float, stop: Float) {
+private fun DrawScope.glow(
+    color: Color,
+    centerX: Float,
+    centerY: Float,
+    radiusX: Float,
+    radiusY: Float,
+    stop: Float,
+) {
     val center = Offset(size.width * centerX, size.height * centerY)
     val rx = radiusX.dp2px(this)
     val ry = radiusY.dp2px(this)

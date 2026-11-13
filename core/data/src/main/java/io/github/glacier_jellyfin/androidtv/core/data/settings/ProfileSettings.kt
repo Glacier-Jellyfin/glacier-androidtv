@@ -48,6 +48,7 @@ data class ProfileSettings(
 enum class MusicVideoView {
     /** Every music video in one grid, sorted and grouped like a library. */
     All,
+
     /** The folders of the music video libraries, browsed one by one. */
     Folders,
 }
@@ -76,6 +77,7 @@ data class FolderSettings(
 enum class FolderView {
     /** Cards with the name below, as large as "Continue watching". */
     Grid,
+
     /** Small pictures without names; the focused one is named at the bottom. */
     Gallery,
 }
@@ -87,6 +89,7 @@ enum class FolderShow { All, Videos, Photos }
 enum class FolderAspect(val width: Int, val height: Int) {
     /** 16:9, like videos and the TV. */
     Wide(16, 9),
+
     /** 4:3, like most camera photos and old camcorder videos. */
     Standard(4, 3),
 }
@@ -123,8 +126,14 @@ data class LiveTvSettings(
     }
 
     /** Moved by hand to radio, or to TV. */
-    fun moved(channelId: String, toRadio: Boolean): LiveTvSettings =
-        if (toRadio) copy(radio = radio + channelId, tv = tv - channelId) else copy(radio = radio - channelId, tv = tv + channelId)
+    fun moved(channelId: String, toRadio: Boolean): LiveTvSettings = if (toRadio) {
+        copy(
+            radio = radio + channelId,
+            tv = tv - channelId,
+        )
+    } else {
+        copy(radio = radio - channelId, tv = tv + channelId)
+    }
 
     /** A playback found no picture: radio, unless the user said TV. */
     fun heardAsRadio(channelId: String): LiveTvSettings = if (channelId in tv) this else copy(radio = radio + channelId)
@@ -135,35 +144,31 @@ data class LiveTvSettings(
 enum class ChannelSort {
     /** By channel number. Channels without a number follow, by name. */
     Number,
+
     /** By name, whatever the numbers. */
     Name,
 }
 
 /** One library kind's sort, kept from one time to the next. */
 @Serializable
-data class LibrarySortChoice(
-    val sort: LibrarySort = LibrarySort.Title,
-    val descending: Boolean = false,
-)
+data class LibrarySortChoice(val sort: LibrarySort = LibrarySort.Title, val descending: Boolean = false)
 
 /** One library kind's toggles, kept from one time to the next. */
 @Serializable
-data class LibraryFilterChoice(
-    val favoritesOnly: Boolean = false,
-    val unwatchedOnly: Boolean = false,
-)
+data class LibraryFilterChoice(val favoritesOnly: Boolean = false, val unwatchedOnly: Boolean = false)
 
 /** Shuffle (music pages and player share it) and lyrics in the player. */
 @Serializable
-data class MusicSettings(
-    val shuffle: Boolean = false,
-    val lyrics: Boolean = false,
-)
+data class MusicSettings(val shuffle: Boolean = false, val lyrics: Boolean = false)
 
 /** Language of Glacier's own texts (Settings › Account); [System] follows Android. */
 @Serializable
 enum class UiLanguage(val tag: String?) {
-    System(null), German("de"), English("en"), Spanish("es");
+    System(null),
+    German("de"),
+    English("en"),
+    Spanish("es"),
+    ;
 
     companion object {
         fun of(tag: String?): UiLanguage = entries.firstOrNull { it.tag == tag } ?: System
@@ -197,7 +202,8 @@ data class HomeSettings(
     /** The single source of earlier versions; only read, as the default of [spotlightSources]. */
     @SerialName("spotlightSource") val legacySpotlightSource: SpotlightSource? = null,
     /** Mixed into one spotlight; none switches the spotlight off. */
-    val spotlightSources: Set<SpotlightSource> = setOf(legacySpotlightSource ?: SpotlightSource.ContinueWatching),
+    val spotlightSources: Set<SpotlightSource> =
+        setOf(legacySpotlightSource ?: SpotlightSource.ContinueWatching),
     val spotlightType: SpotlightType = SpotlightType.All,
     val spotlightCount: SpotlightCount = SpotlightCount.N5,
     val spotlightRotation: SpotlightRotation = SpotlightRotation.S9,
@@ -216,16 +222,25 @@ data class HomeSettings(
      */
     fun homeRows(libraries: List<String>): List<HomeRowChoice> = arranged(libraries).filterNot { it.isLatestSlot }
 
-    fun withRowShown(id: String, shown: Boolean, libraries: List<String>): HomeSettings =
-        copy(rows = arranged(libraries).map { if (it.id == id) it.copy(shown = shown) else it })
+    fun withRowShown(
+        id: String,
+        shown: Boolean,
+        libraries: List<String>,
+    ): HomeSettings = copy(rows = arranged(libraries).map { if (it.id == id) it.copy(shown = shown) else it })
 
     /**
      * The row [id] swapped with its neighbour [by] steps away (-1 up, 1 down),
      * skipping rows not [visible] in the settings, e.g. the music rows on a
      * server without music.
      */
-    fun withRowMoved(id: String, by: Int, libraries: List<String>, visible: (HomeRowChoice) -> Boolean = { true }): HomeSettings =
-        copy(rows = arranged(libraries).swapped(by, { it.id == id }) { !it.isLatestSlot && visible(it) })
+    fun withRowMoved(
+        id: String,
+        by: Int,
+        libraries: List<String>,
+        visible: (HomeRowChoice) -> Boolean = {
+            true
+        },
+    ): HomeSettings = copy(rows = arranged(libraries).swapped(by, { it.id == id }) { !it.isLatestSlot && visible(it) })
 
     /** [homeRows] with the general "New in" entry kept, so libraries added later have their place. */
     private fun arranged(libraries: List<String>): List<HomeRowChoice> {
@@ -246,12 +261,18 @@ data class Choice(val id: String = "", val shown: Boolean = true)
 fun List<Choice>.arranged(available: List<String>): List<Choice> =
     (filter { it.id in available } + available.map { Choice(it) }).distinctBy { it.id }
 
-fun List<Choice>.withShown(id: String, shown: Boolean, available: List<String>): List<Choice> =
-    arranged(available).map { if (it.id == id) it.copy(shown = shown) else it }
+fun List<Choice>.withShown(
+    id: String,
+    shown: Boolean,
+    available: List<String>,
+): List<Choice> = arranged(available).map { if (it.id == id) it.copy(shown = shown) else it }
 
 /** The entry [id] swapped with its neighbour [by] steps away (-1 up, 1 down). */
-fun List<Choice>.withMoved(id: String, by: Int, available: List<String>): List<Choice> =
-    arranged(available).swapped(by, { it.id == id }) { true }
+fun List<Choice>.withMoved(
+    id: String,
+    by: Int,
+    available: List<String>,
+): List<Choice> = arranged(available).swapped(by, { it.id == id }) { true }
 
 /** Top navigation and the favorites page (Settings › Appearance). */
 @Serializable
@@ -270,7 +291,11 @@ enum class FavoriteRow { Movies, Shows, Episodes, Albums, Artists, Songs }
  * The entry matching [which] swapped with the nearest entry [by] steps away
  * (-1 before, 1 after) that is a [target]; unchanged at either end.
  */
-private fun <T> List<T>.swapped(by: Int, which: (T) -> Boolean, target: (T) -> Boolean): List<T> {
+private fun <T> List<T>.swapped(
+    by: Int,
+    which: (T) -> Boolean,
+    target: (T) -> Boolean,
+): List<T> {
     val from = indexOfFirst(which)
     if (from < 0 || by == 0) return this
     val step = if (by < 0) -1 else 1
@@ -363,7 +388,12 @@ enum class UpNextCollapse(val ms: Long) { Off(0), S5(5_000), S10(10_000), S15(15
 /** Remote Left/Right, the OSD skip buttons and the music player's seek. */
 @Serializable
 enum class SeekStep(val ms: Long) {
-    S5(5_000), S10(10_000), S15(15_000), S30(30_000), S60(60_000);
+    S5(5_000),
+    S10(10_000),
+    S15(15_000),
+    S30(30_000),
+    S60(60_000),
+    ;
 
     companion object {
         val Back = listOf(S5, S10, S15, S30)
@@ -388,7 +418,10 @@ enum class MaxBitrate(val bitsPerSecond: Int?) {
 /** Most audio channels the server may send; more are downmixed. */
 @Serializable
 enum class AudioChannels(val max: Int?) {
-    Auto(null), Stereo(2), Surround51(6), Surround71(8),
+    Auto(null),
+    Stereo(2),
+    Surround51(6),
+    Surround71(8),
 }
 
 /**
@@ -399,6 +432,7 @@ enum class AudioChannels(val max: Int?) {
 enum class DolbyVisionProfile7Choice {
     /** Rewritten as profile 8.1: Dolby Vision without the enhancement layer. */
     DolbyVision,
+
     /** The HDR10 base layer. */
     Hdr10,
 }
@@ -411,8 +445,10 @@ enum class HdAudioOutput {
      * stream, also where Android sends only the DTS core. Elsewhere as [Android].
      */
     Glacier,
+
     /** Android passes the bitstream on, or the device decodes it. */
     Android,
+
     /**
      * As [Glacier], and the server converts to E-AC-3 (or what the receiver
      * takes) each of the two that neither Android nor Glacier can send as a
@@ -447,7 +483,11 @@ enum class SubtitleStyleMode {
 /** Text height as a share of the picture height. */
 @Serializable
 enum class SubtitleSize(val fraction: Float) {
-    XSmall(0.035f), Small(0.043f), Normal(0.0533f), Large(0.065f), XLarge(0.08f),
+    XSmall(0.035f),
+    Small(0.043f),
+    Normal(0.0533f),
+    Large(0.065f),
+    XLarge(0.08f),
 }
 
 /** Variable weights of the Glacier font; system fonts use their nearest cut. */
@@ -473,8 +513,14 @@ enum class SubtitleFont(val family: String?) {
 
 @Serializable
 enum class SubtitleColor(val argb: Long) {
-    White(0xFFFFFFFF), Grey(0xFFBFC6CE), Yellow(0xFFFFE66D), Amber(0xFFFFB74D),
-    Green(0xFF9BE89B), Cyan(0xFF7FE3F0), IceBlue(0xFFCFE8FF), Pink(0xFFF7A8D8),
+    White(0xFFFFFFFF),
+    Grey(0xFFBFC6CE),
+    Yellow(0xFFFFE66D),
+    Amber(0xFFFFB74D),
+    Green(0xFF9BE89B),
+    Cyan(0xFF7FE3F0),
+    IceBlue(0xFFCFE8FF),
+    Pink(0xFFF7A8D8),
 }
 
 /** Box behind each line, for pictures too bright for an outline. */
@@ -487,7 +533,11 @@ enum class SubtitleEdge { None, Raised, Depressed, Outline, Shadow }
 /** Text line for subtitles without a position of their own: negative lines count from the bottom. */
 @Serializable
 enum class SubtitlePosition(val line: Int) {
-    Bottom1(-1), Bottom2(-2), Bottom3(-3), Bottom5(-5), Top1(1),
+    Bottom1(-1),
+    Bottom2(-2),
+    Bottom3(-3),
+    Bottom5(-5),
+    Top1(1),
 }
 
 /** What identifies a track across titles: language and kind, not the index. */

@@ -1,16 +1,19 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
+import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.util.UUID
 
 class GuideTest {
 
     private val channelId = UUID.randomUUID()
 
-    private fun program(title: String, start: Long, end: Long) =
-        LiveProgram(title, channelId, title, null, null, start, end, null, null, new = false)
+    private fun program(
+        title: String,
+        start: Long,
+        end: Long,
+    ) = LiveProgram(title, channelId, title, null, null, start, end, null, null, new = false)
 
     @Test
     fun `a row without guide data is one empty cell`() {
@@ -22,7 +25,13 @@ class GuideTest {
         val a = program("a", 10, 40)
         val b = program("b", 60, 90)
         assertEquals(
-            listOf(GuideCell(0, 10, null), GuideCell(10, 40, a), GuideCell(40, 60, null), GuideCell(60, 90, b), GuideCell(90, 100, null)),
+            listOf(
+                GuideCell(0, 10, null),
+                GuideCell(10, 40, a),
+                GuideCell(40, 60, null),
+                GuideCell(60, 90, b),
+                GuideCell(90, 100, null),
+            ),
             guideCells(listOf(b, a), 0, 100),
         )
     }

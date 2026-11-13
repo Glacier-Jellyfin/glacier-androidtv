@@ -32,14 +32,22 @@ class DeviceProfilesTest {
 
     @Test
     fun `lossless audio the device cannot carry goes to the server`() {
-        val tv = fullHdTv.copy(audioCodecs = setOf("aac", "ac3", "eac3", "dts", "truehd"), passthroughAudio = setOf("eac3"), convertTrueHd = true, convertDtsHd = true)
+        val tv = fullHdTv.copy(
+            audioCodecs = setOf("aac", "ac3", "eac3", "dts", "truehd"),
+            passthroughAudio = setOf("eac3"),
+            convertTrueHd = true,
+            convertDtsHd = true,
+        )
         val profile = DeviceProfiles.build(tv, MAX)
         val video = profile.directPlayProfiles.single { it.type == DlnaProfileType.VIDEO }
         assertEquals(setOf("aac", "ac3", "eac3", "dts"), video.audioCodec!!.split(",").toSet())
         val dts = profile.codecProfiles.single { it.codec == "dts" }
         assertTrue(dts.conditions.any { it.property == ProfileConditionValue.AUDIO_PROFILE && it.value == "DTS-HD MA" })
         // The server converts to the bitstream the receiver takes.
-        assertEquals("eac3", profile.transcodingProfiles.single { it.type == DlnaProfileType.VIDEO }.audioCodec!!.split(",").first())
+        assertEquals(
+            "eac3",
+            profile.transcodingProfiles.single { it.type == DlnaProfileType.VIDEO }.audioCodec!!.split(",").first(),
+        )
     }
 
     @Test
@@ -47,7 +55,9 @@ class DeviceProfilesTest {
         // TrueHD converts, DTS-HD goes out as a bitstream: as on TVs that offer apps DTS-HD but not TrueHD.
         val tv = fullHdTv.copy(audioCodecs = setOf("aac", "eac3", "dts", "truehd"), convertTrueHd = true)
         val profile = DeviceProfiles.build(tv, MAX)
-        assertFalse("truehd" in profile.directPlayProfiles.single { it.type == DlnaProfileType.VIDEO }.audioCodec!!.split(","))
+        assertFalse(
+            "truehd" in profile.directPlayProfiles.single { it.type == DlnaProfileType.VIDEO }.audioCodec!!.split(","),
+        )
         assertTrue(profile.codecProfiles.none { it.codec == "dts" })
     }
 
@@ -55,7 +65,9 @@ class DeviceProfilesTest {
     fun `lossless audio plays on the device by default`() {
         val tv = fullHdTv.copy(audioCodecs = setOf("aac", "dts", "truehd"))
         val profile = DeviceProfiles.build(tv, MAX)
-        assertTrue("truehd" in profile.directPlayProfiles.single { it.type == DlnaProfileType.VIDEO }.audioCodec!!.split(","))
+        assertTrue(
+            "truehd" in profile.directPlayProfiles.single { it.type == DlnaProfileType.VIDEO }.audioCodec!!.split(","),
+        )
         assertTrue(profile.codecProfiles.none { it.codec == "dts" })
     }
 
@@ -77,11 +89,18 @@ class DeviceProfilesTest {
 
     @Test
     fun `dolby vision devices get fMP4 segments, which keep the dolby vision tag`() {
-        val tv = fullHdTv.copy(audioCodecs = setOf("aac", "eac3", "flac"), hdr = setOf(HdrType.Hdr10, HdrType.DolbyVision))
+        val tv = fullHdTv.copy(
+            audioCodecs = setOf("aac", "eac3", "flac"),
+            hdr = setOf(HdrType.Hdr10, HdrType.DolbyVision),
+        )
         val video = DeviceProfiles.build(tv, MAX).transcodingProfiles.single { it.type == DlnaProfileType.VIDEO }
         assertEquals("mp4", video.container)
         assertEquals("aac,eac3,flac", video.audioCodec)
-        val retry = DeviceProfiles.build(tv, MAX, segments = HlsSegments.Ts).transcodingProfiles.single { it.type == DlnaProfileType.VIDEO }
+        val retry = DeviceProfiles.build(
+            tv,
+            MAX,
+            segments = HlsSegments.Ts,
+        ).transcodingProfiles.single { it.type == DlnaProfileType.VIDEO }
         assertEquals("ts", retry.container)
     }
 
@@ -105,7 +124,10 @@ class DeviceProfilesTest {
     @Test
     fun `hdr the display cannot show is left to the server`() {
         val hevcRange = DeviceProfiles.build(fullHdTv, MAX).codecProfiles
-            .single { it.codec == "hevc" && it.conditions.any { c -> c.property == ProfileConditionValue.VIDEO_RANGE_TYPE } }
+            .single {
+                it.codec == "hevc" &&
+                    it.conditions.any { c -> c.property == ProfileConditionValue.VIDEO_RANGE_TYPE }
+            }
         val ranges = hevcRange.conditions.single().value!!.split("|")
         assertTrue(VideoRangeType.HDR10.serialName in ranges)
         assertTrue(VideoRangeType.DOVI_WITH_HDR10.serialName in ranges)
@@ -116,14 +138,30 @@ class DeviceProfilesTest {
     @Test
     fun `dolby vision profile 7 plays its hdr10 base layer, profile 5 needs the decoder`() {
         // Like the DuneHD Pro 8K Plus's Amlogic decoder: no profile 7.
-        val amlogic = DeviceProfiles.supportedRanges(setOf(HdrType.Hdr10, HdrType.DolbyVision), dolbyVisionProfiles = setOf(4, 5, 8, 9))
+        val amlogic = DeviceProfiles.supportedRanges(
+            setOf(HdrType.Hdr10, HdrType.DolbyVision),
+            dolbyVisionProfiles = setOf(4, 5, 8, 9),
+        )
         assertTrue(VideoRangeType.DOVI in amlogic)
         assertTrue(VideoRangeType.DOVI_WITH_EL in amlogic)
-        val noProfile5 = DeviceProfiles.supportedRanges(setOf(HdrType.Hdr10, HdrType.DolbyVision), dolbyVisionProfiles = setOf(8))
+        val noProfile5 = DeviceProfiles.supportedRanges(
+            setOf(HdrType.Hdr10, HdrType.DolbyVision),
+            dolbyVisionProfiles = setOf(8),
+        )
         assertFalse(VideoRangeType.DOVI in noProfile5)
         // Without HDR10 the base layer cannot be shown: profile 7 needs a decoder that declares it.
-        assertFalse(VideoRangeType.DOVI_WITH_EL in DeviceProfiles.supportedRanges(setOf(HdrType.DolbyVision), dolbyVisionProfiles = setOf(8)))
-        assertTrue(VideoRangeType.DOVI_WITH_EL in DeviceProfiles.supportedRanges(setOf(HdrType.DolbyVision), dolbyVisionProfiles = null))
+        assertFalse(
+            VideoRangeType.DOVI_WITH_EL in DeviceProfiles.supportedRanges(
+                setOf(HdrType.DolbyVision),
+                dolbyVisionProfiles = setOf(8),
+            ),
+        )
+        assertTrue(
+            VideoRangeType.DOVI_WITH_EL in DeviceProfiles.supportedRanges(
+                setOf(HdrType.DolbyVision),
+                dolbyVisionProfiles = null,
+            ),
+        )
     }
 
     @Test
@@ -145,13 +183,22 @@ class DeviceProfilesTest {
 
     @Test
     fun `burn-in modes only offer burning for the chosen formats`() {
-        fun methods(mode: SubtitleBurnIn, format: String) =
-            DeviceProfiles.build(fullHdTv, MAX, mode).subtitleProfiles.filter { it.format == format }.map { it.method }.toSet()
+        fun methods(mode: SubtitleBurnIn, format: String) = DeviceProfiles.build(
+            fullHdTv,
+            MAX,
+            mode,
+        ).subtitleProfiles.filter { it.format == format }.map { it.method }.toSet()
 
         assertEquals(setOf(SubtitleDeliveryMethod.ENCODE), methods(SubtitleBurnIn.PictureFormats, "pgssub"))
-        assertEquals(setOf(SubtitleDeliveryMethod.EMBED, SubtitleDeliveryMethod.EXTERNAL), methods(SubtitleBurnIn.PictureFormats, "ass"))
+        assertEquals(
+            setOf(SubtitleDeliveryMethod.EMBED, SubtitleDeliveryMethod.EXTERNAL),
+            methods(SubtitleBurnIn.PictureFormats, "ass"),
+        )
         assertEquals(setOf(SubtitleDeliveryMethod.ENCODE), methods(SubtitleBurnIn.ComplexFormats, "ass"))
-        assertEquals(setOf(SubtitleDeliveryMethod.EMBED, SubtitleDeliveryMethod.EXTERNAL), methods(SubtitleBurnIn.ComplexFormats, "srt"))
+        assertEquals(
+            setOf(SubtitleDeliveryMethod.EMBED, SubtitleDeliveryMethod.EXTERNAL),
+            methods(SubtitleBurnIn.ComplexFormats, "srt"),
+        )
         assertEquals(setOf(SubtitleDeliveryMethod.ENCODE), methods(SubtitleBurnIn.Always, "srt"))
     }
 

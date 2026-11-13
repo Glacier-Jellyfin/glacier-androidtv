@@ -10,7 +10,24 @@ class AudioFormatTest {
 
     @Test
     fun `flac, alac and pcm are lossless, lossy codecs are not`() {
-        listOf("flac", "FLAC", "alac", "pcm_s16le", "pcm_s24le", "ape", "wavpack", "dsd_lsbf").forEach { assertTrue(it, format(it).lossless) }
-        listOf(null, "", "mp3", "aac", "opus", "vorbis", "ac3").forEach { assertFalse(it.toString(), format(it).lossless) }
+        listOf(
+            "flac",
+            "FLAC",
+            "alac",
+            "pcm_s16le",
+            "pcm_s24le",
+            "ape",
+            "wavpack",
+            "dsd_lsbf",
+        ).forEach { assertTrue(it, format(it).lossless) }
+        listOf(
+            null,
+            "",
+            "mp3",
+            "aac",
+            "opus",
+            "vorbis",
+            "ac3",
+        ).forEach { assertFalse(it.toString(), format(it).lossless) }
     }
 }

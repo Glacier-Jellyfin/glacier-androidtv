@@ -2,6 +2,11 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import io.github.glacier_jellyfin.androidtv.core.data.AccountRepository
 import io.github.glacier_jellyfin.androidtv.core.data.StoredUser
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -20,11 +25,6 @@ import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.SortOrder
-import java.time.LocalDateTime
-import java.time.ZoneOffset
-import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** A title for the Android TV home screen. */
 data class HomeScreenTitle(
@@ -64,7 +64,8 @@ class HomeScreenRepository @Inject constructor(
     /** Null when no profile on this device is signed in. */
     suspend fun load(): HomeScreenContent? = withContext(Dispatchers.IO) {
         val state = accounts.current()
-        val user = state.users.filter { it.accessToken != null }.maxByOrNull { it.lastUsedAt } ?: return@withContext null
+        val user =
+            state.users.filter { it.accessToken != null }.maxByOrNull { it.lastUsedAt } ?: return@withContext null
         val server = state.servers.firstOrNull { it.id == user.serverId } ?: return@withContext null
         val api = jellyfin.createApi(baseUrl = server.address, accessToken = user.accessToken)
         val userId = UUID.fromString(user.userId)
@@ -79,7 +80,12 @@ class HomeScreenRepository @Inject constructor(
             val continueWatching = mergeContinueWatching(started, nextUp.await())
             val recentlyAdded = added.await()
             val recentReleases = releases.await()
-            val blocked = blocked(api, userId, user, (continueWatching + recentlyAdded + recentReleases).map { it.id }.distinct())
+            val blocked = blocked(
+                api,
+                userId,
+                user,
+                (continueWatching + recentlyAdded + recentReleases).map { it.id }.distinct(),
+            )
             fun titles(list: List<BaseItemDto>) = list.filterNot { it.id in blocked }
                 .map { title(mapper, it, nextUp = it.type == BaseItemKind.EPISODE && it.id !in startedIds) }
             HomeScreenContent(
@@ -92,40 +98,47 @@ class HomeScreenRepository @Inject constructor(
         }
     }
 
-    private suspend fun blocked(api: ApiClient, userId: UUID, user: StoredUser, ids: List<UUID>): Set<UUID> {
+    private suspend fun blocked(
+        api: ApiClient,
+        userId: UUID,
+        user: StoredUser,
+        ids: List<UUID>,
+    ): Set<UUID> {
         val protection = user.protection
         if (!protection.restricts || ids.isEmpty()) return emptySet()
         val maxAge = protection.maxAge.age?.let { age -> policyMaxAge(api)?.let { minOf(it, age) } ?: age }
         return blockedTitles(api, userId, maxAge, protection.blockUnrated, ids)
     }
 
-    private fun title(mapper: MediaMapper, dto: BaseItemDto, nextUp: Boolean) = HomeScreenTitle(
+    private fun title(
+        mapper: MediaMapper,
+        dto: BaseItemDto,
+        nextUp: Boolean,
+    ) = HomeScreenTitle(
         item = mapper.item(dto),
         durationMs = dto.runTimeTicks?.let { it / TICKS_PER_MS },
         lastPlayedAt = dto.userData?.lastPlayedDate?.toInstant(ZoneOffset.UTC)?.toEpochMilli(),
         nextUp = nextUp,
     )
 
-    private suspend fun resume(api: ApiClient, userId: UUID): List<BaseItemDto> =
-        api.libraryApi.getResumeItems(
-            userId = userId,
-            limit = LIMIT,
-            mediaTypes = listOf(MediaType.VIDEO),
-            // Music videos play in the music player, from the start.
-            excludeItemTypes = listOf(BaseItemKind.MUSIC_VIDEO),
-            fields = FIELDS,
-            enableUserData = true,
-        ).content.items
+    private suspend fun resume(api: ApiClient, userId: UUID): List<BaseItemDto> = api.libraryApi.getResumeItems(
+        userId = userId,
+        limit = LIMIT,
+        mediaTypes = listOf(MediaType.VIDEO),
+        // Music videos play in the music player, from the start.
+        excludeItemTypes = listOf(BaseItemKind.MUSIC_VIDEO),
+        fields = FIELDS,
+        enableUserData = true,
+    ).content.items
 
-    private suspend fun nextUp(api: ApiClient, userId: UUID): List<BaseItemDto> =
-        api.showApi.getNextUp(
-            userId = userId,
-            limit = LIMIT,
-            fields = FIELDS,
-            enableUserData = true,
-            // Episodes already started are in the resume list.
-            enableResumable = false,
-        ).content.items
+    private suspend fun nextUp(api: ApiClient, userId: UUID): List<BaseItemDto> = api.showApi.getNextUp(
+        userId = userId,
+        limit = LIMIT,
+        fields = FIELDS,
+        enableUserData = true,
+        // Episodes already started are in the resume list.
+        enableResumable = false,
+    ).content.items
 
     /**
      * Movies and shows of every movie and show library the user did not leave out
@@ -163,19 +176,18 @@ class HomeScreenRepository @Inject constructor(
             .take(LIMIT)
     }
 
-    private suspend fun recentReleases(api: ApiClient, userId: UUID): List<BaseItemDto> =
-        api.libraryApi.getItems(
-            userId = userId,
-            recursive = true,
-            includeItemTypes = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
-            // Announced titles carry future dates.
-            maxPremiereDate = LocalDateTime.now(ZoneOffset.UTC),
-            sortBy = listOf(ItemSortBy.PREMIERE_DATE),
-            sortOrder = listOf(SortOrder.DESCENDING),
-            fields = FIELDS,
-            enableUserData = true,
-            limit = LIMIT,
-        ).content.items
+    private suspend fun recentReleases(api: ApiClient, userId: UUID): List<BaseItemDto> = api.libraryApi.getItems(
+        userId = userId,
+        recursive = true,
+        includeItemTypes = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
+        // Announced titles carry future dates.
+        maxPremiereDate = LocalDateTime.now(ZoneOffset.UTC),
+        sortBy = listOf(ItemSortBy.PREMIERE_DATE),
+        sortOrder = listOf(SortOrder.DESCENDING),
+        fields = FIELDS,
+        enableUserData = true,
+        limit = LIMIT,
+    ).content.items
 
     private companion object {
         const val LIMIT = 20

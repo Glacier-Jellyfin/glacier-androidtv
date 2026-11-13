@@ -57,7 +57,13 @@ class LibraryQueryTest {
         assertTrue(LibraryQuery(LibraryKind.Movies, unwatchedOnly = true).unwatchedGrouped)
         assertFalse(LibraryQuery(LibraryKind.Movies, unwatchedOnly = true, favoritesOnly = true).unwatchedGrouped)
         assertFalse(LibraryQuery(LibraryKind.Movies, unwatchedOnly = true, groupCollections = false).unwatchedGrouped)
-        assertFalse(LibraryQuery(LibraryKind.Movies, unwatchedOnly = true, genreId = java.util.UUID.randomUUID()).unwatchedGrouped)
+        assertFalse(
+            LibraryQuery(
+                LibraryKind.Movies,
+                unwatchedOnly = true,
+                genreId = java.util.UUID.randomUUID(),
+            ).unwatchedGrouped,
+        )
         assertFalse(LibraryQuery(LibraryKind.Shows, unwatchedOnly = true).unwatchedGrouped)
         assertFalse(LibraryQuery(LibraryKind.Movies).unwatchedGrouped)
     }

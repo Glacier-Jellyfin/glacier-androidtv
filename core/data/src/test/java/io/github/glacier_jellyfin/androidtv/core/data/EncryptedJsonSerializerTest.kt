@@ -1,13 +1,13 @@
 package io.github.glacier_jellyfin.androidtv.core.data
 
 import androidx.datastore.core.CorruptionException
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.security.GeneralSecurityException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.security.GeneralSecurityException
 
 class EncryptedJsonSerializerTest {
 

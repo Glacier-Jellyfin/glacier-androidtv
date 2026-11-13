@@ -3,9 +3,9 @@ package io.github.glacier_jellyfin.androidtv.livetv
 import android.os.Handler
 import android.os.Looper
 import androidx.media3.common.Player
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
 import java.util.UUID
 import javax.inject.Inject
@@ -17,11 +17,13 @@ import javax.inject.Singleton
  * instead of tuning again.
  */
 @Singleton
-class LiveStreamHandoff @Inject constructor(
-    private val playback: PlaybackRepository,
-) {
+class LiveStreamHandoff @Inject constructor(private val playback: PlaybackRepository) {
 
-    class Stream(val channelId: UUID, val playback: GlacierPlayback, val source: PlaybackSource)
+    class Stream(
+        val channelId: UUID,
+        val playback: GlacierPlayback,
+        val source: PlaybackSource,
+    )
 
     private var waiting: Stream? = null
     private val handler = Handler(Looper.getMainLooper())

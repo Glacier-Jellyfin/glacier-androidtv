@@ -6,6 +6,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepositor
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -16,10 +17,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 /** What [InlineVideo] plays: [player] once the stream of [id] is open, and how far it has come, 0 to 1. */
-data class InlineVideoState(val id: UUID? = null, val player: Player? = null, val progress: Float = 0f)
+data class InlineVideoState(
+    val id: UUID? = null,
+    val player: Player? = null,
+    val progress: Float = 0f,
+)
 
 /**
  * One home video playing inside a screen rather than the full player: the photo viewer, the
@@ -52,7 +56,11 @@ class InlineVideo(
      * Plays [id] from [startMs], after [delayMs] in which another [open] or [release] can still call it
      * off (a gallery row the focus only passes through).
      */
-    fun open(id: UUID, startMs: Long = 0, delayMs: Long = 0) {
+    fun open(
+        id: UUID,
+        startMs: Long = 0,
+        delayMs: Long = 0,
+    ) {
         if (_state.value.id == id && (_state.value.player != null || opening?.isActive == true)) return
         release()
         _state.update { it.copy(id = id) }
@@ -62,7 +70,12 @@ class InlineVideo(
                 val source = playback.open(id, startMs = startMs, audioIndex = null, subtitleIndex = null)
                 val player = GlacierPlayer.create(
                     context,
-                    StreamRequest(url = source.url, isHls = source.isHls, headers = source.headers, startPositionMs = startMs),
+                    StreamRequest(
+                        url = source.url,
+                        isHls = source.isHls,
+                        headers = source.headers,
+                        startPositionMs = startMs,
+                    ),
                 ).player
                 player.addListener(listener)
                 player.playWhenReady = true
@@ -70,7 +83,13 @@ class InlineVideo(
                 ticker = scope.launch {
                     while (isActive) {
                         val duration = player.duration.takeIf { it > 0 }
-                        if (duration != null) _state.update { it.copy(progress = (player.currentPosition.toFloat() / duration).coerceIn(0f, 1f)) }
+                        if (duration != null) {
+                            _state.update {
+                                it.copy(
+                                    progress = (player.currentPosition.toFloat() / duration).coerceIn(0f, 1f),
+                                )
+                            }
+                        }
                         delay(TICK_MS)
                     }
                 }

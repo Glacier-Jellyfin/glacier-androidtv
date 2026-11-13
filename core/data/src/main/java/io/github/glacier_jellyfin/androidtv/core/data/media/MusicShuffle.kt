@@ -1,6 +1,8 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -9,17 +11,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * The design's one shuffle switch, shared by the music pages and the player,
  * and the player's lyrics switch; both kept per profile (MusicSettings).
  */
 @Singleton
-class MusicShuffle @Inject constructor(
-    private val settings: SettingsRepository,
-) {
+class MusicShuffle @Inject constructor(private val settings: SettingsRepository) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val on: StateFlow<Boolean> = settings.settings.map { it.music.shuffle }

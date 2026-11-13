@@ -9,7 +9,12 @@ import io.github.glacier_jellyfin.androidtv.core.log.Log
 import kotlin.math.abs
 
 /** One picture mode of the TV, as far as matching cares. */
-internal data class DisplayModeSpec(val id: Int, val width: Int, val height: Int, val refreshRate: Float)
+internal data class DisplayModeSpec(
+    val id: Int,
+    val width: Int,
+    val height: Int,
+    val refreshRate: Float,
+)
 
 /**
  * The mode to switch to for [fps], or null to stay on [current]. Only modes of the
@@ -17,7 +22,11 @@ internal data class DisplayModeSpec(val id: Int, val width: Int, val height: Int
  * fastest wins (50 Hz over 25 Hz). Failing that, one within 0.5 % (24 Hz for a
  * 23.976 film) still beats the 3:2 judder of 60 Hz.
  */
-internal fun pickDisplayMode(modes: List<DisplayModeSpec>, current: DisplayModeSpec, fps: Float): DisplayModeSpec? {
+internal fun pickDisplayMode(
+    modes: List<DisplayModeSpec>,
+    current: DisplayModeSpec,
+    fps: Float,
+): DisplayModeSpec? {
     if (fps <= 0) return null
     if (frameRateMatches(current.refreshRate, fps)) return null
     val sameSize = modes.filter { it.width == current.width && it.height == current.height }

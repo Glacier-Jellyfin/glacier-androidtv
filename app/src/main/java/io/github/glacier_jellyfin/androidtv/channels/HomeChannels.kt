@@ -82,15 +82,24 @@ internal class HomeChannels(context: Context) {
         ).also { Log.i(TAG, "Created channel ${channel.key}") }
     }
 
-    private fun programFor(channel: Channel, title: HomeScreenTitle, owner: HomeScreenContent, channelId: Long, weight: Int) =
-        PreviewProgram.Builder()
-            .setChannelId(channelId)
-            .setWeight(weight)
-            .describe(title, owner, wide = channel.wide)
-            .build()
+    private fun programFor(
+        channel: Channel,
+        title: HomeScreenTitle,
+        owner: HomeScreenContent,
+        channelId: Long,
+        weight: Int,
+    ) = PreviewProgram.Builder()
+        .setChannelId(channelId)
+        .setWeight(weight)
+        .describe(title, owner, wide = channel.wide)
+        .build()
 
     private fun writePrograms(channelId: Long, programs: List<PreviewProgram>) {
-        val existing = query(TvContractCompat.buildPreviewProgramsUriForChannel(channelId), PreviewProgram.PROJECTION, PreviewProgram::fromCursor)
+        val existing = query(
+            TvContractCompat.buildPreviewProgramsUriForChannel(channelId),
+            PreviewProgram.PROJECTION,
+            PreviewProgram::fromCursor,
+        )
             .associateBy { it.internalProviderId }
         for (program in programs) {
             val old = existing[program.internalProviderId]
@@ -101,23 +110,37 @@ internal class HomeChannels(context: Context) {
     }
 
     private fun writeWatchNext(content: HomeScreenContent?) {
-        val existing = query(TvContractCompat.WatchNextPrograms.CONTENT_URI, WatchNextProgram.PROJECTION, WatchNextProgram::fromCursor)
+        val existing = query(
+            TvContractCompat.WatchNextPrograms.CONTENT_URI,
+            WatchNextProgram.PROJECTION,
+            WatchNextProgram::fromCursor,
+        )
             .associateBy { it.internalProviderId }
         val titles = content?.continueWatching.orEmpty()
         val now = System.currentTimeMillis()
-        if (content != null) titles.forEachIndexed { index, title ->
-            val old = existing[title.item.id.toString()]
-            val builder = WatchNextProgram.Builder()
-                .setWatchNextType(if (title.nextUp) TvContractCompat.WatchNextPrograms.WATCH_NEXT_TYPE_NEXT else TvContractCompat.WatchNextPrograms.WATCH_NEXT_TYPE_CONTINUE)
-                // Next episodes have not been played; they keep the server's order behind the started titles.
-                .setLastEngagementTimeUtcMillis(title.lastPlayedAt ?: (now - index * 1000L))
-                .describe(title, content, wide = true)
-            if (old == null) {
-                helper.publishWatchNextProgram(builder.build())
-            } else {
-                // Removed by the user: back once it was watched further.
-                if (!old.isBrowsable && old.lastPlaybackPositionMillis != title.item.resumePositionMs.toInt()) builder.setBrowsable(true)
-                helper.updateWatchNextProgram(builder.build(), old.id)
+        if (content != null) {
+            titles.forEachIndexed { index, title ->
+                val old = existing[title.item.id.toString()]
+                val builder = WatchNextProgram.Builder()
+                    .setWatchNextType(
+                        if (title.nextUp) TvContractCompat.WatchNextPrograms.WATCH_NEXT_TYPE_NEXT else TvContractCompat.WatchNextPrograms.WATCH_NEXT_TYPE_CONTINUE,
+                    )
+                    // Next episodes have not been played; they keep the server's order behind the started titles.
+                    .setLastEngagementTimeUtcMillis(title.lastPlayedAt ?: (now - index * 1000L))
+                    .describe(title, content, wide = true)
+                if (old == null) {
+                    helper.publishWatchNextProgram(builder.build())
+                } else {
+                    // Removed by the user: back once it was watched further.
+                    if (!old.isBrowsable &&
+                        old.lastPlaybackPositionMillis != title.item.resumePositionMs.toInt()
+                    ) {
+                        builder.setBrowsable(
+                            true,
+                        )
+                    }
+                    helper.updateWatchNextProgram(builder.build(), old.id)
+                }
             }
         }
         val wanted = titles.mapTo(HashSet()) { it.item.id.toString() }
@@ -125,7 +148,11 @@ internal class HomeChannels(context: Context) {
             .forEach { resolver.delete(TvContractCompat.buildWatchNextProgramUri(it.id), null, null) }
     }
 
-    private fun <B : BasePreviewProgram.Builder<B>> B.describe(title: HomeScreenTitle, owner: HomeScreenContent, wide: Boolean): B {
+    private fun <B : BasePreviewProgram.Builder<B>> B.describe(
+        title: HomeScreenTitle,
+        owner: HomeScreenContent,
+        wide: Boolean,
+    ): B {
         val item = title.item
         val id = item.id.toString()
         setInternalProviderId(id)
@@ -139,7 +166,9 @@ internal class HomeChannels(context: Context) {
                 item.seasonNumber?.let { setSeasonNumber(it) }
                 item.episodeNumber?.let { setEpisodeNumber(it) }
             }
+
             ItemKind.Series -> setType(TvContractCompat.PreviewPrograms.TYPE_TV_SERIES).setTitle(item.title)
+
             else -> setType(TvContractCompat.PreviewPrograms.TYPE_MOVIE).setTitle(item.title)
         }
         item.overview?.let { setDescription(it) }
@@ -164,8 +193,18 @@ internal class HomeChannels(context: Context) {
             buildList { while (cursor.moveToNext()) add(read(cursor)) }
         }.orEmpty()
 
-    private enum class Channel(val key: String, @StringRes val title: Int, val wide: Boolean, val titles: (HomeScreenContent) -> List<HomeScreenTitle>) {
-        ContinueWatching("continue", R.string.channel_continue_watching, wide = true, HomeScreenContent::continueWatching),
+    private enum class Channel(
+        val key: String,
+        @StringRes val title: Int,
+        val wide: Boolean,
+        val titles: (HomeScreenContent) -> List<HomeScreenTitle>,
+    ) {
+        ContinueWatching(
+            "continue",
+            R.string.channel_continue_watching,
+            wide = true,
+            HomeScreenContent::continueWatching,
+        ),
         RecentlyAdded("added", R.string.channel_recently_added, wide = false, HomeScreenContent::recentlyAdded),
         RecentReleases("releases", R.string.channel_recent_releases, wide = false, HomeScreenContent::recentReleases),
     }

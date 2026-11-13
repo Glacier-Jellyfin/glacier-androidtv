@@ -9,6 +9,8 @@ import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.core.log.Log
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -21,11 +23,14 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** The question once a profile is new on this device: take the settings one of [copies] holds? */
-data class RestoreOffer(val profileKey: String, val userName: String, val copies: List<DeviceSettings>, val thisDeviceId: String)
+data class RestoreOffer(
+    val profileKey: String,
+    val userName: String,
+    val copies: List<DeviceSettings>,
+    val thisDeviceId: String,
+)
 
 /**
  * Keeps a copy of the signed-in profile's settings on its Jellyfin server, one
@@ -95,7 +100,13 @@ class SettingsSync @Inject constructor(
                     uploaded = settings
                     _copies.value = listOf(copy) + _copies.value.filterNot { it.deviceId == deviceId }
                 }
-                .onFailure { Log.w(TAG, "Uploading the settings failed; tried again with the next change or start", it) }
+                .onFailure {
+                    Log.w(
+                        TAG,
+                        "Uploading the settings failed; tried again with the next change or start",
+                        it,
+                    )
+                }
         }
     }
 

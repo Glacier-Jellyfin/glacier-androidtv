@@ -46,7 +46,11 @@ data class ItemDetails(
 
 data class EpisodeNeighbours(val previous: MediaItem?, val next: MediaItem?)
 
-data class Chapter(val name: String, val startMs: Long, val imageUrl: String?)
+data class Chapter(
+    val name: String,
+    val startMs: Long,
+    val imageUrl: String?,
+)
 
 /**
  * Seek preview thumbnails: [count] pictures of [width]×[height], one every

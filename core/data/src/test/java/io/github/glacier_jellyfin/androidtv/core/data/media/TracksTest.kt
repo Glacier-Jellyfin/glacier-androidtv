@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
+import java.util.Locale
 import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaStreamType
 import org.junit.Assert.assertEquals
@@ -7,7 +8,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.Locale
 
 class TracksTest {
 
@@ -55,14 +55,38 @@ class TracksTest {
 
     private val de = listOf(Locale.GERMAN)
 
-    private fun sub(title: String?, codec: String, forced: Boolean = false, language: String = "ger", sdh: Boolean = false) =
-        Track(index = 0, language = language, codec = codec, channels = null, forced = forced, hearingImpaired = sdh, title = title)
+    private fun sub(
+        title: String?,
+        codec: String,
+        forced: Boolean = false,
+        language: String = "ger",
+        sdh: Boolean = false,
+    ) = Track(
+        index = 0,
+        language = language,
+        codec = codec,
+        channels = null,
+        forced = forced,
+        hearingImpaired = sdh,
+        title = title,
+    )
 
-    private fun audio(title: String?, codec: String, channels: Int, language: String = "ger", profile: String? = null) =
-        Track(
-            index = 0, language = language, codec = codec, channels = channels, title = title, profile = profile,
-            commentary = commentaryByName(title), audioDescription = audioDescriptionByName(title),
-        )
+    private fun audio(
+        title: String?,
+        codec: String,
+        channels: Int,
+        language: String = "ger",
+        profile: String? = null,
+    ) = Track(
+        index = 0,
+        language = language,
+        codec = codec,
+        channels = channels,
+        title = title,
+        profile = profile,
+        commentary = commentaryByName(title),
+        audioDescription = audioDescriptionByName(title),
+    )
 
     private fun facts(track: Track, subtitle: Boolean) = describeTrack(track, subtitle, de).facts
 
@@ -108,7 +132,10 @@ class TracksTest {
         assertEquals(listOf("FLAC 2.0"), facts(audio("German", "flac", 2), false))
         assertEquals(listOf("TrueHD 2.0"), facts(audio("Stereo", "truehd", 2), false))
         assertEquals(listOf("AAC 2.0", "Director's Cut"), facts(audio("Director's Cut", "aac", 2, "eng"), false))
-        assertEquals(listOf("TrueHD Atmos 7.1", "BTM"), facts(audio("BTM TrueHD Atmos", "truehd", 8, "eng", "Dolby TrueHD + Dolby Atmos"), false))
+        assertEquals(
+            listOf("TrueHD Atmos 7.1", "BTM"),
+            facts(audio("BTM TrueHD Atmos", "truehd", 8, "eng", "Dolby TrueHD + Dolby Atmos"), false),
+        )
     }
 
     @Test
@@ -147,7 +174,14 @@ class TracksTest {
         assertTrue(closedCaptionsByName("English CC"))
         assertTrue(closedCaptionsByName("Closed Captions"))
         assertFalse(closedCaptionsByName("Accent"))
-        val cc = Track(index = 0, language = "eng", codec = "subrip", channels = null, closedCaptions = true, title = "English CC")
+        val cc = Track(
+            index = 0,
+            language = "eng",
+            codec = "subrip",
+            channels = null,
+            closedCaptions = true,
+            title = "English CC",
+        )
         val described = describeTrack(cc, true, de)
         assertEquals(listOf(TrackMark.ClosedCaptions), described.marks)
         assertEquals(listOf("SRT"), described.facts)
@@ -180,7 +214,14 @@ class TracksTest {
 
     @Test
     fun `a variant names its region and shows its flag`() {
-        val canadian = Track(index = 0, language = "fre", codec = "PGSSUB", channels = null, title = "BTM CA", region = "CA")
+        val canadian = Track(
+            index = 0,
+            language = "fre",
+            codec = "PGSSUB",
+            channels = null,
+            title = "BTM CA",
+            region = "CA",
+        )
         val described = describeTrack(canadian, true, de)
         assertEquals("Französisch (Kanada)", described.name)
         assertEquals(listOf("BTM", "PGS"), described.facts)
@@ -270,7 +311,11 @@ class TracksTest {
 
     @Test
     fun `signs and songs is forced, not sing-along`() {
-        for (title in listOf("Signs & Songs", "English (Signs/Songs) [Lyrics]", "Deutsch - Schild- und Liedtext - Ohne Insert CR/Fuchs ASS")) {
+        for (title in listOf(
+            "Signs & Songs",
+            "English (Signs/Songs) [Lyrics]",
+            "Deutsch - Schild- und Liedtext - Ohne Insert CR/Fuchs ASS",
+        )) {
             val track = stream(title).toTrack()
             assertTrue(title, track.forced)
             assertFalse(title, track.singAlong)
@@ -311,7 +356,14 @@ class TracksTest {
     private val japanese = Track(index = 1, language = "jpn", codec = "truehd", channels = 2)
     private val german = Track(index = 2, language = "ger", codec = "ac3", channels = 2)
     private val full = Track(index = 4, language = "ger", codec = "PGSSUB", channels = null, title = "German Full")
-    private val forced = Track(index = 5, language = "ger", codec = "PGSSUB", channels = null, forced = true, title = "German Forced")
+    private val forced = Track(
+        index = 5,
+        language = "ger",
+        codec = "PGSSUB",
+        channels = null,
+        forced = true,
+        title = "German Forced",
+    )
     private val subtitles = listOf(Track(index = 0, language = "jpn", codec = "subrip", channels = null), full, forced)
 
     @Test

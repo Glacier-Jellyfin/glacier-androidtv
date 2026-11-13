@@ -14,7 +14,11 @@ import kotlin.concurrent.thread
  * phone or computer can download the log: `http://<address>:<port>/<token>`.
  * The random token keeps others on the network from guessing the address.
  */
-class LogServer(address: String, val fileName: String, private val content: ByteArray) : Closeable {
+class LogServer(
+    address: String,
+    val fileName: String,
+    private val content: ByteArray,
+) : Closeable {
 
     private val socket = ServerSocket(0)
     private val token = ByteArray(TOKEN_BYTES).also(SecureRandom()::nextBytes).joinToString("") { "%02x".format(it) }
@@ -40,7 +44,13 @@ class LogServer(address: String, val fileName: String, private val content: Byte
             }
             // One thread per client: a slow one cannot hold up the next download.
             thread(name = "log-server-client", isDaemon = true) {
-                client.use { runCatching { answer(it) }.onFailure { e -> Log.w(TAG, "Answering a log download failed", e) } }
+                client.use {
+                    runCatching {
+                        answer(
+                            it,
+                        )
+                    }.onFailure { e -> Log.w(TAG, "Answering a log download failed", e) }
+                }
             }
         }
     }
@@ -59,7 +69,16 @@ class LogServer(address: String, val fileName: String, private val content: Byte
     private fun respond(client: Socket, request: String) {
         val parts = request.split(' ')
         val found = parts.getOrNull(0) == "GET" && parts.getOrNull(1) == "/$token"
-        Log.i(TAG, if (found) "Log downloaded by ${client.inetAddress.hostAddress}" else "Refused ${parts.getOrNull(0)} from ${client.inetAddress.hostAddress}")
+        Log.i(
+            TAG,
+            if (found) {
+                "Log downloaded by ${client.inetAddress.hostAddress}"
+            } else {
+                "Refused ${parts.getOrNull(
+                    0,
+                )} from ${client.inetAddress.hostAddress}"
+            },
+        )
         val body = if (found) content else "Not found\n".toByteArray()
         val head = buildString {
             append(if (found) "HTTP/1.1 200 OK\r\n" else "HTTP/1.1 404 Not Found\r\n")
@@ -105,6 +124,7 @@ class LogServer(address: String, val fileName: String, private val content: Byte
         const val TAG = "LogServer"
         const val TOKEN_BYTES = 16
         const val TIMEOUT_MS = 5_000
+
         /** A browser's request with its headers is well below this. */
         const val MAX_REQUEST_BYTES = 16 * 1024
     }

@@ -26,7 +26,10 @@ class AudioPathTest {
         assertFalse(AudioPath.platformMayDecode(MimeTypes.AUDIO_AC3, decodeCompressed = true, ffmpegDecodes = true))
         assertFalse(AudioPath.platformMayDecode(MimeTypes.AUDIO_E_AC3, true, true))
         assertTrue("Flag off: unchanged", AudioPath.platformMayDecode(MimeTypes.AUDIO_AC3, false, true))
-        assertTrue("Without FFmpeg the platform decoder stays", AudioPath.platformMayDecode(MimeTypes.AUDIO_AC3, true, false))
+        assertTrue(
+            "Without FFmpeg the platform decoder stays",
+            AudioPath.platformMayDecode(MimeTypes.AUDIO_AC3, true, false),
+        )
         assertTrue("Not compressed", AudioPath.platformMayDecode(MimeTypes.AUDIO_AAC, true, true))
         assertTrue("Video", AudioPath.platformMayDecode(MimeTypes.VIDEO_H264, true, true))
         assertTrue(AudioPath.platformMayDecode(null, true, true))
@@ -70,10 +73,15 @@ class AudioPathTest {
 
     /** A sink under the guard that takes every format directly, like a receiver that does AC-3. */
     private fun guard(decoders: (String) -> Boolean = { true }): GuardedAudioSink {
-        val inner = Proxy.newProxyInstance(AudioSink::class.java.classLoader, arrayOf(AudioSink::class.java)) { _, method, _ ->
+        val inner = Proxy.newProxyInstance(
+            AudioSink::class.java.classLoader,
+            arrayOf(AudioSink::class.java),
+        ) { _, method, _ ->
             when (method.name) {
                 "supportsFormat" -> true
+
                 "getFormatSupport" -> AudioSink.SINK_FORMAT_SUPPORTED_DIRECTLY
+
                 else -> when (method.returnType) {
                     java.lang.Boolean.TYPE -> false
                     Integer.TYPE -> 0
@@ -85,14 +93,21 @@ class AudioPathTest {
         return GuardedAudioSink(inner, onStall = {}, decoders = decoders)
     }
 
-    private fun format(mime: String) = Format.Builder().setSampleMimeType(mime).setChannelCount(6).setSampleRate(48_000).build()
+    private fun format(mime: String) = Format.Builder().setSampleMimeType(
+        mime,
+    ).setChannelCount(6).setSampleRate(48_000).build()
 
     @Test
     fun `the sink reports compressed formats as not supported while it decodes`() {
         val sink = guard()
         assertTrue(sink.supportsFormat(format(MimeTypes.AUDIO_AC3)))
         sink.decodeCompressed = true
-        for (mime in listOf(MimeTypes.AUDIO_AC3, MimeTypes.AUDIO_E_AC3, MimeTypes.AUDIO_E_AC3_JOC, MimeTypes.AUDIO_DTS)) {
+        for (mime in listOf(
+            MimeTypes.AUDIO_AC3,
+            MimeTypes.AUDIO_E_AC3,
+            MimeTypes.AUDIO_E_AC3_JOC,
+            MimeTypes.AUDIO_DTS,
+        )) {
             assertFalse(mime, sink.supportsFormat(format(mime)))
             assertEquals(mime, AudioSink.SINK_FORMAT_UNSUPPORTED, sink.getFormatSupport(format(mime)))
         }

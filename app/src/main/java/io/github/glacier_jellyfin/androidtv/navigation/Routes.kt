@@ -23,7 +23,11 @@ data class QuickConnectRoute(val serverId: String)
  * or [userId] (the profile of a title picked on the Android TV home screen) instead.
  */
 @Serializable
-data class ProfilesRoute(val serverId: String, val appStart: Boolean = false, val userId: String? = null)
+data class ProfilesRoute(
+    val serverId: String,
+    val appStart: Boolean = false,
+    val userId: String? = null,
+)
 
 @Serializable
 data object HomeRoute
@@ -53,7 +57,11 @@ data class LibraryRoute(
  * for a screen rebuilt on the back stack from what the user left.
  */
 @Serializable
-data class FolderRoute(val folderId: String? = null, val title: String? = null, val focus: String? = null)
+data class FolderRoute(
+    val folderId: String? = null,
+    val title: String? = null,
+    val focus: String? = null,
+)
 
 /** The photos of a home video folder ([folderId]) full screen, starting with [photoId]. */
 @Serializable
@@ -64,22 +72,41 @@ data class PhotoRoute(val folderId: String, val photoId: String)
  * [seasonId] opens a show on that season instead of the first one with something unwatched.
  */
 @Serializable
-data class DetailRoute(val itemId: String, val themeArea: String? = null, val seasonId: String? = null)
+data class DetailRoute(
+    val itemId: String,
+    val themeArea: String? = null,
+    val seasonId: String? = null,
+)
 
 /** Where a title opens: a music video plays in the music player (it has no page of its own), anything else opens its page. */
 fun routeFor(item: io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem): Any =
-    if (item.kind == io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind.MusicVideo) MusicRoute(item.id.toString()) else DetailRoute(item.id.toString())
+    if (item.kind == io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind.MusicVideo) {
+        MusicRoute(
+            item.id.toString(),
+        )
+    } else {
+        DetailRoute(item.id.toString())
+    }
 
 /**
  * The video player; with [queueOf] (a playlist, or an artist for its music videos) the next video follows.
  * [startMs] starts there instead of the resume point, such as where a slideshow's video had come to.
  */
 @Serializable
-data class PlayerRoute(val itemId: String, val fromStart: Boolean = false, val queueOf: String? = null, val startMs: Long? = null)
+data class PlayerRoute(
+    val itemId: String,
+    val fromStart: Boolean = false,
+    val queueOf: String? = null,
+    val startMs: Long? = null,
+)
 
 /** Trailers of a library title ([itemId]), or of a Seerr title ([seerrType] and [tmdbId]) not in the library yet. */
 @Serializable
-data class TrailerRoute(val itemId: String? = null, val seerrType: String? = null, val tmdbId: Int? = null)
+data class TrailerRoute(
+    val itemId: String? = null,
+    val seerrType: String? = null,
+    val tmdbId: Int? = null,
+)
 
 /**
  * The music player, queueing every song of an album, artist or playlist
@@ -87,7 +114,11 @@ data class TrailerRoute(val itemId: String? = null, val seerrType: String? = nul
  * one with shuffle on). Without [sourceId] it shows what plays (mini player).
  */
 @Serializable
-data class MusicRoute(val sourceId: String? = null, val startTrackId: String? = null, val shuffle: Boolean = false)
+data class MusicRoute(
+    val sourceId: String? = null,
+    val startTrackId: String? = null,
+    val shuffle: Boolean = false,
+)
 
 /**
  * A cast member; [fromTitle] and [role] feed the breadcrumb ("Dracula · Count Dracula").
@@ -125,7 +156,11 @@ data object LiveTvRoute
  * started from elsewhere (the home screen) nothing takes it, so it stops.
  */
 @Serializable
-data class LiveTvPlayerRoute(val channelId: String, val favoritesOnly: Boolean = false, val handBack: Boolean = true)
+data class LiveTvPlayerRoute(
+    val channelId: String,
+    val favoritesOnly: Boolean = false,
+    val handBack: Boolean = true,
+)
 
 @Serializable
 data object SettingsRoute

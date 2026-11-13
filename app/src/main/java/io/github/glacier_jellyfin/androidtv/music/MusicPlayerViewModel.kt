@@ -10,6 +10,8 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.MusicRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,8 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.receiveAsFlow
-import java.util.UUID
-import javax.inject.Inject
 
 /**
  * The full-screen player, a view on [MusicController]: closing it leaves the
@@ -55,6 +55,7 @@ class MusicPlayerViewModel @Inject constructor(
                 savedStateHandle[KEY_STARTED] = true
                 controller.play(UUID.fromString(route.sourceId), route.startTrackId, shuffle = route.shuffle)
             }
+
             // Opened from the mini player after the music ended.
             controller.player.value == null && !controller.state.value.loading -> close()
         }

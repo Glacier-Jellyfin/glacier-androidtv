@@ -1,6 +1,9 @@
 package io.github.glacier_jellyfin.androidtv.core.data.settings
 
 import io.github.glacier_jellyfin.androidtv.core.data.Session
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -8,9 +11,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.jellyfin.sdk.api.client.extensions.displayPreferenceApi
-import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** One device's copy of a profile's settings, kept on the Jellyfin server. */
 @Serializable
@@ -50,7 +50,11 @@ internal fun decodeDeviceSettings(prefs: Map<String, String?>): List<DeviceSetti
     }.sortedByDescending { it.savedAt }
 
 /** [prefs] (our keys only) with [copy] put in, or with [removeDeviceId]'s copy taken out. */
-internal fun withDeviceSettings(prefs: Map<String, String?>, copy: DeviceSettings? = null, removeDeviceId: String? = null): Map<String, String?> {
+internal fun withDeviceSettings(
+    prefs: Map<String, String?>,
+    copy: DeviceSettings? = null,
+    removeDeviceId: String? = null,
+): Map<String, String?> {
     val own = prefs.filterKeys { it.startsWith(KEY_PREFIX) }
     return when {
         copy != null -> own + (KEY_PREFIX + copy.deviceId to json.encodeToString(DeviceSettings.serializer(), copy))
@@ -70,14 +74,22 @@ class SettingsBackup @Inject constructor() {
 
     suspend fun save(session: Session, copy: DeviceSettings) = change(session) { withDeviceSettings(it, copy = copy) }
 
-    suspend fun delete(session: Session, deviceId: String) = change(session) { withDeviceSettings(it, removeDeviceId = deviceId) }
+    suspend fun delete(session: Session, deviceId: String) = change(
+        session,
+    ) { withDeviceSettings(it, removeDeviceId = deviceId) }
 
-    private suspend fun change(session: Session, transform: (Map<String, String?>) -> Map<String, String?>) = writing.withLock {
-        val current = read(session)
-        withContext(Dispatchers.IO) {
-            session.api.displayPreferenceApi.updateDisplayPreferences(PREFERENCES_ID, userId(session), CLIENT, current.copy(customPrefs = transform(current.customPrefs)))
+    private suspend fun change(session: Session, transform: (Map<String, String?>) -> Map<String, String?>) =
+        writing.withLock {
+            val current = read(session)
+            withContext(Dispatchers.IO) {
+                session.api.displayPreferenceApi.updateDisplayPreferences(
+                    PREFERENCES_ID,
+                    userId(session),
+                    CLIENT,
+                    current.copy(customPrefs = transform(current.customPrefs)),
+                )
+            }
         }
-    }
 
     private suspend fun read(session: Session) = withContext(Dispatchers.IO) {
         session.api.displayPreferenceApi.getDisplayPreferences(PREFERENCES_ID, userId(session), CLIENT).content

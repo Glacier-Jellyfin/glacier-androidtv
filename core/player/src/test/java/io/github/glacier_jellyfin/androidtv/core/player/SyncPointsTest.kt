@@ -15,7 +15,11 @@ import org.junit.Test
 @UnstableApi
 class SyncPointsTest {
     /** A file with a cue point every 30 s, like the cues of a Matroska file: the points around a time, as the extractor gives them. */
-    private class Cues(private val spacingUs: Long, private val durationUs: Long, private val seekable: Boolean = true) : SeekMap {
+    private class Cues(
+        private val spacingUs: Long,
+        private val durationUs: Long,
+        private val seekable: Boolean = true,
+    ) : SeekMap {
         override fun isSeekable() = seekable
         override fun getDurationUs() = durationUs
         override fun getSeekPoints(timeUs: Long): SeekMap.SeekPoints {
@@ -32,8 +36,12 @@ class SyncPointsTest {
 
     @Test
     fun `two opens of a file have the same key whatever the session`() {
-        val a = SyncPoints.keyOf("http://server:8096/Videos/1234/stream?static=true&mediaSourceId=AbC&playSessionId=s1&api_key=t1")
-        val b = SyncPoints.keyOf("http://server:8096/Videos/1234/stream?playSessionId=s2&mediaSourceId=abc&static=true&ApiKey=t2")
+        val a = SyncPoints.keyOf(
+            "http://server:8096/Videos/1234/stream?static=true&mediaSourceId=AbC&playSessionId=s1&api_key=t1",
+        )
+        val b = SyncPoints.keyOf(
+            "http://server:8096/Videos/1234/stream?playSessionId=s2&mediaSourceId=abc&static=true&ApiKey=t2",
+        )
         assertEquals(a, b)
     }
 
@@ -91,7 +99,12 @@ class SyncPointsTest {
 
     @Test
     fun `only the last few files are kept`() {
-        for (i in 1..6) SyncPoints.remember(SyncPoints.keyOf("http://s/Videos/$i/stream?mediaSourceId=a")!!, Cues(30_000_000, 600_000_000))
+        for (i in 1..6) {
+            SyncPoints.remember(
+                SyncPoints.keyOf("http://s/Videos/$i/stream?mediaSourceId=a")!!,
+                Cues(30_000_000, 600_000_000),
+            )
+        }
         assertNull(SyncPoints.atOrAfter("http://s/Videos/1/stream?mediaSourceId=a", 1_000, 60_000))
         assertEquals(30_000L, SyncPoints.atOrAfter("http://s/Videos/6/stream?mediaSourceId=a", 1_000, 60_000))
     }

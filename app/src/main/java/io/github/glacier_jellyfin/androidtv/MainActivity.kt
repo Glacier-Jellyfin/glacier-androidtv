@@ -1,8 +1,5 @@
 package io.github.glacier_jellyfin.androidtv
 
-import io.github.glacier_jellyfin.androidtv.ui.navTargets
-import io.github.glacier_jellyfin.androidtv.ui.LocalNavTargets
-import io.github.glacier_jellyfin.androidtv.core.data.settings.NavigationSettings
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -47,17 +44,18 @@ import io.github.glacier_jellyfin.androidtv.channels.HomeLaunches
 import io.github.glacier_jellyfin.androidtv.core.data.AccountRepository
 import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
-import io.github.glacier_jellyfin.androidtv.core.data.startServerId
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AppearanceSettings
+import io.github.glacier_jellyfin.androidtv.core.data.settings.NavigationSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsSync
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
+import io.github.glacier_jellyfin.androidtv.core.data.startServerId
 import io.github.glacier_jellyfin.androidtv.core.designsystem.Accent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierBackground
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierTheme
 import io.github.glacier_jellyfin.androidtv.core.log.Log
-import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsSync
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateManager
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
 import io.github.glacier_jellyfin.androidtv.core.updater.WhatsNew
@@ -69,20 +67,21 @@ import io.github.glacier_jellyfin.androidtv.diagnostics.LogShareScreen
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.music.NowPlaying
 import io.github.glacier_jellyfin.androidtv.navigation.GlacierNavHost
-import io.github.glacier_jellyfin.androidtv.ui.BrowseMemory
-import io.github.glacier_jellyfin.androidtv.ui.FolderMemory
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.ServerListRoute
+import io.github.glacier_jellyfin.androidtv.ui.BrowseMemory
 import io.github.glacier_jellyfin.androidtv.ui.CardSizes
+import io.github.glacier_jellyfin.androidtv.ui.FolderMemory
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.LocalLiveTv
 import io.github.glacier_jellyfin.androidtv.ui.LocalMusicController
 import io.github.glacier_jellyfin.androidtv.ui.LocalMusicProgress
-import io.github.glacier_jellyfin.androidtv.ui.LocalProfileImage
+import io.github.glacier_jellyfin.androidtv.ui.LocalNavTargets
 import io.github.glacier_jellyfin.androidtv.ui.LocalNowPlaying
+import io.github.glacier_jellyfin.androidtv.ui.LocalProfileImage
 import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
 import io.github.glacier_jellyfin.androidtv.ui.LocalUnlockedTitles
 import io.github.glacier_jellyfin.androidtv.ui.LocalUpdatePending
@@ -91,9 +90,11 @@ import io.github.glacier_jellyfin.androidtv.ui.NowPlayingSaver
 import io.github.glacier_jellyfin.androidtv.ui.SAVER_IDLE_MS
 import io.github.glacier_jellyfin.androidtv.ui.ToastHost
 import io.github.glacier_jellyfin.androidtv.ui.Toaster
+import io.github.glacier_jellyfin.androidtv.ui.navTargets
 import io.github.glacier_jellyfin.androidtv.update.DownloadingOverlay
 import io.github.glacier_jellyfin.androidtv.update.InstallingOverlay
 import io.github.glacier_jellyfin.androidtv.update.text
+import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -111,7 +112,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.imageApi
-import java.util.UUID
 
 /** Picks the first screen: "Who's watching?" (or the start profile) for the start server, otherwise setup. */
 @HiltViewModel
@@ -151,7 +151,12 @@ class StartViewModel @Inject constructor(
     val profileImage: StateFlow<String?> = sessions.session
         .map { session ->
             val tag = session?.user?.primaryImageTag ?: return@map null
-            runCatching { session.api.imageApi.getUserImageUrl(UUID.fromString(session.user.userId), tag = tag) }.getOrNull()
+            runCatching {
+                session.api.imageApi.getUserImageUrl(
+                    UUID.fromString(session.user.userId),
+                    tag = tag,
+                )
+            }.getOrNull()
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
@@ -201,7 +206,9 @@ class StartViewModel @Inject constructor(
         launches.set(launch)
         val session = sessions.session.value
         val same = session != null && session.server.id == launch.serverId && session.user.userId == launch.userId
-        _relaunch.trySend(if (same) HomeRoute else ProfilesRoute(launch.serverId, appStart = true, userId = launch.userId))
+        _relaunch.trySend(
+            if (same) HomeRoute else ProfilesRoute(launch.serverId, appStart = true, userId = launch.userId),
+        )
     }
 
     /** Debug builds: plays a title straight away, from [startMs], for tests that cannot press buttons reliably. */
@@ -331,7 +338,10 @@ class MainActivity : ComponentActivity() {
                         Modifier.onPreviewKeyEvent { event ->
                             lastInput = SystemClock.uptimeMillis()
                             // The key that ends the saver does nothing else; media keys still reach the music.
-                            if (saverOn && event.type == KeyEventType.KeyDown && !startViewModel.music.ownsKey(event.nativeKeyEvent.keyCode)) {
+                            if (saverOn && event.type == KeyEventType.KeyDown && !startViewModel.music.ownsKey(
+                                    event.nativeKeyEvent.keyCode,
+                                )
+                            ) {
                                 saverOn = false
                                 swallowKeyUp = true
                                 if (event.key == Key.Back) saverBackAt = SystemClock.uptimeMillis()
@@ -354,7 +364,11 @@ class MainActivity : ComponentActivity() {
                             }
                             // Nothing reacts to keys while an update downloads for the installation or Android installs it.
                             // Back still reaches the download dialog, which cancels the download (newer Android sends no Back key events at all).
-                            if ((update as? UpdateState.Downloading)?.install == true) return@onPreviewKeyEvent event.key != Key.Back
+                            if ((update as? UpdateState.Downloading)?.install ==
+                                true
+                            ) {
+                                return@onPreviewKeyEvent event.key != Key.Back
+                            }
                             update is UpdateState.Installing
                         }.onKeyEvent { event ->
                             // Media keys no screen used go to the music, wherever the user is.
@@ -369,17 +383,23 @@ class MainActivity : ComponentActivity() {
                         val start by startViewModel.start.collectAsStateWithLifecycle()
                         val crashShare by startViewModel.crashShare.collectAsStateWithLifecycle()
                         // The first screen waits for the crash page, so it cannot take the focus from it.
-                        if (crashShare == null) start?.let {
-                            val navController = rememberNavController()
-                            GlacierNavHost(navController, startDestination = it, folderMemory = startViewModel::folderMemory)
-                            LaunchedEffect(navController) {
-                                startViewModel.relaunch.collect { route ->
-                                    // A title played straight away (debug builds) gets Home beneath it, so Back has a screen to return to.
-                                    if (route is PlayerRoute) {
-                                        navController.navigate(HomeRoute) { popUpTo(0) { inclusive = true } }
-                                        navController.navigate(route)
-                                    } else {
-                                        navController.navigate(route) { popUpTo(0) { inclusive = true } }
+                        if (crashShare == null) {
+                            start?.let {
+                                val navController = rememberNavController()
+                                GlacierNavHost(
+                                    navController,
+                                    startDestination = it,
+                                    folderMemory = startViewModel::folderMemory,
+                                )
+                                LaunchedEffect(navController) {
+                                    startViewModel.relaunch.collect { route ->
+                                        // A title played straight away (debug builds) gets Home beneath it, so Back has a screen to return to.
+                                        if (route is PlayerRoute) {
+                                            navController.navigate(HomeRoute) { popUpTo(0) { inclusive = true } }
+                                            navController.navigate(route)
+                                        } else {
+                                            navController.navigate(route) { popUpTo(0) { inclusive = true } }
+                                        }
                                     }
                                 }
                             }
@@ -456,9 +476,16 @@ private fun UpdateLayer(updates: UpdateManager, toaster: Toaster) {
     val state by updates.state.collectAsStateWithLifecycle()
     when (val update = state) {
         is UpdateState.Downloading -> if (update.install) {
-            DownloadingOverlay(update.candidate.version, update.bytes, update.candidate.apk.sizeBytes, onCancel = updates::cancelDownload)
+            DownloadingOverlay(
+                update.candidate.version,
+                update.bytes,
+                update.candidate.apk.sizeBytes,
+                onCancel = updates::cancelDownload,
+            )
         }
+
         is UpdateState.Installing -> InstallingOverlay(update.candidate.version)
+
         else -> Unit
     }
 }

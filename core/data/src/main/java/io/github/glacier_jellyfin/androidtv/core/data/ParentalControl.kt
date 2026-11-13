@@ -1,5 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.core.data
 
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -12,8 +14,6 @@ import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** Parental control of the signed-in profile. */
 data class ProfileLock(
@@ -35,7 +35,12 @@ class ParentalControl @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val lock: StateFlow<ProfileLock> = combine(sessions.session, accounts.state) { session, state ->
-        val user = session?.let { s -> state.users.firstOrNull { it.serverId == s.server.id && it.userId == s.user.userId } }
+        val user = session?.let { s ->
+            state.users.firstOrNull {
+                it.serverId == s.server.id &&
+                    it.userId == s.user.userId
+            }
+        }
         user?.let { ProfileLock(it.protection, it.pin != null, it.pinChangedAt) } ?: ProfileLock()
     }.stateIn(scope, SharingStarted.Eagerly, ProfileLock())
 

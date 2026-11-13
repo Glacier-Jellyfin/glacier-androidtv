@@ -22,13 +22,30 @@ internal const val TIMELINE_MAX_LABEL = 300f
  * [TIMELINE_GAP] before the start of the next label in its lane (the last two end at the component's edge),
  * so labels of a lane cannot overlap whatever the programmes' lengths.
  */
-internal fun timelineStations(startsMs: List<Long>, windowStartMs: Long, windowMs: Long, totalWidth: Float): List<TimelineStation> {
+internal fun timelineStations(
+    startsMs: List<Long>,
+    windowStartMs: Long,
+    windowMs: Long,
+    totalWidth: Float,
+): List<TimelineStation> {
     val railWidth = (totalWidth - 2 * TIMELINE_INSET).coerceAtLeast(0f)
-    val xs = startsMs.map { TIMELINE_INSET + railWidth * ((it - windowStartMs).coerceIn(0L, windowMs).toFloat() / windowMs) }
+    val xs = startsMs.map {
+        TIMELINE_INSET + railWidth * (
+            (it - windowStartMs).coerceIn(
+                0L,
+                windowMs,
+            ).toFloat() / windowMs
+            )
+    }
     return xs.indices.map { i ->
         val left = xs[i] - TIMELINE_DOT_SHIFT
         val limit = if (i + 2 < xs.size) xs[i + 2] - TIMELINE_DOT_SHIFT - TIMELINE_GAP else totalWidth
-        TimelineStation(xs[i], above = i % 2 == 0, labelLeft = left, labelWidth = minOf(limit - left, TIMELINE_MAX_LABEL))
+        TimelineStation(
+            xs[i],
+            above = i % 2 == 0,
+            labelLeft = left,
+            labelWidth = minOf(limit - left, TIMELINE_MAX_LABEL),
+        )
     }
 }
 
@@ -45,7 +62,11 @@ internal const val TIMELINE_TAIL_MS = 30 * MINUTE_MS
  * past [lastEndMs], the end of the last known programme, though at least an hour.
  * [startsMs] are the starts of the programmes that end after the window start, in order.
  */
-internal fun timelineWindowEnd(windowStartMs: Long, startsMs: List<Long>, lastEndMs: Long): Long {
+internal fun timelineWindowEnd(
+    windowStartMs: Long,
+    startsMs: List<Long>,
+    lastEndMs: Long,
+): Long {
     var end = windowStartMs + TIMELINE_BASE_MS
     startsMs.getOrNull(TIMELINE_STATIONS_WANTED - 1)?.let { end = maxOf(end, it + TIMELINE_TAIL_MS) }
     end = minOf(end, windowStartMs + TIMELINE_MAX_MS)

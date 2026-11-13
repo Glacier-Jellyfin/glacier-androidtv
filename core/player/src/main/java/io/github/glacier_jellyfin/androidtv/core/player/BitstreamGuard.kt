@@ -34,10 +34,12 @@ internal class BitstreamGuard(
     private var playing = false
     private var lastPositionUs = NO_POSITION
     private var lastMoveMs = 0L
+
     /** The position has moved since the track was set up. */
     private var moved = false
     private var recoveries = 0
     private var lastRecoveryMs = -recoveryIntervalMs
+
     /** A new track was asked for, and the flush that brings it has not come yet. */
     private var recovering = false
     private var settleUntilMs = 0L
@@ -91,7 +93,11 @@ internal class BitstreamGuard(
      * has none). True once the track counts as silent: the caller then has
      * the player flush the sink, which opens a new track.
      */
-    fun onPosition(positionUs: Long, pendingData: Boolean, nowMs: Long): Boolean {
+    fun onPosition(
+        positionUs: Long,
+        pendingData: Boolean,
+        nowMs: Long,
+    ): Boolean {
         if (positionUs == NO_POSITION) return false
         if (positionUs != lastPositionUs) {
             // The first position after a reset only sets the baseline; a frozen new track cannot pass as moving.
@@ -132,11 +138,14 @@ internal class BitstreamGuard(
     /** What the sink does with the next write while [holdingRoute]; [routeBack]: the output takes the format again. */
     fun routeDecision(routeBack: Boolean, nowMs: Long): RouteDecision = when {
         !holdingRoute -> RouteDecision.Write
+
         nowMs >= routeDeadlineMs -> {
             holdingRoute = false
             RouteDecision.GiveUp
         }
+
         routeBack -> RouteDecision.Write
+
         else -> RouteDecision.Wait
     }
 

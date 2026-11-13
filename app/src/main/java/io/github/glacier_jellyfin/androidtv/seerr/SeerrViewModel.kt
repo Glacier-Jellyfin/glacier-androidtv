@@ -17,6 +17,7 @@ import io.github.glacier_jellyfin.androidtv.navigation.PersonRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SeerrRoute
 import io.github.glacier_jellyfin.androidtv.navigation.TrailerRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +26,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class SeerrState(
     val details: SeerrDetails? = null,
@@ -38,10 +38,8 @@ data class SeerrState(
 )
 
 @HiltViewModel
-class SeerrViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    private val repository: SeerrRepository,
-) : ViewModel() {
+class SeerrViewModel @Inject constructor(savedStateHandle: SavedStateHandle, private val repository: SeerrRepository) :
+    ViewModel() {
 
     private val route = savedStateHandle.toRoute<SeerrRoute>()
     private val type = SeerrMediaType.valueOf(route.type)
@@ -81,11 +79,20 @@ class SeerrViewModel @Inject constructor(
     }
 
     fun playTrailer() {
-        viewModelScope.launch { _events.send(UiEvent.Navigate(TrailerRoute(seerrType = type.name, tmdbId = route.tmdbId))) }
+        viewModelScope.launch {
+            _events.send(
+                UiEvent.Navigate(TrailerRoute(seerrType = type.name, tmdbId = route.tmdbId)),
+            )
+        }
     }
 
     fun openPerson(person: SeerrPerson) {
-        val route = PersonRoute(fromTitle = _state.value.details?.item?.title, role = person.role, tmdbId = person.tmdbId, name = person.name)
+        val route = PersonRoute(
+            fromTitle = _state.value.details?.item?.title,
+            role = person.role,
+            tmdbId = person.tmdbId,
+            name = person.name,
+        )
         viewModelScope.launch { _events.send(UiEvent.Navigate(route)) }
     }
 
@@ -110,12 +117,16 @@ class SeerrViewModel @Inject constructor(
                     _events.send(UiEvent.Toast(R.string.seerr_requested, listOf(details.item.title)))
                     load()
                 }
+
                 SeerrRequestResult.NotAllowed -> _events.send(UiEvent.Toast(R.string.seerr_not_allowed))
+
                 SeerrRequestResult.QuotaUsedUp -> _events.send(UiEvent.Toast(R.string.seerr_quota_used_up))
+
                 SeerrRequestResult.AlreadyRequested -> {
                     _events.send(UiEvent.Toast(R.string.seerr_already_requested))
                     load()
                 }
+
                 SeerrRequestResult.Failed -> _events.send(UiEvent.Toast(R.string.seerr_request_failed))
             }
         }

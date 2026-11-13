@@ -17,6 +17,8 @@ import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.navigation.PhotoRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -26,8 +28,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.UUID
-import javax.inject.Inject
 
 data class PhotoState(
     val loading: Boolean = true,
@@ -108,7 +108,11 @@ class PhotoViewModel @Inject constructor(
             val position = inline.positionMs
             handedOver = current.id to position
             inline.release()
-            viewModelScope.launch { _events.send(UiEvent.Navigate(PlayerRoute(current.id.toString(), startMs = position))) }
+            viewModelScope.launch {
+                _events.send(
+                    UiEvent.Navigate(PlayerRoute(current.id.toString(), startMs = position)),
+                )
+            }
         } else if (_state.value.slideshow) {
             stopSlideshow()
         } else {
@@ -152,10 +156,12 @@ class PhotoViewModel @Inject constructor(
         slideshow?.cancel()
         when (val current = _state.value.current) {
             is FolderMedia.Video -> inline.open(current.id)
+
             is FolderMedia.Photo -> {
                 inline.release()
                 if (_state.value.slideshow) startPhotoTimer()
             }
+
             null -> inline.release()
         }
     }

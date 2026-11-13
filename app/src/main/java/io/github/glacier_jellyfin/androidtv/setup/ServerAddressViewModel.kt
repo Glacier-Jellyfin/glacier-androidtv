@@ -8,15 +8,15 @@ import io.github.glacier_jellyfin.androidtv.core.jellyfin.ResolveResult
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.ServerFinder
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.ServerInfo
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class ServerAddressState(
     val address: String = "",
@@ -52,6 +52,7 @@ class ServerAddressViewModel @Inject constructor(
                     _state.update { it.copy(connecting = null) }
                     _events.send(UiEvent.Toast(R.string.address_not_found, listOf(input)))
                 }
+
                 is ResolveResult.Found -> {
                     if (result.server.isSupported) {
                         finish(result.server)

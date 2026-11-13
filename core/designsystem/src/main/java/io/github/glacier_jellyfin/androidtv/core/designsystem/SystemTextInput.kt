@@ -94,6 +94,11 @@ fun SystemTextInput(
 }
 
 private val ReturnKeys = setOf(
-    Key.DirectionUp, Key.DirectionDown, Key.DirectionLeft, Key.DirectionRight,
-    Key.DirectionCenter, Key.Enter, Key.Back,
+    Key.DirectionUp,
+    Key.DirectionDown,
+    Key.DirectionLeft,
+    Key.DirectionRight,
+    Key.DirectionCenter,
+    Key.Enter,
+    Key.Back,
 )

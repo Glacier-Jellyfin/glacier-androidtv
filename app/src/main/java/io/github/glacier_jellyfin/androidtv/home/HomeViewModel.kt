@@ -1,28 +1,28 @@
 package io.github.glacier_jellyfin.androidtv.home
 
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.channels.HomeLaunches
 import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
+import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.AgeFilter
 import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
-import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeContent
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
-import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
-import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeSettings
-import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
-import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightSource
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.Library
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveChannel
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
+import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeSettings
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightSource
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
 import io.github.glacier_jellyfin.androidtv.navigation.FolderRoute
@@ -31,9 +31,12 @@ import io.github.glacier_jellyfin.androidtv.navigation.LiveTvPlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
+import io.github.glacier_jellyfin.androidtv.navigation.routeFor
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PinGate
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -45,9 +48,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.UUID
-import javax.inject.Inject
-import io.github.glacier_jellyfin.androidtv.navigation.routeFor
 
 data class HomeState(
     val loading: Boolean = true,
@@ -116,7 +116,13 @@ class HomeViewModel @Inject constructor(
     private fun refreshLive() {
         viewModelScope.launch {
             runSuspendCatching { repository.liveChannels() }
-                .onSuccess { channels -> _state.update { it.copy(content = it.content?.copy(liveChannels = channels)) } }
+                .onSuccess { channels ->
+                    _state.update {
+                        it.copy(
+                            content = it.content?.copy(liveChannels = channels),
+                        )
+                    }
+                }
                 .onFailure { Log.w(TAG, "Refreshing Live TV failed", it) }
         }
     }
@@ -128,7 +134,11 @@ class HomeViewModel @Inject constructor(
                 .onSuccess { content ->
                     _state.update { it.copy(content = content) }
                     // Only "continue watching" follows what was just watched; the other sources stay put.
-                    if (SpotlightSource.ContinueWatching in _state.value.settings.spotlightSources) updateSpotlight(content)
+                    if (SpotlightSource.ContinueWatching in _state.value.settings.spotlightSources) {
+                        updateSpotlight(
+                            content,
+                        )
+                    }
                 }
                 .onFailure { Log.w(TAG, "Refreshing home failed", it) }
         }
@@ -170,10 +180,12 @@ class HomeViewModel @Inject constructor(
         throw e
     } catch (e: Exception) {
         Log.w(TAG, "Loading the spotlight failed", e)
-        if (settings.spotlightSources.isEmpty()) emptyList()
-        else content.continueWatching.filter { it.backdropUrl != null }.take(settings.spotlightCount.count)
+        if (settings.spotlightSources.isEmpty()) {
+            emptyList()
+        } else {
+            content.continueWatching.filter { it.backdropUrl != null }.take(settings.spotlightCount.count)
+        }
     }
-
 
     fun toggleFavorite(item: MediaItem) {
         val favorite = !item.isFavorite
@@ -235,8 +247,7 @@ class HomeViewModel @Inject constructor(
     }
 
     /** Design: episodes open their episode page, movies start playing. */
-    fun openContinueWatching(item: MediaItem) =
-        if (item.kind == ItemKind.Episode) openDetails(item) else play(item)
+    fun openContinueWatching(item: MediaItem) = if (item.kind == ItemKind.Episode) openDetails(item) else play(item)
 
     /** Tunes in full screen; Back comes back here. */
     fun playChannel(channel: LiveChannel) = navigate(LiveTvPlayerRoute(channel.id.toString(), handBack = false))

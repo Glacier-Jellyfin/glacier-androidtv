@@ -1,10 +1,10 @@
 package io.github.glacier_jellyfin.androidtv.core.player
 
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.decoder.ffmpeg.FfmpegLibrary
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 
 /** What the bundled FFmpeg decoder can play; empty in builds without it (see core/ffmpeg/README.md). */
 object FfmpegAudio {
@@ -34,7 +34,11 @@ object FfmpegAudio {
             Log.i(TAG, "FFmpeg decoder not included in this build")
             return emptySet()
         }
-        val codecs = FORMATS.filter { (mime, _) -> FfmpegLibrary.supportsFormat(mime) }.flatMapTo(HashSet()) { it.second }
+        val codecs = FORMATS.filter { (mime, _) ->
+            FfmpegLibrary.supportsFormat(
+                mime,
+            )
+        }.flatMapTo(HashSet()) { it.second }
         Log.i(TAG, "FFmpeg ${FfmpegLibrary.getVersion()} decodes ${codecs.sorted()}")
         return codecs
     }

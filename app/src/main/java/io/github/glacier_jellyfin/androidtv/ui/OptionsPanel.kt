@@ -120,8 +120,22 @@ fun OptionsPanel(
                     verticalArrangement = Arrangement.spacedBy(28.dp),
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(title, style = GlacierText.display(34), color = GlacierColors.Ice, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        subtitle?.let { Text(it, style = GlacierText.body(19), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        Text(
+                            title,
+                            style = GlacierText.display(34),
+                            color = GlacierColors.Ice,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        subtitle?.let {
+                            Text(
+                                it,
+                                style = GlacierText.body(19),
+                                color = GlacierColors.Mist,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
                     // The rows scroll when there are many; the header and the description stay.
                     Column(

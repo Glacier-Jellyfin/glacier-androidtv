@@ -1,6 +1,5 @@
 package io.github.glacier_jellyfin.androidtv.settings
 
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,49 +13,49 @@ import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.StartMode
 import io.github.glacier_jellyfin.androidtv.core.data.StartProfile
 import io.github.glacier_jellyfin.androidtv.core.data.StoredUser
+import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.Library
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryQuery
-import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryRepository
-import io.github.glacier_jellyfin.androidtv.core.data.media.Library
-import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AppearanceSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.DeviceSettings
-import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsSync
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeSettings
-import io.github.glacier_jellyfin.androidtv.core.data.settings.NavigationSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.Language
+import io.github.glacier_jellyfin.androidtv.core.data.settings.NavigationSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.PlaybackSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ProfileSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferences
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsSync
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyle
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
+import io.github.glacier_jellyfin.androidtv.core.log.Log
+import io.github.glacier_jellyfin.androidtv.core.player.FfmpegAudio
+import io.github.glacier_jellyfin.androidtv.core.player.PlaybackSetup
+import io.github.glacier_jellyfin.androidtv.core.updater.UpdateChannel
+import io.github.glacier_jellyfin.androidtv.core.updater.UpdateManager
+import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
+import io.github.glacier_jellyfin.androidtv.core.updater.WhatsNew
 import io.github.glacier_jellyfin.androidtv.diagnostics.Diagnostics
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogServer
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogShare
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
+import io.github.glacier_jellyfin.androidtv.player.choosesDolbyVisionProfile7
+import io.github.glacier_jellyfin.androidtv.player.playbackSetup
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PinGate
 import io.github.glacier_jellyfin.androidtv.ui.PinReason
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
-import io.github.glacier_jellyfin.androidtv.core.player.FfmpegAudio
-import io.github.glacier_jellyfin.androidtv.core.player.PlaybackSetup
-import io.github.glacier_jellyfin.androidtv.player.choosesDolbyVisionProfile7
-import io.github.glacier_jellyfin.androidtv.player.playbackSetup
-import io.github.glacier_jellyfin.androidtv.core.updater.UpdateChannel
-import io.github.glacier_jellyfin.androidtv.core.updater.WhatsNew
-import io.github.glacier_jellyfin.androidtv.core.updater.UpdateManager
-import io.github.glacier_jellyfin.androidtv.core.updater.UpdateState
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import org.jellyfin.sdk.api.client.extensions.systemApi
-import org.jellyfin.sdk.api.client.exception.InvalidStatusException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -65,7 +64,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
+import org.jellyfin.sdk.api.client.exception.InvalidStatusException
+import org.jellyfin.sdk.api.client.extensions.systemApi
 
 /** Settings categories in the design's order. */
 enum class SettingsCategory(val label: Int) {
@@ -139,7 +139,11 @@ data class DiagnosticsState(
 )
 
 /** Settings › System › Server; [version] is asked fresh from the server, the stored one until then. */
-data class ServerSummary(val name: String, val address: String, val version: String?)
+data class ServerSummary(
+    val name: String,
+    val address: String,
+    val version: String?,
+)
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -158,7 +162,10 @@ class SettingsViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
-        SettingsUiState(userName = sessions.session.value?.user?.name.orEmpty(), thisDeviceId = sessions.session.value?.api?.deviceInfo?.id),
+        SettingsUiState(
+            userName = sessions.session.value?.user?.name.orEmpty(),
+            thisDeviceId = sessions.session.value?.api?.deviceInfo?.id,
+        ),
     )
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
 
@@ -175,7 +182,19 @@ class SettingsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch { settings.settings.collect { profile -> _state.update { it.copy(profile = profile) } } }
-        viewModelScope.launch { serverPreferences.preferences.collect { server -> if (server != null) _state.update { it.copy(server = server) } } }
+        viewModelScope.launch {
+            serverPreferences.preferences.collect { server ->
+                if (server !=
+                    null
+                ) {
+                    _state.update {
+                        it.copy(
+                            server = server,
+                        )
+                    }
+                }
+            }
+        }
         viewModelScope.launch {
             // Another client may have changed them since the app started.
             val server = serverPreferences.refresh()
@@ -187,10 +206,26 @@ class SettingsViewModel @Inject constructor(
         }
         viewModelScope.launch { sync.copies.collect { copies -> _state.update { it.copy(copies = copies) } } }
         viewModelScope.launch { parental.lock.collect { lock -> _state.update { it.copy(lock = lock) } } }
-        viewModelScope.launch { parental.settingsUnlocked.collect { unlocked -> _state.update { it.copy(accountUnlocked = unlocked) } } }
+        viewModelScope.launch {
+            parental.settingsUnlocked.collect { unlocked ->
+                _state.update {
+                    it.copy(
+                        accountUnlocked = unlocked,
+                    )
+                }
+            }
+        }
         viewModelScope.launch { loadPreviewImage() }
         viewModelScope.launch { updates.state.collect { update -> _state.update { it.copy(update = update) } } }
-        viewModelScope.launch { updates.channel.collect { channel -> _state.update { it.copy(updateChannel = channel) } } }
+        viewModelScope.launch {
+            updates.channel.collect { channel ->
+                _state.update {
+                    it.copy(
+                        updateChannel = channel,
+                    )
+                }
+            }
+        }
         viewModelScope.launch { updates.autoCheck.collect { on -> _state.update { it.copy(autoUpdate = on) } } }
         viewModelScope.launch { updates.showPrompt.collect { on -> _state.update { it.copy(updatePrompt = on) } } }
         viewModelScope.launch { whatsNew.enabled.collect { on -> _state.update { it.copy(whatsNew = on) } } }
@@ -206,8 +241,20 @@ class SettingsViewModel @Inject constructor(
                 _state.update { it.copy(startProfile = start, startCandidates = candidates) }
             }
         }
-        viewModelScope.launch(Dispatchers.Default) { FfmpegAudio.version()?.let { version -> _state.update { it.copy(ffmpegVersion = version) } } }
-        viewModelScope.launch(Dispatchers.IO) { Log.lastCrash()?.let { crash -> _state.update { it.copy(diagnostics = it.diagnostics.copy(lastCrash = crash)) } } }
+        viewModelScope.launch(
+            Dispatchers.Default,
+        ) { FfmpegAudio.version()?.let { version -> _state.update { it.copy(ffmpegVersion = version) } } }
+        viewModelScope.launch(
+            Dispatchers.IO,
+        ) {
+            Log.lastCrash()?.let { crash ->
+                _state.update {
+                    it.copy(
+                        diagnostics = it.diagnostics.copy(lastCrash = crash),
+                    )
+                }
+            }
+        }
         _state.update { it.copy(diagnostics = it.diagnostics.copy(verboseUntil = Log.verboseUntil())) }
     }
 
@@ -249,11 +296,18 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-
     /** Choosing "fixed profile" starts with the profile using the app now. */
     fun setStartMode(mode: StartMode) {
         val user = sessions.session.value?.user
-        val start = if (mode == StartMode.Fixed) StartProfile(mode, user?.serverId, user?.userId) else StartProfile(mode)
+        val start = if (mode == StartMode.Fixed) {
+            StartProfile(
+                mode,
+                user?.serverId,
+                user?.userId,
+            )
+        } else {
+            StartProfile(mode)
+        }
         viewModelScope.launch { accounts.setStartProfile(start) }
     }
 
@@ -353,8 +407,16 @@ class SettingsViewModel @Inject constructor(
             val deleted = sync.deleteCopy(copy.deviceId)
             val copies = sync.copies.value
             _state.update {
-                if (deleted) it.copy(copies = copies, deleteAsked = null, copyOpened = null, copyPicker = it.copyPicker && copies.isNotEmpty())
-                else it.copy(deleteAsked = null)
+                if (deleted) {
+                    it.copy(
+                        copies = copies,
+                        deleteAsked = null,
+                        copyOpened = null,
+                        copyPicker = it.copyPicker && copies.isNotEmpty(),
+                    )
+                } else {
+                    it.copy(deleteAsked = null)
+                }
             }
             if (!deleted) _events.send(UiEvent.Toast(R.string.settings_copy_delete_failed))
         }
@@ -388,7 +450,10 @@ class SettingsViewModel @Inject constructor(
     }
 
     /** For the playback check, which runs in a process of its own and is told this. */
-    val playbackSetup: PlaybackSetup get() = playback.device.playbackSetup(_state.value.profile.playback, playback.iec61937)
+    val playbackSetup: PlaybackSetup get() = playback.device.playbackSetup(
+        _state.value.profile.playback,
+        playback.iec61937,
+    )
 
     /** HDMI takes IEC 61937: the choice who hands TrueHD and DTS-HD on matters. */
     val iec61937Available: Boolean get() = playback.iec61937
@@ -402,7 +467,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val fileName = diagnostics.sendToServer()
-                _state.update { it.copy(diagnostics = it.diagnostics.copy(sending = false, sentAs = fileName, lastCrash = null)) }
+                _state.update {
+                    it.copy(
+                        diagnostics = it.diagnostics.copy(sending = false, sentAs = fileName, lastCrash = null),
+                    )
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -447,7 +516,14 @@ class SettingsViewModel @Inject constructor(
                 return@launch
             }
             logServer = server
-            _state.update { it.copy(diagnostics = it.diagnostics.copy(share = LogShare(server.url, server.fileName, server.sizeBytes), lastCrash = null)) }
+            _state.update {
+                it.copy(
+                    diagnostics = it.diagnostics.copy(
+                        share = LogShare(server.url, server.fileName, server.sizeBytes),
+                        lastCrash = null,
+                    ),
+                )
+            }
         }
     }
 
@@ -477,7 +553,11 @@ class SettingsViewModel @Inject constructor(
 
     private suspend fun loadPreviewImage() {
         try {
-            val image = library.page(LibraryQuery(LibraryKind.Movies, sort = LibrarySort.DateAdded, descending = true), start = 0, limit = PREVIEW_CANDIDATES)
+            val image = library.page(
+                LibraryQuery(LibraryKind.Movies, sort = LibrarySort.DateAdded, descending = true),
+                start = 0,
+                limit = PREVIEW_CANDIDATES,
+            )
                 .items.firstNotNullOfOrNull { it.backdropUrl }
             _state.update { it.copy(previewImage = image) }
         } catch (e: CancellationException) {

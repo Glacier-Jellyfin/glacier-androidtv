@@ -27,7 +27,11 @@ import androidx.tv.material3.Text
  * with Left/Right, so they must not look pressable.
  */
 @Composable
-fun GlacierTabs(labels: List<String>, selected: Int, modifier: Modifier = Modifier) {
+fun GlacierTabs(
+    labels: List<String>,
+    selected: Int,
+    modifier: Modifier = Modifier,
+) {
     val accent = LocalAccent.current.main
     Box(modifier) {
         Box(

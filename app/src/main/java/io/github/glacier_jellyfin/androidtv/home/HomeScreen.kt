@@ -1,29 +1,23 @@
 package io.github.glacier_jellyfin.androidtv.home
 
-import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.Spacer
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -40,9 +34,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -56,47 +50,45 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
-import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
-import io.github.glacier_jellyfin.androidtv.ui.libraryTitle
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
-import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeRow
-import io.github.glacier_jellyfin.androidtv.core.data.settings.arranged
 import io.github.glacier_jellyfin.androidtv.core.data.media.Library
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
+import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeRow
+import io.github.glacier_jellyfin.androidtv.core.data.settings.arranged
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
-import io.github.glacier_jellyfin.androidtv.ui.CardSize
+import io.github.glacier_jellyfin.androidtv.core.updater.UpdateCandidate
+import io.github.glacier_jellyfin.androidtv.core.updater.WhatsNewPrompt
+import io.github.glacier_jellyfin.androidtv.settings.RestoreOfferDialog
+import io.github.glacier_jellyfin.androidtv.settings.RestoreViewModel
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
-import io.github.glacier_jellyfin.androidtv.ui.PinDialog
 import io.github.glacier_jellyfin.androidtv.ui.ContinueCard
+import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 import io.github.glacier_jellyfin.androidtv.ui.LibraryCard
+import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
+import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
+import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
+import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
+import io.github.glacier_jellyfin.androidtv.ui.PinDialog
 import io.github.glacier_jellyfin.androidtv.ui.PosterCard
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
-import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
-import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
-import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
+import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
+import io.github.glacier_jellyfin.androidtv.ui.libraryTitle
+import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
-import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 import io.github.glacier_jellyfin.androidtv.ui.yearText
-import io.github.glacier_jellyfin.androidtv.settings.RestoreOfferDialog
-import io.github.glacier_jellyfin.androidtv.settings.RestoreViewModel
 import io.github.glacier_jellyfin.androidtv.update.UpdateDialog
 import io.github.glacier_jellyfin.androidtv.update.UpdateViewModel
 import io.github.glacier_jellyfin.androidtv.update.WhatsNewDialog
-import io.github.glacier_jellyfin.androidtv.core.updater.WhatsNewPrompt
-import io.github.glacier_jellyfin.androidtv.core.updater.UpdateCandidate
-import io.github.glacier_jellyfin.androidtv.ui.rememberCardPivotSpec
-import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
-
 
 @OptIn(ExperimentalFoundationApi::class) // LocalBringIntoViewSpec
 @Composable
@@ -187,7 +179,11 @@ fun HomeScreen(
         }
         if (!initialFocusDone) return@LaunchedEffect
         withFrameNanos { }
-        val restored = lastFocus?.let { requesters[it] }?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true
+        val restored = lastFocus?.let { requesters[it] }?.let {
+            runCatching { it.requestFocus() }.getOrDefault(
+                false,
+            )
+        } == true
         if (!restored) runCatching { listFocus.requestFocus() }
     }
     // A dismissed PIN dialog gives focus back to the card that asked for it.
@@ -231,7 +227,11 @@ fun HomeScreen(
     LaunchedEffect(dialogOpen) {
         if (!dialogOpen && updateWasOpen) {
             withFrameNanos { }
-            val restored = lastFocus?.let { requesters[it] }?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true
+            val restored = lastFocus?.let { requesters[it] }?.let {
+                runCatching { it.requestFocus() }.getOrDefault(
+                    false,
+                )
+            } == true
             if (!restored) runCatching { listFocus.requestFocus() }
         }
         updateWasOpen = dialogOpen
@@ -257,7 +257,12 @@ fun HomeScreen(
     LaunchedEffect(exitAsked) {
         if (!exitAsked && exitWasOpen) {
             withFrameNanos { }
-            val restored = !toTop && lastFocus?.let { requesters[it] }?.let { runCatching { it.requestFocus() }.getOrDefault(false) } == true
+            val restored =
+                !toTop && lastFocus?.let { requesters[it] }?.let {
+                    runCatching { it.requestFocus() }.getOrDefault(
+                        false,
+                    )
+                } == true
             if (!restored) runCatching { navFocus.requestFocus() }
         }
         exitWasOpen = exitAsked
@@ -274,10 +279,17 @@ fun HomeScreen(
         val content = state.content
         val rows = state.settings
         when {
-            state.loading && content == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(110) }
+            state.loading && content == null -> Box(
+                Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) { SpinningDiamond(110) }
+
             state.failed && content == null -> ErrorState(onRetry = viewModel::load)
+
             content != null -> {
-                CompositionLocalProvider(LocalBringIntoViewSpec provides rememberRowPivotSpec(listState, SpotlightHeight)) {
+                CompositionLocalProvider(
+                    LocalBringIntoViewSpec provides rememberRowPivotSpec(listState, SpotlightHeight),
+                ) {
                     LazyColumn(
                         state = listState,
                         // Down from the nav returns to the last focused card.
@@ -347,133 +359,187 @@ fun HomeScreen(
                             }
                         }
                         rows.homeRows(content.latestLibraries.map { it.id.toString() }).forEach { choice ->
-                            if (choice.shown) when (choice.row) {
-                                HomeRow.ContinueWatching -> if (content.continueWatching.isNotEmpty()) {
-                                    item(key = "continue") {
-                                        MediaRow(
-                                            title = stringResource(R.string.home_continue_watching),
-                                            state = continueRow,
-                                            modifier = Modifier.onFocusChanged { inContinue = it.hasFocus },
-                                        ) {
-                                            items(content.continueWatching, key = { it.id }) { item ->
-                                                ContinueCard(
-                                                    title = if (item.kind == ItemKind.Episode) item.parentTitle ?: item.title else item.title,
-                                                    subtitle = continueSubtitle(item),
-                                                    // The show's art, not the episode still (user decision).
-                                                    imageUrl = item.showThumbUrl ?: item.posterUrl,
-                                                    progress = item.progress,
-                                                    onClick = { viewModel.openContinueWatching(item) },
-                                                    modifier = Modifier.remembered("continue-${item.id}"),
-                                                    locked = item.showsLock(),
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                                HomeRow.Favorites -> if (content.favorites.isNotEmpty()) {
-                                    item(key = "favorites") {
-                                        MediaRow(title = stringResource(R.string.home_favorites)) {
-                                            items(content.favorites, key = { it.id }) { item ->
-                                                PosterFor(item, onClick = { viewModel.openDetails(item) }, modifier = Modifier.remembered("favorites-${item.id}"))
-                                            }
-                                        }
-                                    }
-                                }
-                                HomeRow.Latest -> content.latest.firstOrNull { it.first.id.toString() == choice.library }?.let { (library, items) ->
-                                    item(key = "latest-${library.id}") {
-                                        MediaRow(
-                                            title = stringResource(R.string.home_new_in, libraryTitle(library, content.libraries)),
-                                            subtitle = libraryCount(library),
-                                        ) {
-                                            items(items, key = { it.id }) { item ->
-                                                PosterFor(item, onClick = { viewModel.openDetails(item) }, modifier = Modifier.remembered("latest-${library.id}-${item.id}"))
-                                            }
-                                        }
-                                    }
-                                }
-                                HomeRow.RecentAlbums -> if (content.recentAlbums.isNotEmpty()) {
-                                    item(key = "recent-albums") {
-                                        MediaRow(title = stringResource(R.string.home_recent_albums)) {
-                                            items(content.recentAlbums, key = { it.id }) { album ->
-                                                PosterFor(album, onClick = { viewModel.openDetails(album) }, modifier = Modifier.remembered("recent-${album.id}"))
-                                            }
-                                        }
-                                    }
-                                }
-                                HomeRow.FavoriteSongs -> if (content.favoriteSongs.isNotEmpty()) {
-                                    item(key = "favorite-songs") {
-                                        val favoritesTitle = stringResource(R.string.home_favorite_songs)
-                                        MediaRow(title = favoritesTitle) {
-                                            items(content.favoriteSongs, key = { it.id }) { track ->
-                                                PosterCard(
-                                                    imageUrl = track.coverUrl,
-                                                    caption = track.artist.orEmpty(),
-                                                    title = track.title,
-                                                    square = true,
-                                                    onClick = { viewModel.playFavorite(track, favoritesTitle) },
-                                                    modifier = Modifier.remembered("favorite-${track.id}"),
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                                HomeRow.Libraries -> {
-                                    val cards = rows.libraryCards.arranged(content.libraries.map { it.id.toString() })
-                                        .filter { it.shown }
-                                        .mapNotNull { card -> content.libraries.firstOrNull { it.id.toString() == card.id } }
-                                    if (cards.isNotEmpty()) {
-                                        item(key = "libraries") {
-                                            MediaRow(title = stringResource(R.string.home_my_media)) {
-                                                items(cards, key = { it.id }) { library ->
-                                                    // Jellyfin's generated library images carry the name already;
-                                                    // a backdrop from the library reads like the design's photo.
-                                                    val newest = content.latest.firstOrNull { it.first.id == library.id }?.second?.firstOrNull()
-                                                    LibraryCard(
-                                                        name = libraryTitle(library, content.libraries),
-                                                        count = libraryCount(library),
-                                                        imageUrl = newest?.backdropUrl ?: newest?.posterUrl ?: library.imageUrl,
-                                                        onClick = { viewModel.openLibrary(library) },
-                                                        modifier = Modifier.remembered("library-${library.id}"),
+                            if (choice.shown) {
+                                when (choice.row) {
+                                    HomeRow.ContinueWatching -> if (content.continueWatching.isNotEmpty()) {
+                                        item(key = "continue") {
+                                            MediaRow(
+                                                title = stringResource(R.string.home_continue_watching),
+                                                state = continueRow,
+                                                modifier = Modifier.onFocusChanged { inContinue = it.hasFocus },
+                                            ) {
+                                                items(content.continueWatching, key = { it.id }) { item ->
+                                                    ContinueCard(
+                                                        title = if (item.kind ==
+                                                            ItemKind.Episode
+                                                        ) {
+                                                            item.parentTitle ?: item.title
+                                                        } else {
+                                                            item.title
+                                                        },
+                                                        subtitle = continueSubtitle(item),
+                                                        // The show's art, not the episode still (user decision).
+                                                        imageUrl = item.showThumbUrl ?: item.posterUrl,
+                                                        progress = item.progress,
+                                                        onClick = { viewModel.openContinueWatching(item) },
+                                                        modifier = Modifier.remembered("continue-${item.id}"),
+                                                        locked = item.showsLock(),
                                                     )
                                                 }
                                             }
                                         }
                                     }
-                                }
-                                HomeRow.LiveTvOnNow -> {
-                                    val airing = content.liveChannels.filter { it.now != null }
-                                    if (airing.isNotEmpty()) item(key = "live-now") {
-                                        val nowMs = rememberLiveClock()
-                                        MediaRow(title = stringResource(R.string.home_live_now)) {
-                                            items(airing, key = { it.id }) { channel ->
-                                                OnNowCard(
-                                                    channel = channel,
-                                                    nowMs = nowMs,
-                                                    onClick = { viewModel.playChannel(channel) },
-                                                    modifier = Modifier.remembered("live-now-${channel.id}"),
-                                                )
+
+                                    HomeRow.Favorites -> if (content.favorites.isNotEmpty()) {
+                                        item(key = "favorites") {
+                                            MediaRow(title = stringResource(R.string.home_favorites)) {
+                                                items(content.favorites, key = { it.id }) { item ->
+                                                    PosterFor(
+                                                        item,
+                                                        onClick = { viewModel.openDetails(item) },
+                                                        modifier = Modifier.remembered("favorites-${item.id}"),
+                                                    )
+                                                }
                                             }
                                         }
                                     }
-                                }
-                                HomeRow.LiveTvChannels -> if (content.liveChannels.isNotEmpty()) {
-                                    item(key = "live-channels") {
-                                        MediaRow(title = stringResource(R.string.home_live_channels)) {
-                                            items(content.liveChannels, key = { it.id }) { channel ->
-                                                ChannelCard(
-                                                    channel = channel,
-                                                    onClick = { viewModel.playChannel(channel) },
-                                                    modifier = Modifier.remembered("live-channel-${channel.id}"),
-                                                )
+
+                                    HomeRow.Latest -> content.latest.firstOrNull {
+                                        it.first.id.toString() == choice.library
+                                    }?.let { (library, items) ->
+                                        item(key = "latest-${library.id}") {
+                                            MediaRow(
+                                                title = stringResource(
+                                                    R.string.home_new_in,
+                                                    libraryTitle(library, content.libraries),
+                                                ),
+                                                subtitle = libraryCount(library),
+                                            ) {
+                                                items(items, key = { it.id }) { item ->
+                                                    PosterFor(
+                                                        item,
+                                                        onClick = { viewModel.openDetails(item) },
+                                                        modifier = Modifier.remembered(
+                                                            "latest-${library.id}-${item.id}",
+                                                        ),
+                                                    )
+                                                }
                                             }
                                         }
                                     }
+
+                                    HomeRow.RecentAlbums -> if (content.recentAlbums.isNotEmpty()) {
+                                        item(key = "recent-albums") {
+                                            MediaRow(title = stringResource(R.string.home_recent_albums)) {
+                                                items(content.recentAlbums, key = { it.id }) { album ->
+                                                    PosterFor(
+                                                        album,
+                                                        onClick = { viewModel.openDetails(album) },
+                                                        modifier = Modifier.remembered("recent-${album.id}"),
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    HomeRow.FavoriteSongs -> if (content.favoriteSongs.isNotEmpty()) {
+                                        item(key = "favorite-songs") {
+                                            val favoritesTitle = stringResource(R.string.home_favorite_songs)
+                                            MediaRow(title = favoritesTitle) {
+                                                items(content.favoriteSongs, key = { it.id }) { track ->
+                                                    PosterCard(
+                                                        imageUrl = track.coverUrl,
+                                                        caption = track.artist.orEmpty(),
+                                                        title = track.title,
+                                                        square = true,
+                                                        onClick = { viewModel.playFavorite(track, favoritesTitle) },
+                                                        modifier = Modifier.remembered("favorite-${track.id}"),
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    HomeRow.Libraries -> {
+                                        val cards = rows.libraryCards.arranged(
+                                            content.libraries.map { it.id.toString() },
+                                        )
+                                            .filter { it.shown }
+                                            .mapNotNull { card ->
+                                                content.libraries.firstOrNull {
+                                                    it.id.toString() ==
+                                                        card.id
+                                                }
+                                            }
+                                        if (cards.isNotEmpty()) {
+                                            item(key = "libraries") {
+                                                MediaRow(title = stringResource(R.string.home_my_media)) {
+                                                    items(cards, key = { it.id }) { library ->
+                                                        // Jellyfin's generated library images carry the name already;
+                                                        // a backdrop from the library reads like the design's photo.
+                                                        val newest = content.latest.firstOrNull {
+                                                            it.first.id == library.id
+                                                        }?.second?.firstOrNull()
+                                                        LibraryCard(
+                                                            name = libraryTitle(library, content.libraries),
+                                                            count = libraryCount(library),
+                                                            imageUrl =
+                                                                newest?.backdropUrl ?: newest?.posterUrl
+                                                                    ?: library.imageUrl,
+                                                            onClick = { viewModel.openLibrary(library) },
+                                                            modifier = Modifier.remembered("library-${library.id}"),
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    HomeRow.LiveTvOnNow -> {
+                                        val airing = content.liveChannels.filter { it.now != null }
+                                        if (airing.isNotEmpty()) {
+                                            item(key = "live-now") {
+                                                val nowMs = rememberLiveClock()
+                                                MediaRow(title = stringResource(R.string.home_live_now)) {
+                                                    items(airing, key = { it.id }) { channel ->
+                                                        OnNowCard(
+                                                            channel = channel,
+                                                            nowMs = nowMs,
+                                                            onClick = { viewModel.playChannel(channel) },
+                                                            modifier = Modifier.remembered("live-now-${channel.id}"),
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    HomeRow.LiveTvChannels -> if (content.liveChannels.isNotEmpty()) {
+                                        item(key = "live-channels") {
+                                            MediaRow(title = stringResource(R.string.home_live_channels)) {
+                                                items(content.liveChannels, key = { it.id }) { channel ->
+                                                    ChannelCard(
+                                                        channel = channel,
+                                                        onClick = { viewModel.playChannel(channel) },
+                                                        modifier = Modifier.remembered("live-channel-${channel.id}"),
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    null -> Unit
                                 }
-                                null -> Unit
                             }
                         }
                         // Room below the last row, whichever it is.
-                        item(key = "end") { Spacer(Modifier.height((LastRowBottom - LocalCardSizes.current.rowBottom).coerceAtLeast(0).dp)) }
+                        item(
+                            key = "end",
+                        ) {
+                            Spacer(
+                                Modifier.height((LastRowBottom - LocalCardSizes.current.rowBottom).coerceAtLeast(0).dp),
+                            )
+                        }
                     }
                 }
             }
@@ -499,19 +565,21 @@ fun HomeScreen(
         pinPrompt?.let { PinDialog(it, onKey = viewModel.pin::key, onDismiss = viewModel.pin::dismiss) }
 
         val installed = updates.updates.installed
-        if (installed != null) updateShown?.let { candidate ->
-            UpdateDialog(
-                candidate,
-                installed,
-                onNow = {
-                    updateShown = null
-                    updates.updates.download(install = true)
-                },
-                onLater = {
-                    updateShown = null
-                    toaster.show(laterText)
-                },
-            )
+        if (installed != null) {
+            updateShown?.let { candidate ->
+                UpdateDialog(
+                    candidate,
+                    installed,
+                    onNow = {
+                        updateShown = null
+                        updates.updates.download(install = true)
+                    },
+                    onLater = {
+                        updateShown = null
+                        toaster.show(laterText)
+                    },
+                )
+            }
         }
         whatsNewShown?.let { WhatsNewDialog(it, onClose = { whatsNewShown = null }) }
         restoreShown?.let { RestoreOfferDialog(it, onAnswer = restore::answer) }
@@ -527,7 +595,11 @@ private const val LastRowBottom = 90
 private val ConfirmKeys = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
 
 @Composable
-private fun PosterFor(item: MediaItem, onClick: () -> Unit, modifier: Modifier) {
+private fun PosterFor(
+    item: MediaItem,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
     if (item.kind == ItemKind.Album) {
         PosterCard(
             imageUrl = item.posterUrl,
@@ -559,9 +631,12 @@ private fun continueSubtitle(item: MediaItem): String {
     return when {
         item.kind == ItemKind.Episode && season != null && episode != null && left != null ->
             stringResource(R.string.episode_minutes_left, season, episode, left)
+
         item.kind == ItemKind.Episode && season != null && episode != null ->
             listOfNotNull(stringResource(R.string.episode_short, season, episode), item.title).joinToString(" · ")
+
         left != null -> stringResource(R.string.minutes_left, left)
+
         else -> yearText(item).orEmpty()
     }
 }
@@ -586,7 +661,12 @@ private fun ErrorState(onRetry: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterVertically),
     ) {
         Text(stringResource(R.string.home_error), style = GlacierText.display(30), color = GlacierColors.Ice)
-        PillButton(stringResource(R.string.action_retry), onClick = onRetry, primary = true, modifier = Modifier.focusRequester(focus))
+        PillButton(
+            stringResource(R.string.action_retry),
+            onClick = onRetry,
+            primary = true,
+            modifier = Modifier.focusRequester(focus),
+        )
     }
 }
 
@@ -604,7 +684,12 @@ private fun ExitDialog(onCancel: () -> Unit, onQuit: () -> Unit) {
         val quitFocus = remember { FocusRequester() }
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             PillButton(stringResource(R.string.action_cancel), onClick = onCancel)
-            PillButton(stringResource(R.string.home_exit_confirm), onClick = onQuit, primary = true, modifier = Modifier.focusRequester(quitFocus))
+            PillButton(
+                stringResource(R.string.home_exit_confirm),
+                onClick = onQuit,
+                primary = true,
+                modifier = Modifier.focusRequester(quitFocus),
+            )
         }
         LaunchedEffect(Unit) {
             withFrameNanos { }

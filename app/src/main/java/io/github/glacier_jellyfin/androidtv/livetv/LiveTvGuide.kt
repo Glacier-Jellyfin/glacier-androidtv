@@ -64,14 +64,14 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.halfHourFloor
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
-import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
+import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.endKey
 import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
 import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
+import java.util.UUID
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 /** The guide shows three hours at a time. */
 private const val WINDOW_MS = 3 * 60 * 60_000L
@@ -195,13 +195,16 @@ fun GuideGrid(
                         .onFocusChanged { focused = it.isFocused }
                         .onKeyEvent { event ->
                             val native = event.nativeKeyEvent
-                            if (event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter) {
+                            if (event.key == Key.DirectionCenter || event.key == Key.Enter ||
+                                event.key == Key.NumPadEnter
+                            ) {
                                 when (event.type) {
                                     // Holding OK repeats the key: the first repeat opens the menu, the release does nothing.
                                     KeyEventType.KeyDown -> if (native.repeatCount == 1) {
                                         heldOk = true
                                         onMenu(channels[row], cell?.program)
                                     }
+
                                     KeyEventType.KeyUp -> {
                                         if (!heldOk) onOpen(channels[row], cell?.program)
                                         heldOk = false
@@ -222,6 +225,7 @@ fun GuideGrid(
                                     }
                                     true
                                 }
+
                                 direction.startKey -> {
                                     cells.getOrNull(cellIndex - 1)?.let { previous ->
                                         focusMs = maxOf(previous.startMs, fromMs)
@@ -229,6 +233,7 @@ fun GuideGrid(
                                     }
                                     true
                                 }
+
                                 Key.DirectionUp -> {
                                     if (row == 0) {
                                         runCatching { up.requestFocus() }
@@ -238,17 +243,28 @@ fun GuideGrid(
                                     }
                                     true
                                 }
+
                                 Key.DirectionDown -> {
                                     keepColumn(cell, windowStart)?.let { focusMs = it }
                                     moveRow(row + 1)
                                     true
                                 }
+
                                 Key.ChannelUp, Key.PageUp, Key.ChannelDown, Key.PageDown -> {
                                     val page = (listState.layoutInfo.visibleItemsInfo.size - 1).coerceAtLeast(1)
                                     keepColumn(cell, windowStart)?.let { focusMs = it }
-                                    moveRow(if (event.key == Key.ChannelUp || event.key == Key.PageUp) row - page else row + page)
+                                    moveRow(
+                                        if (event.key == Key.ChannelUp ||
+                                            event.key == Key.PageUp
+                                        ) {
+                                            row - page
+                                        } else {
+                                            row + page
+                                        },
+                                    )
                                     true
                                 }
+
                                 else -> false
                             }
                         }
@@ -279,7 +295,12 @@ private fun keepColumn(cell: GuideCell?, windowStart: Long): Long? = cell?.let {
 
 /** What the focus rests on, above the grid: title, channel, time and a short overview. */
 @Composable
-private fun GuideDetails(channel: LiveChannel, cell: GuideCell?, nowMs: Long, loaded: Boolean) {
+private fun GuideDetails(
+    channel: LiveChannel,
+    cell: GuideCell?,
+    nowMs: Long,
+    loaded: Boolean,
+) {
     val program = cell?.program
     Column(Modifier.fillMaxWidth().height(158.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         // The channel's row is still loading: a loader, not "no guide data".
@@ -312,14 +333,24 @@ private fun GuideDetails(channel: LiveChannel, cell: GuideCell?, nowMs: Long, lo
             program?.let { RecordMark(it, nowMs) }
         }
         program?.overview?.let {
-            Text(it, style = GlacierText.body(18), color = GlacierColors.Ice.copy(alpha = 0.78f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(
+                it,
+                style = GlacierText.body(18),
+                color = GlacierColors.Ice.copy(alpha = 0.78f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
 
 /** The half hours of the window above the rows, and where now is. */
 @Composable
-private fun TimeHeader(windowStart: Long, nowMs: Long, perMs: Dp) {
+private fun TimeHeader(
+    windowStart: Long,
+    nowMs: Long,
+    perMs: Dp,
+) {
     Box(Modifier.fillMaxWidth().height(40.dp).padding(start = CHANNEL_COLUMN.dp)) {
         var at = windowStart
         while (at < windowStart + WINDOW_MS) {
@@ -365,8 +396,17 @@ private fun GuideRow(
         ) {
             ChannelLogo(channel, Modifier.width(104.dp).height(58.dp), textSize = 20)
             Column(Modifier.weight(1f)) {
-                channel.number?.let { Text(it, style = GlacierText.mono(16), color = if (selected) accent else GlacierColors.Mist) }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                channel.number?.let {
+                    Text(
+                        it,
+                        style = GlacierText.mono(16),
+                        color = if (selected) accent else GlacierColors.Mist,
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     Text(
                         channel.name,
                         style = GlacierText.body(18, FontWeight.SemiBold),
@@ -375,7 +415,14 @@ private fun GuideRow(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
-                    if (channel.favorite) Icon(GlacierIcons.HeartFilled, contentDescription = null, tint = accent, modifier = Modifier.width(16.dp).height(16.dp))
+                    if (channel.favorite) {
+                        Icon(
+                            GlacierIcons.HeartFilled,
+                            contentDescription = null,
+                            tint = accent,
+                            modifier = Modifier.width(16.dp).height(16.dp),
+                        )
+                    }
                 }
             }
         }
@@ -409,7 +456,13 @@ private fun GuideRow(
 }
 
 @Composable
-private fun GuideBox(cell: GuideCell, loaded: Boolean, focused: Boolean, airing: Boolean, modifier: Modifier) {
+private fun GuideBox(
+    cell: GuideCell,
+    loaded: Boolean,
+    focused: Boolean,
+    airing: Boolean,
+    modifier: Modifier,
+) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(12.dp)
     val program = cell.program
@@ -424,14 +477,20 @@ private fun GuideBox(cell: GuideCell, loaded: Boolean, focused: Boolean, airing:
                     else -> GlacierColors.GlassFill
                 },
             )
-            .then(if (program == null && !focused) Modifier.border(1.dp, GlacierColors.GlassBorder, shape) else Modifier)
+            .then(
+                if (program == null && !focused) Modifier.border(1.dp, GlacierColors.GlassBorder, shape) else Modifier,
+            )
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         val ink = if (focused) GlacierColors.Void else GlacierColors.Ice
         val soft = if (focused) GlacierColors.Void.copy(alpha = 0.75f) else GlacierColors.Mist
         if (program != null) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 if (program.recorded) RecordDot(program, Modifier.size(14.dp))
                 Text(
                     program.title,
@@ -444,9 +503,21 @@ private fun GuideBox(cell: GuideCell, loaded: Boolean, focused: Boolean, airing:
                 // Holding OK opens the programme's options; only on focus, where it takes no room from the others.
                 if (focused) HoldOkMark(true, ink, size = 22)
             }
-            Text(clockText(program.startMs), style = GlacierText.body(15), color = soft, maxLines = 1, overflow = TextOverflow.Clip)
+            Text(
+                clockText(program.startMs),
+                style = GlacierText.body(15),
+                color = soft,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
+            )
         } else if (loaded) {
-            Text(stringResource(R.string.livetv_no_guide), style = GlacierText.body(16), color = soft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                stringResource(R.string.livetv_no_guide),
+                style = GlacierText.body(16),
+                color = soft,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

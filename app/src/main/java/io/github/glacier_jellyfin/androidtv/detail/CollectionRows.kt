@@ -7,7 +7,13 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 enum class CollectionRow { Movies, Shows, Videos, Seasons, Episodes, MusicVideos, Music, Artists, People, More }
 
 /** Kinds that are watched: a collection's seen count, years, rating and genres come from these alone. */
-val WatchableInCollection = setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Season, ItemKind.Episode, ItemKind.MusicVideo)
+val WatchableInCollection = setOf(
+    ItemKind.Movie,
+    ItemKind.Series,
+    ItemKind.Season,
+    ItemKind.Episode,
+    ItemKind.MusicVideo,
+)
 
 /** Kinds whose songs play when a collection holds nothing to watch. */
 val MusicInCollection = setOf(ItemKind.Album, ItemKind.Song, ItemKind.Playlist)

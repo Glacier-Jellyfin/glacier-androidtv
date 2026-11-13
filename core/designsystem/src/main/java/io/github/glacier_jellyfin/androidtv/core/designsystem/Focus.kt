@@ -73,11 +73,22 @@ fun GlacierClickable(
             .focusFrame(focused, shape, unfocusedBorder, borderWidth)
             .then(
                 if (onLongClick == null) {
-                    Modifier.clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
+                    Modifier.clickable(
+                        interactionSource = interaction,
+                        indication = null,
+                        enabled = enabled,
+                        onClick = onClick,
+                    )
                 } else {
                     Modifier
                         .onMenuKey(onLongClick)
-                        .combinedClickable(interactionSource = interaction, indication = null, enabled = enabled, onLongClick = onLongClick, onClick = onClick)
+                        .combinedClickable(
+                            interactionSource = interaction,
+                            indication = null,
+                            enabled = enabled,
+                            onLongClick = onLongClick,
+                            onClick = onClick,
+                        )
                 },
             ),
         contentAlignment = contentAlignment,
@@ -109,7 +120,12 @@ fun GlacierCard(
                 } else {
                     Modifier
                         .onMenuKey(onLongClick)
-                        .combinedClickable(interactionSource = interaction, indication = null, onLongClick = onLongClick, onClick = onClick)
+                        .combinedClickable(
+                            interactionSource = interaction,
+                            indication = null,
+                            onLongClick = onLongClick,
+                            onClick = onClick,
+                        )
                 },
             ),
     ) {
@@ -155,7 +171,15 @@ fun Modifier.focusFrame(
 
 /** `box-shadow: 0 0 0 4px accent/0.3, 0 22px 48px -16px rgba(0,0,0,.7)`. */
 private fun Modifier.focusRing(shape: Shape, accent: Color): Modifier = this
-    .dropShadow(shape, Shadow(radius = 48.dp, spread = (-16).dp, color = Color.Black.copy(alpha = 0.7f), offset = DpOffset(0.dp, 22.dp)))
+    .dropShadow(
+        shape,
+        Shadow(
+            radius = 48.dp,
+            spread = (-16).dp,
+            color = Color.Black.copy(alpha = 0.7f),
+            offset = DpOffset(0.dp, 22.dp),
+        ),
+    )
     .drawWithContent {
         val ring = 4.dp.toPx()
         val outline = shape.createOutline(Size(size.width + ring, size.height + ring), layoutDirection, this)
@@ -181,7 +205,11 @@ fun Modifier.onMenuKey(action: () -> Unit): Modifier = onKeyEvent { event ->
 fun Modifier.ignoreHeldOk(): Modifier {
     var armed by remember { mutableStateOf(false) }
     return onPreviewKeyEvent { event ->
-        if (event.key != Key.DirectionCenter && event.key != Key.Enter && event.key != Key.NumPadEnter) return@onPreviewKeyEvent false
+        if (event.key != Key.DirectionCenter && event.key != Key.Enter &&
+            event.key != Key.NumPadEnter
+        ) {
+            return@onPreviewKeyEvent false
+        }
         if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0) armed = true
         !armed
     }

@@ -32,7 +32,11 @@ fun rememberRowPivotSpec(listState: LazyListState, topHeight: Int): BringIntoVie
         val tolerance = with(density) { ROW_TOLERANCE.dp.toPx() }
         val top = with(density) { topHeight.dp.toPx() }
         object : BringIntoViewSpec {
-            override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+            override fun calculateScrollDistance(
+                offset: Float,
+                size: Float,
+                containerSize: Float,
+            ): Float {
                 if (listState.firstVisibleItemIndex == 0) {
                     val scrolled = listState.firstVisibleItemScrollOffset.toFloat()
                     if (offset + scrolled < top) return -scrolled
@@ -62,7 +66,11 @@ fun rememberCardPivotSpec(): BringIntoViewSpec {
     return remember(density) {
         val pivot = with(density) { CardPivot.dp.toPx() }
         object : BringIntoViewSpec {
-            override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = when {
+            override fun calculateScrollDistance(
+                offset: Float,
+                size: Float,
+                containerSize: Float,
+            ): Float = when {
                 !NavDirection.vertical -> offset - pivot
                 offset < 0f -> offset
                 offset + size > containerSize -> offset + size - containerSize
@@ -80,7 +88,11 @@ fun rememberEdgeSpec(margin: Int): BringIntoViewSpec {
     return remember(density, margin) {
         val edge = with(density) { margin.dp.toPx() }
         object : BringIntoViewSpec {
-            override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = when {
+            override fun calculateScrollDistance(
+                offset: Float,
+                size: Float,
+                containerSize: Float,
+            ): Float = when {
                 offset < edge -> offset - edge
                 offset + size > containerSize - edge -> offset + size - (containerSize - edge)
                 else -> 0f

@@ -2,9 +2,9 @@ package io.github.glacier_jellyfin.androidtv.core.designsystem
 
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.EaseInOut
-import androidx.compose.animation.core.keyframes
-import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
@@ -102,7 +102,11 @@ private fun DrawScope.drawCore(color: androidx.compose.ui.graphics.Color, side: 
 }
 
 /** Diamond centred at (c, c) with half-diagonal [r], in 26-unit coordinates. */
-private fun diamond(c: Float, r: Float, unit: Float) = Path().apply {
+private fun diamond(
+    c: Float,
+    r: Float,
+    unit: Float,
+) = Path().apply {
     moveTo(c * unit, (c - r) * unit)
     lineTo((c + r) * unit, c * unit)
     lineTo(c * unit, (c + r) * unit)

@@ -30,18 +30,26 @@ sealed interface ListGroup {
     /** Added in that month (1 to 12). */
     data class Month(val year: Int, val month: Int) : ListGroup
     data class Year(val year: Int) : ListGroup
+
     /** A community rating from [stars] up to just below the next whole star. */
     data class Stars(val stars: Int) : ListGroup
+
     /** A length from [fromMinutes] up to just below [toMinutes]. */
     data class Length(val fromMinutes: Int, val toMinutes: Int) : ListGroup
+
     /** An artist or an album. Albums of the same name stay apart by [id]. */
     data class Name(val id: String, val name: String) : ListGroup
+
     /** Without a value for the sort: always last. */
     data object Unknown : ListGroup
 }
 
 /** A list in the order the grid shows it, with the group of each title when it is grouped. */
-class ArrangedList(val entries: List<IndexEntry>, val groups: List<ListGroup>?, private val letters: List<Char?>?) {
+class ArrangedList(
+    val entries: List<IndexEntry>,
+    val groups: List<ListGroup>?,
+    private val letters: List<Char?>?,
+) {
 
     val size: Int get() = entries.size
 
@@ -75,7 +83,10 @@ object ListArrangement {
         val keys = HashMap<UUID, String>(entries.size * 2)
         entries.forEach { keys[it.id] = NameOrder.key(it.name) }
         val byName = Comparator<IndexEntry> { a, b ->
-            NameOrder.compareKeys(keys.getValue(a.id), keys.getValue(b.id)).takeIf { it != 0 } ?: a.name.compareTo(b.name)
+            NameOrder.compareKeys(
+                keys.getValue(a.id),
+                keys.getValue(b.id),
+            ).takeIf { it != 0 } ?: a.name.compareTo(b.name)
         }
         if (!query.grouped) {
             val sorted = entries.sortedWith(byName).let { if (query.orderDescending) it.asReversed() else it }
@@ -87,15 +98,22 @@ object ListArrangement {
         val byGroup = Comparator<ListGroup> { a, b ->
             when {
                 a == b -> 0
+
                 a == ListGroup.Unknown -> 1
+
                 b == ListGroup.Unknown -> -1
+
                 else -> {
                     val order = when {
                         a is ListGroup.Name && b is ListGroup.Name -> {
                             val ka = nameKeys.getOrPut(a) { NameOrder.key(a.name) }
                             val kb = nameKeys.getOrPut(b) { NameOrder.key(b.name) }
-                            NameOrder.compareKeys(ka, kb).takeIf { it != 0 } ?: a.name.compareTo(b.name).takeIf { it != 0 } ?: a.id.compareTo(b.id)
+                            NameOrder.compareKeys(
+                                ka,
+                                kb,
+                            ).takeIf { it != 0 } ?: a.name.compareTo(b.name).takeIf { it != 0 } ?: a.id.compareTo(b.id)
                         }
+
                         else -> rank(a).compareTo(rank(b))
                     }
                     if (query.orderDescending) -order else order
@@ -104,23 +122,46 @@ object ListArrangement {
         }
         val inGroup = if (query.sort == LibrarySort.Album) {
             compareBy<IndexEntry, Int?>(nullsLast()) { it.disc }.thenBy(nullsLast()) { it.track }.then(byName)
-        } else byName
+        } else {
+            byName
+        }
         val sorted = entries.sortedWith { a, b ->
             byGroup.compare(groupOf.getValue(a.id), groupOf.getValue(b.id)).takeIf { it != 0 } ?: inGroup.compare(a, b)
         }
         val groups = sorted.map { groupOf.getValue(it.id) }
-        val letters = if (query.railed) groups.map { (it as? ListGroup.Name)?.let { name -> railLetter(name.name) } } else null
+        val letters = if (query.railed) {
+            groups.map {
+                (it as? ListGroup.Name)?.let { name ->
+                    railLetter(
+                        name.name,
+                    )
+                }
+            }
+        } else {
+            null
+        }
         return ArrangedList(sorted, groups, letters)
     }
 
     /** The group [entry] falls in when sorted by [sort]. */
     fun group(entry: IndexEntry, sort: LibrarySort): ListGroup = when (sort) {
         LibrarySort.DateAdded -> entry.addedMonth?.let { ListGroup.Month(it / 12, it % 12 + 1) }
+
         LibrarySort.Year -> entry.year?.let { ListGroup.Year(it) }
+
         LibrarySort.Rating -> entry.rating?.let { ListGroup.Stars(it.toInt()) }
+
         LibrarySort.Runtime -> entry.runtimeMs?.takeIf { it > 0 }?.let { length(it) }
+
         LibrarySort.Artist -> entry.artist?.takeIf { it.isNotBlank() }?.let { ListGroup.Name(NameOrder.key(it), it) }
-        LibrarySort.Album -> entry.album?.takeIf { it.isNotBlank() }?.let { ListGroup.Name(entry.albumId ?: NameOrder.key(it), it) }
+
+        LibrarySort.Album -> entry.album?.takeIf { it.isNotBlank() }?.let {
+            ListGroup.Name(
+                entry.albumId ?: NameOrder.key(it),
+                it,
+            )
+        }
+
         LibrarySort.Title -> null
     } ?: ListGroup.Unknown
 

@@ -35,13 +35,13 @@ import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.shadow.Shadow as DropShadow
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -69,22 +69,26 @@ import io.github.glacier_jellyfin.androidtv.ui.ContinueCard
 import io.github.glacier_jellyfin.androidtv.ui.DetailBackdrop
 import io.github.glacier_jellyfin.androidtv.ui.FactBadge
 import io.github.glacier_jellyfin.androidtv.ui.GridCard
+import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 import io.github.glacier_jellyfin.androidtv.ui.ratingText
 import io.github.glacier_jellyfin.androidtv.ui.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
-import io.github.glacier_jellyfin.androidtv.ui.yearText
 import io.github.glacier_jellyfin.androidtv.ui.showsLock
-import io.github.glacier_jellyfin.androidtv.ui.ImagePageGround
+import io.github.glacier_jellyfin.androidtv.ui.yearText
 
 private const val COLLECTION_BACKDROP = 740
 private const val TITLE_CLAMP = 22
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun CollectionDetail(state: DetailState, details: ItemDetails, viewModel: DetailViewModel) {
+fun CollectionDetail(
+    state: DetailState,
+    details: ItemDetails,
+    viewModel: DetailViewModel,
+) {
     val collection = details.item
     val items = state.collectionItems
     // The header speaks of what is watched; music, people and the like in a collection only get their own rows.
@@ -114,15 +118,28 @@ fun CollectionDetail(state: DetailState, details: ItemDetails, viewModel: Detail
             url = collection.backdropUrl ?: items.firstOrNull()?.backdropUrl,
             height = COLLECTION_BACKDROP,
             modifier = Modifier.graphicsLayer {
-                translationY = if (listState.firstVisibleItemIndex == 0) -listState.firstVisibleItemScrollOffset.toFloat() else -size.height
+                translationY =
+                    if (listState.firstVisibleItemIndex ==
+                        0
+                    ) {
+                        -listState.firstVisibleItemScrollOffset.toFloat()
+                    } else {
+                        -size.height
+                    }
             },
         )
         CompositionLocalProvider(LocalBringIntoViewSpec provides rememberRowPivotSpec(listState, 700)) {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                 item(key = "header") {
-                    Row(Modifier.padding(start = PageEdge.dp, end = PageEdge.dp, top = 146.dp), horizontalArrangement = Arrangement.spacedBy(60.dp)) {
+                    Row(
+                        Modifier.padding(start = PageEdge.dp, end = PageEdge.dp, top = 146.dp),
+                        horizontalArrangement = Arrangement.spacedBy(60.dp),
+                    ) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
                                 Box(
                                     Modifier
                                         .height(36.dp)
@@ -140,21 +157,42 @@ fun CollectionDetail(state: DetailState, details: ItemDetails, viewModel: Detail
                                 }
                                 val kindLabel = when {
                                     watchable.isEmpty() -> null
-                                    watchable.all { it.kind == ItemKind.Movie } -> stringResource(R.string.library_movies)
-                                    watchable.all { it.kind == ItemKind.Series } -> stringResource(R.string.library_shows)
+
+                                    watchable.all { it.kind == ItemKind.Movie } -> stringResource(
+                                        R.string.library_movies,
+                                    )
+
+                                    watchable.all { it.kind == ItemKind.Series } -> stringResource(
+                                        R.string.library_shows,
+                                    )
+
                                     else -> null
                                 }
                                 val titles = if (watchable.isEmpty()) items.size else watchable.size
-                                val more = others.takeIf { watchable.isNotEmpty() && it > 0 }?.let { pluralStringResource(R.plurals.collection_more, it, it) }
+                                val more = others.takeIf {
+                                    watchable.isNotEmpty() && it > 0
+                                }?.let {
+                                    pluralStringResource(
+                                        R.plurals.collection_more,
+                                        it,
+                                        it,
+                                    )
+                                }
                                 Text(
-                                    listOfNotNull(kindLabel, pluralStringResource(R.plurals.count_titles, titles, titles), more).joinToString(" · "),
+                                    listOfNotNull(
+                                        kindLabel,
+                                        pluralStringResource(R.plurals.count_titles, titles, titles),
+                                        more,
+                                    ).joinToString(" · "),
                                     style = GlacierText.body(19),
                                     color = GlacierColors.Mist,
                                 )
                             }
                             Text(
                                 collection.title,
-                                style = GlacierText.display(70).copy(lineHeight = 73.sp, shadow = Shadow(Color(0x99000000), blurRadius = 30f)),
+                                style = GlacierText.display(
+                                    70,
+                                ).copy(lineHeight = 73.sp, shadow = Shadow(Color(0x99000000), blurRadius = 30f)),
                                 color = GlacierColors.Ice,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
@@ -172,14 +210,37 @@ fun CollectionDetail(state: DetailState, details: ItemDetails, viewModel: Detail
                             }
                             val seen = watchable.count { it.played }
                             if (watchable.isNotEmpty()) {
-                                Column(Modifier.width(520.dp).padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                                Column(
+                                    Modifier.width(520.dp).padding(top = 4.dp),
+                                    verticalArrangement = Arrangement.spacedBy(9.dp),
+                                ) {
                                     ProgressBar(seen / watchable.size.toFloat(), Modifier.height(6.dp))
-                                    Text(pluralStringResource(R.plurals.collection_seen, watchable.size, seen, watchable.size), style = GlacierText.body(17), color = GlacierColors.Mist)
+                                    Text(
+                                        pluralStringResource(
+                                            R.plurals.collection_seen,
+                                            watchable.size,
+                                            seen,
+                                            watchable.size,
+                                        ),
+                                        style = GlacierText.body(17),
+                                        color = GlacierColors.Mist,
+                                    )
                                 }
                             }
-                            Row(Modifier.padding(top = 10.dp).upTo(LocalMiniPlayerFocus.current), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Row(
+                                Modifier.padding(top = 10.dp).upTo(LocalMiniPlayerFocus.current),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            ) {
                                 if (playable) {
-                                    val title = next?.title?.let { if (it.length > TITLE_CLAMP) it.take(TITLE_CLAMP - 1).trimEnd() + "…" else it }.orEmpty()
+                                    val title = next?.title?.let {
+                                        if (it.length > TITLE_CLAMP) {
+                                            it.take(
+                                                TITLE_CLAMP - 1,
+                                            ).trimEnd() + "…"
+                                        } else {
+                                            it
+                                        }
+                                    }.orEmpty()
                                     ActionButton(
                                         onClick = { viewModel.play() },
                                         label = when {
@@ -196,7 +257,9 @@ fun CollectionDetail(state: DetailState, details: ItemDetails, viewModel: Detail
                                     onClick = viewModel::toggleFavorite,
                                     icon = if (collection.isFavorite) GlacierIcons.HeartFilled else GlacierIcons.Heart,
                                     on = collection.isFavorite,
-                                    contentDescription = stringResource(if (collection.isFavorite) R.string.action_unfavorite else R.string.action_favorite),
+                                    contentDescription = stringResource(
+                                        if (collection.isFavorite) R.string.action_unfavorite else R.string.action_favorite,
+                                    ),
                                     modifier = if (playable) Modifier else Modifier.focusRequester(playFocus),
                                 )
                                 if (watchable.isNotEmpty()) {
@@ -206,13 +269,17 @@ fun CollectionDetail(state: DetailState, details: ItemDetails, viewModel: Detail
                                         icon = if (allSeen) GlacierIcons.SeenFilled else GlacierIcons.Seen,
                                         iconMark = if (allSeen) GlacierIcons.SeenMark else null,
                                         on = allSeen,
-                                        contentDescription = stringResource(if (allSeen) R.string.collection_unmark_all else R.string.collection_mark_all),
+                                        contentDescription = stringResource(
+                                            if (allSeen) R.string.collection_unmark_all else R.string.collection_mark_all,
+                                        ),
                                     )
                                 }
                             }
                         }
                         // Posters fan out well; covers and portraits only when there is nothing else.
-                        PosterStack(items.filter { it.kind in PosterKinds && it.posterUrl != null }.ifEmpty { items }.take(3))
+                        PosterStack(
+                            items.filter { it.kind in PosterKinds && it.posterUrl != null }.ifEmpty { items }.take(3),
+                        )
                     }
                     // The play button only comes with the titles: focus moves on to it once they are loaded.
                     LaunchedEffect(collection.id, playable) {
@@ -271,7 +338,11 @@ private fun CollectionFacts(collection: MediaItem, items: List<MediaItem>) {
         if (ratings.isNotEmpty()) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Icon(GlacierIcons.Star, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
-                Text(stringResource(R.string.collection_average, ratingText(ratings.average().toFloat())), style = GlacierText.body(20, FontWeight.Bold), color = accent)
+                Text(
+                    stringResource(R.string.collection_average, ratingText(ratings.average().toFloat())),
+                    style = GlacierText.body(20, FontWeight.Bold),
+                    color = accent,
+                )
             }
         }
         val span = when {
@@ -281,8 +352,21 @@ private fun CollectionFacts(collection: MediaItem, items: List<MediaItem>) {
         }
         val genres = items.flatMap { it.genres }.distinct().take(3).joinToString(" · ").ifEmpty { null }
         val facts = listOfNotNull(span, minutes.takeIf { it > 0 }?.let { runtimeText(it) }, genres)
-        if (facts.isNotEmpty()) Text(facts.joinToString("  ·  "), style = GlacierText.body(20), color = GlacierColors.Mist)
-        if (collection.isFavorite) FactBadge(stringResource(R.string.favorite_tag), accent.copy(alpha = 0.45f), 16, accent)
+        if (facts.isNotEmpty()) {
+            Text(
+                facts.joinToString("  ·  "),
+                style = GlacierText.body(20),
+                color = GlacierColors.Mist,
+            )
+        }
+        if (collection.isFavorite) {
+            FactBadge(
+                stringResource(R.string.favorite_tag),
+                accent.copy(alpha = 0.45f),
+                16,
+                accent,
+            )
+        }
     }
 }
 
@@ -298,7 +382,15 @@ private fun PosterStack(items: List<MediaItem>) {
                     .offset(x = (i * 140).dp, y = (18 + i * 14).dp)
                     .size(280.dp, 420.dp)
                     .rotate((i - 1) * 2.5f)
-                    .dropShadow(shape, DropShadow(radius = 40.dp, spread = (-14).dp, color = Color.Black.copy(alpha = 0.55f), offset = DpOffset(0.dp, 18.dp)))
+                    .dropShadow(
+                        shape,
+                        DropShadow(
+                            radius = 40.dp,
+                            spread = (-14).dp,
+                            color = Color.Black.copy(alpha = 0.55f),
+                            offset = DpOffset(0.dp, 18.dp),
+                        ),
+                    )
                     .clip(shape)
                     .border(1.dp, GlacierColors.GlassBorder2, shape),
             ) {
@@ -320,7 +412,15 @@ private fun CollectionCard(item: MediaItem, viewModel: DetailViewModel) {
         ItemKind.Episode, ItemKind.MusicVideo -> {
             val season = item.seasonNumber
             val episode = item.episodeNumber
-            val number = if (item.kind == ItemKind.Episode && season != null && episode != null) stringResource(R.string.episode_short, season, episode) else null
+            val number = if (item.kind == ItemKind.Episode && season != null && episode != null) {
+                stringResource(
+                    R.string.episode_short,
+                    season,
+                    episode,
+                )
+            } else {
+                null
+            }
             ContinueCard(
                 title = if (item.kind == ItemKind.Episode) item.parentTitle ?: item.title else item.title,
                 subtitle = if (item.kind == ItemKind.Episode) {
@@ -334,14 +434,24 @@ private fun CollectionCard(item: MediaItem, viewModel: DetailViewModel) {
                 locked = locked,
             )
         }
+
         ItemKind.Album, ItemKind.Song, ItemKind.Playlist -> GridCard(
             imageUrl = item.posterUrl,
             title = item.title,
             caption = item.parentTitle,
-            onClick = { if (item.kind == ItemKind.Song) viewModel.playCollectionSong(item) else viewModel.openItem(item) },
+            onClick = {
+                if (item.kind == ItemKind.Song) {
+                    viewModel.playCollectionSong(
+                        item,
+                    )
+                } else {
+                    viewModel.openItem(item)
+                }
+            },
             shape = CardShape.Square,
             locked = locked,
         )
+
         ItemKind.Artist, ItemKind.Person -> GridCard(
             imageUrl = item.posterUrl,
             title = item.title,
@@ -349,6 +459,7 @@ private fun CollectionCard(item: MediaItem, viewModel: DetailViewModel) {
             onClick = { if (item.kind == ItemKind.Person) viewModel.openPerson(item) else viewModel.openItem(item) },
             shape = CardShape.Round,
         )
+
         else -> {
             val counted = item.kind == ItemKind.Series || item.kind == ItemKind.Season
             GridCard(
@@ -356,10 +467,23 @@ private fun CollectionCard(item: MediaItem, viewModel: DetailViewModel) {
                 title = item.title,
                 caption = when (item.kind) {
                     ItemKind.Series -> yearText(item)
+
                     ItemKind.Season -> item.parentTitle
-                    else -> listOfNotNull(item.year?.toString(), item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }).joinToString(" · ")
+
+                    else -> listOfNotNull(
+                        item.year?.toString(),
+                        item.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) },
+                    ).joinToString(" · ")
                 },
-                onClick = { if (item.kind == ItemKind.Season) viewModel.openSeason(item) else viewModel.openItem(item) },
+                onClick = {
+                    if (item.kind == ItemKind.Season) {
+                        viewModel.openSeason(
+                            item,
+                        )
+                    } else {
+                        viewModel.openItem(item)
+                    }
+                },
                 watched = item.played && item.kind in WatchableInCollection,
                 count = item.unwatchedCount.takeIf { counted && !item.played },
                 locked = locked,

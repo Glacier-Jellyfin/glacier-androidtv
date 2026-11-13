@@ -24,6 +24,9 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeScreenRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.log.Log
+import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,9 +39,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.util.concurrent.TimeUnit
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Keeps the Android TV home screen ([HomeChannels]) current: when a profile
@@ -75,7 +75,15 @@ class HomeChannelsSync @Inject constructor(
         // Signed out, or the age limit of the profile changed.
         scope.launch {
             accounts.state
-                .map { state -> state.users.filter { it.accessToken != null }.maxByOrNull { it.lastUsedAt }?.let { Triple(it.serverId, it.userId, it.protection) } }
+                .map { state ->
+                    state.users.filter { it.accessToken != null }.maxByOrNull { it.lastUsedAt }?.let {
+                        Triple(
+                            it.serverId,
+                            it.userId,
+                            it.protection,
+                        )
+                    }
+                }
                 .distinctUntilChanged()
                 .drop(1)
                 .collect { refresh(context) }

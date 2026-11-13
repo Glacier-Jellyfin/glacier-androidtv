@@ -28,7 +28,12 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
  * dot-separated [facts] and a technical badge ("4K HDR", or [tech] if given).
  */
 @Composable
-fun FactsRow(item: MediaItem, facts: List<String>, tech: String? = qualityText(item.quality), size: Int = 20) {
+fun FactsRow(
+    item: MediaItem,
+    facts: List<String>,
+    tech: String? = qualityText(item.quality),
+    size: Int = 20,
+) {
     val accent = LocalAccent.current.main
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
         item.communityRating?.let {
@@ -46,7 +51,12 @@ fun FactsRow(item: MediaItem, facts: List<String>, tech: String? = qualityText(i
 }
 
 @Composable
-fun FactBadge(text: String, border: Color, size: Int, color: Color) {
+fun FactBadge(
+    text: String,
+    border: Color,
+    size: Int,
+    color: Color,
+) {
     val shape = RoundedCornerShape(GlacierShapes.RadiusSm)
     Box(Modifier.border(1.dp, border, shape).padding(horizontal = 10.dp, vertical = 3.dp)) {
         Text(text, style = GlacierText.body(size).copy(letterSpacing = 0.06.em), color = color)

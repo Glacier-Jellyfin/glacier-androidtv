@@ -6,6 +6,10 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSort
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
+import java.time.LocalDateTime
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -18,10 +22,6 @@ import org.jellyfin.sdk.model.api.CollectionType
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.MediaType
-import java.time.LocalDateTime
-import java.util.UUID
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /** What a folder lists, sorted by [name] or [date]: a subfolder, video or photo. */
 interface FolderEntry {
@@ -30,17 +30,30 @@ interface FolderEntry {
 }
 
 /** A folder of a home video library, or the library itself when there are several; dated like a photo. */
-data class MediaFolder(val id: UUID, override val name: String, override val date: LocalDateTime? = null) : FolderEntry
+data class MediaFolder(
+    val id: UUID,
+    override val name: String,
+    override val date: LocalDateTime? = null,
+) : FolderEntry
 
 /** A photo: [thumbUrl] for its card, [fullUrl] screen-sized for the viewer. */
-data class MediaPhoto(val id: UUID, val name: String, val thumbUrl: String, val fullUrl: String)
+data class MediaPhoto(
+    val id: UUID,
+    val name: String,
+    val thumbUrl: String,
+    val fullUrl: String,
+)
 
 /** A video or photo of a folder, with the time it was taken, else the file's date. */
 sealed interface FolderMedia : FolderEntry {
     val id: UUID
 
     /** [added]: when it came to the library, for music videos sorted by that. */
-    data class Video(val item: MediaItem, override val date: LocalDateTime?, val added: LocalDateTime? = null) : FolderMedia {
+    data class Video(
+        val item: MediaItem,
+        override val date: LocalDateTime?,
+        val added: LocalDateTime? = null,
+    ) : FolderMedia {
         override val id: UUID get() = item.id
         override val name: String get() = item.title
     }
@@ -76,7 +89,9 @@ class FolderRepository @Inject constructor(
      * The folder [folderId]. Without one, the top: the libraries of [type] as folders,
      * or the content of the only one right away.
      */
-    suspend fun load(folderId: UUID?, type: CollectionType = CollectionType.HOMEVIDEOS): FolderContent = withContext(Dispatchers.IO) {
+    suspend fun load(folderId: UUID?, type: CollectionType = CollectionType.HOMEVIDEOS): FolderContent = withContext(
+        Dispatchers.IO,
+    ) {
         val session = checkNotNull(sessions.session.value) { "No profile is signed in" }
         coroutineScope {
             val libraries = async { libraries(session, type) }
@@ -84,7 +99,10 @@ class FolderRepository @Inject constructor(
             val ancestors = folderId?.let { async { runSuspendCatching { ancestors(session, it) }.getOrNull() } }
             val parent = folderId ?: libraries.await().let { all ->
                 if (all.size != 1) {
-                    return@coroutineScope FolderContent(null, all.map { MediaFolder(it.id, it.name.orEmpty(), it.taken) })
+                    return@coroutineScope FolderContent(
+                        null,
+                        all.map { MediaFolder(it.id, it.name.orEmpty(), it.taken) },
+                    )
                 }
                 all.single().id
             }
@@ -112,7 +130,12 @@ class FolderRepository @Inject constructor(
      * The videos in [folderId] and every folder below it; without one, in every library of [type].
      * By name: the page sorts them for the profile.
      */
-    suspend fun videosBelow(folderId: UUID?, type: CollectionType = CollectionType.HOMEVIDEOS): List<FolderMedia.Video> = withContext(Dispatchers.IO) {
+    suspend fun videosBelow(
+        folderId: UUID?,
+        type: CollectionType = CollectionType.HOMEVIDEOS,
+    ): List<FolderMedia.Video> = withContext(
+        Dispatchers.IO,
+    ) {
         val session = checkNotNull(sessions.session.value) { "No profile is signed in" }
         val parents = folderId?.let(::listOf) ?: libraries(session, type).map { it.id }
         val items = coroutineScope {
@@ -150,14 +173,13 @@ class FolderRepository @Inject constructor(
         session.api.userViewApi.getUserViews(userId = session.userId).content.items
             .filter { it.collectionType == type }
 
-    private suspend fun children(session: Session, parentId: UUID) =
-        session.api.libraryApi.getItems(
-            userId = session.userId,
-            parentId = parentId,
-            sortBy = listOf(ItemSortBy.SORT_NAME),
-            fields = listOf(ItemFields.DATE_CREATED),
-            enableUserData = true,
-        ).content.items
+    private suspend fun children(session: Session, parentId: UUID) = session.api.libraryApi.getItems(
+        userId = session.userId,
+        parentId = parentId,
+        sortBy = listOf(ItemSortBy.SORT_NAME),
+        fields = listOf(ItemFields.DATE_CREATED),
+        enableUserData = true,
+    ).content.items
 
     /** From the folder's parent up to the server's root. */
     private suspend fun ancestors(session: Session, folderId: UUID) =
@@ -185,6 +207,7 @@ fun <T : FolderEntry> List<T>.sortedFor(settings: FolderSettings): List<T> {
     val byName = compareBy<T, String>(NameOrder) { it.name }
     return when (settings.sort) {
         FolderSort.Name -> sortedWith(if (settings.descending) byName.reversed() else byName)
+
         FolderSort.Date -> {
             val (dated, undated) = partition { it.date != null }
             val byDate = compareBy<T> { it.date }.then(byName)

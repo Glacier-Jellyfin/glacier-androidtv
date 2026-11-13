@@ -26,7 +26,13 @@ private const val MARQUEE_DP_PER_SECOND = 45f
  * focused) a cut-off text instead slides to its end and back again, pausing at each end.
  */
 @Composable
-fun MarqueeText(text: String, style: TextStyle, color: Color, active: Boolean, modifier: Modifier = Modifier) {
+fun MarqueeText(
+    text: String,
+    style: TextStyle,
+    color: Color,
+    active: Boolean,
+    modifier: Modifier = Modifier,
+) {
     var overflows by remember(text) { mutableStateOf(false) }
     if (active && overflows) {
         val scroll = rememberScrollState()
@@ -42,7 +48,14 @@ fun MarqueeText(text: String, style: TextStyle, color: Color, active: Boolean, m
                 scroll.animateScrollTo(0, tween(durationMs, easing = LinearEasing))
             }
         }
-        Text(text, style = style, color = color, maxLines = 1, softWrap = false, modifier = modifier.horizontalScroll(scroll, enabled = false))
+        Text(
+            text,
+            style = style,
+            color = color,
+            maxLines = 1,
+            softWrap = false,
+            modifier = modifier.horizontalScroll(scroll, enabled = false),
+        )
     } else {
         Text(
             text,

@@ -19,7 +19,11 @@ internal object DolbyVisionRpu {
      * header and emulation prevention bytes; null for one this cannot read,
      * which then stays as it is.
      */
-    fun toProfile81(nal: ByteArray, offset: Int = 0, length: Int = nal.size - offset): ByteArray? {
+    fun toProfile81(
+        nal: ByteArray,
+        offset: Int = 0,
+        length: Int = nal.size - offset,
+    ): ByteArray? {
         if (length < 3) return null
         val rpu = unescape(nal, offset + 2, length - 2)
         val converted = runCatching { convert(rpu, removeFelMapping = true) }.getOrNull() ?: return null
@@ -124,12 +128,14 @@ internal object DolbyVisionRpu {
                             if (order == 0L && r.bit()) return null // linear interpolation: not in the wild
                             repeat(order.toInt() + 2) { r.coefficient(coefficientType, denomLength) }
                         }
+
                         1L -> {
                             val order = r.bits(2)
                             if (order > 2) return null
                             r.coefficient(coefficientType, denomLength)
                             repeat((order.toInt() + 1) * 7) { r.coefficient(coefficientType, denomLength) }
                         }
+
                         else -> return null
                     }
                 }
@@ -204,12 +210,22 @@ internal object DolbyVisionRpu {
 
         val out = w.toByteArray()
         val crc = crc32(out, 1, out.size)
-        return out + byteArrayOf((crc ushr 24).toByte(), (crc ushr 16).toByte(), (crc ushr 8).toByte(), crc.toByte(), FINAL_BYTE) +
+        return out + byteArrayOf(
+            (crc ushr 24).toByte(),
+            (crc ushr 16).toByte(),
+            (crc ushr 8).toByte(),
+            crc.toByte(),
+            FINAL_BYTE,
+        ) +
             ByteArray(trailingZeros)
     }
 
     /** The NAL payload without emulation prevention bytes (00 00 03 → 00 00). */
-    internal fun unescape(data: ByteArray, offset: Int, length: Int): ByteArray {
+    internal fun unescape(
+        data: ByteArray,
+        offset: Int,
+        length: Int,
+    ): ByteArray {
         val out = ByteArrayOutputStream(length)
         var zeros = 0
         for (i in offset until offset + length) {
@@ -241,7 +257,11 @@ internal object DolbyVisionRpu {
     }
 
     /** CRC-32/MPEG-2 over [from] until [to]. */
-    private fun crc32(data: ByteArray, from: Int, to: Int): Int {
+    private fun crc32(
+        data: ByteArray,
+        from: Int,
+        to: Int,
+    ): Int {
         var crc = -1
         for (i in from until to) {
             crc = crc xor ((data[i].toInt() and 0xff) shl 24)
@@ -262,7 +282,11 @@ internal object DolbyVisionRpu {
 }
 
 /** Reads bits MSB first from [data], between bit [position] and bit [limit]. */
-private class BitReader(private val data: ByteArray, var position: Int, private val limit: Int) {
+private class BitReader(
+    private val data: ByteArray,
+    var position: Int,
+    private val limit: Int,
+) {
 
     fun bit(): Boolean {
         check(position < limit) { "RPU ends early" }
@@ -330,7 +354,11 @@ private class BitWriter {
     fun se(value: Long) = ue(if (value > 0) value * 2 - 1 else -value * 2)
 
     /** The bits of [data] from bit [from] to bit [to]. */
-    fun copy(data: ByteArray, from: Int, to: Int) {
+    fun copy(
+        data: ByteArray,
+        from: Int,
+        to: Int,
+    ) {
         for (position in from until to) bit((data[position ushr 3].toInt() shr (7 - (position and 7))) and 1 == 1)
     }
 
@@ -339,7 +367,11 @@ private class BitWriter {
     }
 
     /** Whole bytes, at a byte boundary. */
-    fun bytes(data: ByteArray, from: Int, to: Int) {
+    fun bytes(
+        data: ByteArray,
+        from: Int,
+        to: Int,
+    ) {
         check(filled == 0)
         out.write(data, from, to - from)
     }

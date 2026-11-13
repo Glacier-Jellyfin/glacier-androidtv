@@ -6,6 +6,10 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightSource
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightType
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.random.Random
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -28,10 +32,6 @@ import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.SortOrder
-import java.util.UUID
-import kotlin.random.Random
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
 class HomeRepository @Inject constructor(
@@ -85,19 +85,51 @@ class HomeRepository @Inject constructor(
         _libraries.value = libraries
         _latestLibraries.value = latestLibraries
         val latest = latestLibraries
-            .map { library -> async { library to ageFilter.screen(latest(session, userId, library).map(mapper::item)) } }
+            .map { library ->
+                async {
+                    library to ageFilter.screen(
+                        latest(session, userId, library).map(mapper::item),
+                    )
+                }
+            }
             .awaitAll()
             .filter { (_, items) -> items.isNotEmpty() }
 
         val hasMusic = libraries.any { it.kind == LibraryKind.Music }
-        val recentAlbums = if (hasMusic) runSuspendCatching { recentAlbums(session, mapper) }.getOrDefault(emptyList()) else emptyList()
-        val favoriteSongs = if (hasMusic) runSuspendCatching { favoriteSongs(session, mapper) }.getOrDefault(emptyList()) else emptyList()
+        val recentAlbums = if (hasMusic) {
+            runSuspendCatching {
+                recentAlbums(
+                    session,
+                    mapper,
+                )
+            }.getOrDefault(emptyList())
+        } else {
+            emptyList()
+        }
+        val favoriteSongs = if (hasMusic) {
+            runSuspendCatching {
+                favoriteSongs(
+                    session,
+                    mapper,
+                )
+            }.getOrDefault(emptyList())
+        } else {
+            emptyList()
+        }
         // Set by libraries(), so known here.
-        val liveChannels = if (_liveTv.value) runSuspendCatching { liveChannels() }.getOrDefault(emptyList()) else emptyList()
+        val liveChannels = if (_liveTv.value) {
+            runSuspendCatching { liveChannels() }.getOrDefault(
+                emptyList(),
+            )
+        } else {
+            emptyList()
+        }
 
         HomeContent(
             libraries = libraries,
-            continueWatching = ageFilter.screen(mergeContinueWatching(resumeAsync.await(), nextUpAsync.await()).map(mapper::item)),
+            continueWatching = ageFilter.screen(
+                mergeContinueWatching(resumeAsync.await(), nextUpAsync.await()).map(mapper::item),
+            ),
             latest = latest,
             favorites = favoritesAsync.await(),
             latestLibraries = latestLibraries,
@@ -167,26 +199,31 @@ class HomeRepository @Inject constructor(
      * nothing matching falls back to the newest titles of the type, as the
      * design falls back to something rather than nothing.
      */
-    suspend fun spotlight(settings: HomeSettings, continueWatching: List<MediaItem>): List<MediaItem> = withContext(Dispatchers.IO) {
+    suspend fun spotlight(settings: HomeSettings, continueWatching: List<MediaItem>): List<MediaItem> = withContext(
+        Dispatchers.IO,
+    ) {
         val sources = settings.spotlightSources
         if (sources.isEmpty()) return@withContext emptyList()
         val count = settings.spotlightCount.count
         val session = requireSession()
         val mapper = MediaMapper(session.api)
-        suspend fun fromServer(sort: ItemSortBy, favorites: Boolean, unwatched: Boolean): List<MediaItem> =
-            session.api.libraryApi.getItems(
-                userId = session.userId,
-                recursive = true,
-                includeItemTypes = settings.spotlightType.itemTypes,
-                isFavorite = true.takeIf { favorites },
-                filters = listOfNotNull(ItemFilter.IS_UNPLAYED.takeIf { unwatched }),
-                imageTypes = listOf(ImageType.BACKDROP),
-                sortBy = listOf(sort),
-                sortOrder = listOf(SortOrder.DESCENDING),
-                fields = FIELDS,
-                enableUserData = true,
-                limit = count,
-            ).content.items.map(mapper::item).let { ageFilter.screen(it) }
+        suspend fun fromServer(
+            sort: ItemSortBy,
+            favorites: Boolean,
+            unwatched: Boolean,
+        ): List<MediaItem> = session.api.libraryApi.getItems(
+            userId = session.userId,
+            recursive = true,
+            includeItemTypes = settings.spotlightType.itemTypes,
+            isFavorite = true.takeIf { favorites },
+            filters = listOfNotNull(ItemFilter.IS_UNPLAYED.takeIf { unwatched }),
+            imageTypes = listOf(ImageType.BACKDROP),
+            sortBy = listOf(sort),
+            sortOrder = listOf(SortOrder.DESCENDING),
+            fields = FIELDS,
+            enableUserData = true,
+            limit = count,
+        ).content.items.map(mapper::item).let { ageFilter.screen(it) }
         val unwatched = settings.spotlightUnwatched
         val started = if (SpotlightSource.ContinueWatching in sources) {
             continueWatching.filter { it.backdropUrl != null && settings.spotlightType.matches(it.kind) }
@@ -221,7 +258,11 @@ class HomeRepository @Inject constructor(
             .awaitAll()
     }
 
-    private suspend fun count(session: Session, libraryId: UUID, kind: LibraryKind): Int? = runSuspendCatching {
+    private suspend fun count(
+        session: Session,
+        libraryId: UUID,
+        kind: LibraryKind,
+    ): Int? = runSuspendCatching {
         session.api.libraryApi.getItems(
             userId = session.userId,
             parentId = libraryId,
@@ -232,28 +273,30 @@ class HomeRepository @Inject constructor(
         ).content.totalRecordCount
     }.getOrNull()
 
-    private suspend fun resume(session: Session): List<BaseItemDto> =
-        session.api.libraryApi.getResumeItems(
-            userId = session.userId,
-            limit = ROW_LIMIT,
-            mediaTypes = listOf(MediaType.VIDEO),
-            // Music videos play in the music player, from the start.
-            excludeItemTypes = listOf(BaseItemKind.MUSIC_VIDEO),
-            fields = FIELDS,
-            enableUserData = true,
-        ).content.items
+    private suspend fun resume(session: Session): List<BaseItemDto> = session.api.libraryApi.getResumeItems(
+        userId = session.userId,
+        limit = ROW_LIMIT,
+        mediaTypes = listOf(MediaType.VIDEO),
+        // Music videos play in the music player, from the start.
+        excludeItemTypes = listOf(BaseItemKind.MUSIC_VIDEO),
+        fields = FIELDS,
+        enableUserData = true,
+    ).content.items
 
-    private suspend fun nextUp(session: Session): List<BaseItemDto> =
-        session.api.showApi.getNextUp(
-            userId = session.userId,
-            limit = ROW_LIMIT,
-            fields = FIELDS,
-            enableUserData = true,
-            // Episodes already started are in the resume list.
-            enableResumable = false,
-        ).content.items
+    private suspend fun nextUp(session: Session): List<BaseItemDto> = session.api.showApi.getNextUp(
+        userId = session.userId,
+        limit = ROW_LIMIT,
+        fields = FIELDS,
+        enableUserData = true,
+        // Episodes already started are in the resume list.
+        enableResumable = false,
+    ).content.items
 
-    private suspend fun latest(session: Session, userId: UUID, library: Library): List<BaseItemDto> {
+    private suspend fun latest(
+        session: Session,
+        userId: UUID,
+        library: Library,
+    ): List<BaseItemDto> {
         val items = session.api.libraryApi.getLatestMedia(
             userId = userId,
             parentId = library.id,
@@ -269,15 +312,23 @@ class HomeRepository @Inject constructor(
      * when only that part is new, which would put a season poster in the row
      * and open the season. Those become their show, once each, in the same order.
      */
-    private suspend fun asShows(session: Session, userId: UUID, items: List<BaseItemDto>): List<BaseItemDto> {
+    private suspend fun asShows(
+        session: Session,
+        userId: UUID,
+        items: List<BaseItemDto>,
+    ): List<BaseItemDto> {
         val showIds = items.map { if (it.type == BaseItemKind.SERIES) it.id else it.seriesId }
         val missing = showIds.filterNotNull().filter { id -> items.none { it.id == id } }.distinct()
-        val shows = if (missing.isEmpty()) emptyMap() else session.api.libraryApi.getItems(
-            userId = userId,
-            ids = missing,
-            fields = FIELDS,
-            enableUserData = true,
-        ).content.items.associateBy { it.id }
+        val shows = if (missing.isEmpty()) {
+            emptyMap()
+        } else {
+            session.api.libraryApi.getItems(
+                userId = userId,
+                ids = missing,
+                fields = FIELDS,
+                enableUserData = true,
+            ).content.items.associateBy { it.id }
+        }
         return items.mapIndexedNotNull { index, item ->
             val id = showIds[index] ?: return@mapIndexedNotNull item
             if (item.id == id) item else shows[id]
@@ -325,7 +376,13 @@ class HomeRepository @Inject constructor(
  * its own order, then the titles of the [other] sources shuffled together,
  * each title once, cut to [count].
  */
-internal fun <T> spotlightPool(started: List<T>, other: List<List<T>>, count: Int, random: Random, id: (T) -> Any): List<T> {
+internal fun <T> spotlightPool(
+    started: List<T>,
+    other: List<List<T>>,
+    count: Int,
+    random: Random,
+    id: (T) -> Any,
+): List<T> {
     val seen = started.mapTo(HashSet(), id)
     val mixed = other.flatten().filter { seen.add(id(it)) }.shuffled(random)
     return (started.distinctBy(id) + mixed).take(count)

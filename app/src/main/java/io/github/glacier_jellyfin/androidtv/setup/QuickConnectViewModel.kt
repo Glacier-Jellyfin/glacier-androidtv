@@ -1,6 +1,5 @@
 package io.github.glacier_jellyfin.androidtv.setup
 
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,9 +12,11 @@ import io.github.glacier_jellyfin.androidtv.core.jellyfin.Authenticator
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.QuickConnectState
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.ServerInfo
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.SignedInUser
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.QuickConnectRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -25,7 +26,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class QuickConnectUiState(
     val server: ServerInfo? = null,
@@ -79,9 +79,12 @@ class QuickConnectViewModel @Inject constructor(
                         _state.update { it.copy(code = qc.code, secondsLeft = QUICK_CONNECT_TTL_SECONDS) }
                         startCountdown()
                     }
+
                     // Finish outside this job: finish() cancels it, which would abort the sign-in itself.
                     is QuickConnectState.Authorized -> viewModelScope.launch { finish(qc.user) }
+
                     QuickConnectState.Unavailable -> close(R.string.quick_connect_unavailable)
+
                     is QuickConnectState.Failed -> {
                         Log.w(TAG, "Quick Connect failed", qc.cause)
                         close(R.string.quick_connect_failed)

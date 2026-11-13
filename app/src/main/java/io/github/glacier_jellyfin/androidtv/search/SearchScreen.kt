@@ -54,8 +54,8 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.SystemTextInput
 import io.github.glacier_jellyfin.androidtv.seerr.seerrStatusLabel
 import io.github.glacier_jellyfin.androidtv.setup.InputField
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
-import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
+import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PosterCard
 import io.github.glacier_jellyfin.androidtv.ui.TopNav
@@ -71,10 +71,7 @@ private const val KeyGap = 12
 private const val Columns = 4
 
 @Composable
-fun SearchScreen(
-    onNavigate: (UiEvent.Navigate) -> Unit,
-    viewModel: SearchViewModel = hiltViewModel(),
-) {
+fun SearchScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SearchViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
     val keyFocus = remember { FocusRequester() }
@@ -117,7 +114,10 @@ fun SearchScreen(
                 .padding(start = 80.dp, end = 80.dp, top = 150.dp),
             horizontalArrangement = Arrangement.spacedBy(56.dp),
         ) {
-            Column(Modifier.width(620.dp).onFocusChanged { inInput = it.hasFocus }, verticalArrangement = Arrangement.spacedBy(26.dp)) {
+            Column(
+                Modifier.width(620.dp).onFocusChanged { inInput = it.hasFocus },
+                verticalArrangement = Arrangement.spacedBy(26.dp),
+            ) {
                 // Same field as sign-in: OK opens the system keyboard, Up reaches the top navigation.
                 InputField(
                     label = null,
@@ -196,20 +196,44 @@ private fun Keypad(
                         onClick = { onQueryChange(typeChar(query, char)) },
                         width = KeyWidth,
                         height = KeyHeight,
-                        modifier = if (rowIndex == 0 && index == 0) Modifier.focusRequester(firstKeyFocus) else Modifier,
+                        modifier = if (rowIndex == 0 && index == 0) {
+                            Modifier.focusRequester(
+                                firstKeyFocus,
+                            )
+                        } else {
+                            Modifier
+                        },
                     ) { color -> Text(char.toString(), style = GlacierText.display(24), color = color) }
                 }
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(KeyGap.dp)) {
             KeyCap(onClick = onSystemKeyboard, width = span(2), height = KeyHeight) { color ->
-                Icon(GlacierIcons.Keyboard, contentDescription = stringResource(R.string.keyboard_system), tint = color, modifier = Modifier.size(30.dp))
+                Icon(
+                    GlacierIcons.Keyboard,
+                    contentDescription = stringResource(R.string.keyboard_system),
+                    tint = color,
+                    modifier = Modifier.size(30.dp),
+                )
             }
-            KeyCap(onClick = { if (query.isNotEmpty() && !query.endsWith(' ')) onQueryChange("$query ") }, width = span(3), height = KeyHeight) { color ->
-                Text(stringResource(R.string.keyboard_space), style = GlacierText.body(23, FontWeight.SemiBold), color = color)
+            KeyCap(
+                onClick = { if (query.isNotEmpty() && !query.endsWith(' ')) onQueryChange("$query ") },
+                width = span(3),
+                height = KeyHeight,
+            ) { color ->
+                Text(
+                    stringResource(R.string.keyboard_space),
+                    style = GlacierText.body(23, FontWeight.SemiBold),
+                    color = color,
+                )
             }
             KeyCap(onClick = { onQueryChange(query.dropLast(1)) }, width = KeyWidth, height = KeyHeight) { color ->
-                Icon(GlacierIcons.Backspace, contentDescription = stringResource(R.string.keyboard_delete), tint = color, modifier = Modifier.size(26.dp))
+                Icon(
+                    GlacierIcons.Backspace,
+                    contentDescription = stringResource(R.string.keyboard_delete),
+                    tint = color,
+                    modifier = Modifier.size(26.dp),
+                )
             }
         }
     }
@@ -240,19 +264,31 @@ private fun Results(
             state.resultsFor == null -> stringResource(R.string.search_suggestions)
             else -> pluralStringResource(R.plurals.search_results, count, count, state.resultsFor)
         }
-        Text(title, style = GlacierText.display(28), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            title,
+            style = GlacierText.display(28),
+            color = GlacierColors.Ice,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         when {
             state.failed -> Column(verticalArrangement = Arrangement.spacedBy(22.dp)) {
                 Text(stringResource(R.string.search_error), style = GlacierText.body(21), color = GlacierColors.Mist)
                 PillButton(stringResource(R.string.action_retry), onClick = onRetry)
             }
-            (state.loading || state.seerrLoading) && count == 0 -> Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { SpinningDiamond(60) }
+
+            (state.loading || state.seerrLoading) && count == 0 -> Box(
+                Modifier.fillMaxWidth().weight(1f),
+                contentAlignment = Alignment.Center,
+            ) { SpinningDiamond(60) }
+
             state.resultsFor != null && count == 0 -> Text(
                 stringResource(R.string.search_none, state.resultsFor),
                 style = GlacierText.body(21),
                 color = GlacierColors.Mist,
                 modifier = Modifier.padding(vertical = 60.dp),
             )
+
             else -> LazyVerticalGrid(
                 state = gridState,
                 columns = GridCells.Fixed(Columns),
@@ -275,19 +311,41 @@ private fun Results(
 }
 
 @Composable
-private fun ResultCard(item: MediaItem, onClick: () -> Unit, modifier: Modifier) {
+private fun ResultCard(
+    item: MediaItem,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
     if (item.kind == ItemKind.Album) {
         // Design: albums show title and artist under a square cover.
-        PosterCard(imageUrl = item.posterUrl, caption = item.parentTitle.orEmpty(), onClick = onClick, modifier = modifier, square = true, title = item.title)
+        PosterCard(
+            imageUrl = item.posterUrl,
+            caption = item.parentTitle.orEmpty(),
+            onClick = onClick,
+            modifier = modifier,
+            square = true,
+            title = item.title,
+        )
     } else {
         // Title above the year, laid out like the album cards.
-        PosterCard(imageUrl = item.posterUrl, caption = yearText(item).orEmpty(), onClick = onClick, modifier = modifier, title = item.title, locked = item.showsLock())
+        PosterCard(
+            imageUrl = item.posterUrl,
+            caption = yearText(item).orEmpty(),
+            onClick = onClick,
+            modifier = modifier,
+            title = item.title,
+            locked = item.showsLock(),
+        )
     }
 }
 
 /** A title from Seerr: what it is and where its request stands. */
 @Composable
-private fun SeerrCard(item: SeerrItem, onClick: () -> Unit, modifier: Modifier) {
+private fun SeerrCard(
+    item: SeerrItem,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
     val kind = stringResource(if (item.type == SeerrMediaType.Movie) R.string.seerr_movie else R.string.seerr_show)
     PosterCard(
         imageUrl = item.posterUrl,

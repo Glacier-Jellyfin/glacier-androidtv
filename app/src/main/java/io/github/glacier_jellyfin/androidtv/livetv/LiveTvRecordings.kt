@@ -115,10 +115,19 @@ fun RecordingsView(
             Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) { SpinningDiamond(90) }
             return
         }
+
         recordings == null && failed -> {
             Column(modifier.padding(top = 40.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text(stringResource(R.string.livetv_recordings_error), style = GlacierText.display(30), color = GlacierColors.Ice)
-                Text(stringResource(R.string.livetv_error_body), style = GlacierText.body(20), color = GlacierColors.Mist)
+                Text(
+                    stringResource(R.string.livetv_recordings_error),
+                    style = GlacierText.display(30),
+                    color = GlacierColors.Ice,
+                )
+                Text(
+                    stringResource(R.string.livetv_error_body),
+                    style = GlacierText.body(20),
+                    color = GlacierColors.Mist,
+                )
                 PillButton(
                     stringResource(R.string.action_retry),
                     onClick = onRetry,
@@ -128,7 +137,9 @@ fun RecordingsView(
             }
             return
         }
+
         recordings == null -> return
+
         recordings.isEmpty -> {
             // The last entry went away: the focus goes up to the views instead.
             LaunchedEffect(Unit) {
@@ -137,9 +148,20 @@ fun RecordingsView(
                 withFrameNanos { }
                 runCatching { up.requestFocus() }
             }
-            Column(modifier.width(LIST_WIDTH.dp).padding(top = 40.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(R.string.livetv_recordings_empty), style = GlacierText.display(30), color = GlacierColors.Ice)
-                Text(stringResource(R.string.livetv_recordings_empty_body), style = GlacierText.body(20), color = GlacierColors.Mist)
+            Column(
+                modifier.width(LIST_WIDTH.dp).padding(top = 40.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    stringResource(R.string.livetv_recordings_empty),
+                    style = GlacierText.display(30),
+                    color = GlacierColors.Ice,
+                )
+                Text(
+                    stringResource(R.string.livetv_recordings_empty_body),
+                    style = GlacierText.body(20),
+                    color = GlacierColors.Mist,
+                )
             }
             return
         }
@@ -223,7 +245,10 @@ fun RecordingsView(
                             title = entry.recording.title,
                             lines = listOfNotNull(
                                 entry.recording.episodeTitle,
-                                listOfNotNull(entry.recording.channelName, dayAndTime(entry.recording.startMs, entry.recording.endMs)).joinToString(" · "),
+                                listOfNotNull(
+                                    entry.recording.channelName,
+                                    dayAndTime(entry.recording.startMs, entry.recording.endMs),
+                                ).joinToString(" · "),
                             ),
                             imageUrl = entry.recording.imageUrl,
                             icon = GlacierIcons.Film,
@@ -233,22 +258,35 @@ fun RecordingsView(
                             modifier = rowModifier,
                             holdMenu = true,
                         )
+
                         is Entry.Scheduled -> EntryRow(
                             title = entry.timer.title,
                             lines = listOfNotNull(
                                 entry.timer.episodeTitle,
-                                listOfNotNull(entry.timer.channelName, dayAndTime(entry.timer.startMs, entry.timer.endMs)).joinToString(" · "),
+                                listOfNotNull(
+                                    entry.timer.channelName,
+                                    dayAndTime(entry.timer.startMs, entry.timer.endMs),
+                                ).joinToString(" · "),
                             ),
                             imageUrl = null,
-                            icon = if (entry.timer.seriesTimerId != null) GlacierIcons.RecordSeries else GlacierIcons.Record,
+                            icon = if (entry.timer.seriesTimerId !=
+                                null
+                            ) {
+                                GlacierIcons.RecordSeries
+                            } else {
+                                GlacierIcons.Record
+                            },
                             rec = entry.timer.recording,
                             onClick = { onTimer(entry.timer) },
                             onLongClick = { onTimer(entry.timer) },
                             modifier = rowModifier,
                         )
+
                         is Entry.Series -> EntryRow(
                             title = entry.timer.title,
-                            lines = listOf(entry.timer.channelName ?: stringResource(R.string.livetv_series_any_channel)),
+                            lines = listOf(
+                                entry.timer.channelName ?: stringResource(R.string.livetv_series_any_channel),
+                            ),
                             imageUrl = entry.timer.imageUrl,
                             icon = GlacierIcons.RecordSeries,
                             rec = false,
@@ -297,7 +335,10 @@ private fun EntryRow(
         ) {
             Thumb(imageUrl, icon, Modifier.width(136.dp).height(76.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
                     Text(
                         title,
                         style = GlacierText.body(22, FontWeight.SemiBold),
@@ -309,7 +350,13 @@ private fun EntryRow(
                     if (rec) RecBadge()
                 }
                 lines.forEach {
-                    Text(it, style = GlacierText.body(18), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        it,
+                        style = GlacierText.body(18),
+                        color = GlacierColors.Mist,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
             if (holdMenu) HoldOkMark(focused, LocalAccent.current.main)
@@ -319,7 +366,12 @@ private fun EntryRow(
 
 /** The entry's picture, or a glass tile with [icon] when the guide had none. */
 @Composable
-private fun Thumb(imageUrl: String?, icon: ImageVector, modifier: Modifier = Modifier, iconSize: Int = 30) {
+private fun Thumb(
+    imageUrl: String?,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    iconSize: Int = 30,
+) {
     Box(
         modifier
             .clip(RoundedCornerShape(12.dp))
@@ -330,14 +382,23 @@ private fun Thumb(imageUrl: String?, icon: ImageVector, modifier: Modifier = Mod
             Artwork(imageUrl, Modifier.fillMaxSize())
         } else {
             val red = icon == GlacierIcons.Record || icon == GlacierIcons.RecordSeries
-            Icon(icon, contentDescription = null, tint = if (red) RecordRed else GlacierColors.Mist, modifier = Modifier.size(iconSize.dp))
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = if (red) RecordRed else GlacierColors.Mist,
+                modifier = Modifier.size(iconSize.dp),
+            )
         }
     }
 }
 
 /** The focused entry, large: picture, title, when and what it is about. */
 @Composable
-private fun EntryPanel(entry: Entry, nowMs: Long, modifier: Modifier = Modifier) {
+private fun EntryPanel(
+    entry: Entry,
+    nowMs: Long,
+    modifier: Modifier = Modifier,
+) {
     val (title, image, overview) = when (entry) {
         is Entry.Recorded -> Triple(entry.recording.title, entry.recording.imageUrl, entry.recording.overview)
         is Entry.Scheduled -> Triple(entry.timer.title, null, entry.timer.overview)
@@ -351,18 +412,46 @@ private fun EntryPanel(entry: Entry, nowMs: Long, modifier: Modifier = Modifier)
     Column(modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Thumb(image, icon, Modifier.fillMaxWidth().aspectRatio(16f / 9f), iconSize = 64)
         Spacer(Modifier.height(8.dp))
-        Text(title, style = GlacierText.display(34), color = GlacierColors.Ice, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(
+            title,
+            style = GlacierText.display(34),
+            color = GlacierColors.Ice,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
         val meta = when (entry) {
-            is Entry.Recorded -> listOfNotNull(entry.recording.episodeTitle, entry.recording.channelName, dayAndTime(entry.recording.startMs, entry.recording.endMs))
-            is Entry.Scheduled -> listOfNotNull(entry.timer.episodeTitle, entry.timer.channelName, dayAndTime(entry.timer.startMs, entry.timer.endMs))
+            is Entry.Recorded -> listOfNotNull(
+                entry.recording.episodeTitle,
+                entry.recording.channelName,
+                dayAndTime(entry.recording.startMs, entry.recording.endMs),
+            )
+
+            is Entry.Scheduled -> listOfNotNull(
+                entry.timer.episodeTitle,
+                entry.timer.channelName,
+                dayAndTime(entry.timer.startMs, entry.timer.endMs),
+            )
+
             is Entry.Series -> listOf(entry.timer.channelName ?: stringResource(R.string.livetv_series_any_channel))
         }
-        Text(meta.joinToString(" · "), style = GlacierText.body(19), color = GlacierColors.Mist, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(
+            meta.joinToString(" · "),
+            style = GlacierText.body(19),
+            color = GlacierColors.Mist,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
         val running = (entry as? Entry.Recorded)?.recording?.recording == true ||
             (entry as? Entry.Scheduled)?.timer?.let { it.recording || nowMs in it.startMs until it.endMs } == true
         if (running) RecBadge()
         overview?.let {
-            Text(it, style = GlacierText.body(19), color = GlacierColors.Ice.copy(alpha = 0.78f), maxLines = 5, overflow = TextOverflow.Ellipsis)
+            Text(
+                it,
+                style = GlacierText.body(19),
+                color = GlacierColors.Ice.copy(alpha = 0.78f),
+                maxLines = 5,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -377,7 +466,13 @@ interface RecordActions {
 
 /** A programme's sheet on its own, for the player: record it or its series. */
 @Composable
-fun ProgramSheet(channel: LiveChannel, program: LiveProgram, nowMs: Long, actions: RecordActions, onDismiss: () -> Unit) {
+fun ProgramSheet(
+    channel: LiveChannel,
+    program: LiveProgram,
+    nowMs: Long,
+    actions: RecordActions,
+    onDismiss: () -> Unit,
+) {
     val first = remember(program) { FocusRequester() }
     OptionsPanel(
         title = program.title,
@@ -391,7 +486,13 @@ fun ProgramSheet(channel: LiveChannel, program: LiveProgram, nowMs: Long, action
 
 /** A channel's or station's sheet on its own, for the radio player: play it, mark it, move it. */
 @Composable
-fun ChannelSheet(channel: LiveChannel, onPlay: () -> Unit, onFavorite: () -> Unit, onMove: () -> Unit, onDismiss: () -> Unit) {
+fun ChannelSheet(
+    channel: LiveChannel,
+    onPlay: () -> Unit,
+    onFavorite: () -> Unit,
+    onMove: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     val first = remember(channel.id) { FocusRequester() }
     OptionsPanel(
         title = listOfNotNull(channel.number, channel.name).joinToString("  "),
@@ -405,17 +506,45 @@ fun ChannelSheet(channel: LiveChannel, onPlay: () -> Unit, onFavorite: () -> Uni
 
 /** A channel's choices: watch or listen, the heart, and moving it between TV and radio. */
 @Composable
-private fun OptionsPanelScope.ChannelChoices(channel: LiveChannel, first: FocusRequester, onPlay: () -> Unit, onFavorite: () -> Unit, onMove: () -> Unit) {
+private fun OptionsPanelScope.ChannelChoices(
+    channel: LiveChannel,
+    first: FocusRequester,
+    onPlay: () -> Unit,
+    onFavorite: () -> Unit,
+    onMove: () -> Unit,
+) {
     if (channel.radio) {
-        OptionRow(stringResource(R.string.radio_listen), stringResource(R.string.radio_listen_desc), onPlay, Modifier.focusRequester(first), GlacierIcons.Play)
+        OptionRow(
+            stringResource(R.string.radio_listen),
+            stringResource(R.string.radio_listen_desc),
+            onPlay,
+            Modifier.focusRequester(first),
+            GlacierIcons.Play,
+        )
     } else {
-        OptionRow(stringResource(R.string.livetv_watch), stringResource(R.string.livetv_watch_channel_desc), onPlay, Modifier.focusRequester(first), GlacierIcons.Play)
+        OptionRow(
+            stringResource(R.string.livetv_watch),
+            stringResource(R.string.livetv_watch_channel_desc),
+            onPlay,
+            Modifier.focusRequester(first),
+            GlacierIcons.Play,
+        )
     }
     FavoriteRow(channel.favorite, onFavorite)
     if (channel.radio) {
-        OptionRow(stringResource(R.string.livetv_move_tv), stringResource(R.string.livetv_move_tv_desc), onMove, icon = GlacierIcons.Film)
+        OptionRow(
+            stringResource(R.string.livetv_move_tv),
+            stringResource(R.string.livetv_move_tv_desc),
+            onMove,
+            icon = GlacierIcons.Film,
+        )
     } else {
-        OptionRow(stringResource(R.string.livetv_move_radio), stringResource(R.string.livetv_move_radio_desc), onMove, icon = GlacierIcons.Speaker)
+        OptionRow(
+            stringResource(R.string.livetv_move_radio),
+            stringResource(R.string.livetv_move_radio_desc),
+            onMove,
+            icon = GlacierIcons.Speaker,
+        )
     }
 }
 
@@ -445,11 +574,25 @@ private fun OptionsPanelScope.ProgramChoices(
 ) {
     val airing = program.airsAt(nowMs)
     val watch = onWatch?.takeIf { airing }
-    if (watch != null) OptionRow(stringResource(R.string.livetv_watch), stringResource(R.string.livetv_watch_airing_desc), watch, Modifier.focusRequester(first), GlacierIcons.Play)
+    if (watch != null) {
+        OptionRow(
+            stringResource(R.string.livetv_watch),
+            stringResource(R.string.livetv_watch_airing_desc),
+            watch,
+            Modifier.focusRequester(first),
+            GlacierIcons.Play,
+        )
+    }
     val timerId = program.timerId
     val firstIfNoWatch = if (watch == null) Modifier.focusRequester(first) else Modifier
     if (timerId == null) {
-        OptionRow(stringResource(R.string.livetv_record), stringResource(R.string.livetv_record_desc), { actions.record(program) }, firstIfNoWatch, GlacierIcons.Record)
+        OptionRow(
+            stringResource(R.string.livetv_record),
+            stringResource(R.string.livetv_record_desc),
+            { actions.record(program) },
+            firstIfNoWatch,
+            GlacierIcons.Record,
+        )
     } else {
         OptionRow(
             stringResource(if (airing) R.string.livetv_record_stop else R.string.livetv_record_cancel),
@@ -461,16 +604,31 @@ private fun OptionsPanelScope.ProgramChoices(
     }
     val seriesTimerId = program.seriesTimerId
     if (seriesTimerId != null) {
-        OptionRow(stringResource(R.string.livetv_series_cancel), stringResource(R.string.livetv_series_cancel_desc), { actions.cancelSeriesTimer(seriesTimerId, program.title) }, icon = GlacierIcons.Close)
+        OptionRow(
+            stringResource(R.string.livetv_series_cancel),
+            stringResource(R.string.livetv_series_cancel_desc),
+            { actions.cancelSeriesTimer(seriesTimerId, program.title) },
+            icon = GlacierIcons.Close,
+        )
     } else if (program.series) {
-        OptionRow(stringResource(R.string.livetv_record_series), stringResource(R.string.livetv_record_series_desc), { actions.recordSeries(program) }, icon = GlacierIcons.RecordSeries)
+        OptionRow(
+            stringResource(R.string.livetv_record_series),
+            stringResource(R.string.livetv_record_series_desc),
+            { actions.recordSeries(program) },
+            icon = GlacierIcons.RecordSeries,
+        )
     }
     if (favorite != null) FavoriteRow(favorite, onFavorite)
 }
 
 /** The options of the Live TV page; the view model holds what it shows. Deleting asks in a centred dialog. */
 @Composable
-fun LiveTvSheetHost(sheet: LiveTvSheet, nowMs: Long, channels: List<LiveChannel>?, viewModel: LiveTvViewModel) {
+fun LiveTvSheetHost(
+    sheet: LiveTvSheet,
+    nowMs: Long,
+    channels: List<LiveChannel>?,
+    viewModel: LiveTvViewModel,
+) {
     val first = remember(sheet) { FocusRequester() }
     if (sheet is LiveTvSheet.ConfirmDelete) {
         // A confirmation forces a decision, so it stays a dialog in the middle.
@@ -484,13 +642,37 @@ fun LiveTvSheetHost(sheet: LiveTvSheet, nowMs: Long, channels: List<LiveChannel>
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(28.dp),
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.livetv_delete_title), style = GlacierText.display(30), color = GlacierColors.Ice, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-                    Text(stringResource(R.string.livetv_delete_body, recording.title), style = GlacierText.body(17), color = GlacierColors.Mist, textAlign = TextAlign.Center)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.livetv_delete_title),
+                        style = GlacierText.display(30),
+                        color = GlacierColors.Ice,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        stringResource(R.string.livetv_delete_body, recording.title),
+                        style = GlacierText.body(17),
+                        color = GlacierColors.Mist,
+                        textAlign = TextAlign.Center,
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    PillButton(stringResource(R.string.action_cancel), onClick = viewModel::closeSheet, modifier = Modifier.focusRequester(first))
-                    PillButton(stringResource(R.string.livetv_delete), onClick = { viewModel.deleteRecording(recording) }, primary = true, icon = GlacierIcons.Trash)
+                    PillButton(
+                        stringResource(R.string.action_cancel),
+                        onClick = viewModel::closeSheet,
+                        modifier = Modifier.focusRequester(first),
+                    )
+                    PillButton(
+                        stringResource(R.string.livetv_delete),
+                        onClick = { viewModel.deleteRecording(recording) },
+                        primary = true,
+                        icon = GlacierIcons.Trash,
+                    )
                 }
             }
         }
@@ -502,24 +684,38 @@ fun LiveTvSheetHost(sheet: LiveTvSheet, nowMs: Long, channels: List<LiveChannel>
     when (sheet) {
         is LiveTvSheet.Program -> {
             title = sheet.program.title
-            subtitle = listOfNotNull(sheet.channel.name, dayAndTime(sheet.program.startMs, sheet.program.endMs)).joinToString(" · ")
+            subtitle = listOfNotNull(
+                sheet.channel.name,
+                dayAndTime(sheet.program.startMs, sheet.program.endMs),
+            ).joinToString(" · ")
         }
+
         is LiveTvSheet.Channel -> {
             title = listOfNotNull(sheet.channel.number, sheet.channel.name).joinToString("  ")
             subtitle = sheet.channel.now?.title
         }
+
         is LiveTvSheet.Recording -> {
             title = sheet.recording.title
-            subtitle = listOfNotNull(sheet.recording.channelName, dayAndTime(sheet.recording.startMs, sheet.recording.endMs)).joinToString(" · ")
+            subtitle = listOfNotNull(
+                sheet.recording.channelName,
+                dayAndTime(sheet.recording.startMs, sheet.recording.endMs),
+            ).joinToString(" · ")
         }
+
         is LiveTvSheet.Timer -> {
             title = sheet.timer.title
-            subtitle = listOfNotNull(sheet.timer.channelName, dayAndTime(sheet.timer.startMs, sheet.timer.endMs)).joinToString(" · ")
+            subtitle = listOfNotNull(
+                sheet.timer.channelName,
+                dayAndTime(sheet.timer.startMs, sheet.timer.endMs),
+            ).joinToString(" · ")
         }
+
         is LiveTvSheet.SeriesTimer -> {
             title = sheet.timer.title
             subtitle = sheet.timer.channelName ?: stringResource(R.string.livetv_series_any_channel)
         }
+
         is LiveTvSheet.ConfirmDelete -> return
     }
     OptionsPanel(title = title, subtitle = subtitle, onDismiss = viewModel::closeSheet, first = first) {
@@ -531,9 +727,18 @@ fun LiveTvSheetHost(sheet: LiveTvSheet, nowMs: Long, channels: List<LiveChannel>
                 first = first,
                 onWatch = if (sheet.more) ({ viewModel.play(sheet.channel) }) else null,
                 // The sheet holds the channel as it was when it opened.
-                favorite = if (sheet.more) (channels?.firstOrNull { it.id == sheet.channel.id } ?: sheet.channel).favorite else null,
+                favorite = if (sheet.more) {
+                    (
+                        channels?.firstOrNull {
+                            it.id == sheet.channel.id
+                        } ?: sheet.channel
+                        ).favorite
+                } else {
+                    null
+                },
                 onFavorite = { viewModel.toggleFavorite(sheet.channel) },
             )
+
             is LiveTvSheet.Channel -> {
                 val channel = channels?.firstOrNull { it.id == sheet.channel.id } ?: sheet.channel
                 ChannelChoices(
@@ -547,34 +752,67 @@ fun LiveTvSheetHost(sheet: LiveTvSheet, nowMs: Long, channels: List<LiveChannel>
                     onMove = { viewModel.moveChannel(channel) },
                 )
             }
+
             is LiveTvSheet.Recording -> {
                 val recording = sheet.recording
-                OptionRow(stringResource(R.string.livetv_watch), stringResource(R.string.livetv_watch_recording_desc), { viewModel.playRecording(recording) }, Modifier.focusRequester(first), GlacierIcons.Play)
+                OptionRow(
+                    stringResource(R.string.livetv_watch),
+                    stringResource(R.string.livetv_watch_recording_desc),
+                    { viewModel.playRecording(recording) },
+                    Modifier.focusRequester(first),
+                    GlacierIcons.Play,
+                )
                 val timerId = recording.timerId
                 if (recording.recording && timerId != null) {
-                    OptionRow(stringResource(R.string.livetv_record_stop), stringResource(R.string.livetv_record_stop_desc), { viewModel.cancelTimer(timerId, recording.title) }, icon = GlacierIcons.Close)
+                    OptionRow(
+                        stringResource(R.string.livetv_record_stop),
+                        stringResource(R.string.livetv_record_stop_desc),
+                        { viewModel.cancelTimer(timerId, recording.title) },
+                        icon = GlacierIcons.Close,
+                    )
                 }
-                OptionRow(stringResource(R.string.livetv_delete), stringResource(R.string.livetv_delete_desc), { viewModel.askDelete(recording) }, icon = GlacierIcons.Trash)
+                OptionRow(
+                    stringResource(R.string.livetv_delete),
+                    stringResource(R.string.livetv_delete_desc),
+                    { viewModel.askDelete(recording) },
+                    icon = GlacierIcons.Trash,
+                )
             }
+
             is LiveTvSheet.Timer -> {
                 val timer = sheet.timer
                 val airing = timer.recording || nowMs in timer.startMs until timer.endMs
                 OptionRow(
                     stringResource(if (airing) R.string.livetv_record_stop else R.string.livetv_record_cancel),
-                    stringResource(if (airing) R.string.livetv_record_stop_desc else R.string.livetv_record_cancel_desc),
+                    stringResource(
+                        if (airing) R.string.livetv_record_stop_desc else R.string.livetv_record_cancel_desc,
+                    ),
                     { viewModel.cancelTimer(timer.id, timer.title) },
                     Modifier.focusRequester(first),
                     GlacierIcons.Close,
                 )
                 val seriesTimerId = timer.seriesTimerId
                 if (seriesTimerId != null) {
-                    OptionRow(stringResource(R.string.livetv_series_cancel), stringResource(R.string.livetv_series_cancel_desc), { viewModel.cancelSeriesTimer(seriesTimerId, timer.title) }, icon = GlacierIcons.Close)
+                    OptionRow(
+                        stringResource(R.string.livetv_series_cancel),
+                        stringResource(R.string.livetv_series_cancel_desc),
+                        { viewModel.cancelSeriesTimer(seriesTimerId, timer.title) },
+                        icon = GlacierIcons.Close,
+                    )
                 }
             }
+
             is LiveTvSheet.SeriesTimer -> {
                 val timer = sheet.timer
-                OptionRow(stringResource(R.string.livetv_series_cancel), stringResource(R.string.livetv_series_cancel_desc), { viewModel.cancelSeriesTimer(timer.id, timer.title) }, Modifier.focusRequester(first), GlacierIcons.Close)
+                OptionRow(
+                    stringResource(R.string.livetv_series_cancel),
+                    stringResource(R.string.livetv_series_cancel_desc),
+                    { viewModel.cancelSeriesTimer(timer.id, timer.title) },
+                    Modifier.focusRequester(first),
+                    GlacierIcons.Close,
+                )
             }
+
             is LiveTvSheet.ConfirmDelete -> Unit
         }
     }

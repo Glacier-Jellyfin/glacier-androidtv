@@ -3,11 +3,11 @@ package io.github.glacier_jellyfin.androidtv.core.data.settings
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentAction
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.UpNextMode
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 
 class SettingsSerializerTest {
 
@@ -29,8 +29,15 @@ class SettingsSerializerTest {
                         background = SubtitleBackground.Translucent,
                         edge = SubtitleEdge.Outline,
                     ),
-                    appearance = AppearanceSettings(accent = AccentColor.Aurora, compact = true, groupCollections = false),
-                    home = HomeSettings(spotlightSources = setOf(SpotlightSource.Random, SpotlightSource.Favorites), spotlightCount = SpotlightCount.N10),
+                    appearance = AppearanceSettings(
+                        accent = AccentColor.Aurora,
+                        compact = true,
+                        groupCollections = false,
+                    ),
+                    home = HomeSettings(
+                        spotlightSources = setOf(SpotlightSource.Random, SpotlightSource.Favorites),
+                        spotlightCount = SpotlightCount.N10,
+                    ),
                 ),
             ),
         )
@@ -42,7 +49,9 @@ class SettingsSerializerTest {
     @Test
     fun `unknown options fall back to their defaults`() = runTest {
         val json = """{"profiles":{"s/u":{"playback":{"upNext":"S90","seekBack":"S5"},"future":1}}}"""
-        val playback = SettingsSerializer.readFrom(ByteArrayInputStream(json.toByteArray())).profiles.getValue("s/u").playback
+        val playback = SettingsSerializer.readFrom(
+            ByteArrayInputStream(json.toByteArray()),
+        ).profiles.getValue("s/u").playback
         assertEquals(UpNextChoice.WithCredits, playback.upNext)
         assertEquals(SeekStep.S5, playback.seekBack)
     }
@@ -65,29 +74,56 @@ class SettingsSerializerTest {
     @Test
     fun `the bold switch of earlier versions becomes the bold weight`() = runTest {
         val json = """{"profiles":{"s/u":{"subtitleStyle":{"bold":true}}}}"""
-        val style = SettingsSerializer.readFrom(ByteArrayInputStream(json.toByteArray())).profiles.getValue("s/u").subtitleStyle
+        val style = SettingsSerializer.readFrom(
+            ByteArrayInputStream(json.toByteArray()),
+        ).profiles.getValue("s/u").subtitleStyle
         assertEquals(SubtitleWeight.Bold, style.weight)
     }
 
     @Test
     fun `a weight chosen after the bold switch survives a round trip`() = runTest {
-        val state = SettingsState(mapOf("s/u" to ProfileSettings(subtitleStyle = SubtitleStyle(legacyBold = true, weight = SubtitleWeight.Regular))))
+        val state = SettingsState(
+            mapOf(
+                "s/u" to ProfileSettings(
+                    subtitleStyle = SubtitleStyle(legacyBold = true, weight = SubtitleWeight.Regular),
+                ),
+            ),
+        )
         val out = ByteArrayOutputStream()
         SettingsSerializer.writeTo(state, out)
-        assertEquals(SubtitleWeight.Regular, SettingsSerializer.readFrom(ByteArrayInputStream(out.toByteArray())).profiles.getValue("s/u").subtitleStyle.weight)
+        assertEquals(
+            SubtitleWeight.Regular,
+            SettingsSerializer.readFrom(
+                ByteArrayInputStream(out.toByteArray()),
+            ).profiles.getValue("s/u").subtitleStyle.weight,
+        )
     }
 
     @Test
     fun `no spotlight source chosen survives a round trip`() = runTest {
-        val state = SettingsState(mapOf("s/u" to ProfileSettings(home = HomeSettings(legacySpotlightSource = SpotlightSource.Random, spotlightSources = emptySet()))))
+        val state = SettingsState(
+            mapOf(
+                "s/u" to ProfileSettings(
+                    home = HomeSettings(legacySpotlightSource = SpotlightSource.Random, spotlightSources = emptySet()),
+                ),
+            ),
+        )
         val out = ByteArrayOutputStream()
         SettingsSerializer.writeTo(state, out)
-        assertEquals(emptySet<SpotlightSource>(), SettingsSerializer.readFrom(ByteArrayInputStream(out.toByteArray())).profiles.getValue("s/u").home.spotlightSources)
+        assertEquals(
+            emptySet<SpotlightSource>(),
+            SettingsSerializer.readFrom(
+                ByteArrayInputStream(out.toByteArray()),
+            ).profiles.getValue("s/u").home.spotlightSources,
+        )
     }
 
     @Test
     fun `segment settings keep defaults for kinds not stored`() {
-        val policy = PlaybackSettings(segments = mapOf(SegmentKind.Intro to SegmentAction.Skip), upNext = UpNextChoice.Off).segmentPolicy
+        val policy = PlaybackSettings(
+            segments = mapOf(SegmentKind.Intro to SegmentAction.Skip),
+            upNext = UpNextChoice.Off,
+        ).segmentPolicy
         assertEquals(SegmentAction.Skip, policy.action(SegmentKind.Intro))
         assertEquals(SegmentAction.Skip, policy.action(SegmentKind.Recap))
         assertEquals(UpNextMode.Off, policy.upNext)

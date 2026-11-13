@@ -2,10 +2,10 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSort
-import org.junit.Assert.assertEquals
-import org.junit.Test
 import java.time.LocalDateTime
 import java.util.UUID
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 class FolderSortTest {
 
@@ -29,13 +29,19 @@ class FolderSortTest {
 
     @Test
     fun `by date turned around the newest comes first and undated stay last`() {
-        assertEquals(listOf("Beach", "Album", "cake", "Scan"), names(FolderSettings(sort = FolderSort.Date, descending = true)))
+        assertEquals(
+            listOf("Beach", "Album", "cake", "Scan"),
+            names(FolderSettings(sort = FolderSort.Date, descending = true)),
+        )
     }
 
     @Test
     fun `by name upper and lower case count the same`() {
         assertEquals(listOf("Album", "Beach", "cake", "Scan"), names(FolderSettings(sort = FolderSort.Name)))
-        assertEquals(listOf("Scan", "cake", "Beach", "Album"), names(FolderSettings(sort = FolderSort.Name, descending = true)))
+        assertEquals(
+            listOf("Scan", "cake", "Beach", "Album"),
+            names(FolderSettings(sort = FolderSort.Name, descending = true)),
+        )
     }
 
     @Test
@@ -45,7 +51,13 @@ class FolderSortTest {
             MediaFolder(UUID(1, 1), "Archive", null),
             MediaFolder(UUID(1, 2), "Norway", LocalDateTime.of(2024, 7, 12, 9, 0)),
         )
-        assertEquals(listOf("Norway", "Summer", "Archive"), folders.sortedFor(FolderSettings(sort = FolderSort.Date, descending = true)).map { it.name })
-        assertEquals(listOf("Archive", "Norway", "Summer"), folders.sortedFor(FolderSettings(sort = FolderSort.Name)).map { it.name })
+        assertEquals(
+            listOf("Norway", "Summer", "Archive"),
+            folders.sortedFor(FolderSettings(sort = FolderSort.Date, descending = true)).map { it.name },
+        )
+        assertEquals(
+            listOf("Archive", "Norway", "Summer"),
+            folders.sortedFor(FolderSettings(sort = FolderSort.Name)).map { it.name },
+        )
     }
 }

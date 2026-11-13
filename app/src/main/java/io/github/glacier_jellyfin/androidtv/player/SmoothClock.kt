@@ -7,10 +7,7 @@ import kotlin.math.abs
  * runs on continuously: it advances with the wall clock at the playback rate seen so
  * far and eases toward the samples instead of jumping to them. Pure, no Compose.
  */
-class SmoothClock(
-    private val snapMs: Long = SNAP_MS,
-    private val easeMs: Long = EASE_MS,
-) {
+class SmoothClock(private val snapMs: Long = SNAP_MS, private val easeMs: Long = EASE_MS) {
     var value = 0.0
         private set
     var rate = 1.0

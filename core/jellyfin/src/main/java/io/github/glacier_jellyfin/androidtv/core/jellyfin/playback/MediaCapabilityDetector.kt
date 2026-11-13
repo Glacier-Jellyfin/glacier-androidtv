@@ -30,7 +30,14 @@ class MediaCapabilityDetector @Inject constructor(
     @SuppressLint("InlinedApi")
     private fun detect(): DeviceCapabilities {
         val decoders = MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.filterNot { it.isEncoder }
-        fun decodersFor(mime: String) = decoders.filter { info -> info.supportedTypes.any { it.equals(mime, ignoreCase = true) } }
+        fun decodersFor(mime: String) = decoders.filter { info ->
+            info.supportedTypes.any {
+                it.equals(
+                    mime,
+                    ignoreCase = true,
+                )
+            }
+        }
         fun has(mime: String) = decodersFor(mime).isNotEmpty()
 
         val displayHdr = displayHdrTypes()
@@ -44,8 +51,19 @@ class MediaCapabilityDetector @Inject constructor(
             if (hdr10Decoder && Display.HdrCapabilities.HDR_TYPE_HDR10 in displayHdr) add(HdrType.Hdr10)
             if (hdr10PlusDecoder && Display.HdrCapabilities.HDR_TYPE_HDR10_PLUS in displayHdr) add(HdrType.Hdr10Plus)
             // HLG uses the plain Main 10 profile.
-            if (CodecProfileLevel.HEVCProfileMain10 in hevcProfiles && Display.HdrCapabilities.HDR_TYPE_HLG in displayHdr) add(HdrType.Hlg)
-            if (has(MIME_DOLBY_VISION) && Display.HdrCapabilities.HDR_TYPE_DOLBY_VISION in displayHdr) add(HdrType.DolbyVision)
+            if (CodecProfileLevel.HEVCProfileMain10 in hevcProfiles &&
+                Display.HdrCapabilities.HDR_TYPE_HLG in displayHdr
+            ) {
+                add(
+                    HdrType.Hlg,
+                )
+            }
+            if (has(
+                    MIME_DOLBY_VISION,
+                ) && Display.HdrCapabilities.HDR_TYPE_DOLBY_VISION in displayHdr
+            ) {
+                add(HdrType.DolbyVision)
+            }
         }
 
         val passthrough = passthroughCodecs().toSet()
@@ -56,8 +74,18 @@ class MediaCapabilityDetector @Inject constructor(
         }
 
         return DeviceCapabilities(
-            h264 = videoSupport(decodersFor(MIME_H264), MIME_H264, ::avcLevel, tenBit = CodecProfileLevel.AVCProfileHigh10),
-            hevc = videoSupport(decodersFor(MIME_HEVC), MIME_HEVC, ::hevcLevel, tenBit = CodecProfileLevel.HEVCProfileMain10),
+            h264 = videoSupport(
+                decodersFor(MIME_H264),
+                MIME_H264,
+                ::avcLevel,
+                tenBit = CodecProfileLevel.AVCProfileHigh10,
+            ),
+            hevc = videoSupport(
+                decodersFor(MIME_HEVC),
+                MIME_HEVC,
+                ::hevcLevel,
+                tenBit = CodecProfileLevel.HEVCProfileMain10,
+            ),
             av1 = videoSupport(decodersFor(MIME_AV1), MIME_AV1, { null }, tenBit = CodecProfileLevel.AV1ProfileMain10),
             vp9 = videoSupport(decodersFor(MIME_VP9), MIME_VP9, { null }, tenBit = CodecProfileLevel.VP9Profile2),
             otherVideoCodecs = buildSet {
@@ -77,7 +105,9 @@ class MediaCapabilityDetector @Inject constructor(
 
     /** Android's Dolby Vision profile constants are one bit per profile: DvavPer (profile 0) is 1, DvheDtb (7) is 0x80. */
     private fun dolbyVisionProfiles(constants: Set<Int>): Set<Int>? =
-        constants.filter { it > 0 && it and (it - 1) == 0 }.mapTo(HashSet()) { Integer.numberOfTrailingZeros(it) }.ifEmpty { null }
+        constants.filter { it > 0 && it and (it - 1) == 0 }.mapTo(
+            HashSet(),
+        ) { Integer.numberOfTrailingZeros(it) }.ifEmpty { null }
 
     private fun videoSupport(
         codecs: List<MediaCodecInfo>,
@@ -102,7 +132,9 @@ class MediaCapabilityDetector @Inject constructor(
         codecs.flatMapTo(HashSet()) { info -> info.getCapabilitiesForType(mime).profileLevels.map { it.profile } }
 
     private fun displayHdrTypes(): Set<Int> {
-        val display = context.getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY) ?: return emptySet()
+        val display = context.getSystemService(
+            DisplayManager::class.java,
+        )?.getDisplay(Display.DEFAULT_DISPLAY) ?: return emptySet()
         val types = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             display.mode.supportedHdrTypes
         } else {
@@ -119,11 +151,18 @@ class MediaCapabilityDetector @Inject constructor(
     /** Formats the connected receiver or TV accepts as a bitstream. */
     private fun passthroughCodecs(): List<String> {
         val audioManager = context.getSystemService(AudioManager::class.java) ?: return emptyList()
-        val encodings = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).flatMap { it.encodings.toList() }.toSet()
+        val encodings = audioManager.getDevices(
+            AudioManager.GET_DEVICES_OUTPUTS,
+        ).flatMap { it.encodings.toList() }.toSet()
         return buildList {
             if (AudioFormat.ENCODING_AC3 in encodings) add("ac3")
             if (AudioFormat.ENCODING_E_AC3 in encodings || AudioFormat.ENCODING_E_AC3_JOC in encodings) add("eac3")
-            if (AudioFormat.ENCODING_DTS in encodings || AudioFormat.ENCODING_DTS_HD in encodings) { add("dts"); add("dca") }
+            if (AudioFormat.ENCODING_DTS in encodings || AudioFormat.ENCODING_DTS_HD in encodings) {
+                add(
+                    "dts",
+                )
+                add("dca")
+            }
             if (AudioFormat.ENCODING_DOLBY_TRUEHD in encodings) add("truehd")
         }
     }
@@ -145,7 +184,10 @@ class MediaCapabilityDetector @Inject constructor(
         iec61937Cache?.takeIf { it.first == route }?.let { return it.second }
         val available = hdmi.isNotEmpty() && (
             iecTrackSupported() ||
-                hdmi.any { AudioFormat.ENCODING_IEC61937 in it.encodings && (it.channelCounts.isEmpty() || it.channelCounts.any { n -> n >= 8 }) } ||
+                hdmi.any {
+                    AudioFormat.ENCODING_IEC61937 in it.encodings &&
+                        (it.channelCounts.isEmpty() || it.channelCounts.any { n -> n >= 8 })
+                } ||
                 // Some devices say no to the 8-channel carrier and play it all the same.
                 iecTrackOpens()
             )
@@ -160,21 +202,35 @@ class MediaCapabilityDetector @Inject constructor(
         .build()
 
     private val movieAttributes: AudioAttributes
-        get() = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MOVIE).build()
+        get() = AudioAttributes.Builder().setUsage(
+            AudioAttributes.USAGE_MEDIA,
+        ).setContentType(AudioAttributes.CONTENT_TYPE_MOVIE).build()
 
     /** The platform's own answer, where it gives one (Android 10 and later). */
     private fun iecTrackSupported(): Boolean = runCatching {
         when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ->
-                AudioManager.getDirectPlaybackSupport(iecFormat(), movieAttributes) != AudioManager.DIRECT_PLAYBACK_NOT_SUPPORTED
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> AudioTrack.isDirectPlaybackSupported(iecFormat(), movieAttributes)
+                AudioManager.getDirectPlaybackSupport(
+                    iecFormat(),
+                    movieAttributes,
+                ) != AudioManager.DIRECT_PLAYBACK_NOT_SUPPORTED
+
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> AudioTrack.isDirectPlaybackSupported(
+                iecFormat(),
+                movieAttributes,
+            )
+
             else -> false
         }
     }.getOrDefault(false)
 
     /** Opens such a track for a moment: initialised means the route takes it. */
     private fun iecTrackOpens(): Boolean = runCatching {
-        val minimum = AudioTrack.getMinBufferSize(IEC_SAMPLE_RATE, AudioFormat.CHANNEL_OUT_7POINT1_SURROUND, AudioFormat.ENCODING_IEC61937)
+        val minimum = AudioTrack.getMinBufferSize(
+            IEC_SAMPLE_RATE,
+            AudioFormat.CHANNEL_OUT_7POINT1_SURROUND,
+            AudioFormat.ENCODING_IEC61937,
+        )
         val track = AudioTrack.Builder()
             .setAudioAttributes(movieAttributes)
             .setAudioFormat(iecFormat())
@@ -205,10 +261,15 @@ class MediaCapabilityDetector @Inject constructor(
         // eARC is a plain number compiled in; older devices never report it.
         @SuppressLint("InlinedApi")
         const val IEC_SAMPLE_RATE = 192_000
+
         /** One TrueHD burst, the largest the 8-channel carrier takes. */
         const val MAT_BURST_BYTES = 61440
 
-        val HDMI_OUTPUTS = setOf(AudioDeviceInfo.TYPE_HDMI, AudioDeviceInfo.TYPE_HDMI_ARC, AudioDeviceInfo.TYPE_HDMI_EARC)
+        val HDMI_OUTPUTS = setOf(
+            AudioDeviceInfo.TYPE_HDMI,
+            AudioDeviceInfo.TYPE_HDMI_ARC,
+            AudioDeviceInfo.TYPE_HDMI_EARC,
+        )
 
         /** Platform decoders Media3 uses, and the Jellyfin codec names they cover. */
         val AUDIO_DECODERS = listOf(

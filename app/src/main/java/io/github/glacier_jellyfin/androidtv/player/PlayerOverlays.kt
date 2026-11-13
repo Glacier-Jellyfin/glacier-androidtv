@@ -6,7 +6,6 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,8 +39,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -55,14 +54,12 @@ import androidx.media3.common.text.Cue
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.SubtitleView
-import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyle
-import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
 import androidx.tv.material3.Text
 import coil3.SingletonImageLoader
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
-import coil3.request.ImageRequest
 import coil3.request.CachePolicy
+import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import coil3.request.bitmapConfig
 import coil3.toBitmap
@@ -70,12 +67,14 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.Chapter
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.Trickplay
+import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyle
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierCard
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
+import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
 import io.github.glacier_jellyfin.androidtv.detail.TrackKind
 import io.github.glacier_jellyfin.androidtv.detail.TrackPanel
 import io.github.glacier_jellyfin.androidtv.detail.trackOptions
@@ -83,7 +82,11 @@ import io.github.glacier_jellyfin.androidtv.ui.Artwork
 
 /** The detail page's track sheet, applied immediately while playing. */
 @Composable
-fun PlayerTrackPanel(state: PlayerUiState, kind: TrackKind, viewModel: PlayerViewModel) {
+fun PlayerTrackPanel(
+    state: PlayerUiState,
+    kind: TrackKind,
+    viewModel: PlayerViewModel,
+) {
     val audio = kind == TrackKind.Audio
     val (rows, indices) = trackOptions(
         if (audio) state.audioTracks else state.subtitles.map { it.track },
@@ -92,7 +95,12 @@ fun PlayerTrackPanel(state: PlayerUiState, kind: TrackKind, viewModel: PlayerVie
     val item = state.details?.item
     val prefix = when {
         item == null -> ""
-        item.kind == ItemKind.Episode && item.episodeNumber != null -> stringResource(R.string.episode_badge, item.episodeNumber!!) + " · " + item.title + " · "
+
+        item.kind == ItemKind.Episode && item.episodeNumber != null -> stringResource(
+            R.string.episode_badge,
+            item.episodeNumber!!,
+        ) + " · " + item.title + " · "
+
         else -> item.title + " · "
     }
     val current = if (audio) state.audioIndex else state.subtitleIndex
@@ -103,7 +111,16 @@ fun PlayerTrackPanel(state: PlayerUiState, kind: TrackKind, viewModel: PlayerVie
         selected = indices.indexOf(current).coerceAtLeast(0),
         onPick = { i ->
             val index = indices[i]
-            if (audio) index?.let { viewModel.pickAudio(it, rows[i].full) } else viewModel.pickSubtitle(index, rows[i].full)
+            if (audio) {
+                index?.let {
+                    viewModel.pickAudio(
+                        it,
+                        rows[i].full,
+                    )
+                }
+            } else {
+                viewModel.pickSubtitle(index, rows[i].full)
+            }
         },
         onDismiss = viewModel::closeTracks,
     )
@@ -111,7 +128,13 @@ fun PlayerTrackPanel(state: PlayerUiState, kind: TrackKind, viewModel: PlayerVie
 
 /** Bottom sheet of chapter cards (design: 300 wide, 16:9), starting at the current one. */
 @Composable
-fun ChapterSheet(chapters: List<Chapter>, positionMs: Long, fallbackImage: String?, onPick: (Chapter) -> Unit, onDismiss: () -> Unit) {
+fun ChapterSheet(
+    chapters: List<Chapter>,
+    positionMs: Long,
+    fallbackImage: String?,
+    onPick: (Chapter) -> Unit,
+    onDismiss: () -> Unit,
+) {
     BackHandler(onBack = onDismiss)
     val current = chapters.indexOfLast { it.startMs <= positionMs }.coerceAtLeast(0)
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = current)
@@ -153,7 +176,12 @@ fun ChapterSheet(chapters: List<Chapter>, positionMs: Long, fallbackImage: Strin
 }
 
 @Composable
-private fun ChapterCard(chapter: Chapter, fallbackImage: String?, onClick: () -> Unit, modifier: Modifier) {
+private fun ChapterCard(
+    chapter: Chapter,
+    fallbackImage: String?,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     GlacierCard(onClick = onClick, modifier = modifier.width(300.dp)) { focused ->
@@ -189,7 +217,12 @@ private fun ChapterCard(chapter: Chapter, fallbackImage: String?, onClick: () ->
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun PlayerSubtitles(playback: GlacierPlayback, lift: SubtitleLift, style: SubtitleStyle, modifier: Modifier = Modifier) {
+fun PlayerSubtitles(
+    playback: GlacierPlayback,
+    lift: SubtitleLift,
+    style: SubtitleStyle,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     val player = playback.player
     // A new player (track change, next episode) brings a new ASS renderer, so a new view.
@@ -224,8 +257,17 @@ fun PlayerSubtitles(playback: GlacierPlayback, lift: SubtitleLift, style: Subtit
 
 /** One seek preview picture, cut from its trickplay tile. */
 @Composable
-fun TrickplayThumb(trickplay: Trickplay, positionMs: Long, headers: Map<String, String>, modifier: Modifier = Modifier) {
-    val thumb = (positionMs / trickplay.intervalMs.coerceAtLeast(1)).toInt().coerceIn(0, (trickplay.count - 1).coerceAtLeast(0))
+fun TrickplayThumb(
+    trickplay: Trickplay,
+    positionMs: Long,
+    headers: Map<String, String>,
+    modifier: Modifier = Modifier,
+) {
+    val thumb = (
+        positionMs / trickplay.intervalMs.coerceAtLeast(
+            1,
+        )
+        ).toInt().coerceIn(0, (trickplay.count - 1).coerceAtLeast(0))
     val perTile = (trickplay.columns * trickplay.rows).coerceAtLeast(1)
     val tile = thumb / perTile
     val cell = thumb % perTile
@@ -238,7 +280,10 @@ fun TrickplayThumb(trickplay: Trickplay, positionMs: Long, headers: Map<String, 
         val height = (trickplay.height * scale).toInt()
         drawImage(
             image = bitmap,
-            srcOffset = IntOffset((cell % trickplay.columns) * trickplay.width, (cell / trickplay.columns) * trickplay.height),
+            srcOffset = IntOffset(
+                (cell % trickplay.columns) * trickplay.width,
+                (cell / trickplay.columns) * trickplay.height,
+            ),
             srcSize = IntSize(trickplay.width, trickplay.height),
             dstOffset = IntOffset(((size.width - width) / 2).toInt(), ((size.height - height) / 2).toInt()),
             dstSize = IntSize(width, height),

@@ -9,9 +9,9 @@ import android.content.IntentFilter
 import android.content.pm.PackageInstaller
 import android.os.Build
 import android.provider.Settings
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import io.github.glacier_jellyfin.androidtv.core.log.Log
-import androidx.core.content.ContextCompat
 import java.io.File
 
 /** What the system installer reported back. */
@@ -57,7 +57,11 @@ internal class ApkInstaller(private val context: Context) {
             setAppPackageName(context.packageName)
             setSize(file.length())
             // Updating itself needs no confirmation once Glacier installed the running version.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                setRequireUserAction(
+                    PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED,
+                )
+            }
         }
         val sessionId = installer.createSession(params)
         try {
@@ -68,7 +72,12 @@ internal class ApkInstaller(private val context: Context) {
                 }
                 val intent = Intent(action).setPackage(context.packageName)
                 // Mutable: the installer adds its status to the intent.
-                val status = PendingIntent.getBroadcast(context, sessionId, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
+                val status = PendingIntent.getBroadcast(
+                    context,
+                    sessionId,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
+                )
                 session.commit(status.intentSender)
             }
         } catch (e: Exception) {

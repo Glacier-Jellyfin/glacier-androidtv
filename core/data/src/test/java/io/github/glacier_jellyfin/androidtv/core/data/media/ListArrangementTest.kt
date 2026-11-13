@@ -1,9 +1,9 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
+import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.util.UUID
 
 class ListArrangementTest {
 
@@ -30,7 +30,13 @@ class ListArrangementTest {
 
     @Test
     fun `groups in order, names A to Z inside, unknown last`() {
-        val entries = listOf(entry("Zulu", 2020), entry("Alpha", 2021), entry("Mike", 2020), entry("None"), entry("Bravo", 2020))
+        val entries = listOf(
+            entry("Zulu", 2020),
+            entry("Alpha", 2021),
+            entry("Mike", 2020),
+            entry("None"),
+            entry("Bravo", 2020),
+        )
         val list = ListArrangement.arrange(entries, movies(LibrarySort.Year))
         assertEquals(listOf("Bravo", "Mike", "Zulu", "Alpha", "None"), list.entries.map { it.name })
         assertEquals(ListGroup.Year(2020), list.groups!![0])

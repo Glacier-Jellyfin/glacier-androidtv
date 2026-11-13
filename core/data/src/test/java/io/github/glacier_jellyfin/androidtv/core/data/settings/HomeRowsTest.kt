@@ -1,16 +1,18 @@
 package io.github.glacier_jellyfin.androidtv.core.data.settings
 
+import java.io.ByteArrayInputStream
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
-import java.io.ByteArrayInputStream
 
 class HomeRowsTest {
 
     private val libraries = listOf("movies", "shows")
 
-    private fun HomeSettings.order(libraries: List<String> = this@HomeRowsTest.libraries) = homeRows(libraries).map { it.id }
+    private fun HomeSettings.order(libraries: List<String> = this@HomeRowsTest.libraries) = homeRows(
+        libraries,
+    ).map { it.id }
 
     @Test
     fun `new in is one row per library, at the place of the general entry`() {
@@ -22,7 +24,9 @@ class HomeRowsTest {
 
     @Test
     fun `rows the saved list does not know come last`() {
-        val settings = HomeSettings(rows = listOf(HomeRowChoice(HomeRow.Libraries), HomeRowChoice(HomeRow.Favorites, shown = false)))
+        val settings = HomeSettings(
+            rows = listOf(HomeRowChoice(HomeRow.Libraries), HomeRowChoice(HomeRow.Favorites, shown = false)),
+        )
         assertEquals(
             listOf("Libraries", "Favorites", "ContinueWatching", "Latest:movies", "Latest:shows", "RecentAlbums", "FavoriteSongs", "LiveTvOnNow", "LiveTvChannels"),
             settings.order(),
@@ -43,7 +47,10 @@ class HomeRowsTest {
 
     @Test
     fun `moving skips rows hidden in the settings`() {
-        val noMusic = { choice: HomeRowChoice -> choice.row != HomeRow.RecentAlbums && choice.row != HomeRow.FavoriteSongs }
+        val noMusic = { choice: HomeRowChoice ->
+            choice.row != HomeRow.RecentAlbums &&
+                choice.row != HomeRow.FavoriteSongs
+        }
         assertEquals(
             listOf("ContinueWatching", "Favorites", "Latest:movies", "Libraries", "RecentAlbums", "FavoriteSongs", "Latest:shows", "LiveTvOnNow", "LiveTvChannels"),
             HomeSettings().withRowMoved("Libraries", -1, libraries, noMusic).order(),
@@ -52,7 +59,11 @@ class HomeRowsTest {
 
     @Test
     fun `a library added later joins the other new in rows`() {
-        val moved = HomeSettings().withRowMoved("Latest:shows", -1, libraries).withRowShown("Latest:movies", false, libraries)
+        val moved = HomeSettings().withRowMoved(
+            "Latest:shows",
+            -1,
+            libraries,
+        ).withRowShown("Latest:movies", false, libraries)
         val withMusic = moved.homeRows(libraries + "music")
         assertEquals(
             listOf("ContinueWatching", "Favorites", "Latest:shows", "Latest:movies", "Latest:music", "RecentAlbums", "FavoriteSongs", "Libraries", "LiveTvOnNow", "LiveTvChannels"),

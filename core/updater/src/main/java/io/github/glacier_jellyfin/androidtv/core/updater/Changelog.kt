@@ -1,7 +1,11 @@
 package io.github.glacier_jellyfin.androidtv.core.updater
 
 /** One version's section of CHANGELOG.md; [date] as written there, e.g. "2026-10-27"; [body] is Markdown for [ReleaseNotes]. */
-data class ChangelogEntry(val version: AppVersion, val date: String?, val body: String)
+data class ChangelogEntry(
+    val version: AppVersion,
+    val date: String?,
+    val body: String,
+)
 
 /**
  * Reads CHANGELOG.md as the store build carries it (Keep a Changelog):
@@ -24,7 +28,9 @@ object Changelog {
             val heading = VERSION.matchEntire(line.trim())
             if (heading != null) {
                 close()
-                current = AppVersion.parse(heading.groupValues[1])?.let { it to heading.groupValues[2].ifEmpty { null } }
+                current = AppVersion.parse(
+                    heading.groupValues[1],
+                )?.let { it to heading.groupValues[2].ifEmpty { null } }
             } else if (current != null) {
                 body.appendLine(line)
             }
@@ -34,6 +40,9 @@ object Changelog {
     }
 
     /** The entries after [from] up to and including [to], newest first. */
-    fun between(entries: List<ChangelogEntry>, from: AppVersion, to: AppVersion): List<ChangelogEntry> =
-        entries.filter { it.version > from && it.version <= to }.sortedByDescending { it.version }
+    fun between(
+        entries: List<ChangelogEntry>,
+        from: AppVersion,
+        to: AppVersion,
+    ): List<ChangelogEntry> = entries.filter { it.version > from && it.version <= to }.sortedByDescending { it.version }
 }

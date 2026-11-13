@@ -25,6 +25,7 @@ internal sealed class Iec61937Packer {
         private var filled = 0
         private var samplesPerUnit = 0
         private var previousTiming = 0
+
         /** The previous access unit's size including MAT codes it ran into; 0 before the first. */
         private var previousSize = 0
 
@@ -159,6 +160,7 @@ internal sealed class Iec61937Packer {
      */
     class DtsHd : Iec61937Packer() {
         private var payload = ByteArray(0)
+
         /** Frames left to send as core only after one that did not fit. */
         private var coreOnly = 0
 
@@ -208,6 +210,7 @@ internal sealed class Iec61937Packer {
             const val HBR_RATE = 768000
             const val FALLBACK_SECONDS = 60
             val START_CODE = byteArrayOf(0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfe.toByte(), 0xfe.toByte())
+
             /** Repetition period in IEC 60958 frames, to the type IV subtype. */
             val SUBTYPES = mapOf(512 to 0x0, 1024 to 0x1, 2048 to 0x2, 4096 to 0x3, 8192 to 0x4, 16384 to 0x5)
             val SAMPLE_RATES = intArrayOf(
@@ -239,7 +242,13 @@ internal class Iec61937Bursts {
     var size = 0
         private set
 
-    fun add(type: Int, lengthCode: Int, burstSize: Int, payload: ByteArray, length: Int) {
+    fun add(
+        type: Int,
+        lengthCode: Int,
+        burstSize: Int,
+        payload: ByteArray,
+        length: Int,
+    ) {
         ensureCapacity(size + burstSize)
         val start = size
         putWord(SYNCWORD1)

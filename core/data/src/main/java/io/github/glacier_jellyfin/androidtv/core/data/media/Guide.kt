@@ -1,7 +1,11 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
 /** One box of a channel's row in the programme guide: a programme, or a stretch the guide knows nothing about. */
-data class GuideCell(val startMs: Long, val endMs: Long, val program: LiveProgram?) {
+data class GuideCell(
+    val startMs: Long,
+    val endMs: Long,
+    val program: LiveProgram?,
+) {
     fun covers(timeMs: Long): Boolean = timeMs in startMs until endMs
 }
 
@@ -10,7 +14,11 @@ data class GuideCell(val startMs: Long, val endMs: Long, val program: LiveProgra
  * (in any order, overlaps cut off) and, between them, cells without a
  * programme. A channel without guide data is one such cell.
  */
-fun guideCells(programs: List<LiveProgram>, fromMs: Long, toMs: Long): List<GuideCell> {
+fun guideCells(
+    programs: List<LiveProgram>,
+    fromMs: Long,
+    toMs: Long,
+): List<GuideCell> {
     val cells = mutableListOf<GuideCell>()
     var at = fromMs
     for (program in programs.sortedBy { it.startMs }) {

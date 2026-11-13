@@ -76,13 +76,26 @@ fun SetupLayout(
 
 /** Mark, title and description at the top of the intro column. */
 @Composable
-fun SetupHeading(title: String, body: String, brand: String? = null) {
+fun SetupHeading(
+    title: String,
+    body: String,
+    brand: String? = null,
+) {
     GlacierMark(size = 62)
     if (brand != null) {
-        Text(brand.uppercase(), style = GlacierText.body(24, FontWeight.Bold).copy(letterSpacing = 0.34.em), color = GlacierColors.Ice)
+        Text(
+            brand.uppercase(),
+            style = GlacierText.body(24, FontWeight.Bold).copy(letterSpacing = 0.34.em),
+            color = GlacierColors.Ice,
+        )
     }
     Text(title, style = GlacierText.display(60).copy(lineHeight = 63.sp), color = GlacierColors.Ice)
-    Text(body, style = GlacierText.body(23).copy(lineHeight = 34.sp), color = GlacierColors.Mist, modifier = Modifier.widthIn(max = 490.dp))
+    Text(
+        body,
+        style = GlacierText.body(23).copy(lineHeight = 34.sp),
+        color = GlacierColors.Mist,
+        modifier = Modifier.widthIn(max = 490.dp),
+    )
 }
 
 /** The accent dot in front of status lines; it pulses while something is going on. */
@@ -121,7 +134,14 @@ fun InputField(
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusSm)
     Column(modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (label != null) Text(label.uppercase(), style = GlacierText.body(16).copy(letterSpacing = 0.08.em), color = GlacierColors.Mist, modifier = Modifier.padding(start = 4.dp))
+        if (label != null) {
+            Text(
+                label.uppercase(),
+                style = GlacierText.body(16).copy(letterSpacing = 0.08.em),
+                color = GlacierColors.Mist,
+                modifier = Modifier.padding(start = 4.dp),
+            )
+        }
         GlacierClickable(
             onClick = onClick,
             shape = shape,
@@ -143,7 +163,11 @@ fun InputField(
                 horizontalArrangement = Arrangement.spacedBy(22.dp),
             ) {
                 Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(30.dp))
-                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(
+                    Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
                     val shown = if (masked) "•".repeat(value.length) else value
                     // The caret sits where typing continues: before the placeholder, after the text.
                     if (editing && shown.isEmpty()) Caret()
@@ -210,7 +234,11 @@ fun KeyboardStatus(open: Boolean) {
             PulseDot()
             Text(stringResource(R.string.keyboard_open_hint), style = GlacierText.body(18), color = GlacierColors.Ice)
         } else {
-            Text(stringResource(R.string.keyboard_closed_hint), style = GlacierText.body(18), color = GlacierColors.Mist)
+            Text(
+                stringResource(R.string.keyboard_closed_hint),
+                style = GlacierText.body(18),
+                color = GlacierColors.Mist,
+            )
         }
     }
 }
@@ -229,7 +257,11 @@ fun SetupButton(
 @Composable
 fun UnsupportedServerDialog(server: ServerInfo, onResult: (connect: Boolean) -> Unit) {
     ModalSheet(onDismiss = { onResult(false) }, width = 640) {
-        Text(stringResource(R.string.setup_unsupported_title), style = GlacierText.display(28), color = GlacierColors.Ice)
+        Text(
+            stringResource(R.string.setup_unsupported_title),
+            style = GlacierText.display(28),
+            color = GlacierColors.Ice,
+        )
         Text(
             stringResource(
                 R.string.setup_unsupported_body,
@@ -241,7 +273,11 @@ fun UnsupportedServerDialog(server: ServerInfo, onResult: (connect: Boolean) -> 
         )
         val cancelFocus = remember { FocusRequester() }
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            PillButton(stringResource(R.string.action_cancel), onClick = { onResult(false) }, modifier = Modifier.focusRequester(cancelFocus))
+            PillButton(
+                stringResource(R.string.action_cancel),
+                onClick = { onResult(false) },
+                modifier = Modifier.focusRequester(cancelFocus),
+            )
             PillButton(stringResource(R.string.setup_connect_anyway), onClick = { onResult(true) }, primary = true)
         }
         LaunchedEffect(Unit) { cancelFocus.requestFocus() }

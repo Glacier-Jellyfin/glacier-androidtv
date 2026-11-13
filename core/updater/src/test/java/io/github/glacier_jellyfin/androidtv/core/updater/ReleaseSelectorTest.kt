@@ -60,13 +60,19 @@ class ReleaseSelectorTest {
     @Test
     fun `accepts the versioned apk name of older releases`() {
         val legacy = listOf(release("v1.5.0", apkNames = listOf("glacier-androidtv-1.5.0.apk")))
-        assertEquals("glacier-androidtv-1.5.0.apk", ReleaseSelector.select(legacy, v("1.3.0"), UpdateChannel.Stable)?.apk?.name)
+        assertEquals(
+            "glacier-androidtv-1.5.0.apk",
+            ReleaseSelector.select(legacy, v("1.3.0"), UpdateChannel.Stable)?.apk?.name,
+        )
     }
 
     @Test
     fun `prefers the fixed apk name when a release has both`() {
         val both = listOf(release("v1.5.0", apkNames = listOf("glacier-androidtv-1.5.0.apk", ReleaseSelector.APK_NAME)))
-        assertEquals(ReleaseSelector.APK_NAME, ReleaseSelector.select(both, v("1.3.0"), UpdateChannel.Stable)?.apk?.name)
+        assertEquals(
+            ReleaseSelector.APK_NAME,
+            ReleaseSelector.select(both, v("1.3.0"), UpdateChannel.Stable)?.apk?.name,
+        )
     }
 
     @Test

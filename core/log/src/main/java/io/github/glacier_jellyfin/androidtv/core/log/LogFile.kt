@@ -24,7 +24,12 @@ internal class LogFile(private val dir: File) {
     /** Exists from a crash until the next start showed its notice. */
     private val crashNotice = File(dir, "crash-notice")
 
-    fun append(level: Char, tag: String, message: String, error: Throwable?) {
+    fun append(
+        level: Char,
+        tag: String,
+        message: String,
+        error: Throwable?,
+    ) {
         val line = format(level, tag, message, error)
         runCatching { writer.execute { write(line) } }
     }
@@ -86,7 +91,12 @@ internal class LogFile(private val dir: File) {
 
     private fun readOrEmpty(file: File): ByteArray = if (file.exists()) file.readBytes() else ByteArray(0)
 
-    private fun format(level: Char, tag: String, message: String, error: Throwable?): String = buildString {
+    private fun format(
+        level: Char,
+        tag: String,
+        message: String,
+        error: Throwable?,
+    ): String = buildString {
         append(LocalDateTime.now().format(TIME)).append(' ').append(level).append('/').append(tag)
         append(" [").append(Thread.currentThread().name).append("]: ").append(message).append('\n')
         // Not Log.getStackTraceString: it drops UnknownHostException, a common reason for failures.

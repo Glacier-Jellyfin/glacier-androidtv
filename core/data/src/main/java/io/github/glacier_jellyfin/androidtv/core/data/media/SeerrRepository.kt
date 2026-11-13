@@ -4,13 +4,6 @@ import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.core.log.Log
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import org.jellyfin.sdk.api.client.HttpMethod
 import java.net.HttpURLConnection
 import java.net.URL
 import java.time.LocalDate
@@ -18,6 +11,13 @@ import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import org.jellyfin.sdk.api.client.HttpMethod
 
 enum class SeerrMediaType(val path: String) { Movie("movie"), Tv("tv") }
 
@@ -49,7 +49,12 @@ data class SeerrSeason(
 }
 
 /** A cast member from TMDB, known to Seerr but not necessarily to Jellyfin. */
-data class SeerrPerson(val tmdbId: Int, val name: String, val role: String?, val imageUrl: String?)
+data class SeerrPerson(
+    val tmdbId: Int,
+    val name: String,
+    val role: String?,
+    val imageUrl: String?,
+)
 
 /** A person as TMDB describes them, for someone the library does not know. */
 data class SeerrPersonDetails(
@@ -85,7 +90,11 @@ data class SeerrDetails(
 enum class SeerrRequestResult { Sent, NotAllowed, QuotaUsedUp, AlreadyRequested, Failed }
 
 /** A request limit set in Seerr: [remaining] of [limit] requests within [days]. */
-data class SeerrQuota(val limit: Int, val remaining: Int, val days: Int)
+data class SeerrQuota(
+    val limit: Int,
+    val remaining: Int,
+    val days: Int,
+)
 
 private val Requestable = setOf(SeerrStatus.Unknown, SeerrStatus.Deleted)
 
@@ -96,9 +105,7 @@ private val Requestable = setOf(SeerrStatus.Unknown, SeerrStatus.Deleted)
  * for a user Seerr does not know, there simply are no Seerr results.
  */
 @Singleton
-class SeerrRepository @Inject constructor(
-    private val sessions: SessionManager,
-) {
+class SeerrRepository @Inject constructor(private val sessions: SessionManager) {
     private val mutex = Mutex()
     private var linkedFor: String? = null
     private var linked = false
@@ -112,7 +119,11 @@ class SeerrRepository @Inject constructor(
         val session = sessions.session.value ?: return@withContext false
         val key = "${session.server.id}/${session.user.userId}"
         mutex.withLock {
-            if (linkedFor == key && (linked || System.currentTimeMillis() - checkedAt < RECHECK_MS)) return@withLock linked
+            if (linkedFor == key &&
+                (linked || System.currentTimeMillis() - checkedAt < RECHECK_MS)
+            ) {
+                return@withLock linked
+            }
             val status = runSuspendCatching { session.get<UserStatusDto>("/user-status") }
                 .getOrNull()
             // Only answers are kept: a server that could not be reached is asked again next time.
@@ -142,7 +153,12 @@ class SeerrRepository @Inject constructor(
         // TMDB leaves the plot empty without a translation and lists only trailers in the
         // asked language; English fills the gaps.
         if (language != FALLBACK_LANGUAGE && (dto.overview.isNullOrBlank() || dto.youTubeTrailers().isEmpty())) {
-            val english = runSuspendCatching { session.get<DetailsDto>("/${type.path}/$tmdbId", mapOf("language" to FALLBACK_LANGUAGE)) }
+            val english = runSuspendCatching {
+                session.get<DetailsDto>(
+                    "/${type.path}/$tmdbId",
+                    mapOf("language" to FALLBACK_LANGUAGE),
+                )
+            }
                 .getOrNull()
             if (english != null) {
                 dto = dto.copy(
@@ -229,32 +245,39 @@ class SeerrRepository @Inject constructor(
      * SDK client, which drops the body of an error answer: the reason for a
      * refusal (no permission, quota used up) is only in there.
      */
-    suspend fun request(type: SeerrMediaType, tmdbId: Int, seasons: List<Int> = emptyList()): SeerrRequestResult =
-        withContext(Dispatchers.IO) {
-            val session = requireSession()
-            val body = json.encodeToString(
-                RequestDto.serializer(),
-                RequestDto(mediaType = type.path, mediaId = tmdbId, seasons = seasons.takeIf { type == SeerrMediaType.Tv }),
-            )
-            val connection = URL(session.api.createUrl("$BASE/request")).openConnection() as HttpURLConnection
-            try {
-                connection.requestMethod = "POST"
-                connection.doOutput = true
-                connection.connectTimeout = TIMEOUT_MS
-                connection.readTimeout = TIMEOUT_MS
-                connection.setRequestProperty("Content-Type", "application/json")
-                connection.setRequestProperty("Accept", "application/json")
-                connection.setRequestProperty("Authorization", session.authorization())
-                connection.outputStream.use { it.write(body.toByteArray()) }
-                val status = connection.responseCode
-                if (status in 200..299) return@withContext SeerrRequestResult.Sent
-                val answer = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
-                Log.w(TAG, "Seerr request for $type $tmdbId answered $status: ${answer.take(300)}")
-                requestFailure(status, answer)
-            } finally {
-                connection.disconnect()
-            }
+    suspend fun request(
+        type: SeerrMediaType,
+        tmdbId: Int,
+        seasons: List<Int> = emptyList(),
+    ): SeerrRequestResult = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        val body = json.encodeToString(
+            RequestDto.serializer(),
+            RequestDto(
+                mediaType = type.path,
+                mediaId = tmdbId,
+                seasons = seasons.takeIf { type == SeerrMediaType.Tv },
+            ),
+        )
+        val connection = URL(session.api.createUrl("$BASE/request")).openConnection() as HttpURLConnection
+        try {
+            connection.requestMethod = "POST"
+            connection.doOutput = true
+            connection.connectTimeout = TIMEOUT_MS
+            connection.readTimeout = TIMEOUT_MS
+            connection.setRequestProperty("Content-Type", "application/json")
+            connection.setRequestProperty("Accept", "application/json")
+            connection.setRequestProperty("Authorization", session.authorization())
+            connection.outputStream.use { it.write(body.toByteArray()) }
+            val status = connection.responseCode
+            if (status in 200..299) return@withContext SeerrRequestResult.Sent
+            val answer = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            Log.w(TAG, "Seerr request for $type $tmdbId answered $status: ${answer.take(300)}")
+            requestFailure(status, answer)
+        } finally {
+            connection.disconnect()
         }
+    }
 
     private suspend inline fun <reified T> Session.get(path: String, query: Map<String, Any?> = emptyMap()): T {
         val response = api.request(HttpMethod.GET, "$BASE$path", emptyMap(), query, null)
@@ -262,11 +285,15 @@ class SeerrRepository @Inject constructor(
     }
 
     /** Trailers first, then teasers, as TMDB lists them. */
-    private fun DetailsDto.youTubeTrailers(): List<YouTubeTrailer> =
-        relatedVideos
-            .filter { it.site.equals("YouTube", ignoreCase = true) && it.type in TrailerTypes && it.key?.let(::isYouTubeId) == true }
-            .sortedBy { TrailerTypes.indexOf(it.type) }
-            .map { YouTubeTrailer(it.key!!, it.name) }
+    private fun DetailsDto.youTubeTrailers(): List<YouTubeTrailer> = relatedVideos
+        .filter {
+            it.site.equals(
+                "YouTube",
+                ignoreCase = true,
+            ) && it.type in TrailerTypes && it.key?.let(::isYouTubeId) == true
+        }
+        .sortedBy { TrailerTypes.indexOf(it.type) }
+        .map { YouTubeTrailer(it.key!!, it.name) }
 
     private fun requireSession(): Session = checkNotNull(sessions.session.value) { "No profile is signed in" }
 
@@ -299,6 +326,7 @@ class SeerrRepository @Inject constructor(
         const val RECHECK_MS = 5 * 60_000L
         const val CAST_LIMIT = 20
         const val PERSON_CREDIT_LIMIT = 60
+
         /** TMDB's Talk and News genres. */
         val TalkGenres = setOf(10767, 10763)
         val Themselves = Regex("""\b(self|himself|herself|themselves)\b""", RegexOption.IGNORE_CASE)
@@ -307,6 +335,7 @@ class SeerrRepository @Inject constructor(
         const val TIMEOUT_MS = 15_000
         const val FALLBACK_LANGUAGE = "en"
         val TrailerTypes = listOf("Trailer", "Teaser")
+
         /** Pending and approved; declined requests can be asked again. */
         val OpenRequestStatuses = setOf(1, 2)
 
@@ -338,17 +367,31 @@ internal fun requestFailure(status: Int, answer: String): SeerrRequestResult {
 internal fun parseJellyfinId(raw: String): UUID? {
     val hex = raw.replace("-", "")
     if (hex.length != 32) return null
-    return runCatching { UUID.fromString("${hex.take(8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}") }.getOrNull()
+    return runCatching {
+        UUID.fromString(
+            "${hex.take(
+                8,
+            )}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}",
+        )
+    }.getOrNull()
 }
 
 @Serializable
-private data class UserStatusDto(val active: Boolean = false, val userFound: Boolean = false, val reason: String? = null)
+private data class UserStatusDto(
+    val active: Boolean = false,
+    val userFound: Boolean = false,
+    val reason: String? = null,
+)
 
 @Serializable
 private data class QuotaDto(val movie: QuotaEntryDto? = null, val tv: QuotaEntryDto? = null)
 
 @Serializable
-private data class QuotaEntryDto(val limit: Int? = null, val remaining: Int? = null, val days: Int? = null)
+private data class QuotaEntryDto(
+    val limit: Int? = null,
+    val remaining: Int? = null,
+    val days: Int? = null,
+)
 
 @Serializable
 private data class SearchDto(val results: List<ResultDto> = emptyList())
@@ -389,13 +432,23 @@ private data class DetailsDto(
 )
 
 @Serializable
-private data class VideoDto(val key: String? = null, val name: String? = null, val site: String? = null, val type: String? = null)
+private data class VideoDto(
+    val key: String? = null,
+    val name: String? = null,
+    val site: String? = null,
+    val type: String? = null,
+)
 
 @Serializable
 private data class CreditsDto(val cast: List<CastDto> = emptyList())
 
 @Serializable
-private data class CastDto(val id: Int, val name: String, val character: String? = null, val profilePath: String? = null)
+private data class CastDto(
+    val id: Int,
+    val name: String,
+    val character: String? = null,
+    val profilePath: String? = null,
+)
 
 @Serializable
 private data class PersonDto(
@@ -408,7 +461,10 @@ private data class PersonDto(
 )
 
 @Serializable
-private data class CombinedCreditsDto(val cast: List<PersonCreditDto> = emptyList(), val crew: List<PersonCreditDto> = emptyList())
+private data class CombinedCreditsDto(
+    val cast: List<PersonCreditDto> = emptyList(),
+    val crew: List<PersonCreditDto> = emptyList(),
+)
 
 @Serializable
 private data class PersonCreditDto(
@@ -426,7 +482,8 @@ private data class PersonCreditDto(
     val genreIds: List<Int> = emptyList(),
     val mediaInfo: MediaInfoDto? = null,
 ) {
-    fun toResult() = ResultDto(id, mediaType, title, name, releaseDate, firstAirDate, overview, posterPath, backdropPath, mediaInfo)
+    fun toResult() =
+        ResultDto(id, mediaType, title, name, releaseDate, firstAirDate, overview, posterPath, backdropPath, mediaInfo)
 }
 
 @Serializable

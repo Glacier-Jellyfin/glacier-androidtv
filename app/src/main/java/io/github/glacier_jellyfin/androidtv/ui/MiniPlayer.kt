@@ -98,7 +98,11 @@ object MiniPlayerOnScreen {
  * artist and a progress line along the bottom edge. OK opens the full player.
  */
 @Composable
-fun MiniPlayer(nowPlaying: NowPlaying, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun MiniPlayer(
+    nowPlaying: NowPlaying,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -127,14 +131,24 @@ fun MiniPlayer(nowPlaying: NowPlaying, onClick: () -> Unit, modifier: Modifier =
             val cover = Modifier.size(56.dp).clip(RoundedCornerShape(GlacierShapes.RadiusSm))
             when {
                 nowPlaying.live -> StationLogo(nowPlaying.coverUrl, nowPlaying.title, cover, textSize = 17)
-                nowPlaying.video -> MiniVideo(nowPlaying.coverUrl, Modifier.width(100.dp).height(56.dp).clip(RoundedCornerShape(GlacierShapes.RadiusSm)))
+
+                nowPlaying.video -> MiniVideo(
+                    nowPlaying.coverUrl,
+                    Modifier.width(100.dp).height(56.dp).clip(RoundedCornerShape(GlacierShapes.RadiusSm)),
+                )
+
                 else -> Artwork(nowPlaying.coverUrl, cover)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     EqualizerBars(accent, moving = nowPlaying.playing)
                     Text(
-                        stringResource(if (nowPlaying.playing) R.string.music_now_playing else R.string.mini_player_paused).uppercase(),
+                        stringResource(
+                            if (nowPlaying.playing) R.string.music_now_playing else R.string.mini_player_paused,
+                        ).uppercase(),
                         style = GlacierText.label(13, 0.06),
                         color = if (nowPlaying.playing) accent else GlacierColors.Mist,
                     )
@@ -147,7 +161,13 @@ fun MiniPlayer(nowPlaying: NowPlaying, onClick: () -> Unit, modifier: Modifier =
                     overflow = TextOverflow.Ellipsis,
                 )
                 nowPlaying.subtitle?.let {
-                    Text(it, style = GlacierText.body(15), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        it,
+                        style = GlacierText.body(15),
+                        color = GlacierColors.Mist,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
         }
@@ -203,11 +223,22 @@ private fun MiniVideo(stillUrl: String?, modifier: Modifier) {
  * letters of its [name] stand in.
  */
 @Composable
-fun StationLogo(url: String?, name: String, modifier: Modifier = Modifier, textSize: Int = 24) {
+fun StationLogo(
+    url: String?,
+    name: String,
+    modifier: Modifier = Modifier,
+    textSize: Int = 24,
+) {
     var failed by remember(url) { mutableStateOf(false) }
     Box(modifier.background(GlacierColors.GlassFill2), contentAlignment = Alignment.Center) {
         if (url == null || failed) {
-            Text(name.take(3).uppercase(), style = GlacierText.display(textSize), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Clip)
+            Text(
+                name.take(3).uppercase(),
+                style = GlacierText.display(textSize),
+                color = GlacierColors.Mist,
+                maxLines = 1,
+                overflow = TextOverflow.Clip,
+            )
         } else {
             AsyncImage(
                 model = url,
@@ -225,7 +256,11 @@ fun StationLogo(url: String?, name: String, modifier: Modifier = Modifier, textS
 private fun EqualizerBars(color: Color, moving: Boolean) {
     val still = !moving || LocalReduceMotion.current
     val transition = rememberInfiniteTransition(label = "equalizer")
-    Row(Modifier.height(13.dp), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.Bottom) {
+    Row(
+        Modifier.height(13.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.Bottom,
+    ) {
         listOf(520, 380, 640).forEachIndexed { i, period ->
             val level by transition.animateFloat(
                 initialValue = 0.3f,

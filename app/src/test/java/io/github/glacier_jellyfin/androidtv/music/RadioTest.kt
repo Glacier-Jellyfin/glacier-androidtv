@@ -4,18 +4,26 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LiveChannel
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveProgram
 import io.github.glacier_jellyfin.androidtv.livetv.LiveTvState
 import io.github.glacier_jellyfin.androidtv.livetv.LiveTvView
+import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
-import java.util.UUID
 
 class RadioTest {
 
-    private fun channel(name: String, radio: Boolean = false, favorite: Boolean = false, now: LiveProgram? = null) =
-        LiveChannel(UUID.randomUUID(), null, name, null, favorite = favorite, now = now, radio = radio)
+    private fun channel(
+        name: String,
+        radio: Boolean = false,
+        favorite: Boolean = false,
+        now: LiveProgram? = null,
+    ) = LiveChannel(UUID.randomUUID(), null, name, null, favorite = favorite, now = now, radio = radio)
 
-    private fun program(channelId: UUID, title: String, startMs: Long, endMs: Long) =
-        LiveProgram(title, channelId, title, null, null, startMs, endMs, null, null, new = false)
+    private fun program(
+        channelId: UUID,
+        title: String,
+        startMs: Long,
+        endMs: Long,
+    ) = LiveProgram(title, channelId, title, null, null, startMs, endMs, null, null, new = false)
 
     @Test
     fun `the page lists TV and radio apart`() {

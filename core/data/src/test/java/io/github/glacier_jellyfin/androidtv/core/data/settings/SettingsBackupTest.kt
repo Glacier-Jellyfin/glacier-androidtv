@@ -6,11 +6,25 @@ import org.junit.Test
 
 class SettingsBackupTest {
 
-    private val tv = DeviceSettings("tv", "Fire TV", savedAt = 1, ProfileSettings(appearance = AppearanceSettings(accent = AccentColor.Aurora)))
-    private val shield = DeviceSettings("shield", "SHIELD", savedAt = 2, ProfileSettings(appearance = AppearanceSettings(compact = true)))
+    private val tv = DeviceSettings(
+        "tv",
+        "Fire TV",
+        savedAt = 1,
+        ProfileSettings(appearance = AppearanceSettings(accent = AccentColor.Aurora)),
+    )
+    private val shield = DeviceSettings(
+        "shield",
+        "SHIELD",
+        savedAt = 2,
+        ProfileSettings(appearance = AppearanceSettings(compact = true)),
+    )
 
     // What the server adds to every answer, besides our own keys.
-    private val serverDefaults = mapOf("chromecastVersion" to "stable", "skipBackLength" to "15000", "homesection0" to "smalllibrarytiles")
+    private val serverDefaults = mapOf(
+        "chromecastVersion" to "stable",
+        "skipBackLength" to "15000",
+        "homesection0" to "smalllibrarytiles",
+    )
 
     @Test
     fun `copies survive a round trip, newest first`() {
@@ -26,7 +40,10 @@ class SettingsBackupTest {
     @Test
     fun `saving again replaces the device's copy`() {
         val newer = tv.copy(savedAt = 5, settings = ProfileSettings())
-        assertEquals(listOf(newer), decodeDeviceSettings(withDeviceSettings(withDeviceSettings(emptyMap(), copy = tv), copy = newer)))
+        assertEquals(
+            listOf(newer),
+            decodeDeviceSettings(withDeviceSettings(withDeviceSettings(emptyMap(), copy = tv), copy = newer)),
+        )
     }
 
     @Test
@@ -37,13 +54,20 @@ class SettingsBackupTest {
 
     @Test
     fun `unreadable copies and other keys are skipped`() {
-        val prefs = mapOf("device.broken" to "{not json", "device.empty" to null, "tvhome" to "") + withDeviceSettings(emptyMap(), copy = tv)
+        val prefs = mapOf(
+            "device.broken" to "{not json",
+            "device.empty" to null,
+            "tvhome" to "",
+        ) + withDeviceSettings(emptyMap(), copy = tv)
         assertEquals(listOf(tv), decodeDeviceSettings(prefs))
     }
 
     @Test
     fun `a copy with unknown options still loads`() {
-        val prefs = mapOf("device.new" to """{"deviceId":"new","deviceName":"TV","savedAt":3,"future":1,"settings":{"appearance":{"accent":"NotYet"}}}""")
+        val prefs = mapOf(
+            "device.new" to
+                """{"deviceId":"new","deviceName":"TV","savedAt":3,"future":1,"settings":{"appearance":{"accent":"NotYet"}}}""",
+        )
         val copy = decodeDeviceSettings(prefs).single()
         assertEquals(AppearanceSettings().accent, copy.settings.appearance.accent)
         assertTrue(copy.deviceName == "TV")

@@ -14,7 +14,11 @@ class PlaybackCheckJournal(context: Context) {
 
     private val file = File(context.filesDir, "playback-check.txt")
 
-    class Entries(val results: List<CheckResult>, val open: Int?, val ended: Boolean)
+    class Entries(
+        val results: List<CheckResult>,
+        val open: Int?,
+        val ended: Boolean,
+    )
 
     fun begin() = write { file.writeText("") }
 
@@ -41,7 +45,11 @@ class PlaybackCheckJournal(context: Context) {
             val sample = PlaybackCheck.SAMPLES.getOrNull(fields[1].toIntOrNull() ?: -1) ?: return@mapNotNull null
             CheckResult(
                 sample = sample,
-                outcome = runCatching { CheckResult.Outcome.valueOf(fields[2]) }.getOrDefault(CheckResult.Outcome.Fails),
+                outcome = runCatching {
+                    CheckResult.Outcome.valueOf(
+                        fields[2],
+                    )
+                }.getOrDefault(CheckResult.Outcome.Fails),
                 beyondDeclared = fields[3].toBoolean(),
                 decoder = fields[4].ifEmpty { null },
                 audioOutput = fields[5].ifEmpty { null },
@@ -51,7 +59,11 @@ class PlaybackCheckJournal(context: Context) {
         }
         val started = lines.filter { it.first() == "start" }.mapNotNull { it.getOrNull(1)?.toIntOrNull() }
         val finished = lines.filter { it.first() == "result" }.mapNotNull { it.getOrNull(1)?.toIntOrNull() }.toSet()
-        return Entries(results, open = started.lastOrNull()?.takeIf { it !in finished }, ended = lines.any { it.first() == "end" })
+        return Entries(
+            results,
+            open = started.lastOrNull()?.takeIf { it !in finished },
+            ended = lines.any { it.first() == "end" },
+        )
     }
 
     /**

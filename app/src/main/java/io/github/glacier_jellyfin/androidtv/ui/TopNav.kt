@@ -35,12 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.onPlaced
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.dropShadow
@@ -48,6 +42,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -55,6 +51,10 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.shadow.Shadow
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -98,12 +98,15 @@ sealed interface NavTarget {
     data object Search : NavTarget
     data object Home : NavTarget
     data class Library(val kind: LibraryKind) : NavTarget
+
     /** The channels of the server's Live TV. */
     data object LiveTv : NavTarget
+
     /** Everything marked with the heart. */
     data object Favorites : NavTarget
     data object Settings : NavTarget
     data object Profile : NavTarget
+
     /** The full music player, opened from the [MiniPlayer]. */
     data object NowPlaying : NavTarget
 }
@@ -148,7 +151,11 @@ fun TopNav(
     val profileFocus = remember { FocusRequester() }
     val miniFocus = remember { FocusRequester() }
     val nowPlaying = LocalNowPlaying.current
-    val middle = LocalNavTargets.current ?: (listOf(NavTarget.Home) + kinds.map(NavTarget::Library) + NavTarget.Favorites)
+    val middle = LocalNavTargets.current ?: (
+        listOf(
+            NavTarget.Home,
+        ) + kinds.map(NavTarget::Library) + NavTarget.Favorites
+        )
     // The page's own entry may be switched off: entering from below lands on search then.
     val focusTarget = active.takeIf { it in middle || it == NavTarget.Settings } ?: NavTarget.Search
     val scroll = rememberScrollState()
@@ -192,7 +199,15 @@ fun TopNav(
                     // Entering from below lands on the active entry, not the geometrically nearest one.
                     .focusProperties { onEnter = { activeFocus.requestFocus() } }
                     .focusGroup()
-                    .dropShadow(PillShape, Shadow(radius = 40.dp, spread = (-14).dp, color = Color.Black.copy(alpha = 0.55f), offset = DpOffset(0.dp, 18.dp)))
+                    .dropShadow(
+                        PillShape,
+                        Shadow(
+                            radius = 40.dp,
+                            spread = (-14).dp,
+                            color = Color.Black.copy(alpha = 0.55f),
+                            offset = DpOffset(0.dp, 18.dp),
+                        ),
+                    )
                     .clip(PillShape)
                     .background(GlacierColors.Deep.copy(alpha = 0.72f))
                     .background(GlacierColors.GlassFill2)
@@ -222,7 +237,12 @@ fun TopNav(
                                     // counts from the start edge, the right one in a right-to-left layout.
                                     Modifier.onPlaced {
                                         val left = it.positionInParent().x.toInt()
-                                        val start = if (rtl) (it.parentLayoutCoordinates?.size?.width ?: 0) - left - it.size.width else left
+                                        val start = if (rtl) {
+                                            (it.parentLayoutCoordinates?.size?.width ?: 0) - left -
+                                                it.size.width
+                                        } else {
+                                            left
+                                        }
                                         activeBounds = (start + inset).let { x -> x..x + it.size.width }
                                     }
                                 } else {
@@ -258,7 +278,9 @@ fun TopNav(
         val miniEnd = width - MINI_PLAYER_END.dp.roundToPx()
         val toast = TOAST_WIDTH.dp.roundToPx()
         val pill = measurables[0].measure(loose.copy(maxWidth = (miniEnd - toast - gap - edge).coerceAtLeast(0)))
-        val mini = measurables.getOrNull(1)?.measure(loose.copy(maxWidth = (miniEnd - edge - pill.width - gap).coerceAtLeast(0)))
+        val mini = measurables.getOrNull(
+            1,
+        )?.measure(loose.copy(maxWidth = (miniEnd - edge - pill.width - gap).coerceAtLeast(0)))
         val centred = (width - pill.width) / 2
         val corner = maxOf(toast, mini?.width ?: 0)
         val pillX = minOf(centred, miniEnd - corner - gap - pill.width).coerceAtLeast(edge)
@@ -319,7 +341,12 @@ private fun DrawScope.fadeEdge(fade: Float, left: Boolean) {
         )
     } else {
         drawRect(
-            Brush.horizontalGradient(0f to Color.Black, 1f to Color.Transparent, startX = size.width - fade, endX = size.width),
+            Brush.horizontalGradient(
+                0f to Color.Black,
+                1f to Color.Transparent,
+                startX = size.width - fade,
+                endX = size.width,
+            ),
             topLeft = Offset(size.width - fade, 0f),
             size = Size(fade, size.height),
             blendMode = BlendMode.DstIn,
@@ -377,9 +404,20 @@ private fun NavItem(
         contentAlignment = Alignment.Center,
     ) {
         when (target) {
-            NavTarget.Search -> Icon(GlacierIcons.Search, stringResource(R.string.nav_search), tint = foreground, modifier = Modifier.size(22.dp))
+            NavTarget.Search -> Icon(
+                GlacierIcons.Search,
+                stringResource(R.string.nav_search),
+                tint = foreground,
+                modifier = Modifier.size(22.dp),
+            )
+
             NavTarget.Settings -> Box {
-                Icon(GlacierIcons.Settings, stringResource(R.string.nav_settings), tint = foreground, modifier = Modifier.size(22.dp))
+                Icon(
+                    GlacierIcons.Settings,
+                    stringResource(R.string.nav_settings),
+                    tint = foreground,
+                    modifier = Modifier.size(22.dp),
+                )
                 if (LocalUpdatePending.current) {
                     Box(
                         Modifier
@@ -392,6 +430,7 @@ private fun NavItem(
                     )
                 }
             }
+
             NavTarget.Profile -> Box(
                 Modifier
                     .semantics { contentDescription = profileLabel }
@@ -402,7 +441,13 @@ private fun NavItem(
             ) {
                 val image = LocalProfileImage.current
                 var imageLoaded by remember(image) { mutableStateOf(false) }
-                if (!imageLoaded) Text(userName.take(1).uppercase(), style = GlacierText.display(16), color = GlacierColors.Void)
+                if (!imageLoaded) {
+                    Text(
+                        userName.take(1).uppercase(),
+                        style = GlacierText.display(16),
+                        color = GlacierColors.Void,
+                    )
+                }
                 if (image != null) {
                     AsyncImage(
                         model = image,
@@ -413,10 +458,15 @@ private fun NavItem(
                     )
                 }
             }
+
             NavTarget.Home -> NavLabel(stringResource(R.string.nav_home), foreground)
+
             NavTarget.Favorites -> NavLabel(stringResource(R.string.nav_favorites), foreground)
+
             NavTarget.LiveTv -> NavLabel(stringResource(R.string.nav_live_tv), foreground)
+
             is NavTarget.Library -> NavLabel(stringResource(target.kind.navTitle), foreground)
+
             NavTarget.NowPlaying -> Unit
         }
     }
@@ -428,9 +478,13 @@ private fun NavLabel(text: String, color: Color) {
 }
 
 /** Ids of the entries Settings › Appearance arranges, in their default order; Live TV only when the server has it. */
+
 /** Music videos are a tab of music; they have their own entry only on a server without music. */
-fun navEntryIds(kinds: List<LibraryKind>, liveTv: Boolean): List<String> =
-    listOf(NAV_HOME) + kinds.filterNot { it == LibraryKind.MusicVideos && LibraryKind.Music in kinds }.map { it.name } + listOfNotNull(NAV_LIVE_TV.takeIf { liveTv }) + NAV_FAVORITES
+fun navEntryIds(kinds: List<LibraryKind>, liveTv: Boolean): List<String> = listOf(
+    NAV_HOME,
+) + kinds.filterNot { it == LibraryKind.MusicVideos && LibraryKind.Music in kinds }.map { it.name } + listOfNotNull(
+    NAV_LIVE_TV.takeIf { liveTv },
+) + NAV_FAVORITES
 
 fun navTargetOf(id: String): NavTarget? = when (id) {
     NAV_HOME -> NavTarget.Home
@@ -440,7 +494,11 @@ fun navTargetOf(id: String): NavTarget? = when (id) {
 }
 
 /** The entries between search and settings, as [navigation] arranges them. */
-fun navTargets(navigation: NavigationSettings, kinds: List<LibraryKind>, liveTv: Boolean): List<NavTarget> =
+fun navTargets(
+    navigation: NavigationSettings,
+    kinds: List<LibraryKind>,
+    liveTv: Boolean,
+): List<NavTarget> =
     navigation.entries.arranged(navEntryIds(kinds, liveTv)).filter { it.shown }.mapNotNull { navTargetOf(it.id) }
 
 const val NAV_HOME = "Home"

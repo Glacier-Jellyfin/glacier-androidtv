@@ -84,7 +84,6 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LeftToRight
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
-import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.endKey
@@ -93,11 +92,10 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.startGradient
 import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
 import io.github.glacier_jellyfin.androidtv.player.OsdGlass
 import io.github.glacier_jellyfin.androidtv.player.OsdSecondary
-import io.github.glacier_jellyfin.androidtv.player.formatTime
 import io.github.glacier_jellyfin.androidtv.player.osdScrim
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
-import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.OverlayCard
+import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 import java.time.Instant
 import java.time.ZoneId
@@ -151,21 +149,28 @@ fun LiveTvPlayerScreen(
     var bannerVisible by remember { mutableStateOf(true) }
     var listOpen by remember { mutableStateOf(false) }
     var programsOpen by remember { mutableStateOf(false) }
+
     /** The programme whose recording sheet is open. */
     var sheetProgram by remember { mutableStateOf<LiveProgram?>(null) }
+
     /** The info panel is open; it takes the keys, Back included. */
     var infoOpen by remember { mutableStateOf(false) }
     var interaction by remember { mutableIntStateOf(0) }
     var typed by remember { mutableStateOf("") }
     var unknownNumber by remember { mutableStateOf<String?>(null) }
+
     /** The time bar has the keys. */
     var seeking by remember { mutableStateOf(false) }
+
     /** Where Left/Right moved the knob to, until it seeks there. */
     var scrubMs by remember { mutableStateOf<Long?>(null) }
+
     /** Which part of the time bar has the keys: the bar or a button under it. */
     var control by remember { mutableStateOf(TimeControl.Bar) }
+
     /** Back went down on this screen; its release may act (see [back]). */
     var backDown by remember { mutableStateOf(false) }
+
     /** When the back dispatcher last acted, so the key's release does not act again. */
     var backHandledAt by remember { mutableLongStateOf(0L) }
 
@@ -188,15 +193,19 @@ fun LiveTvPlayerScreen(
     }
 
     /** Moves the knob; the buttons -10/+30 do it too, without taking the keys to the bar. */
+
     /** One step back: a list, then the time bar, then the player itself. */
     fun back() {
         when {
             listOpen -> listOpen = false
+
             programsOpen -> programsOpen = false
+
             seeking -> {
                 closeSeeking()
                 bannerVisible = state.paused
             }
+
             else -> viewModel.stop()
         }
     }
@@ -228,7 +237,10 @@ fun LiveTvPlayerScreen(
     // layout the buttons after it sit to its left, the last one leftmost.
     fun buttonsOnScreen(): List<TimeControl> {
         val all = buttons()
-        val (playback, rest) = all.partition { it == TimeControl.Back || it == TimeControl.Play || it == TimeControl.Forward }
+        val (playback, rest) = all.partition {
+            it == TimeControl.Back || it == TimeControl.Play ||
+                it == TimeControl.Forward
+        }
         return if (direction == LayoutDirection.Rtl) rest.reversed() + playback else all
     }
 
@@ -250,9 +262,20 @@ fun LiveTvPlayerScreen(
         showBanner()
     }
 
-    LaunchedEffect(bannerVisible, interaction, state.loading, state.failed, listOpen, programsOpen, infoOpen, state.paused) {
+    LaunchedEffect(
+        bannerVisible,
+        interaction,
+        state.loading,
+        state.failed,
+        listOpen,
+        programsOpen,
+        infoOpen,
+        state.paused,
+    ) {
         // Paused, the time bar stays: Play goes on from there. Behind the info panel, it waits for its return.
-        if (bannerVisible && !state.loading && !state.failed && !listOpen && !programsOpen && !infoOpen && !(seeking && state.paused)) {
+        if (bannerVisible && !state.loading && !state.failed && !listOpen && !programsOpen && !infoOpen &&
+            !(seeking && state.paused)
+        ) {
             delay(BANNER_TIMEOUT_MS)
             bannerVisible = false
             closeSeeking()
@@ -335,18 +358,22 @@ fun LiveTvPlayerScreen(
                             if (control == TimeControl.Bar) scrub(-state.seekBackMs) else moveControl(-1)
                             true
                         }
+
                         Key.DirectionRight -> {
                             if (control == TimeControl.Bar) scrub(state.seekForwardMs) else moveControl(1)
                             true
                         }
+
                         Key.DirectionDown -> {
                             if (control == TimeControl.Bar) control = TimeControl.Play
                             true
                         }
+
                         Key.DirectionUp -> {
                             if (state.timeshift != null) control = TimeControl.Bar
                             true
                         }
+
                         Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
                             when {
                                 control == TimeControl.Live -> {
@@ -354,14 +381,20 @@ fun LiveTvPlayerScreen(
                                     control = TimeControl.Play
                                     viewModel.goLive()
                                 }
+
                                 control == TimeControl.Back -> scrub(-state.seekBackMs, fromButton = true)
+
                                 control == TimeControl.Forward -> scrub(state.seekForwardMs, fromButton = true)
+
                                 control == TimeControl.Info -> infoOpen = true
+
                                 control == TimeControl.Bar && scrubMs != null -> commitScrub()
+
                                 else -> viewModel.togglePlay()
                             }
                             true
                         }
+
                         else -> false
                     }
                     if (handled) return@onPreviewKeyEvent true
@@ -377,47 +410,57 @@ fun LiveTvPlayerScreen(
                         showBanner()
                         true
                     }
+
                     Key.DirectionDown, Key.ChannelDown, Key.PageDown -> {
                         closeSeeking()
                         viewModel.zap(-1)
                         showBanner()
                         true
                     }
+
                     Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
                         if (typed.isNotEmpty()) commitNumber() else openSeeking(at = TimeControl.Play)
                         true
                     }
+
                     direction.startKey -> {
                         listOpen = true
                         true
                     }
+
                     direction.endKey, Key.Guide -> {
                         programsOpen = true
                         true
                     }
+
                     Key.Info -> {
                         infoOpen = true
                         true
                     }
+
                     Key.Menu -> {
                         openSeeking()
                         true
                     }
+
                     Key.MediaRewind -> {
                         openSeeking()
                         scrub(-state.seekBackMs)
                         true
                     }
+
                     Key.MediaFastForward -> {
                         openSeeking()
                         scrub(state.seekForwardMs)
                         true
                     }
+
                     Key.LastChannel -> {
                         viewModel.lastChannel()
                         showBanner()
                         true
                     }
+
                     Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause -> {
                         val pause = when (event.key) {
                             Key.MediaPause -> true
@@ -429,6 +472,7 @@ fun LiveTvPlayerScreen(
                         showBanner()
                         true
                     }
+
                     else -> false
                 }
             }
@@ -442,7 +486,11 @@ fun LiveTvPlayerScreen(
             Box(Modifier.align(Alignment.Center)) { SpinningDiamond(90) }
         }
 
-        AnimatedVisibility(visible = (bannerVisible || state.loading || state.paused) && !state.failed && !listOpen && !programsOpen, enter = fadeIn(), exit = fadeOut()) {
+        AnimatedVisibility(
+            visible = (bannerVisible || state.loading || state.paused) && !state.failed && !listOpen && !programsOpen,
+            enter = fadeIn(),
+            exit = fadeOut(),
+        ) {
             ChannelBanner(state, seeking = seeking, scrubMs = scrubMs, control = control)
         }
 
@@ -457,9 +505,23 @@ fun LiveTvPlayerScreen(
         // Only the channel and a line on its picture: the keys go on as ever, so zapping away and back tries again.
         if (state.failed) {
             OverlayCard {
-                state.channel?.takeIf { it.logoUrl != null }?.let { ChannelLogo(it, Modifier.width(200.dp).height(112.dp), textSize = 36) }
-                Text(state.channel?.name ?: stringResource(R.string.nav_live_tv), style = GlacierText.body(21, FontWeight.SemiBold), color = GlacierColors.Mist)
-                Text(stringResource(R.string.livetv_play_error), style = GlacierText.display(30), color = GlacierColors.Ice)
+                state.channel?.takeIf { it.logoUrl != null }?.let {
+                    ChannelLogo(
+                        it,
+                        Modifier.width(200.dp).height(112.dp),
+                        textSize = 36,
+                    )
+                }
+                Text(
+                    state.channel?.name ?: stringResource(R.string.nav_live_tv),
+                    style = GlacierText.body(21, FontWeight.SemiBold),
+                    color = GlacierColors.Mist,
+                )
+                Text(
+                    stringResource(R.string.livetv_play_error),
+                    style = GlacierText.display(30),
+                    color = GlacierColors.Ice,
+                )
             }
         }
 
@@ -506,30 +568,42 @@ fun LiveTvPlayerScreen(
         if (channel != null && program != null) {
             // The marks may have changed meanwhile: the sheet shows the programme as the list has it now.
             val current = state.programs.firstOrNull { it.id == program.id } ?: program
-            ProgramSheet(channel, current, state.nowMs, actions = object : RecordActions by viewModel {
-                override fun record(program: LiveProgram) {
-                    sheetProgram = null
-                    viewModel.record(program)
-                }
+            ProgramSheet(
+                channel,
+                current,
+                state.nowMs,
+                actions = object : RecordActions by viewModel {
+                    override fun record(program: LiveProgram) {
+                        sheetProgram = null
+                        viewModel.record(program)
+                    }
 
-                override fun recordSeries(program: LiveProgram) {
-                    sheetProgram = null
-                    viewModel.recordSeries(program)
-                }
+                    override fun recordSeries(program: LiveProgram) {
+                        sheetProgram = null
+                        viewModel.recordSeries(program)
+                    }
 
-                override fun cancelTimer(timerId: String, title: String) {
-                    sheetProgram = null
-                    viewModel.cancelTimer(timerId, title)
-                }
+                    override fun cancelTimer(timerId: String, title: String) {
+                        sheetProgram = null
+                        viewModel.cancelTimer(timerId, title)
+                    }
 
-                override fun cancelSeriesTimer(seriesTimerId: String, title: String) {
-                    sheetProgram = null
-                    viewModel.cancelSeriesTimer(seriesTimerId, title)
-                }
-            }, onDismiss = { sheetProgram = null })
+                    override fun cancelSeriesTimer(seriesTimerId: String, title: String) {
+                        sheetProgram = null
+                        viewModel.cancelSeriesTimer(seriesTimerId, title)
+                    }
+                },
+                onDismiss = { sheetProgram = null },
+            )
         }
 
-        if (infoOpen) LiveTvInfoPanel(state, transcodeStatus = viewModel::transcodeStatus, onDismiss = { infoOpen = false })
+        if (infoOpen) {
+            LiveTvInfoPanel(
+                state,
+                transcodeStatus = viewModel::transcodeStatus,
+                onDismiss = { infoOpen = false },
+            )
+        }
     }
 }
 
@@ -589,7 +663,12 @@ private fun ProgramList(
                     ) { SpinningDiamond(56) }
                 } else {
                     val holder = Modifier.padding(start = 48.dp).focusRequester(firstFocus).focusable()
-                    Text(stringResource(R.string.livetv_no_guide), style = GlacierText.body(20), color = GlacierColors.Mist, modifier = holder)
+                    Text(
+                        stringResource(R.string.livetv_no_guide),
+                        style = GlacierText.body(20),
+                        color = GlacierColors.Mist,
+                        modifier = holder,
+                    )
                 }
                 return@Column
             }
@@ -625,9 +704,16 @@ private fun ProgramList(
                                 .padding(horizontal = 14.dp, vertical = 12.dp),
                             horizontalArrangement = Arrangement.spacedBy(18.dp),
                         ) {
-                            Text(clockText(program.startMs), style = GlacierText.mono(19), color = if (airing) LocalAccent.current.main else GlacierColors.Mist)
+                            Text(
+                                clockText(program.startMs),
+                                style = GlacierText.mono(19),
+                                color = if (airing) LocalAccent.current.main else GlacierColors.Mist,
+                            )
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                ) {
                                     if (airing) LiveBadge()
                                     Text(
                                         program.title,
@@ -639,11 +725,26 @@ private fun ProgramList(
                                     )
                                     if (program.recorded) RecordDot(program, Modifier.size(16.dp))
                                 }
-                                val details = listOfNotNull(if (airing) null else dayText(program.startMs), program.episodeTitle)
+                                val details = listOfNotNull(
+                                    if (airing) null else dayText(program.startMs),
+                                    program.episodeTitle,
+                                )
                                 if (details.isNotEmpty()) {
-                                    Text(details.joinToString(" · "), style = GlacierText.body(17), color = GlacierColors.Mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(
+                                        details.joinToString(" · "),
+                                        style = GlacierText.body(17),
+                                        color = GlacierColors.Mist,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
                                 }
-                                if (airing) ProgramProgress(program.progressAt(nowMs), Modifier.width(220.dp).padding(top = 4.dp), height = 3)
+                                if (airing) {
+                                    ProgramProgress(
+                                        program.progressAt(nowMs),
+                                        Modifier.width(220.dp).padding(top = 4.dp),
+                                        height = 3,
+                                    )
+                                }
                             }
                         }
                     }
@@ -655,7 +756,12 @@ private fun ProgramList(
 
 /** What runs on the channel: logo, number and name, the programme with its progress, and what follows. */
 @Composable
-private fun ChannelBanner(state: LiveTvPlayerState, seeking: Boolean, scrubMs: Long?, control: TimeControl) {
+private fun ChannelBanner(
+    state: LiveTvPlayerState,
+    seeking: Boolean,
+    scrubMs: Long?,
+    control: TimeControl,
+) {
     val channel = state.channel ?: return
     val now = state.now?.takeIf { it.airsAt(state.nowMs) }
     val shift = state.timeshift
@@ -673,15 +779,33 @@ private fun ChannelBanner(state: LiveTvPlayerState, seeking: Boolean, scrubMs: L
         ) {
             ChannelLogo(channel, Modifier.width(200.dp).height(112.dp), textSize = 36)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
                     // The one place that says how far behind live the picture is.
                     if (behind == null) LiveBadge() else BehindBadge(behind)
                     channel.number?.let { Text(it, style = GlacierText.mono(22), color = LocalAccent.current.main) }
-                    Text(channel.name, style = GlacierText.body(22, FontWeight.SemiBold), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    if (state.paused) Text(stringResource(R.string.livetv_paused), style = GlacierText.body(20), color = GlacierColors.Mist)
+                    Text(
+                        channel.name,
+                        style = GlacierText.body(22, FontWeight.SemiBold),
+                        color = GlacierColors.Ice,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (state.paused) {
+                        Text(
+                            stringResource(R.string.livetv_paused),
+                            style = GlacierText.body(20),
+                            color = GlacierColors.Mist,
+                        )
+                    }
                 }
                 if (now == null && !state.guideLoaded) {
-                    Box(Modifier.fillMaxWidth().height(56.dp), contentAlignment = Alignment.Center) { SpinningDiamond(48) }
+                    Box(
+                        Modifier.fillMaxWidth().height(56.dp),
+                        contentAlignment = Alignment.Center,
+                    ) { SpinningDiamond(48) }
                 } else {
                     Text(
                         now?.title ?: stringResource(R.string.livetv_no_guide),
@@ -722,29 +846,67 @@ private fun ChannelBanner(state: LiveTvPlayerState, seeking: Boolean, scrubMs: L
                     ) {
                         // Playback keeps its direction in every language; the buttons after it follow the layout.
                         LeftToRight {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                                if (shift != null) TimeButton(GlacierIcons.Replay, stringResource(R.string.player_rewind), selected = control == TimeControl.Back)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            ) {
+                                if (shift != null) {
+                                    TimeButton(
+                                        GlacierIcons.Replay,
+                                        stringResource(R.string.player_rewind),
+                                        selected = control == TimeControl.Back,
+                                    )
+                                }
                                 TimeButton(
                                     icon = if (state.paused) GlacierIcons.Play else GlacierIcons.Pause,
-                                    description = stringResource(if (state.paused) R.string.player_play else R.string.player_pause),
+                                    description = stringResource(
+                                        if (state.paused) R.string.player_play else R.string.player_pause,
+                                    ),
                                     selected = control == TimeControl.Play,
                                     big = true,
                                 )
-                                if (shift != null) TimeButton(GlacierIcons.Forward, stringResource(R.string.player_forward), selected = control == TimeControl.Forward)
+                                if (shift != null) {
+                                    TimeButton(
+                                        GlacierIcons.Forward,
+                                        stringResource(R.string.player_forward),
+                                        selected = control == TimeControl.Forward,
+                                    )
+                                }
                             }
                         }
                         if (shift?.live == false) {
-                            TimeLabelButton(GlacierIcons.SkipForward, stringResource(R.string.livetv_go_live), selected = control == TimeControl.Live)
+                            TimeLabelButton(
+                                GlacierIcons.SkipForward,
+                                stringResource(R.string.livetv_go_live),
+                                selected = control == TimeControl.Live,
+                            )
                         }
                         // At the end, like the video and music players' info button.
-                        TimeButton(GlacierIcons.Info, stringResource(R.string.player_info), selected = control == TimeControl.Info)
+                        TimeButton(
+                            GlacierIcons.Info,
+                            stringResource(R.string.player_info),
+                            selected = control == TimeControl.Info,
+                        )
                     }
                 } else {
                     state.next?.let { next ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(top = 4.dp)) {
-                            Text(stringResource(R.string.livetv_next), style = GlacierText.label(16), color = GlacierColors.Mist)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            modifier = Modifier.padding(top = 4.dp),
+                        ) {
+                            Text(
+                                stringResource(R.string.livetv_next),
+                                style = GlacierText.label(16),
+                                color = GlacierColors.Mist,
+                            )
                             Text(clockText(next.startMs), style = GlacierText.mono(19), color = GlacierColors.Mist)
-                            Text(next.title, style = GlacierText.body(19), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                next.title,
+                                style = GlacierText.body(19),
+                                color = GlacierColors.Ice,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                         }
                     }
                 }
@@ -817,7 +979,9 @@ private fun ProgramTimeline(
                     .clip(PillShape)
                     .background(OsdGlass),
             ) {
-                fun Modifier.stretch(start: Long, end: Long) = offset(x = width * at(start)).width(width * (at(end) - at(start))).fillMaxHeight()
+                fun Modifier.stretch(start: Long, end: Long) = offset(
+                    x = width * at(start),
+                ).width(width * (at(end) - at(start))).fillMaxHeight()
                 val kept = keptFrom ?: nowMs
                 if (kept > from) Box(Modifier.stretch(from, kept).background(accent.copy(alpha = 0.4f)))
                 Box(Modifier.stretch(kept, playingAt).background(accent))
@@ -843,7 +1007,11 @@ private fun ProgramTimeline(
                         .background(if (focused) accent.copy(alpha = 0.3f) else Color.Transparent, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Box(Modifier.size(size).shadow(if (focused) 0.dp else 8.dp, CircleShape).clip(CircleShape).background(accent))
+                    Box(
+                        Modifier.size(
+                            size,
+                        ).shadow(if (focused) 0.dp else 8.dp, CircleShape).clip(CircleShape).background(accent),
+                    )
                 }
             }
             if (scrubMs != null) {
@@ -870,7 +1038,12 @@ private fun ProgramTimeline(
 
 /** Round button under the time bar, drawn like the video player's (62, Play 78); the keys pick it, not the focus. */
 @Composable
-private fun TimeButton(icon: ImageVector, description: String, selected: Boolean, big: Boolean = false) {
+private fun TimeButton(
+    icon: ImageVector,
+    description: String,
+    selected: Boolean,
+    big: Boolean = false,
+) {
     val accent = LocalAccent.current.main
     Box(
         Modifier
@@ -880,13 +1053,22 @@ private fun TimeButton(icon: ImageVector, description: String, selected: Boolean
             .border(2.dp, if (selected) accent else GlacierColors.GlassBorder2, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription = description, tint = if (selected) GlacierColors.Void else GlacierColors.Ice, modifier = Modifier.size(if (big) 30.dp else 24.dp))
+        Icon(
+            icon,
+            contentDescription = description,
+            tint = if (selected) GlacierColors.Void else GlacierColors.Ice,
+            modifier = Modifier.size(if (big) 30.dp else 24.dp),
+        )
     }
 }
 
 /** Pill with icon and text, drawn like the video player's label buttons. */
 @Composable
-private fun TimeLabelButton(icon: ImageVector, label: String, selected: Boolean) {
+private fun TimeLabelButton(
+    icon: ImageVector,
+    label: String,
+    selected: Boolean,
+) {
     val accent = LocalAccent.current.main
     Row(
         Modifier
@@ -907,15 +1089,20 @@ private fun TimeLabelButton(icon: ImageVector, label: String, selected: Boolean)
 private val SecondsClock: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
 
 /** 18:58:40: a step of a few seconds still shows. */
-private fun secondsClockText(timeMs: Long): String = Instant.ofEpochMilli(timeMs).atZone(ZoneId.systemDefault()).format(SecondsClock)
+private fun secondsClockText(timeMs: Long): String = Instant.ofEpochMilli(
+    timeMs,
+).atZone(ZoneId.systemDefault()).format(SecondsClock)
 
 /** Where the keys are while the time bar is open. */
 private enum class TimeControl { Bar, Back, Play, Forward, Live, Info }
 
-
 /** The digits typed on the remote, or a number no channel has. */
 @Composable
-private fun NumberEntry(text: String, unknown: Boolean, modifier: Modifier = Modifier) {
+private fun NumberEntry(
+    text: String,
+    unknown: Boolean,
+    modifier: Modifier = Modifier,
+) {
     val shape = RoundedCornerShape(18.dp)
     Column(
         modifier
@@ -925,7 +1112,13 @@ private fun NumberEntry(text: String, unknown: Boolean, modifier: Modifier = Mod
         horizontalAlignment = Alignment.End,
     ) {
         Text(text, style = GlacierText.display(56), color = if (unknown) GlacierColors.Mist else GlacierColors.Ice)
-        if (unknown) Text(stringResource(R.string.livetv_no_channel), style = GlacierText.body(18), color = GlacierColors.Mist)
+        if (unknown) {
+            Text(
+                stringResource(R.string.livetv_no_channel),
+                style = GlacierText.body(18),
+                color = GlacierColors.Mist,
+            )
+        }
     }
 }
 
@@ -997,9 +1190,24 @@ private fun ChannelList(
                         ) {
                             ChannelLogo(channel, Modifier.width(100.dp).height(56.dp), textSize = 20)
                             Column(Modifier.weight(1f)) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    channel.number?.let { Text(it, style = GlacierText.mono(17), color = GlacierColors.Mist) }
-                                    Text(channel.name, style = GlacierText.body(20, FontWeight.SemiBold), color = GlacierColors.Ice, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    channel.number?.let {
+                                        Text(
+                                            it,
+                                            style = GlacierText.mono(17),
+                                            color = GlacierColors.Mist,
+                                        )
+                                    }
+                                    Text(
+                                        channel.name,
+                                        style = GlacierText.body(20, FontWeight.SemiBold),
+                                        color = GlacierColors.Ice,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
                                 }
                                 val now = channel.now?.takeIf { it.airsAt(nowMs) }
                                 Text(

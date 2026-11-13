@@ -1,7 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.trailer
 
 import android.content.Context
-import io.github.glacier_jellyfin.androidtv.core.log.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -19,22 +18,25 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LocalTrailer
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
-import io.github.glacier_jellyfin.androidtv.core.data.media.Trailer
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrMediaType
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.Trailer
 import io.github.glacier_jellyfin.androidtv.core.data.media.Trailers
 import io.github.glacier_jellyfin.androidtv.core.data.media.YouTubeTrailer
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.PlaybackSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
+import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.TrailerRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -46,8 +48,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.util.UUID
-import javax.inject.Inject
 
 /** The big button next to the trailer controls and on the end screen. */
 enum class TitleAction { PlayMovie, ResumeMovie, WatchShow, PlayEpisode }
@@ -87,11 +87,24 @@ data class TrailerUiState(
     fun durationOf(index: Int): Long? = durations[index] ?: (trailers.getOrNull(index) as? LocalTrailer)?.durationMs
 
     val titleAction: TitleAction?
-        get() = if (seerr) null else when (item?.kind) {
-            ItemKind.Movie -> if ((item?.resumePositionMs ?: 0) > 0) TitleAction.ResumeMovie else TitleAction.PlayMovie
-            ItemKind.Series -> TitleAction.WatchShow
-            ItemKind.Episode -> TitleAction.PlayEpisode
-            else -> null
+        get() = if (seerr) {
+            null
+        } else {
+            when (item?.kind) {
+                ItemKind.Movie -> if ((item?.resumePositionMs ?: 0) >
+                    0
+                ) {
+                    TitleAction.ResumeMovie
+                } else {
+                    TitleAction.PlayMovie
+                }
+
+                ItemKind.Series -> TitleAction.WatchShow
+
+                ItemKind.Episode -> TitleAction.PlayEpisode
+
+                else -> null
+            }
         }
 }
 
@@ -109,7 +122,8 @@ class TrailerViewModel @Inject constructor(
     private val settings: SettingsRepository,
     private val musicPlayback: MusicController,
     private val seerrRepository: SeerrRepository,
-) : ViewModel(), YouTubeListener {
+) : ViewModel(),
+    YouTubeListener {
 
     private val route = savedStateHandle.toRoute<TrailerRoute>()
     private val itemId = route.itemId?.let(UUID::fromString)
@@ -134,15 +148,18 @@ class TrailerViewModel @Inject constructor(
     private var ticker: Job? = null
     private var countdown: Job? = null
     private var loadTimeout: Job? = null
+
     /** Set once the title starts: a second OK must not navigate again. */
     private var leaving = false
     private var closed = false
+
     /**
      * Where a YouTube seek is headed. The player keeps reporting the old
      * position for a moment; quick presses add up from here instead.
      */
     private var seekTarget: Long? = null
     private var seekStartedAt = 0L
+
     /** The profile's subtitle choice for trailers (see [PlaybackSettings.trailerSubtitles]). */
     var subtitlePreference: String = settings.settings.value.playback.trailerSubtitles
         private set
@@ -200,7 +217,14 @@ class TrailerViewModel @Inject constructor(
                 }
                 // Files on the server first: they need no third party and play in the best quality.
                 val trailers = local + details.trailers.youTube
-                _state.update { it.copy(details = details, trailers = trailers, empty = trailers.isEmpty(), loading = trailers.isNotEmpty()) }
+                _state.update {
+                    it.copy(
+                        details = details,
+                        trailers = trailers,
+                        empty = trailers.isEmpty(),
+                        loading = trailers.isNotEmpty(),
+                    )
+                }
                 if (trailers.isNotEmpty()) play(0)
             } catch (e: CancellationException) {
                 throw e
@@ -217,7 +241,13 @@ class TrailerViewModel @Inject constructor(
         val seerr = seerrRepository.details(type, checkNotNull(route.tmdbId))
         val details = seerr.asItemDetails()
         _state.update {
-            it.copy(details = details, trailers = seerr.trailers, seerr = true, empty = seerr.trailers.isEmpty(), loading = seerr.trailers.isNotEmpty())
+            it.copy(
+                details = details,
+                trailers = seerr.trailers,
+                seerr = true,
+                empty = seerr.trailers.isEmpty(),
+                loading = seerr.trailers.isNotEmpty(),
+            )
         }
         if (seerr.trailers.isNotEmpty()) play(0)
     }
@@ -239,6 +269,7 @@ class TrailerViewModel @Inject constructor(
         startLoadTimeout()
         when (trailer) {
             is LocalTrailer -> openLocal(trailer)
+
             // The YouTube player starts itself once the screen shows it.
             is YouTubeTrailer -> Unit
         }
@@ -250,7 +281,12 @@ class TrailerViewModel @Inject constructor(
                 val source = playback.open(trailer.id, startMs = 0, audioIndex = null, subtitleIndex = null)
                 val player = GlacierPlayer.create(
                     context,
-                    StreamRequest(url = source.url, isHls = source.isHls, headers = source.headers, startPositionMs = 0),
+                    StreamRequest(
+                        url = source.url,
+                        isHls = source.isHls,
+                        headers = source.headers,
+                        startPositionMs = 0,
+                    ),
                 ).player
                 player.addListener(listener)
                 applySubtitles(player, subtitlePreference)
@@ -416,7 +452,11 @@ class TrailerViewModel @Inject constructor(
         setFavorite(favorite)
         viewModelScope.launch {
             runSuspendCatching { repository.setFavorite(details.item.id, favorite) }
-                .onSuccess { _events.send(UiEvent.Toast(if (favorite) R.string.favorite_added else R.string.favorite_removed)) }
+                .onSuccess {
+                    _events.send(
+                        UiEvent.Toast(if (favorite) R.string.favorite_added else R.string.favorite_removed),
+                    )
+                }
                 .onFailure { setFavorite(!favorite) }
         }
     }
@@ -449,7 +489,11 @@ class TrailerViewModel @Inject constructor(
         }
     }
 
-    override fun onYouTubeProgress(videoId: String, positionMs: Long, durationMs: Long) {
+    override fun onYouTubeProgress(
+        videoId: String,
+        positionMs: Long,
+        durationMs: Long,
+    ) {
         if (!isCurrent(videoId) || _state.value.loading) return
         seekTarget?.let { target ->
             val settled = kotlin.math.abs(positionMs - target) < SEEK_TOLERANCE_MS
@@ -459,7 +503,11 @@ class TrailerViewModel @Inject constructor(
         onProgress(positionMs, durationMs)
     }
 
-    override fun onYouTubeSubtitles(videoId: String, tracks: List<TrailerSubtitle>, shown: String?) {
+    override fun onYouTubeSubtitles(
+        videoId: String,
+        tracks: List<TrailerSubtitle>,
+        shown: String?,
+    ) {
         if (!isCurrent(videoId)) return
         _state.update { state ->
             // Unloading the captions module reports an empty list; the languages are still there.

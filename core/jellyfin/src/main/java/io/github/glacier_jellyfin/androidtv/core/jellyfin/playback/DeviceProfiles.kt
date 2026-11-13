@@ -19,7 +19,8 @@ import org.jellyfin.sdk.model.deviceprofile.buildDeviceProfile
 object DeviceProfiles {
 
     /** Containers Media3 extracts itself. */
-    private val Containers = listOf("mkv", "webm", "mp4", "m4v", "mov", "ts", "mpegts", "m2ts", "avi", "flv", "ogg", "ogv", "mpg", "mpeg", "vob")
+    private val Containers =
+        listOf("mkv", "webm", "mp4", "m4v", "mov", "ts", "mpegts", "m2ts", "avi", "flv", "ogg", "ogv", "mpg", "mpeg", "vob")
 
     /** Text subtitles Media3 renders from a separate file or from inside the container. */
     private val TextSubtitles = listOf("srt", "subrip", "vtt", "webvtt", "ttml", "ass", "ssa")
@@ -62,7 +63,11 @@ object DeviceProfiles {
         // Transcoding target: HLS, HEVC when the device decodes it. The server converts
         // audio to the first codec listed: a bitstream the receiver takes beats AAC,
         // because AAC arrives as PCM, and HDMI ARC carries PCM in stereo only.
-        val hlsAudio = (hlsAudioOrder(capabilities.passthroughAudio) + if (segments == HlsSegments.Fmp4) listOf("flac", "opus") else emptyList())
+        val hlsAudio = (
+            hlsAudioOrder(
+                capabilities.passthroughAudio,
+            ) + if (segments == HlsSegments.Fmp4) listOf("flac", "opus") else emptyList()
+            )
             .filter { it in capabilities.audioCodecs }
             .ifEmpty { listOf("aac") }
         transcodingProfile {
@@ -86,14 +91,41 @@ object DeviceProfiles {
             audioCodec("aac")
         }
 
-        capabilities.h264?.let { videoLimits("h264", it, profiles = listOfNotNull("high", "main", "baseline", "constrained baseline", "high 10".takeIf { _ -> it.tenBit })) }
-        capabilities.hevc?.let { videoLimits("hevc", it, profiles = listOfNotNull("main", "main 10".takeIf { _ -> it.tenBit })) }
-        capabilities.av1?.let { videoLimits("av1", it, profiles = listOfNotNull("main", "main 10".takeIf { _ -> it.tenBit })) }
+        capabilities.h264?.let {
+            videoLimits(
+                "h264",
+                it,
+                profiles = listOfNotNull(
+                    "high",
+                    "main",
+                    "baseline",
+                    "constrained baseline",
+                    "high 10".takeIf { _ -> it.tenBit },
+                ),
+            )
+        }
+        capabilities.hevc?.let {
+            videoLimits(
+                "hevc",
+                it,
+                profiles = listOfNotNull("main", "main 10".takeIf { _ -> it.tenBit }),
+            )
+        }
+        capabilities.av1?.let {
+            videoLimits(
+                "av1",
+                it,
+                profiles = listOfNotNull("main", "main 10".takeIf { _ -> it.tenBit }),
+            )
+        }
         capabilities.vp9?.let { videoLimits("vp9", it, profiles = null) }
 
         // HDR the device cannot show is tone-mapped by the server.
         val ranges = supportedRanges(capabilities.hdr, capabilities.dolbyVisionProfiles).map { it.serialName }
-        listOfNotNull("hevc".takeIf { capabilities.hevc != null }, "av1".takeIf { capabilities.av1 != null }).forEach { codec ->
+        listOfNotNull(
+            "hevc".takeIf { capabilities.hevc != null },
+            "av1".takeIf { capabilities.av1 != null },
+        ).forEach { codec ->
             codecProfile {
                 type = CodecType.VIDEO
                 this.codec = codec
@@ -132,7 +164,13 @@ object DeviceProfiles {
     }
 
     /** DTS profiles as the server names them that carry a lossless or high resolution extension. */
-    private val DtsLosslessProfiles = listOf("DTS-HD MA", "DTS-HD MA + DTS:X", "DTS-HD MA + DTS:X IMAX", "DTS-HD HRA", "DTS:X")
+    private val DtsLosslessProfiles = listOf(
+        "DTS-HD MA",
+        "DTS-HD MA + DTS:X",
+        "DTS-HD MA + DTS:X IMAX",
+        "DTS-HD HRA",
+        "DTS:X",
+    )
 
     /** E-AC-3, then AC-3 first when the receiver takes them as a bitstream; AAC otherwise. */
     internal fun hlsAudioOrder(passthrough: Set<String>): List<String> {
@@ -148,21 +186,31 @@ object DeviceProfiles {
      * player arranges itself (see GlacierPlayer). Profile 5 has no base layer
      * and plays only when the Dolby Vision decoder declares it.
      */
-    internal fun supportedRanges(hdr: Set<HdrType>, dolbyVisionProfiles: Set<Int>? = null): List<VideoRangeType> = buildList {
-        add(VideoRangeType.SDR)
-        add(VideoRangeType.UNKNOWN)
-        add(VideoRangeType.DOVI_WITH_SDR)
-        if (HdrType.Hdr10 in hdr) addAll(listOf(VideoRangeType.HDR10, VideoRangeType.DOVI_WITH_HDR10))
-        if (HdrType.Hdr10Plus in hdr) addAll(listOf(VideoRangeType.HDR10_PLUS, VideoRangeType.DOVI_WITH_HDR10_PLUS))
-        if (HdrType.Hdr10 in hdr && HdrType.Hdr10Plus !in hdr) add(VideoRangeType.DOVI_WITH_HDR10_PLUS)
-        if (HdrType.Hlg in hdr) addAll(listOf(VideoRangeType.HLG, VideoRangeType.DOVI_WITH_HLG))
-        val dolbyVision = HdrType.DolbyVision in hdr
-        fun declares(profile: Int) = dolbyVision && dolbyVisionProfiles?.contains(profile) != false
-        if (declares(5)) add(VideoRangeType.DOVI)
-        if (HdrType.Hdr10 in hdr || declares(7)) addAll(listOf(VideoRangeType.DOVI_WITH_EL, VideoRangeType.DOVI_WITH_ELHDR10_PLUS))
-    }.distinct()
+    internal fun supportedRanges(hdr: Set<HdrType>, dolbyVisionProfiles: Set<Int>? = null): List<VideoRangeType> =
+        buildList {
+            add(VideoRangeType.SDR)
+            add(VideoRangeType.UNKNOWN)
+            add(VideoRangeType.DOVI_WITH_SDR)
+            if (HdrType.Hdr10 in hdr) addAll(listOf(VideoRangeType.HDR10, VideoRangeType.DOVI_WITH_HDR10))
+            if (HdrType.Hdr10Plus in hdr) addAll(listOf(VideoRangeType.HDR10_PLUS, VideoRangeType.DOVI_WITH_HDR10_PLUS))
+            if (HdrType.Hdr10 in hdr && HdrType.Hdr10Plus !in hdr) add(VideoRangeType.DOVI_WITH_HDR10_PLUS)
+            if (HdrType.Hlg in hdr) addAll(listOf(VideoRangeType.HLG, VideoRangeType.DOVI_WITH_HLG))
+            val dolbyVision = HdrType.DolbyVision in hdr
+            fun declares(profile: Int) = dolbyVision && dolbyVisionProfiles?.contains(profile) != false
+            if (declares(5)) add(VideoRangeType.DOVI)
+            if (HdrType.Hdr10 in hdr || declares(
+                    7,
+                )
+            ) {
+                addAll(listOf(VideoRangeType.DOVI_WITH_EL, VideoRangeType.DOVI_WITH_ELHDR10_PLUS))
+            }
+        }.distinct()
 
-    private fun DeviceProfileBuilder.videoLimits(codec: String, support: VideoCodecSupport, profiles: List<String>?) {
+    private fun DeviceProfileBuilder.videoLimits(
+        codec: String,
+        support: VideoCodecSupport,
+        profiles: List<String>?,
+    ) {
         codecProfile {
             type = CodecType.VIDEO
             this.codec = codec
@@ -194,7 +242,9 @@ enum class SubtitleBurnIn {
     ComplexFormats,
 
     /** Every subtitle. */
-    Always;
+    Always,
+
+    ;
 
     internal fun burnsText(codec: String): Boolean = when (this) {
         Auto, PictureFormats -> false

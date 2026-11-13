@@ -11,18 +11,18 @@ import io.github.glacier_jellyfin.androidtv.core.jellyfin.DiscoveredServer
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.ServerFinder
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.ServerInfo
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class ServerEntry(
     val server: ServerInfo,
@@ -101,18 +101,28 @@ class ServerListViewModel @Inject constructor(
                 reachability.report(stored.id, probe != null)
                 val accountState = accounts.current()
                 _state.update { state ->
-                    state.copy(saved = state.saved.map { entry ->
-                        if (entry.server.id != stored.id) entry
-                        else probe?.toEntry(accountState) ?: entry.copy(reachable = false, latencyMillis = null)
-                    })
+                    state.copy(
+                        saved = state.saved.map { entry ->
+                            if (entry.server.id != stored.id) {
+                                entry
+                            } else {
+                                probe?.toEntry(accountState) ?: entry.copy(reachable = false, latencyMillis = null)
+                            }
+                        },
+                    )
                 }
             }
         }
     }
 
     private fun onDiscovered(found: DiscoveredServer) = _state.update { state ->
-        if (state.saved.any { it.server.id == found.server.id } || state.discovered.any { it.server.id == found.server.id }) state
-        else state.copy(discovered = state.discovered + found.toEntry(AccountState()))
+        if (state.saved.any { it.server.id == found.server.id } ||
+            state.discovered.any { it.server.id == found.server.id }
+        ) {
+            state
+        } else {
+            state.copy(discovered = state.discovered + found.toEntry(AccountState()))
+        }
     }
 
     fun select(entry: ServerEntry) {
@@ -153,8 +163,11 @@ class ServerListViewModel @Inject constructor(
     }
 
     /** Public users and the profiles set up here, each counted once; only the local ones when the server did not list its users. */
-    private fun DiscoveredServer.toEntry(accountState: AccountState) =
-        ServerEntry(server, profileCount = accountState.profilesFor(server.id, publicUsers).size, latencyMillis = latencyMillis)
+    private fun DiscoveredServer.toEntry(accountState: AccountState) = ServerEntry(
+        server,
+        profileCount = accountState.profilesFor(server.id, publicUsers).size,
+        latencyMillis = latencyMillis,
+    )
 
     private companion object {
         const val RECHECK_MILLIS = 10_000L

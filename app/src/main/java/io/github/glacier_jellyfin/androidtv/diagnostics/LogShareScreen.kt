@@ -45,7 +45,12 @@ import java.util.Date
  * The log offered on the local network: where to get it, what it is called and how large it is.
  * [crashedAt] is set when the page opens by itself after a crash (epoch ms).
  */
-data class LogShare(val url: String, val fileName: String, val sizeBytes: Int, val crashedAt: Long? = null)
+data class LogShare(
+    val url: String,
+    val fileName: String,
+    val sizeBytes: Int,
+    val crashedAt: Long? = null,
+)
 
 /**
  * Downloading the log on another device, laid out like the update dialog:
@@ -62,8 +67,15 @@ fun LogShareScreen(share: LogShare, onClose: () -> Unit) {
             .focusProperties { onExit = { cancelFocusChange() } }
             .focusGroup(),
     ) {
-        Column(Modifier.fillMaxSize().padding(start = 130.dp, end = 130.dp, top = 90.dp, bottom = 80.dp), verticalArrangement = Arrangement.spacedBy(48.dp)) {
-            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(100.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            Modifier.fillMaxSize().padding(start = 130.dp, end = 130.dp, top = 90.dp, bottom = 80.dp),
+            verticalArrangement = Arrangement.spacedBy(48.dp),
+        ) {
+            Row(
+                Modifier.weight(1f).fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(100.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(36.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Text(
@@ -72,13 +84,21 @@ fun LogShareScreen(share: LogShare, onClose: () -> Unit) {
                             color = LocalAccent.current.main,
                         )
                         Text(
-                            stringResource(if (share.crashedAt != null) R.string.diag_crash_title else R.string.diag_share_title),
+                            stringResource(
+                                if (share.crashedAt != null) R.string.diag_crash_title else R.string.diag_share_title,
+                            ),
                             style = GlacierText.display(64),
                             color = GlacierColors.Ice,
                         )
                         share.crashedAt?.let {
                             Text(
-                                stringResource(R.string.diag_crash_intro, DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(it))),
+                                stringResource(
+                                    R.string.diag_crash_intro,
+                                    DateFormat.getDateTimeInstance(
+                                        DateFormat.MEDIUM,
+                                        DateFormat.SHORT,
+                                    ).format(Date(it)),
+                                ),
                                 style = GlacierText.body(21),
                                 color = GlacierColors.Mist,
                             )
@@ -92,13 +112,25 @@ fun LogShareScreen(share: LogShare, onClose: () -> Unit) {
                     Box(Modifier.fillMaxWidth().height(1.dp).background(GlacierColors.GlassBorder))
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Fact(stringResource(R.string.diag_share_file), share.fileName)
-                        Fact(stringResource(R.string.diag_share_size), stringResource(R.string.diag_share_kb, share.sizeBytes / 1000.0))
+                        Fact(
+                            stringResource(R.string.diag_share_size),
+                            stringResource(R.string.diag_share_kb, share.sizeBytes / 1000.0),
+                        )
                     }
                 }
                 QrPanel(share.url, Modifier.width(620.dp).fillMaxHeight())
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(40.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.diag_share_hint), style = GlacierText.body(17), color = GlacierColors.Mist, modifier = Modifier.weight(1f))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(40.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.diag_share_hint),
+                    style = GlacierText.body(17),
+                    color = GlacierColors.Mist,
+                    modifier = Modifier.weight(1f),
+                )
                 PillButton(
                     stringResource(R.string.diag_share_close),
                     onClick = onClose,

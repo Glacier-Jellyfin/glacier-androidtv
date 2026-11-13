@@ -17,7 +17,13 @@ internal class ThroughputWatch(
      * One check. [rateBps]: bit/s loaded over the last [LOADING_MS] or less (the caller's window must not reach back before
      * the loading began); [streamBps]: what the stream asks; [full]: the buffer is as full as it gets.
      */
-    fun check(nowMs: Long, loading: Boolean, rateBps: Long, streamBps: Long, full: Boolean): Boolean {
+    fun check(
+        nowMs: Long,
+        loading: Boolean,
+        rateBps: Long,
+        streamBps: Long,
+        full: Boolean,
+    ): Boolean {
         if (!loading || full || streamBps <= 0) {
             loadingSince = NONE
             return false
