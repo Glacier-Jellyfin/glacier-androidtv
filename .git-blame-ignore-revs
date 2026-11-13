@@ -1,0 +1,4 @@
+# Formatting-only commits; git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# ktlint formatting (style: format Kotlin code with ktlint)
+a73b32a59c6d491667c8bae7dfa282694e48a7fb
