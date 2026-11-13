@@ -9,9 +9,6 @@ class GlacierRuleSetProvider : RuleSetProvider {
 
     override fun instance(): RuleSet = RuleSet(
         ruleSetId,
-        listOf(
-            ::WhenConditionPerLine,
-            ::DanglingShortArguments,
-        ),
+        listOf(::WhenConditionPerLine, ::DanglingShortArguments, ::DanglingShortOperand),
     )
 }
