@@ -1,4 +1,4 @@
-package io.github.glacier_jellyfin.androidtv.ui
+package io.github.glacier_jellyfin.androidtv.library
 
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable

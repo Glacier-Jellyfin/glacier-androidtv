@@ -35,6 +35,11 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
+import io.github.glacier_jellyfin.androidtv.music.MINI_PLAYER_HEIGHT
+import io.github.glacier_jellyfin.androidtv.music.MINI_PLAYER_TOP
+import io.github.glacier_jellyfin.androidtv.music.MiniPlayer
+import io.github.glacier_jellyfin.androidtv.music.MiniPlayerOnScreen
+import io.github.glacier_jellyfin.androidtv.navigation.MINI_PLAYER_END
 import kotlinx.coroutines.delay
 
 /** Shows short notices; see [ToastHost]. */

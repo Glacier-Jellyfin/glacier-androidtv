@@ -51,16 +51,16 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.KeyCap
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SystemTextInput
+import io.github.glacier_jellyfin.androidtv.navigation.LocalLibraryKinds
+import io.github.glacier_jellyfin.androidtv.navigation.NavTarget
+import io.github.glacier_jellyfin.androidtv.navigation.TopNav
+import io.github.glacier_jellyfin.androidtv.parental.showsLock
 import io.github.glacier_jellyfin.androidtv.seerr.seerrStatusLabel
 import io.github.glacier_jellyfin.androidtv.setup.InputField
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
-import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
-import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PosterCard
-import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
-import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import io.github.glacier_jellyfin.androidtv.ui.yearText
 
 /** Design keypad: six columns of letters and digits, then keyboard, space and delete. */

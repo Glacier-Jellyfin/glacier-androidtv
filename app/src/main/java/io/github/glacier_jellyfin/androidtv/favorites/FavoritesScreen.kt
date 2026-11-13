@@ -40,17 +40,17 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
+import io.github.glacier_jellyfin.androidtv.core.designsystem.blockKeysWhile
+import io.github.glacier_jellyfin.androidtv.navigation.LocalLibraryKinds
+import io.github.glacier_jellyfin.androidtv.navigation.NavTarget
+import io.github.glacier_jellyfin.androidtv.navigation.TopNav
+import io.github.glacier_jellyfin.androidtv.parental.showsLock
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.ContinueCard
-import io.github.glacier_jellyfin.androidtv.ui.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
-import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.PosterCard
-import io.github.glacier_jellyfin.androidtv.ui.TopNav
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
-import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
-import io.github.glacier_jellyfin.androidtv.ui.showsLock
 import io.github.glacier_jellyfin.androidtv.ui.yearText
 
 /** Everything marked with the heart: a row per kind, empty kinds left out. */

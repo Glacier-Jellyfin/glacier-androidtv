@@ -1,4 +1,4 @@
-package io.github.glacier_jellyfin.androidtv.ui
+package io.github.glacier_jellyfin.androidtv.library
 
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryScope

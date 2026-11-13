@@ -63,7 +63,6 @@ import io.github.glacier_jellyfin.androidtv.player.bitrateText
 import io.github.glacier_jellyfin.androidtv.player.formatTime
 import io.github.glacier_jellyfin.androidtv.player.streamStats
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
-import io.github.glacier_jellyfin.androidtv.ui.audioFormatText
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlinx.coroutines.delay

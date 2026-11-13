@@ -1,4 +1,4 @@
-package io.github.glacier_jellyfin.androidtv.ui
+package io.github.glacier_jellyfin.androidtv.core.designsystem
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween

@@ -40,8 +40,8 @@ import io.github.glacier_jellyfin.androidtv.navigation.PersonRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.TrailerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.routeFor
+import io.github.glacier_jellyfin.androidtv.parental.PinGate
 import io.github.glacier_jellyfin.androidtv.player.VersionChooser
-import io.github.glacier_jellyfin.androidtv.ui.PinGate
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import java.util.UUID
 import javax.inject.Inject

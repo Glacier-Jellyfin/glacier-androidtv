@@ -1,4 +1,4 @@
-package io.github.glacier_jellyfin.androidtv.ui
+package io.github.glacier_jellyfin.androidtv.music
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +31,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.player.formatTime
+import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
 
 /** Height of a [SongRow]; lists space them [SONG_ROW_GAP] apart. */
 const val SONG_ROW_HEIGHT = 64

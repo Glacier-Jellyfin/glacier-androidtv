@@ -1,4 +1,4 @@
-package io.github.glacier_jellyfin.androidtv.ui
+package io.github.glacier_jellyfin.androidtv.core.designsystem
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -46,12 +46,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierClickable
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
-import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
-import io.github.glacier_jellyfin.androidtv.core.designsystem.ignoreHeldOk
-import io.github.glacier_jellyfin.androidtv.core.designsystem.startGradient
 
 /** Width of the panel at the end edge (design px of the 1920 grid). */
 private const val PANEL_WIDTH = 620

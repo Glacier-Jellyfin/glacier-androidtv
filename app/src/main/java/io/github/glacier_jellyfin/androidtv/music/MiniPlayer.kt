@@ -1,4 +1,4 @@
-package io.github.glacier_jellyfin.androidtv.ui
+package io.github.glacier_jellyfin.androidtv.music
 
 import androidx.compose.animation.core.RepeatMode as AnimationRepeat
 import androidx.compose.animation.core.animateFloat
@@ -57,9 +57,8 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
-import io.github.glacier_jellyfin.androidtv.music.MusicController
-import io.github.glacier_jellyfin.androidtv.music.MusicProgress
-import io.github.glacier_jellyfin.androidtv.music.NowPlaying
+import io.github.glacier_jellyfin.androidtv.library.title
+import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import kotlinx.coroutines.flow.StateFlow
 
 /** The song that plays, for the [MiniPlayer]; null while no music is loaded. */

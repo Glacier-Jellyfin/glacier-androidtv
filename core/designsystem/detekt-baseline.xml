@@ -13,5 +13,7 @@
     <ID>MaxLineLength:GlacierIcons.kt:GlacierIcons$private const val HEART = "M12 20.3C10.3 19 3.6 14.4 3.6 9.6 3.6 6.9 5.7 5 8.1 5c1.6 0 3 .8 3.9 2.1C12.9 5.8 14.3 5 15.9 5c2.4 0 4.5 1.9 4.5 4.6 0 4.8-6.7 9.4-8.4 10.7z"</ID>
     <ID>PropertyName:Focus.kt:/** Focus scale from the design (`focusScale` 1.07). */ const val FocusScale = 1.07f</ID>
     <ID>PropertyName:GlacierTheme.kt:/** Width of the design's layout grid; see [GlacierTheme]. */ const val DesignWidth = 1920f</ID>
+    <ID>PropertyName:Scrolling.kt:/** Where a focused row settles vertically, and a focused card horizontally (design `sync()`). */ const val RowPivot = 330</ID>
+    <ID>PropertyName:Scrolling.kt:const val CardPivot = 120</ID>
   </CurrentIssues>
 </SmellBaseline>

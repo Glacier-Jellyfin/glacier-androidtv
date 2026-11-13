@@ -2,7 +2,6 @@ package io.github.glacier_jellyfin.androidtv.navigation
 
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
-import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 
 /**

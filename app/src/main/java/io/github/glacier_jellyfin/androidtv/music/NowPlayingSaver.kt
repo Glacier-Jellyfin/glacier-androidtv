@@ -1,4 +1,4 @@
-package io.github.glacier_jellyfin.androidtv.ui
+package io.github.glacier_jellyfin.androidtv.music
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -56,11 +56,9 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
-import io.github.glacier_jellyfin.androidtv.music.MusicClock
-import io.github.glacier_jellyfin.androidtv.music.MusicProgress
-import io.github.glacier_jellyfin.androidtv.music.MusicUiState
-import io.github.glacier_jellyfin.androidtv.music.NowPlaying
+import io.github.glacier_jellyfin.androidtv.library.title
 import io.github.glacier_jellyfin.androidtv.player.formatTime
+import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor

@@ -44,13 +44,13 @@ import io.github.glacier_jellyfin.androidtv.core.updater.WhatsNew
 import io.github.glacier_jellyfin.androidtv.diagnostics.Diagnostics
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogServer
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogShare
+import io.github.glacier_jellyfin.androidtv.navigation.NavTarget
 import io.github.glacier_jellyfin.androidtv.navigation.ProfilesRoute
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
+import io.github.glacier_jellyfin.androidtv.parental.PinGate
+import io.github.glacier_jellyfin.androidtv.parental.PinReason
 import io.github.glacier_jellyfin.androidtv.player.choosesDolbyVisionProfile7
 import io.github.glacier_jellyfin.androidtv.player.playbackSetup
-import io.github.glacier_jellyfin.androidtv.ui.NavTarget
-import io.github.glacier_jellyfin.androidtv.ui.PinGate
-import io.github.glacier_jellyfin.androidtv.ui.PinReason
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException

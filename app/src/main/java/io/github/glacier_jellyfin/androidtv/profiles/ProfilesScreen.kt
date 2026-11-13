@@ -48,15 +48,15 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierMark
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
+import io.github.glacier_jellyfin.androidtv.core.designsystem.ModalSheet
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinDots
+import io.github.glacier_jellyfin.androidtv.core.designsystem.blockKeysWhile
+import io.github.glacier_jellyfin.androidtv.parental.PinEntry
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
-import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
-import io.github.glacier_jellyfin.androidtv.ui.PinEntry
 import io.github.glacier_jellyfin.androidtv.ui.TvPlatform
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
-import io.github.glacier_jellyfin.androidtv.ui.blockKeysWhile
 
 @Composable
 fun ProfilesScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: ProfilesViewModel = hiltViewModel()) {

@@ -35,11 +35,9 @@ import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.music.MusicTarget
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
+import io.github.glacier_jellyfin.androidtv.navigation.NavTarget
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
 import io.github.glacier_jellyfin.androidtv.navigation.routeFor
-import io.github.glacier_jellyfin.androidtv.ui.BrowseMemory
-import io.github.glacier_jellyfin.androidtv.ui.LibraryMemory
-import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import java.util.UUID
 import javax.inject.Inject

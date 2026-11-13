@@ -1,4 +1,4 @@
-package io.github.glacier_jellyfin.androidtv.ui
+package io.github.glacier_jellyfin.androidtv.parental
 
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinKey
 

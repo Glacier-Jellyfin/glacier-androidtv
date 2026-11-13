@@ -16,11 +16,11 @@ import androidx.tvprovider.media.tv.TvContractCompat
 import androidx.tvprovider.media.tv.WatchNextProgram
 import io.github.glacier_jellyfin.androidtv.MainActivity
 import io.github.glacier_jellyfin.androidtv.R
-import io.github.glacier_jellyfin.androidtv.UiLocale
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeScreenContent
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeScreenTitle
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.log.Log
+import io.github.glacier_jellyfin.androidtv.settings.UiLocale
 
 /**
  * Writes [HomeScreenContent] to the Android TV home screen: "Watch next" and

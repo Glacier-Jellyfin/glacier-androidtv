@@ -32,12 +32,12 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
+import io.github.glacier_jellyfin.androidtv.core.designsystem.MarqueeText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
 import io.github.glacier_jellyfin.androidtv.livetv.ChannelLogo
 import io.github.glacier_jellyfin.androidtv.livetv.minutesLeft
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
-import io.github.glacier_jellyfin.androidtv.ui.MarqueeText
 import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 import kotlinx.coroutines.delay
 

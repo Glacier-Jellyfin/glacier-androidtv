@@ -13,8 +13,8 @@ app ──► core:designsystem
 
 | Module | Responsibility |
 |---|---|
-| `app` | Entry point, navigation, screens. Each feature is a package: `setup`, `profiles`, `home`, `library`, `detail`, `search`, `seerr`, `player`, `trailer`, `music`, `channels`, `settings`, `diagnostics`, `update`. |
-| `core:designsystem` | Glacier tokens (colours, accents, shapes) and the Compose theme, plus focus-aware components shared by all screens. |
+| `app` | Entry point, navigation, screens. Each feature is a package: `setup`, `profiles`, `parental` (PIN and age lock), `home`, `library`, `detail`, `search`, `seerr`, `player`, `trailer`, `music`, `channels`, `settings`, `diagnostics`, `update`. `navigation` holds the nav host and top bar; `ui` holds the few app-level building blocks that need app strings or data types (cards, toasts, media text formatting). |
+| `core:designsystem` | Glacier tokens (colours, accents, shapes) and the Compose theme, plus the focus-aware components shared by all screens: action button, toggle chip, modal sheet, options panel, overlay card, marquee text, row and card scrolling, and key blocking. |
 | `core:jellyfin` | Server discovery, authentication, API access and the device profile sent to the server. |
 | `core:data` | Repositories, local settings, and syncing the preferences Jellyfin stores per user. |
 | `core:player` | Media3 ExoPlayer setup, media segments, trickplay, track selection. |

@@ -1,4 +1,4 @@
-package io.github.glacier_jellyfin.androidtv.ui
+package io.github.glacier_jellyfin.androidtv.parental
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
@@ -20,9 +20,12 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.AgeFilter
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
+import io.github.glacier_jellyfin.androidtv.core.designsystem.ModalSheet
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinDots
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinKey
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PinWheel
+import io.github.glacier_jellyfin.androidtv.ui.TvPlatform
+import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job

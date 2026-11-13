@@ -58,15 +58,15 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
+import io.github.glacier_jellyfin.androidtv.core.designsystem.ModalSheet
+import io.github.glacier_jellyfin.androidtv.core.designsystem.OptionRow
+import io.github.glacier_jellyfin.androidtv.core.designsystem.OptionsPanel
+import io.github.glacier_jellyfin.androidtv.core.designsystem.OptionsPanelScope
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.ignoreHeldOk
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
-import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
-import io.github.glacier_jellyfin.androidtv.ui.OptionRow
-import io.github.glacier_jellyfin.androidtv.ui.OptionsPanel
-import io.github.glacier_jellyfin.androidtv.ui.OptionsPanelScope
 
 private val RowShape = RoundedCornerShape(18.dp)
 

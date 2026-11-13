@@ -26,6 +26,7 @@ dependencies {
     api(libs.compose.ui)
     api(libs.compose.foundation)
     api(libs.tv.material)
+    implementation(libs.androidx.activity.compose)
 
     testImplementation(libs.junit)
 }

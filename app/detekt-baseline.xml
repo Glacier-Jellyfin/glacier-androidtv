@@ -114,8 +114,6 @@
     <ID>MixedConditionOperators:HomeChannels.kt:HomeChannels$wide &amp;&amp; wideImage != null</ID>
     <ID>PropertyName:HomeScreen.kt:/** Space below the last row, as the bottom padding of a [MediaRow]. */ private const val LastRowBottom = 90</ID>
     <ID>PropertyName:MediaRow.kt:/** Left and right page margin of rows. */ const val PageEdge = 80</ID>
-    <ID>PropertyName:Scrolling.kt:/** Where a focused row settles vertically, and a focused card horizontally (design `sync()`). */ const val RowPivot = 330</ID>
-    <ID>PropertyName:Scrolling.kt:const val CardPivot = 120</ID>
     <ID>PropertyName:SearchScreen.kt:private const val Columns = 4</ID>
     <ID>PropertyName:SearchScreen.kt:private const val KeyGap = 12</ID>
     <ID>PropertyName:SearchScreen.kt:private const val KeyHeight = 76</ID>

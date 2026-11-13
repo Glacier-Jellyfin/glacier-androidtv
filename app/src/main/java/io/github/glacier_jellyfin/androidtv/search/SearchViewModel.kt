@@ -13,11 +13,11 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrStatus
 import io.github.glacier_jellyfin.androidtv.core.log.Log
+import io.github.glacier_jellyfin.androidtv.navigation.NavTarget
 import io.github.glacier_jellyfin.androidtv.navigation.SearchRoute
 import io.github.glacier_jellyfin.androidtv.navigation.SeerrRoute
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
 import io.github.glacier_jellyfin.androidtv.navigation.routeFor
-import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException

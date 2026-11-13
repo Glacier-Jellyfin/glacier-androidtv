@@ -23,11 +23,10 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepositor
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.navigation.FolderRoute
+import io.github.glacier_jellyfin.androidtv.navigation.NavTarget
 import io.github.glacier_jellyfin.androidtv.navigation.PhotoRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
-import io.github.glacier_jellyfin.androidtv.ui.BrowseMemory
-import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import java.util.UUID
 import javax.inject.Inject

@@ -28,14 +28,14 @@ import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
+import io.github.glacier_jellyfin.androidtv.library.BrowseMemory
+import io.github.glacier_jellyfin.androidtv.library.LiveTvMemory
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.LiveTvPlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
+import io.github.glacier_jellyfin.androidtv.navigation.NavTarget
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
-import io.github.glacier_jellyfin.androidtv.ui.BrowseMemory
-import io.github.glacier_jellyfin.androidtv.ui.LiveTvMemory
-import io.github.glacier_jellyfin.androidtv.ui.NavTarget
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import java.util.UUID
 import javax.inject.Inject

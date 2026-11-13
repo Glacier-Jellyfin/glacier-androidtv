@@ -14,6 +14,7 @@ import io.github.glacier_jellyfin.androidtv.detail.DetailScreen
 import io.github.glacier_jellyfin.androidtv.detail.PersonScreen
 import io.github.glacier_jellyfin.androidtv.favorites.FavoritesScreen
 import io.github.glacier_jellyfin.androidtv.home.HomeScreen
+import io.github.glacier_jellyfin.androidtv.library.FolderMemory
 import io.github.glacier_jellyfin.androidtv.library.FolderScreen
 import io.github.glacier_jellyfin.androidtv.library.LibraryScreen
 import io.github.glacier_jellyfin.androidtv.library.PhotoScreen
@@ -30,7 +31,6 @@ import io.github.glacier_jellyfin.androidtv.setup.ServerAddressScreen
 import io.github.glacier_jellyfin.androidtv.setup.ServerListScreen
 import io.github.glacier_jellyfin.androidtv.setup.SignInScreen
 import io.github.glacier_jellyfin.androidtv.trailer.TrailerScreen
-import io.github.glacier_jellyfin.androidtv.ui.FolderMemory
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 
 /** Screens without arguments; navigating to one that is already on top does nothing. */

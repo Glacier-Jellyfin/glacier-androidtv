@@ -1,4 +1,4 @@
-package io.github.glacier_jellyfin.androidtv
+package io.github.glacier_jellyfin.androidtv.settings
 
 import android.content.Context
 import android.content.res.Configuration

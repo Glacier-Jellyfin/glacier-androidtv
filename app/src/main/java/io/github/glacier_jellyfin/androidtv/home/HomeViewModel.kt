@@ -29,11 +29,11 @@ import io.github.glacier_jellyfin.androidtv.navigation.FolderRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
 import io.github.glacier_jellyfin.androidtv.navigation.LiveTvPlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
+import io.github.glacier_jellyfin.androidtv.navigation.NavTarget
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
 import io.github.glacier_jellyfin.androidtv.navigation.routeFor
-import io.github.glacier_jellyfin.androidtv.ui.NavTarget
-import io.github.glacier_jellyfin.androidtv.ui.PinGate
+import io.github.glacier_jellyfin.androidtv.parental.PinGate
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import java.util.UUID
 import javax.inject.Inject

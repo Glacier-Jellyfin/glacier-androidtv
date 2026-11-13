@@ -1,4 +1,4 @@
-package io.github.glacier_jellyfin.androidtv.ui
+package io.github.glacier_jellyfin.androidtv.music
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration

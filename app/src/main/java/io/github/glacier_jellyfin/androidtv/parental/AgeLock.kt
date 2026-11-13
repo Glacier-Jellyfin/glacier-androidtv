@@ -1,4 +1,4 @@
-package io.github.glacier_jellyfin.androidtv.ui
+package io.github.glacier_jellyfin.androidtv.parental
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box

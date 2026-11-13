@@ -1,4 +1,4 @@
-package io.github.glacier_jellyfin.androidtv.ui
+package io.github.glacier_jellyfin.androidtv.core.designsystem
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,11 +22,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
-import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
-import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
-import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
-import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
 
 /**
  * A filter that is on or off, at the right of a toolbar: "Favorites", "Unwatched".

@@ -9,11 +9,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import io.github.glacier_jellyfin.androidtv.UiLocale
 import io.github.glacier_jellyfin.androidtv.core.designsystem.Accent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierTheme
 import io.github.glacier_jellyfin.androidtv.core.player.DolbyVisionProfile7
 import io.github.glacier_jellyfin.androidtv.core.player.PlaybackSetup
+import io.github.glacier_jellyfin.androidtv.settings.UiLocale
 
 /**
  * The playback check, in a process of its own (":playbackcheck" in the

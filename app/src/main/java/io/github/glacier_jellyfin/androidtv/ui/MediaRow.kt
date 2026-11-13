@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
+import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberCardPivotSpec
 
 /** Left and right page margin of rows. */
 const val PageEdge = 80

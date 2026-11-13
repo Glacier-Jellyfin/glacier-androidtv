@@ -1,4 +1,4 @@
-package io.github.glacier_jellyfin.androidtv.ui
+package io.github.glacier_jellyfin.androidtv.navigation
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -78,6 +78,13 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusScale
+import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberEdgeSpec
+import io.github.glacier_jellyfin.androidtv.library.navTitle
+import io.github.glacier_jellyfin.androidtv.music.LocalNowPlaying
+import io.github.glacier_jellyfin.androidtv.music.MINI_PLAYER_TOP
+import io.github.glacier_jellyfin.androidtv.music.MiniPlayer
+import io.github.glacier_jellyfin.androidtv.ui.PageEdge
+import io.github.glacier_jellyfin.androidtv.ui.TOAST_WIDTH
 
 /** The library kinds the server has (HomeRepository.kinds): one navigation entry each. */
 val LocalLibraryKinds = staticCompositionLocalOf { listOf(LibraryKind.Movies, LibraryKind.Shows, LibraryKind.Music) }

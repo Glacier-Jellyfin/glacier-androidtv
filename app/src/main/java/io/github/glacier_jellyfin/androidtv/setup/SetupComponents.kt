@@ -49,10 +49,10 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierMark
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
+import io.github.glacier_jellyfin.androidtv.core.designsystem.ModalSheet
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.ServerInfo
-import io.github.glacier_jellyfin.androidtv.ui.ModalSheet
 
 /**
  * The two-column frame shared by all setup screens: an intro column of 560

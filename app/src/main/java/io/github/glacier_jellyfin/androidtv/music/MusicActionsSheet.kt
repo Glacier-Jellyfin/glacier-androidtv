@@ -27,13 +27,13 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
+import io.github.glacier_jellyfin.androidtv.core.designsystem.OptionRow
+import io.github.glacier_jellyfin.androidtv.core.designsystem.OptionsPanel
+import io.github.glacier_jellyfin.androidtv.core.designsystem.OptionsPanelScope
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SystemTextInput
 import io.github.glacier_jellyfin.androidtv.setup.InputField
-import io.github.glacier_jellyfin.androidtv.ui.OptionRow
-import io.github.glacier_jellyfin.androidtv.ui.OptionsPanel
-import io.github.glacier_jellyfin.androidtv.ui.OptionsPanelScope
 
 /** The panel of [MusicActions], over whatever page opened it. */
 @Composable
