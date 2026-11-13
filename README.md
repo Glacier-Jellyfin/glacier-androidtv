@@ -26,6 +26,10 @@
 </p>
 
 <p align="center">
+  <a href="https://scorecard.dev/viewer/?uri=github.com/Glacier-Jellyfin/glacier-androidtv"><img src="https://api.scorecard.dev/projects/github.com/Glacier-Jellyfin/glacier-androidtv/badge" alt="OpenSSF Scorecard"></a>
+</p>
+
+<p align="center">
   <img src="website/assets/screenshots/demo.gif" width="800" alt="Highlights of Glacier on a TV">
 </p>
 

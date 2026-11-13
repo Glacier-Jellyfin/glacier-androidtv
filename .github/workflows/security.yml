@@ -55,7 +55,8 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
-          queries: security-extended
+          # Quality queries too (dead code, redundant conditions), the free stand-in for GitHub Code Quality.
+          queries: security-extended,security-and-quality
 
       # CodeQL reads the sources while the compiler runs, so nothing may come from a cache.
       # FFmpeg is left out: the JNI wrapper is skipped without it, the Kotlin and Java code is complete.
@@ -97,3 +98,17 @@ jobs:
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: moderate
+
+  # Lints the workflows themselves, for example for injectable expressions and
+  # excessive permissions.
+  zizmor:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd # v0.8.1
