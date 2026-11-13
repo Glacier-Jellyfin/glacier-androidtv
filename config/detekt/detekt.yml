@@ -1,0 +1,84 @@
+# Applied on top of detekt's defaults (buildUponDefaultConfig).
+
+naming:
+  # The application id uses underscores (glacier_jellyfin).
+  PackageNaming:
+    active: false
+  FunctionNaming:
+    # Composables are PascalCase by convention.
+    ignoreAnnotated: ['Composable']
+  TopLevelPropertyNaming:
+    constantPattern: '[A-Z][A-Za-z0-9_]*'
+
+complexity:
+  LongParameterList:
+    allowedFunctionParameters: 6
+    allowedConstructorParameters: 8
+    ignoreDefaultParameters: true
+    # Composables take many slots and modifiers; Hilt constructors take dependencies.
+    ignoreAnnotated: ['Composable', 'Inject']
+  LongMethod:
+    ignoreAnnotated: ['Composable']
+  CyclomaticComplexMethod:
+    ignoreAnnotated: ['Composable']
+  TooManyFunctions:
+    ignorePrivate: true
+    ignoreOverridden: true
+
+style:
+  MagicNumber:
+    # dp/sp values, colors and durations are the content of UI code.
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreNumbers: ['-1', '0', '1', '2', '3', '4', '5', '10', '16', '24', '60', '100', '255', '1000', '1024']
+    ignoreAnnotation: true
+    ignoreNamedArgument: true
+    ignoreExtensionFunctions: true
+    ignoreAnnotated: ['Composable', 'Preview']
+    excludes:
+      - '**/test/**'
+      - '**/androidTest/**'
+      - '**/designsystem/**'
+  ReturnCount:
+    max: 4
+    excludeGuardClauses: true
+  MaxLineLength:
+    maxLineLength: 160
+    excludeCommentStatements: true
+
+# ktlint rules (detekt-rules-ktlint-wrapper). The wrapping and signature layout
+# rules are off: the existing code follows its own layout and they would only
+# produce noise. Line length is checked by style>MaxLineLength.
+ktlint:
+  MaximumLineLength:
+    active: false
+  PackageName:
+    active: false
+  FunctionNaming:
+    active: false
+  FunctionLiteral:
+    active: false
+  PropertyWrapping:
+    active: false
+  EnumWrapping:
+    active: false
+  MultiLineIfElse:
+    active: false
+  FunctionSignature:
+    active: false
+  ArgumentListWrapping:
+    active: false
+  ParameterListWrapping:
+    active: false
+  BinaryExpressionWrapping:
+    active: false
+  Wrapping:
+    active: false
+  StatementWrapping:
+    active: false
+  ClassSignature:
+    active: false
+  BlankLineBetweenWhenConditions:
+    active: false
+  SpacingBetweenDeclarationsWithComments:
+    active: false

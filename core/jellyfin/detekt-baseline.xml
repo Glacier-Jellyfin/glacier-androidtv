@@ -1,0 +1,50 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:DeviceProfiles.kt:DeviceProfiles$fun build: DeviceProfile</ID>
+    <ID>CyclomaticComplexMethod:MediaCapabilityDetector.kt:MediaCapabilityDetector$@SuppressLint("InlinedApi") private fun detect: DeviceCapabilities</ID>
+    <ID>CyclomaticComplexMethod:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$fun avcLevel: Int?</ID>
+    <ID>CyclomaticComplexMethod:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$fun hevcLevel: Int?</ID>
+    <ID>Kdoc:Authenticator.kt:Authenticator$/** * Runs a Quick Connect session. A code expires on the server after a few * minutes; a fresh one is requested and emitted when that happens. The * flow completes after [QuickConnectState.Authorized], [QuickConnectState.Unavailable] * or [QuickConnectState.Failed]. */</ID>
+    <ID>LongMethod:DeviceProfiles.kt:DeviceProfiles$fun build: DeviceProfile</ID>
+    <ID>MagicNumber:DeviceProfiles.kt:DeviceProfiles$7</ID>
+    <ID>MagicNumber:DeviceProfiles.kt:DeviceProfiles$8</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector$6</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector$8</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$11</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$12</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$120</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$123</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$13</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$150</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$153</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$156</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$180</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$183</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$186</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$20</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$21</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$22</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$30</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$31</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$32</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$40</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$41</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$42</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$50</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$51</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$52</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$61</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$62</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$63</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$90</ID>
+    <ID>MagicNumber:MediaCapabilityDetector.kt:MediaCapabilityDetector.Companion$93</ID>
+    <ID>MaxLineLength:Authenticator.kt:Authenticator$suspend fun signIn: SignInResult</ID>
+    <ID>MaxLineLength:DeviceProfiles.kt:DeviceProfiles$capabilities.h264?.let { videoLimits("h264", it, profiles = listOfNotNull("high", "main", "baseline", "constrained baseline", "high 10".takeIf { _ -&gt; it.tenBit })) }</ID>
+    <ID>MaxLineLength:DeviceProfilesTest.kt:DeviceProfilesTest$val tv = fullHdTv.copy(audioCodecs = setOf("aac", "ac3", "eac3", "dts", "truehd"), passthroughAudio = setOf("eac3"), convertTrueHd = true, convertDtsHd = true)</ID>
+    <ID>SwallowedException:Authenticator.kt:Authenticator$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:Authenticator.kt:Authenticator$e: Exception</ID>
+    <ID>TrailingCommaOnDeclarationSite:DeviceProfiles.kt:SubtitleBurnIn</ID>
+  </CurrentIssues>
+</SmellBaseline>

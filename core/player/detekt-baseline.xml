@@ -1,0 +1,81 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CommentWrapping:GlacierPlayer.kt:GlacierPlayer$/* handleAudioFocus = */</ID>
+    <ID>CommentWrapping:PlaybackCheck.kt:PlaybackCheck.Watch.&lt;no name provided&gt;$/* allowExceedsCapabilities = */</ID>
+    <ID>ComplexCondition:BitstreamGuard.kt:BitstreamGuard$!bitstream || !playing || !pendingData || recovering || holdingRoute</ID>
+    <ID>ComplexCondition:GlacierPlayer.kt:GlacierPlayer$request.snapStart &amp;&amp; !request.live &amp;&amp; !request.isHls &amp;&amp; startMs &gt; 0</ID>
+    <ID>ComplexCondition:HandoverBufferTest.kt:HandoverBufferTest.&lt;no name provided&gt;$(main &amp;&amp; position &gt;= limit.get()) || (segment &amp;&amp; holdSegments &amp;&amp; segmentRead &gt;= segmentHoldAt)</ID>
+    <ID>CyclomaticComplexMethod:DolbyVisionRpu.kt:DolbyVisionRpu$fun convert: ByteArray?</ID>
+    <ID>CyclomaticComplexMethod:GlacierPlayer.kt:GlacierPlayer$@OptIn(UnstableApi::class) fun create: GlacierPlayback</ID>
+    <ID>CyclomaticComplexMethod:GuardedAudioSink.kt:GuardedAudioSink$override fun handleBuffer: Boolean</ID>
+    <ID>CyclomaticComplexMethod:Iec61937.kt:Iec61937Packer.TrueHd$private fun packUnit</ID>
+    <ID>ImportOrdering:AudioPathTest.kt:import androidx.annotation.OptIn import androidx.media3.common.C import androidx.media3.common.Format import androidx.media3.common.MimeTypes import androidx.media3.common.util.UnstableApi import androidx.media3.exoplayer.audio.AudioSink import androidx.test.ext.junit.runners.AndroidJUnit4 import java.lang.reflect.Proxy import org.junit.Assert.assertEquals import org.junit.Assert.assertFalse import org.junit.Assert.assertNull import org.junit.Assert.assertTrue import org.junit.Test import org.junit.runner.RunWith import org.robolectric.annotation.Config</ID>
+    <ID>ImportOrdering:DolbyVisionMatroskaExtractor.kt:import android.net.Uri import androidx.annotation.OptIn import androidx.media3.common.C import androidx.media3.common.util.UnstableApi import androidx.media3.extractor.Extractor import androidx.media3.extractor.ExtractorInput import androidx.media3.extractor.ExtractorOutput import androidx.media3.extractor.SeekMap import androidx.media3.extractor.ExtractorsFactory import androidx.media3.extractor.mkv.MatroskaExtractor import androidx.media3.extractor.text.SubtitleParser import io.github.peerless2012.ass.media.AssHandler import io.github.peerless2012.ass.media.extractor.AssMatroskaExtractor</ID>
+    <ID>ImportOrdering:FfmpegAudio.kt:import io.github.glacier_jellyfin.androidtv.core.log.Log import androidx.annotation.OptIn import androidx.media3.common.MimeTypes import androidx.media3.common.util.UnstableApi import androidx.media3.decoder.ffmpeg.FfmpegLibrary</ID>
+    <ID>ImportOrdering:GlacierPlayer.kt:import android.content.Context import android.net.Uri import android.os.Handler import android.os.SystemClock import androidx.annotation.OptIn import android.util.Base64 import androidx.media3.common.AudioAttributes import androidx.media3.common.C import androidx.media3.common.Format import androidx.media3.common.MediaItem import androidx.media3.common.MediaMetadata import androidx.media3.common.MimeTypes import androidx.media3.common.Player import androidx.media3.common.util.ExperimentalApi import androidx.media3.common.util.UnstableApi import androidx.media3.datasource.DefaultDataSource import androidx.media3.datasource.DefaultHttpDataSource import androidx.media3.decoder.ffmpeg.FfmpegLibrary import androidx.media3.exoplayer.DecoderCounters import androidx.media3.exoplayer.DecoderReuseEvaluation import androidx.media3.exoplayer.DefaultLoadControl import androidx.media3.exoplayer.DefaultRenderersFactory import androidx.media3.exoplayer.ExoPlayer import androidx.media3.exoplayer.LoadControl import androidx.media3.exoplayer.PlayerMessage import androidx.media3.exoplayer.analytics.AnalyticsListener import androidx.media3.exoplayer.audio.AudioCapabilities import androidx.media3.exoplayer.audio.AudioSink import androidx.media3.exoplayer.audio.DefaultAudioSink import androidx.media3.exoplayer.mediacodec.MediaCodecSelector import androidx.media3.exoplayer.source.ClippingMediaSource import androidx.media3.exoplayer.source.DefaultMediaSourceFactory import androidx.media3.exoplayer.source.ForwardingMediaSourceFactory import androidx.media3.exoplayer.source.LoadEventInfo import androidx.media3.exoplayer.source.MediaLoadData import androidx.media3.exoplayer.source.MediaSource import androidx.media3.exoplayer.trackselection.AdaptiveTrackSelection import androidx.media3.exoplayer.trackselection.DefaultTrackSelector import androidx.media3.exoplayer.upstream.BandwidthMeter import androidx.media3.exoplayer.upstream.DefaultAllocator import androidx.media3.common.Timeline import androidx.media3.exoplayer.analytics.PlayerId import androidx.media3.exoplayer.source.MediaSource.MediaPeriodId import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter import androidx.media3.extractor.DefaultExtractorsFactory import androidx.media3.ui.SubtitleView import io.github.glacier_jellyfin.androidtv.core.log.DebugOptions import io.github.glacier_jellyfin.androidtv.core.log.Log import io.github.peerless2012.ass.media.AssHandler import io.github.peerless2012.ass.media.factory.AssRenderersFactory import io.github.peerless2012.ass.media.parser.AssSubtitleParserFactory import io.github.peerless2012.ass.media.type.AssRenderType import io.github.peerless2012.ass.media.widget.AssSubtitleView</ID>
+    <ID>ImportOrdering:HandoverBufferTest.kt:import android.net.Uri import androidx.media3.common.C import androidx.media3.common.MediaItem import androidx.media3.common.MimeTypes import androidx.media3.common.Player import androidx.media3.datasource.DataSource import androidx.media3.datasource.DataSpec import androidx.media3.datasource.DefaultDataSource import androidx.media3.datasource.TransferListener import androidx.media3.exoplayer.ExoPlayer import androidx.media3.exoplayer.drm.DrmSessionManagerProvider import androidx.media3.exoplayer.hls.HlsMediaSource import androidx.media3.exoplayer.source.MediaSource import androidx.media3.exoplayer.source.ProgressiveMediaSource import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy import androidx.media3.test.utils.FakeRenderer import androidx.media3.test.utils.TestExoPlayerBuilder import androidx.media3.test.utils.robolectric.TestPlayerRunHelper import androidx.test.core.app.ApplicationProvider import androidx.test.ext.junit.runners.AndroidJUnit4 import io.github.peerless2012.ass.media.AssHandler import io.github.peerless2012.ass.media.type.AssRenderType import java.io.File import java.io.InterruptedIOException import java.util.concurrent.atomic.AtomicLong import org.junit.After import org.junit.Assert.assertEquals import org.junit.Assert.assertNull import org.junit.Assert.assertTrue import org.junit.Before import org.junit.Test import org.junit.runner.RunWith import org.robolectric.annotation.Config</ID>
+    <ID>LongMethod:DolbyVisionRpu.kt:DolbyVisionRpu$fun convert: ByteArray?</ID>
+    <ID>LongMethod:GlacierPlayer.kt:GlacierPlayer$@OptIn(UnstableApi::class) fun create: GlacierPlayback</ID>
+    <ID>MagicNumber:BitstreamGuard.kt:BitstreamGuard$300</ID>
+    <ID>MagicNumber:BitstreamGuard.kt:BitstreamGuard$600</ID>
+    <ID>MagicNumber:DolbyVisionProfile7.kt:DolbyVisionProfile7Extractors.Companion$0xff</ID>
+    <ID>MagicNumber:DolbyVisionProfile7.kt:DolbyVisionProfile7Extractors.Companion$7</ID>
+    <ID>MagicNumber:DolbyVisionProfile7.kt:DolbyVisionProfile7Extractors.Companion$8</ID>
+    <ID>MagicNumber:DolbyVisionProfile7.kt:DolbyVisionProfile7Extractors.Profile7Track$256</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:BitReader$32</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:BitReader$64</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:BitReader$7</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:BitWriter$7</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:BitWriter$8</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:DolbyVisionRpu$0x04C11DB7</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:DolbyVisionRpu$0x19</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:DolbyVisionRpu$0x700</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:DolbyVisionRpu$0xff</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:DolbyVisionRpu$0xffff</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:DolbyVisionRpu$1023</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:DolbyVisionRpu$11</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:DolbyVisionRpu$12</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:DolbyVisionRpu$32</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:DolbyVisionRpu$6</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:DolbyVisionRpu$7</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:DolbyVisionRpu$8</ID>
+    <ID>MagicNumber:DolbyVisionRpu.kt:DolbyVisionRpu$9</ID>
+    <ID>MagicNumber:DownloadRate.kt:DownloadRate$8_000</ID>
+    <ID>MagicNumber:GlacierPlayer.kt:GlacierPlayer$2160</ID>
+    <ID>MagicNumber:GlacierPlayer.kt:GlacierPlayer$3840</ID>
+    <ID>MagicNumber:GlacierPlayer.kt:GlacierPlayer.&lt;no name provided&gt;$8</ID>
+    <ID>MagicNumber:GlacierPlayer.kt:SteeredBandwidthMeter$1.05</ID>
+    <ID>MagicNumber:Iec61937.kt:Iec61937Bursts$0xff</ID>
+    <ID>MagicNumber:Iec61937.kt:Iec61937Bursts$8</ID>
+    <ID>MagicNumber:Iec61937.kt:Iec61937Packer.Companion$0xff</ID>
+    <ID>MagicNumber:Iec61937.kt:Iec61937Packer.Companion$8</ID>
+    <ID>MagicNumber:Iec61937.kt:Iec61937Packer.DtsHd$8</ID>
+    <ID>MagicNumber:Iec61937.kt:Iec61937Packer.DtsHd$9</ID>
+    <ID>MagicNumber:Iec61937.kt:Iec61937Packer.TrueHd$0xf8726f</ID>
+    <ID>MagicNumber:Iec61937.kt:Iec61937Packer.TrueHd$2560</ID>
+    <ID>MagicNumber:Iec61937.kt:Iec61937Packer.TrueHd$40</ID>
+    <ID>MagicNumber:SyncPoints.kt:SyncPoints$1_000_000</ID>
+    <ID>MagicNumber:ThrottledDataSource.kt:ThrottledDataSource$14</ID>
+    <ID>MagicNumber:ThrottledDataSource.kt:ThrottledDataSource$1_000_000</ID>
+    <ID>MaxLineLength:GlacierPlayer.kt:GlacierPlayback$Log.i(TAG, "Hand over at $atMs ms: the playing stream goes on, the next is queued and loads ahead (${stateName(player.playbackState)} at ${player.currentPosition} ms, ${player.mediaItemCount} items)")</ID>
+    <ID>MaxLineLength:GlacierPlayer.kt:GlacierPlayback$Log.i(TAG, "Hand over point reached at $position ms (${loaded / 1000} s of the next stream loaded, load control ${fromLoadControl / 1000} s, completed loads ${loadedToLog()}), moving on to the next stream" + if (into &gt; 0) " at +$into ms" else "")</ID>
+    <ID>MaxLineLength:GlacierPlayer.kt:GlacierPlayback$Log.i(TAG, "Hand over point reached at $position ms, the next stream has ${loaded / 1000} s (load control ${fromLoadControl / 1000} s, completed loads ${loadedToLog()}): waiting, now $postponedMs ms past the plan")</ID>
+    <ID>MaxLineLength:GlacierPlayer.kt:GlacierPlayback.&lt;no name provided&gt;$Log.i(TAG, "Audio output: ${encodingName(audioTrackConfig.encoding)}, ${Integer.bitCount(audioTrackConfig.channelConfig)} channels, ${audioTrackConfig.sampleRate} Hz")</ID>
+    <ID>MaxLineLength:GlacierPlayer.kt:GlacierPlayback.&lt;no name provided&gt;$audioStart("input ${format.codecs?.let { "$it " } ?: ""}${format.sampleMimeType} ${format.channelCount} ch ${format.sampleRate} Hz ${format.averageBitrate} bit/s")</ID>
+    <ID>MaxLineLength:GlacierPlayer.kt:GlacierPlayback.&lt;no name provided&gt;$override</ID>
+    <ID>MaxLineLength:GlacierPlayer.kt:GlacierPlayer$Log.i("Player", "The file's audio is ${when (predicted) { true -&gt; "decoded on this device"; false -&gt; "passed on as a bitstream"; null -&gt; "not known" }} (predicted)")</ID>
+    <ID>MaxLineLength:GlacierPlayer.kt:GlacierPlayer.&lt;no name provided&gt;$"load starts: tier ${mediaLoadData.trackFormat?.height}p ${(mediaLoadData.trackFormat?.bitrate ?: 0) / 1000} kbit/s, estimate ${meter.bitrateEstimate / 1000} kbit/s, "</ID>
+    <ID>MaxLineLength:GlacierPlayer.kt:GlacierPlayer.&lt;no name provided&gt;$"tier ${mediaLoadData.trackFormat?.height}p ${(mediaLoadData.trackFormat?.bitrate ?: 0) / 1000} kbit/s, at ${mediaLoadData.mediaStartTimeMs / 1000} s, "</ID>
+    <ID>MaxLineLength:GuardedAudioSink.kt:GuardedAudioSink.GuardedListener$override fun onUnderrun</ID>
+    <ID>MaxLineLength:HandoverBufferTest.kt:HandoverBufferTest$assertEquals("the loaded segments are not loaded again: ${synchronized(opens) { opens.toList() }}", segmentsBefore, opened("seg").take(segmentsBefore.size))</ID>
+    <ID>MaxLineLength:HandoverBufferTest.kt:HandoverBufferTest.FileOrPlaylist$if (mediaItem.localConfiguration?.mimeType == MimeTypes.APPLICATION_M3U8) hls.createMediaSource(mediaItem) else progressive.createMediaSource(mediaItem)</ID>
+    <ID>NoUnusedImports:AudioPath.kt:io.github.glacier_jellyfin.androidtv.core.player.AudioPath.kt</ID>
+    <ID>ReturnCount:DolbyVisionRpu.kt:DolbyVisionRpu$fun convert: ByteArray?</ID>
+    <ID>SpacingAroundCurly:DolbyVisionProfile7.kt:DolbyVisionProfile7Extractors.Profile7Extractor${</ID>
+    <ID>SpacingAroundOperators:DolbyVisionProfile7.kt:DolbyVisionProfile7Extractors.Profile7Extractor$=</ID>
+    <ID>StringTemplate:GlacierPlayer.kt:GlacierPlayback.&lt;no name provided&gt;$${elapsedSinceLastFeedMs}</ID>
+    <ID>StringTemplate:GlacierPlayer.kt:GlacierPlayback.&lt;no name provided&gt;$${initializationDurationMs}</ID>
+  </CurrentIssues>
+</SmellBaseline>

@@ -1,0 +1,171 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>AnnotationOnSeparateLine:LibraryRepository.kt:LibraryRepository$@Suppress("DEPRECATION") session.api.artistApi.getAlbumArtists( userId = userId, parentId = query.libraryId, fields = listOf(ItemFields.CHILD_COUNT, ItemFields.SORT_NAME, ItemFields.DATE_CREATED), startIndex = start, limit = limit, isFavorite = favorite, sortBy = sortBy, sortOrder = order, enableUserData = true, ).content</ID>
+    <ID>ComplexCondition:PlaybackRepository.kt:PlaybackRepository$answer.errorCode != null || source == null || source.supportsDirectPlay || url == null || asked == null || asked &lt; videoBitrate || "SubtitleMethod=Encode" in url</ID>
+    <ID>ComplexCondition:PlaybackRepository.kt:PlaybackRepository$cap == null &amp;&amp; copyDemand == null &amp;&amp; method == PlaybackMethod.Transcode &amp;&amp; source.liveStreamId == null &amp;&amp; source.transcodingSubProtocol == MediaStreamProtocol.HLS</ID>
+    <ID>ComplexCondition:PlaybackRepository.kt:PlaybackRepository$info.errorCode == null &amp;&amp; copyDemand == null &amp;&amp; bigger &amp;&amp; !first.supportsDirectPlay &amp;&amp; !first.supportsDirectStream &amp;&amp; first.liveStreamId == null</ID>
+    <ID>ComplexCondition:StreamBudget.kt:StreamBudget$videoCopied &amp;&amp; videoBitrate != null &amp;&amp; videoBitrate &gt; 0 &amp;&amp; height == sourceHeight</ID>
+    <ID>CyclomaticComplexMethod:LibraryRepository.kt:LibraryRepository$private suspend fun index: List&lt;IndexEntry&gt;</ID>
+    <ID>CyclomaticComplexMethod:ListArrangement.kt:ListArrangement$fun arrange: ArrangedList</ID>
+    <ID>CyclomaticComplexMethod:ListArrangement.kt:ListArrangement$fun group: ListGroup</ID>
+    <ID>CyclomaticComplexMethod:LiveTvRepository.kt:LiveTvRepository$private fun BaseItemDto.toProgram: LiveProgram?</ID>
+    <ID>CyclomaticComplexMethod:MediaMapper.kt:MediaMapper$fun item: MediaItem</ID>
+    <ID>CyclomaticComplexMethod:PlaybackRepository.kt:PlaybackRepository$private suspend fun openNow: PlaybackSource</ID>
+    <ID>CyclomaticComplexMethod:Tracks.kt:fun describeTrack: TrackDescription</ID>
+    <ID>ImportOrdering:AgeFilter.kt:import io.github.glacier_jellyfin.androidtv.core.log.Log import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl import io.github.glacier_jellyfin.androidtv.core.data.Protection import io.github.glacier_jellyfin.androidtv.core.data.Session import io.github.glacier_jellyfin.androidtv.core.data.SessionManager import kotlinx.coroutines.CancellationException import kotlinx.coroutines.Dispatchers import kotlinx.coroutines.sync.Mutex import kotlinx.coroutines.sync.withLock import kotlinx.coroutines.withContext import org.jellyfin.sdk.api.client.ApiClient import org.jellyfin.sdk.api.client.extensions.libraryApi import org.jellyfin.sdk.api.client.extensions.userApi import org.jellyfin.sdk.model.api.BaseItemDto import org.jellyfin.sdk.model.api.BaseItemKind import java.util.UUID import javax.inject.Inject import javax.inject.Singleton</ID>
+    <ID>ImportOrdering:DetailRepository.kt:import io.github.glacier_jellyfin.androidtv.core.data.Session import io.github.glacier_jellyfin.androidtv.core.data.SessionManager import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleMode import kotlinx.coroutines.Dispatchers import kotlinx.coroutines.flow.MutableSharedFlow import kotlinx.coroutines.flow.SharedFlow import kotlinx.coroutines.flow.asSharedFlow import kotlinx.coroutines.withContext import org.jellyfin.sdk.api.client.extensions.imageApi import org.jellyfin.sdk.api.client.extensions.libraryApi import org.jellyfin.sdk.api.client.extensions.personApi import org.jellyfin.sdk.api.client.extensions.playlistApi import org.jellyfin.sdk.api.client.extensions.showApi import org.jellyfin.sdk.api.client.extensions.trickPlayApi import org.jellyfin.sdk.api.client.extensions.userDataApi import org.jellyfin.sdk.model.api.BaseItemDto import org.jellyfin.sdk.model.api.BaseItemPerson import org.jellyfin.sdk.model.api.BaseItemKind import org.jellyfin.sdk.model.api.ImageType import org.jellyfin.sdk.model.api.ItemFields import org.jellyfin.sdk.model.api.ItemSortBy import org.jellyfin.sdk.model.api.MediaSourceInfo import org.jellyfin.sdk.model.api.MediaStream import org.jellyfin.sdk.model.api.MediaType import org.jellyfin.sdk.model.api.MediaStreamType import org.jellyfin.sdk.model.api.PersonKind import org.jellyfin.sdk.model.api.SortOrder import java.util.UUID import javax.inject.Inject import javax.inject.Singleton</ID>
+    <ID>ImportOrdering:HomeRepository.kt:import io.github.glacier_jellyfin.androidtv.core.data.Session import io.github.glacier_jellyfin.androidtv.core.data.SessionManager import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeSettings import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightSource import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightType import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching import kotlinx.coroutines.Dispatchers import kotlinx.coroutines.async import kotlinx.coroutines.awaitAll import kotlinx.coroutines.coroutineScope import kotlinx.coroutines.flow.MutableStateFlow import kotlinx.coroutines.flow.StateFlow import kotlinx.coroutines.flow.asStateFlow import kotlinx.coroutines.withContext import org.jellyfin.sdk.api.client.extensions.libraryApi import org.jellyfin.sdk.api.client.extensions.showApi import org.jellyfin.sdk.api.client.extensions.userApi import org.jellyfin.sdk.api.client.extensions.userDataApi import org.jellyfin.sdk.api.client.extensions.userViewApi import org.jellyfin.sdk.model.api.BaseItemDto import org.jellyfin.sdk.model.api.BaseItemKind import org.jellyfin.sdk.model.api.CollectionType import org.jellyfin.sdk.model.api.ImageType import org.jellyfin.sdk.model.api.ItemFields import org.jellyfin.sdk.model.api.ItemFilter import org.jellyfin.sdk.model.api.ItemSortBy import org.jellyfin.sdk.model.api.MediaType import org.jellyfin.sdk.model.api.SortOrder import java.util.UUID import kotlin.random.Random import javax.inject.Inject import javax.inject.Singleton</ID>
+    <ID>ImportOrdering:LibraryRepository.kt:import io.github.glacier_jellyfin.androidtv.core.data.Session import io.github.glacier_jellyfin.androidtv.core.data.SessionManager import io.github.glacier_jellyfin.androidtv.core.log.Log import kotlinx.coroutines.CancellationException import kotlinx.coroutines.CoroutineScope import kotlinx.coroutines.Dispatchers import kotlinx.coroutines.SupervisorJob import kotlinx.coroutines.launch import kotlinx.coroutines.async import kotlinx.coroutines.awaitAll import kotlinx.coroutines.coroutineScope import kotlinx.coroutines.flow.MutableStateFlow import kotlinx.coroutines.flow.StateFlow import kotlinx.coroutines.flow.asStateFlow import kotlinx.coroutines.flow.update import kotlinx.coroutines.sync.Mutex import kotlinx.coroutines.sync.Semaphore import kotlinx.coroutines.sync.withPermit import kotlinx.coroutines.sync.withLock import kotlinx.coroutines.withContext import org.jellyfin.sdk.api.client.extensions.artistApi import org.jellyfin.sdk.api.client.extensions.genreApi import org.jellyfin.sdk.api.client.extensions.libraryApi import org.jellyfin.sdk.model.api.BaseItemDto import org.jellyfin.sdk.model.api.BaseItemDtoQueryResult import org.jellyfin.sdk.model.api.BaseItemKind import org.jellyfin.sdk.model.api.ItemFields import org.jellyfin.sdk.model.api.ItemFilter import org.jellyfin.sdk.model.api.ItemSortBy import org.jellyfin.sdk.model.api.SortOrder import java.util.UUID import java.util.concurrent.atomic.AtomicInteger import javax.inject.Inject import javax.inject.Singleton</ID>
+    <ID>ImportOrdering:PlaybackRepository.kt:import io.github.glacier_jellyfin.androidtv.core.log.DebugOptions import io.github.glacier_jellyfin.androidtv.core.log.DebugThrottle import android.content.res.Resources import io.github.glacier_jellyfin.androidtv.core.log.Log import io.github.glacier_jellyfin.androidtv.core.data.Session import io.github.glacier_jellyfin.androidtv.core.data.SessionManager import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack import io.github.glacier_jellyfin.androidtv.core.data.media.Track import io.github.glacier_jellyfin.androidtv.core.data.media.fullInsteadOfForced import io.github.glacier_jellyfin.androidtv.core.data.media.mainInsteadOfExtra import io.github.glacier_jellyfin.androidtv.core.data.media.toTrack import io.github.glacier_jellyfin.androidtv.core.data.settings.HdAudioOutput import io.github.glacier_jellyfin.androidtv.core.data.settings.PlaybackSettings import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleMode import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.DeviceCapabilities import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.VideoCodecSupport import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.DeviceProfiles import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.HlsSegments import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.MediaCapabilityDetector import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching import kotlinx.coroutines.CancellationException import kotlinx.coroutines.CoroutineScope import kotlinx.coroutines.Deferred import kotlinx.coroutines.Dispatchers import kotlinx.coroutines.NonCancellable import kotlinx.coroutines.SupervisorJob import kotlinx.coroutines.async import kotlinx.coroutines.awaitAll import kotlinx.coroutines.coroutineScope import kotlinx.coroutines.delay import kotlinx.coroutines.flow.MutableSharedFlow import kotlinx.coroutines.flow.SharedFlow import kotlinx.coroutines.flow.asSharedFlow import kotlinx.coroutines.launch import kotlinx.coroutines.withContext import kotlinx.coroutines.withTimeoutOrNull import org.jellyfin.sdk.Jellyfin import org.jellyfin.sdk.api.client.ApiClient import org.jellyfin.sdk.api.client.extensions.audioApi import org.jellyfin.sdk.api.client.extensions.mediaInfoApi import org.jellyfin.sdk.api.client.extensions.mediaSegmentApi import org.jellyfin.sdk.api.client.extensions.sessionApi import org.jellyfin.sdk.api.client.extensions.userDataApi import org.jellyfin.sdk.api.client.extensions.videoApi import org.jellyfin.sdk.model.api.HardwareAccelerationType import org.jellyfin.sdk.model.api.MediaSourceInfo import org.jellyfin.sdk.model.api.MediaStream import org.jellyfin.sdk.model.api.MediaStreamProtocol import org.jellyfin.sdk.model.api.MediaSegmentType import org.jellyfin.sdk.model.api.MediaStreamType import org.jellyfin.sdk.model.api.SubtitleDeliveryMethod import org.jellyfin.sdk.model.api.PlayMethod import org.jellyfin.sdk.model.api.PlaybackInfoDto import org.jellyfin.sdk.model.api.PlaybackInfoResponse import org.jellyfin.sdk.model.api.PlaybackOrder import org.jellyfin.sdk.model.api.PlaybackProgressInfo import org.jellyfin.sdk.model.api.PlaybackStartInfo import org.jellyfin.sdk.model.api.PlaybackStopInfo import org.jellyfin.sdk.model.api.RepeatMode import java.net.HttpURLConnection import java.net.SocketTimeoutException import java.net.URI import java.net.URL import java.net.URLEncoder import java.util.UUID import javax.inject.Inject import javax.inject.Singleton import kotlin.time.Duration.Companion.minutes</ID>
+    <ID>ImportOrdering:ServerPreferences.kt:import io.github.glacier_jellyfin.androidtv.core.log.Log import io.github.glacier_jellyfin.androidtv.core.data.Session import io.github.glacier_jellyfin.androidtv.core.data.SessionManager import io.github.glacier_jellyfin.androidtv.core.data.media.Languages import kotlinx.coroutines.CancellationException import kotlinx.coroutines.CoroutineScope import kotlinx.coroutines.Dispatchers import kotlinx.coroutines.SupervisorJob import kotlinx.coroutines.flow.MutableStateFlow import kotlinx.coroutines.flow.StateFlow import kotlinx.coroutines.flow.asStateFlow import kotlinx.coroutines.flow.distinctUntilChangedBy import kotlinx.coroutines.launch import kotlinx.coroutines.sync.Mutex import kotlinx.coroutines.sync.withLock import kotlinx.coroutines.withContext import org.jellyfin.sdk.api.client.extensions.localizationApi import org.jellyfin.sdk.api.client.extensions.userApi import org.jellyfin.sdk.model.api.SubtitlePlaybackMode import org.jellyfin.sdk.model.api.UserConfiguration import java.text.Collator import java.util.UUID import javax.inject.Inject import javax.inject.Singleton</ID>
+    <ID>ImportOrdering:SessionManager.kt:import io.github.glacier_jellyfin.androidtv.core.log.Log import io.github.glacier_jellyfin.androidtv.core.jellyfin.Authenticator import kotlinx.coroutines.flow.MutableStateFlow import kotlinx.coroutines.flow.StateFlow import kotlinx.coroutines.flow.asStateFlow import org.jellyfin.sdk.Jellyfin import org.jellyfin.sdk.api.client.ApiClient import org.jellyfin.sdk.api.client.util.AuthorizationHeaderBuilder import javax.inject.Inject import javax.inject.Singleton</ID>
+    <ID>ImportOrdering:SettingsRepository.kt:import androidx.datastore.core.CorruptionException import androidx.datastore.core.DataStore import androidx.datastore.core.Serializer import io.github.glacier_jellyfin.androidtv.core.data.SessionManager import kotlinx.coroutines.CoroutineScope import kotlinx.coroutines.Dispatchers import kotlinx.coroutines.SupervisorJob import kotlinx.coroutines.flow.Flow import kotlinx.coroutines.flow.SharingStarted import kotlinx.coroutines.flow.StateFlow import kotlinx.coroutines.flow.combine import kotlinx.coroutines.flow.first import kotlinx.coroutines.flow.map import kotlinx.coroutines.flow.stateIn import kotlinx.serialization.SerializationException import kotlinx.serialization.Serializable import kotlinx.serialization.json.Json import java.io.InputStream import java.io.OutputStream import javax.inject.Inject import javax.inject.Singleton</ID>
+    <ID>Kdoc:LibraryRepository.kt:LibraryRepository$/** Letters that have at least one title, for greying out the rest of the A–Z rail. */</ID>
+    <ID>LargeClass:PlaybackRepository.kt:PlaybackRepository</ID>
+    <ID>LongMethod:MediaMapper.kt:MediaMapper$fun item: MediaItem</ID>
+    <ID>LongMethod:PlaybackRepository.kt:PlaybackRepository$private suspend fun openNow: PlaybackSource</ID>
+    <ID>LoopWithTooManyJumpStatements:Tracks.kt:for</ID>
+    <ID>MagicNumber:AccountState.kt:AgeLimit.A12$12</ID>
+    <ID>MagicNumber:AccountState.kt:AgeLimit.A6$6</ID>
+    <ID>MagicNumber:LibraryRepository.kt:LibraryRepository$10_000</ID>
+    <ID>MagicNumber:LibraryRepository.kt:LibraryRepository$12</ID>
+    <ID>MagicNumber:ListArrangement.kt:ListArrangement$12</ID>
+    <ID>MagicNumber:ListArrangement.kt:ListArrangement$12L</ID>
+    <ID>MagicNumber:NameIndexStore.kt:NameIndexStore$40</ID>
+    <ID>MagicNumber:NameIndexStore.kt:NameIndexStore$6</ID>
+    <ID>MagicNumber:NameIndexStore.kt:NameIndexStore$7</ID>
+    <ID>MagicNumber:NameIndexStore.kt:NameIndexStore$8</ID>
+    <ID>MagicNumber:NameIndexStore.kt:NameIndexStore$9</ID>
+    <ID>MagicNumber:PlaybackRepository.kt:PlaybackRepository$100_000</ID>
+    <ID>MagicNumber:PlaybackRepository.kt:PlaybackRepository$1_000_000</ID>
+    <ID>MagicNumber:PlaybackRepository.kt:PlaybackRepository$1e6</ID>
+    <ID>MagicNumber:PlaybackRepository.kt:PlaybackRepository$400</ID>
+    <ID>MagicNumber:PlaybackRepository.kt:PlaybackRepository$6</ID>
+    <ID>MagicNumber:PlaybackRepository.kt:PlaybackRepository$8</ID>
+    <ID>MagicNumber:ProfileSettings.kt:AudioChannels.Surround51$6</ID>
+    <ID>MagicNumber:ProfileSettings.kt:AudioChannels.Surround71$8</ID>
+    <ID>MagicNumber:ProfileSettings.kt:FolderAspect.Wide$9</ID>
+    <ID>MagicNumber:ProfileSettings.kt:MaxBitrate.M10$10_000_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:MaxBitrate.M120$120_000_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:MaxBitrate.M1_5$1_500_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:MaxBitrate.M20$20_000_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:MaxBitrate.M4$4_000_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:MaxBitrate.M40$40_000_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:MaxBitrate.M60$60_000_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:MaxBitrate.M80$80_000_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SeekStep.S10$10_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SeekStep.S15$15_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SeekStep.S30$30_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SeekStep.S5$5_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SeekStep.S60$60_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SkipButtonHide.S10$10_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SkipButtonHide.S15$15_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SkipButtonHide.S30$30_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SkipButtonHide.S5$5_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SpotlightCount.N7$7</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SpotlightRotation.S15$15</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SpotlightRotation.S6$6</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SpotlightRotation.S9$9</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleBackground.Solid$0xFF000000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleBackground.Translucent$0x99000000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleColor.Amber$0xFFFFB74D</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleColor.Cyan$0xFF7FE3F0</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleColor.Green$0xFF9BE89B</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleColor.Grey$0xFFBFC6CE</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleColor.IceBlue$0xFFCFE8FF</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleColor.Pink$0xFFF7A8D8</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleColor.White$0xFFFFFFFF</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleColor.Yellow$0xFFFFE66D</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitlePosition.Bottom2$2</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitlePosition.Bottom3$3</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitlePosition.Bottom5$5</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleSize.Large$0.065f</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleSize.Normal$0.0533f</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleSize.Small$0.043f</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleSize.XLarge$0.08f</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleSize.XSmall$0.035f</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleWeight.Bold$700</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleWeight.Medium$500</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleWeight.Regular$400</ID>
+    <ID>MagicNumber:ProfileSettings.kt:SubtitleWeight.SemiBold$600</ID>
+    <ID>MagicNumber:ProfileSettings.kt:UpNextChoice.M1$60_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:UpNextChoice.S10$10_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:UpNextChoice.S15$15_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:UpNextChoice.S20$20_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:UpNextChoice.S30$30_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:UpNextChoice.S40$40_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:UpNextChoice.S50$50_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:UpNextCollapse.S10$10_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:UpNextCollapse.S15$15_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:UpNextCollapse.S30$30_000</ID>
+    <ID>MagicNumber:ProfileSettings.kt:UpNextCollapse.S5$5_000</ID>
+    <ID>MagicNumber:SeerrRepository.kt:12</ID>
+    <ID>MagicNumber:SeerrRepository.kt:20</ID>
+    <ID>MagicNumber:SeerrRepository.kt:32</ID>
+    <ID>MagicNumber:SeerrRepository.kt:403</ID>
+    <ID>MagicNumber:SeerrRepository.kt:409</ID>
+    <ID>MagicNumber:SeerrRepository.kt:8</ID>
+    <ID>MagicNumber:SeerrRepository.kt:SeerrRepository$200</ID>
+    <ID>MagicNumber:SeerrRepository.kt:SeerrRepository$299</ID>
+    <ID>MagicNumber:SeerrRepository.kt:SeerrRepository$300</ID>
+    <ID>MagicNumber:StreamBudget.kt:StreamBudget$102</ID>
+    <ID>MagicNumber:StreamBudget.kt:StreamBudget$1080</ID>
+    <ID>MagicNumber:StreamBudget.kt:StreamBudget$10_000_000</ID>
+    <ID>MagicNumber:StreamBudget.kt:StreamBudget$2000</ID>
+    <ID>MagicNumber:StreamBudget.kt:StreamBudget$2160</ID>
+    <ID>MagicNumber:StreamBudget.kt:StreamBudget$25_000_000</ID>
+    <ID>MagicNumber:StreamBudget.kt:StreamBudget$2_500_000</ID>
+    <ID>MagicNumber:StreamBudget.kt:StreamBudget$30_000_000</ID>
+    <ID>MagicNumber:StreamBudget.kt:StreamBudget$384_000</ID>
+    <ID>MagicNumber:StreamBudget.kt:StreamBudget$6</ID>
+    <ID>MagicNumber:StreamBudget.kt:StreamBudget$60_000_000</ID>
+    <ID>MagicNumber:StreamBudget.kt:StreamBudget$640_000</ID>
+    <ID>MagicNumber:StreamBudget.kt:StreamBudget$64_000</ID>
+    <ID>MagicNumber:StreamBudget.kt:StreamBudget$720</ID>
+    <ID>MagicNumber:StreamBudget.kt:StreamBudget$8_000_000</ID>
+    <ID>MagicNumber:Tracks.kt:128</ID>
+    <ID>MagicNumber:Versions.kt:Resolution.Companion$1200</ID>
+    <ID>MagicNumber:Versions.kt:Resolution.Companion$1700</ID>
+    <ID>MagicNumber:Versions.kt:Resolution.Companion$1800</ID>
+    <ID>MagicNumber:Versions.kt:Resolution.Companion$3200</ID>
+    <ID>MagicNumber:Versions.kt:Resolution.Companion$700</ID>
+    <ID>MatchingDeclarationName:Guide.kt:GuideCell</ID>
+    <ID>MaxLineLength:HomeRowsTest.kt:HomeRowsTest$listOf("ContinueWatching", "Favorites", "Latest:movies", "Latest:shows", "RecentAlbums", "FavoriteSongs", "Libraries", "LiveTvOnNow", "LiveTvChannels")</ID>
+    <ID>MaxLineLength:HomeRowsTest.kt:HomeRowsTest$listOf("ContinueWatching", "Favorites", "Latest:movies", "Libraries", "RecentAlbums", "FavoriteSongs", "Latest:shows", "LiveTvOnNow", "LiveTvChannels")</ID>
+    <ID>MaxLineLength:HomeRowsTest.kt:HomeRowsTest$listOf("ContinueWatching", "Favorites", "Latest:shows", "Latest:movies", "Latest:music", "RecentAlbums", "FavoriteSongs", "Libraries", "LiveTvOnNow", "LiveTvChannels")</ID>
+    <ID>MaxLineLength:HomeRowsTest.kt:HomeRowsTest$listOf("ContinueWatching", "Favorites", "Latest:shows", "Latest:movies", "RecentAlbums", "FavoriteSongs", "Libraries", "LiveTvOnNow", "LiveTvChannels")</ID>
+    <ID>MaxLineLength:HomeRowsTest.kt:HomeRowsTest$listOf("Libraries", "Favorites", "ContinueWatching", "Latest:movies", "Latest:shows", "RecentAlbums", "FavoriteSongs", "LiveTvOnNow", "LiveTvChannels")</ID>
+    <ID>MaxLineLength:LibraryRepository.kt:LibraryRepository$fields = if (light) listOf(ItemFields.SORT_NAME, ItemFields.DATE_CREATED) else listOf(ItemFields.CHILD_COUNT, ItemFields.GENRES, ItemFields.SORT_NAME, ItemFields.DATE_CREATED)</ID>
+    <ID>MaxLineLength:PlaybackRepository.kt:PlaybackRepository$", audio ${audioIndex ?: "default " + source.defaultAudioStreamIndex}, subtitles ${subtitleIndex ?: "default " + source.defaultSubtitleStreamIndex}"</ID>
+    <ID>MaxLineLength:PlaybackRepository.kt:PlaybackRepository$"sources ${answer.mediaSources.size}, direct play ${tierSource?.supportsDirectPlay}, direct stream ${tierSource?.supportsDirectStream})"</ID>
+    <ID>MaxLineLength:PlaybackRepository.kt:PlaybackRepository$Log.i(TAG, "The file takes ${first.bitrate!! / 1_000_000} Mbit/s, the link carries ${budget / 1_000_000}: asking for a stream that fits")</ID>
+    <ID>MaxLineLength:PlaybackRepository.kt:PlaybackRepository$if</ID>
+    <ID>MaxLineLength:PlaybackRepository.kt:PlaybackRepository$if (ladder != null) Log.i(TAG, "Demand of the tiers: " + resolutions.joinToString { "${it.height}p ${tierDemand.getValue(it.height) / 100_000 / 10.0} Mbit/s" })</ID>
+    <ID>MaxLineLength:PlaybackRepository.kt:PlaybackRepository$if (streams.any { it.type == MediaStreamType.SUBTITLE &amp;&amp; it.index == subtitle &amp;&amp; it.deliveryMethod == SubtitleDeliveryMethod.ENCODE }) return false</ID>
+    <ID>MaxLineLength:PlaybackRepository.kt:PlaybackRepository$tier.height to StreamBudget.tierDemand(tier.height, sourceVideo?.height, tierPictureFits[tier.height] == true, sourceVideo?.bitRate, tierAudioChannels)</ID>
+    <ID>MaxLineLength:PlaybackRepository.kt:PlaybackRepository$transcodingUrl(resolution)?.let { fetchTier(session, baseUrl + it, main = resolution == resolutions.first(), label = "${resolution.height}p") }</ID>
+    <ID>MaxLineLength:SeerrRepository.kt:return runCatching { UUID.fromString("${hex.take(8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}") }.getOrNull()</ID>
+    <ID>MaxLineLength:SettingsBackup.kt:SettingsBackup$session.api.displayPreferenceApi.updateDisplayPreferences(PREFERENCES_ID, userId(session), CLIENT, current.copy(customPrefs = transform(current.customPrefs)))</ID>
+    <ID>MaxLineLength:SettingsSerializerTest.kt:SettingsSerializerTest$assertEquals(emptySet&lt;SpotlightSource&gt;(), SettingsSerializer.readFrom(ByteArrayInputStream(out.toByteArray())).profiles.getValue("s/u").home.spotlightSources)</ID>
+    <ID>MaxLineLength:SettingsSerializerTest.kt:SettingsSerializerTest$val state = SettingsState(mapOf("s/u" to ProfileSettings(home = HomeSettings(legacySpotlightSource = SpotlightSource.Random, spotlightSources = emptySet()))))</ID>
+    <ID>MaxLineLength:Versions.kt:remainingMinutes = if (runtimeMs != null &amp;&amp; position &gt; 0) ((runtimeMs - position).coerceAtLeast(0) / MS_PER_MINUTE).toInt() else item.remainingMinutes</ID>
+    <ID>ReturnCount:MediaMapper.kt:MediaMapper$private fun thumb: String?</ID>
+    <ID>ReturnCount:Versions.kt:fun pickVersion: MediaVersion?</ID>
+    <ID>SwallowedException:SettingsBackup.kt:e: IllegalArgumentException</ID>
+    <ID>TooGenericExceptionCaught:AgeFilter.kt:AgeFilter$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:LibraryRepository.kt:LibraryRepository$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:MusicRepository.kt:MusicRepository$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:PlaybackRepository.kt:PlaybackRepository$e: Throwable</ID>
+    <ID>TooGenericExceptionCaught:ServerPreferences.kt:ServerPreferencesRepository$e: Exception</ID>
+    <ID>TooManyFunctions:AccountRepository.kt:AccountRepository</ID>
+    <ID>TooManyFunctions:DetailRepository.kt:DetailRepository</ID>
+    <ID>TooManyFunctions:LiveTvRepository.kt:LiveTvRepository</ID>
+    <ID>TooManyFunctions:MusicRepository.kt:MusicRepository</ID>
+    <ID>TooManyFunctions:PlaybackRepository.kt:PlaybackRepository</ID>
+    <ID>TooManyFunctions:StreamBudget.kt:StreamBudget</ID>
+    <ID>TooManyFunctions:Tracks.kt:io.github.glacier_jellyfin.androidtv.core.data.media.Tracks.kt</ID>
+    <ID>TrailingCommaOnDeclarationSite:MediaMapper.kt:VideoRangeType.DOVI, VideoRangeType.DOVI_WITH_HDR10, VideoRangeType.DOVI_WITH_HLG, VideoRangeType.DOVI_WITH_SDR, VideoRangeType.DOVI_WITH_EL, VideoRangeType.DOVI_WITH_HDR10_PLUS, VideoRangeType.DOVI_WITH_ELHDR10_PLUS -&gt; HdrFormat.DolbyVision</ID>
+  </CurrentIssues>
+</SmellBaseline>

@@ -15,6 +15,10 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Code scanning uploads (detekt, Android Lint).
+      security-events: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -29,8 +33,54 @@ jobs:
 
       - uses: ./.github/actions/ffmpeg
 
-      - name: Unit tests, lint and debug build
-        run: ./gradlew testDebugUnitTest lintDebug assembleDebug
+      - name: Unit tests, lint, detekt and debug build
+        run: ./gradlew --continue testDebugUnitTest lintDebug detekt assembleDebug koverXmlReport koverHtmlReport
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          report=build/reports/kover/report.xml
+          if [ -f "$report" ]; then
+            # The last top-level LINE counter is the total over all modules.
+            counter=$(grep -o '<counter type="LINE" missed="[0-9]*" covered="[0-9]*"/>' "$report" | tail -n 1)
+            missed=$(echo "$counter" | sed -E 's/.*missed="([0-9]+)".*/\1/')
+            covered=$(echo "$counter" | sed -E 's/.*covered="([0-9]+)".*/\1/')
+            total=$((missed + covered))
+            {
+              echo "### Test coverage"
+              if [ "$total" -gt 0 ]; then
+                echo "Line coverage: $((covered * 100 / total)).$((covered * 1000 / total % 10))% ($covered of $total lines)"
+              else
+                echo "No coverage data."
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No Kover report found." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # Fork PRs get a read-only token and cannot upload to code scanning.
+      - name: Collect SARIF reports
+        if: always() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+        run: |
+          mkdir -p sarif/detekt sarif/android-lint
+          for f in $(find . -path '*/build/reports/detekt/detekt.sarif'); do
+            cp "$f" "sarif/detekt/$(echo "${f#./}" | tr '/' '_')"
+          done
+          for f in $(find . -path '*/build/reports/lint-results-*.sarif'); do
+            cp "$f" "sarif/android-lint/$(echo "${f#./}" | tr '/' '_')"
+          done
+
+      - uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        if: always() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && hashFiles('sarif/detekt/*') != ''
+        with:
+          sarif_file: sarif/detekt
+          category: detekt
+
+      - uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        if: always() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && hashFiles('sarif/android-lint/*') != ''
+        with:
+          sarif_file: sarif/android-lint
+          category: android-lint
 
       # Optimised with R8 like a release, so shrinking problems show up before tagging.
       - name: Staging build

@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>MagicNumber:DebugThrottle.kt:DebugThrottle$1_000_000_000L</ID>
+    <ID>MagicNumber:DebugThrottle.kt:DebugThrottle$8L</ID>
+    <ID>TooManyFunctions:Log.kt:Log</ID>
+  </CurrentIssues>
+</SmellBaseline>

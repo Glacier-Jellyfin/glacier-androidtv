@@ -8,6 +8,14 @@ plugins {
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.hilt) apply false
+    alias(libs.plugins.detekt) apply false
+    alias(libs.plugins.kover)
+}
+
+// Aggregated coverage report: ./gradlew koverHtmlReport koverXmlReport. No
+// verification rule, coverage is reported but never fails the build.
+dependencies {
+    subprojects.forEach { kover(it) }
 }
 
 // Libraries AGP brings onto the build classpath and Lint's own classpath,
@@ -31,6 +39,32 @@ buildscript {
 }
 
 subprojects {
+    apply(plugin = "dev.detekt")
+    apply(plugin = "org.jetbrains.kotlinx.kover")
+
+    // Standard rules plus ktlint formatting; only findings missing from the
+    // module's detekt-baseline.xml fail the build (./gradlew detektBaseline
+    // rewrites it, only for deliberate clean-ups).
+    extensions.configure<dev.detekt.gradle.extensions.DetektExtension> {
+        buildUponDefaultConfig = true
+        config.setFrom(rootProject.file("config/detekt/detekt.yml"))
+        baseline = file("detekt-baseline.xml")
+        parallel = true
+    }
+    dependencies.add("detektPlugins", rootProject.libs.detekt.formatting)
+    // SARIF next to the HTML/XML lint reports, uploaded to code scanning by CI.
+    plugins.withId("com.android.base") {
+        extensions.configure<com.android.build.api.dsl.CommonExtension>("android") {
+            lint.sarifReport = true
+        }
+    }
+    tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
+        reports {
+            sarif.required.set(true)
+            html.required.set(true)
+        }
+    }
+
     configurations.matching { it.name == "androidLintTool" }.configureEach {
         listOf(
             "org.bouncycastle:bcprov-jdk18on:1.86",

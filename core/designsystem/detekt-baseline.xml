@@ -1,0 +1,18 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ImportOrdering:GlacierIcons.kt:import androidx.compose.ui.graphics.SolidColor import androidx.compose.ui.graphics.StrokeCap import androidx.compose.ui.graphics.StrokeJoin import androidx.compose.ui.graphics.vector.ImageVector import androidx.compose.ui.graphics.vector.addPathNodes import androidx.compose.ui.unit.dp import androidx.compose.ui.graphics.Color</ID>
+    <ID>ImportOrdering:Mark.kt:import androidx.compose.animation.core.CubicBezierEasing import androidx.compose.animation.core.EaseInOut import androidx.compose.animation.core.keyframes import androidx.compose.animation.core.infiniteRepeatable import androidx.compose.animation.core.animateFloat import androidx.compose.animation.core.rememberInfiniteTransition import androidx.compose.foundation.Canvas import androidx.compose.foundation.layout.size import androidx.compose.runtime.Composable import androidx.compose.runtime.getValue import androidx.compose.ui.Modifier import androidx.compose.ui.geometry.CornerRadius import androidx.compose.ui.geometry.Offset import androidx.compose.ui.geometry.Size import androidx.compose.ui.graphics.Path import androidx.compose.ui.graphics.StrokeJoin import androidx.compose.ui.graphics.drawscope.DrawScope import androidx.compose.ui.graphics.drawscope.Stroke import androidx.compose.ui.graphics.drawscope.rotate import androidx.compose.ui.graphics.drawscope.scale import androidx.compose.ui.unit.dp</ID>
+    <ID>Kdoc:Controls.kt:/** A fixed width with the label centred, like the update dialog's buttons. */</ID>
+    <ID>MaxLineLength:Controls.kt:Text(badge, style = GlacierText.body(15, FontWeight.SemiBold), color = if (focused || primary) GlacierColors.Void else GlacierColors.Mist, maxLines = 1)</ID>
+    <ID>MaxLineLength:GlacierIcons.kt:GlacierIcons$"M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"</ID>
+    <ID>MaxLineLength:GlacierIcons.kt:GlacierIcons$"M18 6a2 2 0 0 1 1.387.56l2.307 2.22a1 1 0 0 1 0 1.44l-2.307 2.22A2 2 0 0 1 18 13H6a2 2 0 0 1-1.387-.56l-2.306-2.22a1 1 0 0 1 0-1.44l2.306-2.22A2 2 0 0 1 6 6z"</ID>
+    <ID>MaxLineLength:GlacierIcons.kt:GlacierIcons$private const val HEART = "M12 20.3C10.3 19 3.6 14.4 3.6 9.6 3.6 6.9 5.7 5 8.1 5c1.6 0 3 .8 3.9 2.1C12.9 5.8 14.3 5 15.9 5c2.4 0 4.5 1.9 4.5 4.6 0 4.8-6.7 9.4-8.4 10.7z"</ID>
+    <ID>MaxLineLength:GlacierIcons.kt:GlacierIcons$val</ID>
+    <ID>MaxLineLength:GlacierIcons.kt:GlacierIcons$val Pause = filled("M7 4h2a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM15 4h2a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z")</ID>
+    <ID>PropertyName:Focus.kt:/** Focus scale from the design (`focusScale` 1.07). */ const val FocusScale = 1.07f</ID>
+    <ID>PropertyName:GlacierTheme.kt:/** Width of the design's layout grid; see [GlacierTheme]. */ const val DesignWidth = 1920f</ID>
+    <ID>SpacingAroundOperators:GlacierIcons.kt:GlacierIcons$=</ID>
+  </CurrentIssues>
+</SmellBaseline>
