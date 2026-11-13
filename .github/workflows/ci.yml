@@ -59,28 +59,37 @@ jobs:
           fi
 
       # Fork PRs get a read-only token and cannot upload to code scanning.
+      # Every SARIF run needs its own automationDetails.id (= category), otherwise
+      # the upload is rejected for having several runs in one category.
       - name: Collect SARIF reports
         if: always() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
         run: |
           mkdir -p sarif/detekt sarif/android-lint
-          for f in $(find . -path '*/build/reports/detekt/detekt.sarif'); do
-            cp "$f" "sarif/detekt/$(echo "${f#./}" | tr '/' '_')"
-          done
-          for f in $(find . -path '*/build/reports/lint-results-*.sarif'); do
-            cp "$f" "sarif/android-lint/$(echo "${f#./}" | tr '/' '_')"
-          done
+          while IFS= read -r f; do
+            module="${f#./}"
+            module="${module%/build/reports/*}"
+            id="detekt/${module//\//-}/"
+            jq --arg id "$id" '.runs[].automationDetails.id = $id' "$f" > "sarif/detekt/${module//\//_}.sarif"
+          done < <(find . -path '*/build/reports/detekt/detekt.sarif')
+          while IFS= read -r f; do
+            module="${f#./}"
+            module="${module%/build/reports/*}"
+            variant="$(basename "$f" .sarif)"
+            variant="${variant#lint-results-}"
+            id="android-lint/${module//\//-}/${variant}/"
+            jq --arg id "$id" '.runs[].automationDetails.id = $id' "$f" > "sarif/android-lint/${module//\//_}_${variant}.sarif"
+          done < <(find . -path '*/build/reports/lint-results-*.sarif')
 
+      # No category input here: it would override the per-run ids set above.
       - uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         if: always() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && hashFiles('sarif/detekt/*') != ''
         with:
           sarif_file: sarif/detekt
-          category: detekt
 
       - uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         if: always() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && hashFiles('sarif/android-lint/*') != ''
         with:
           sarif_file: sarif/android-lint
-          category: android-lint
 
       # Optimised with R8 like a release, so shrinking problems show up before tagging.
       - name: Staging build
