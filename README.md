@@ -243,6 +243,8 @@ little better, a coffee on Ko-fi keeps it going.
 ## License
 
 Glacier is licensed under the [GNU General Public License v3.0 or later](LICENSE).
+Third-party parts (fonts, flags, the Media3 decoder module and others) keep their own
+licences, listed in [REUSE.toml](REUSE.toml) with the texts in [LICENSES/](LICENSES/).
 
 Glacier is an independent project and is not affiliated with the Jellyfin project.
 Amazon, Amazon Appstore and the Amazon logo are trademarks of Amazon.com, Inc. or

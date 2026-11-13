@@ -114,3 +114,15 @@ jobs:
           name: reports
           path: '**/build/reports/'
           retention-days: 7
+
+  reuse:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The REUSE tool straight from PyPI, so no third-party action has to be allowed.
+      - run: pipx run reuse==6.3.0 lint

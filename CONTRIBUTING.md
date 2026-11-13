@@ -2,7 +2,8 @@
 
 Thanks for your interest in Glacier. Glacier is maintained by one person, who
 reviews every change and decides what goes in. This document explains how to
-help without anyone's time going to waste.
+help without anyone's time going to waste. Everyone taking part is expected
+to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Bugs and ideas
 
@@ -28,6 +29,7 @@ changes, and merges or closes the pull request.
   To fuzz for real, run one test class at a time with
   `JAZZER_FUZZ=1 ./gradlew :fuzz:test --tests '*TracksFuzzTest'`, which saves crashing inputs next to the seeds.
 - Keep a pull request focused on one change.
+- New third-party files (fonts, images, code or test data from other projects) need an entry in [REUSE.toml](REUSE.toml) with their licence; CI runs `reuse lint`.
 
 The maintainer takes care of the changelog, releases and the
 [website](website/); pull requests for the website are not accepted.
