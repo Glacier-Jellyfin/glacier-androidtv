@@ -30,7 +30,9 @@
   <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases"><img src="https://img.shields.io/github/downloads/Glacier-Jellyfin/glacier-androidtv/total?style=flat&amp;label=downloads" alt="Total downloads"></a>
   <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Glacier-Jellyfin/glacier-androidtv/ci.yml?branch=main&amp;style=flat&amp;label=CI" alt="CI status"></a>
   <a href="https://scorecard.dev/viewer/?uri=github.com/Glacier-Jellyfin/glacier-androidtv"><img src="https://img.shields.io/ossf-scorecard/github.com/Glacier-Jellyfin/glacier-androidtv?style=flat&amp;label=openssf%20scorecard" alt="OpenSSF Scorecard"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/Glacier-Jellyfin/glacier-androidtv?style=flat" alt="License"></a></p>
+  <a href="https://www.bestpractices.dev/projects/16652"><img src="https://img.shields.io/cii/level/16652?style=flat&amp;label=openssf%20best%20practices" alt="OpenSSF Best Practices"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Glacier-Jellyfin/glacier-androidtv?style=flat" alt="License"></a>
+</p>
 
 <p align="center">
   <img src="website/assets/screenshots/demo.gif" width="800" alt="Highlights of Glacier on a TV">
