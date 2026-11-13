@@ -89,7 +89,7 @@ subprojects {
     configurations.matching { it.isCanBeResolved && it.name != "androidLintTool" && !isJvmOnly }.configureEach {
         val processor = name.startsWith("ksp") || name.contains("AnnotationProcessor")
         val flavour = if (processor) "jre" else "android"
-        dependencyConstraints.add(project.dependencies.constraints.create("com.google.guava:guava:33.7.2-$flavour"))
+        dependencyConstraints.add(project.dependencies.constraints.create("com.google.guava:guava:33.8.0-$flavour"))
     }
 
     // Robolectric brings Bouncy Castle into the unit tests. Raised past known
