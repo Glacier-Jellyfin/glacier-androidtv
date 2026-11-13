@@ -3,8 +3,17 @@
 ## Reporting a vulnerability
 
 Please do not open a public issue for security problems. Report them
-privately instead: on the repository's **Security** tab, choose
+privately instead. Use this link:
+https://github.com/Glacier-Jellyfin/glacier-androidtv/security/advisories/new
+
+You can also open the repository's **Security** tab and choose
 **Report a vulnerability**.
+
+Reports usually get an answer within a few days. Glacier is a hobby project,
+so there is no fixed deadline for a fix. Reports are disclosed together with
+the fix.
+
+## Supported versions
 
 Only the newest release receives fixes. Glacier updates itself, so a fix
 reaches everyone with the next release.
@@ -16,6 +25,16 @@ and carries a signed build provenance attestation. With the GitHub CLI:
 
 ```sh
 gh attestation verify glacier-androidtv.apk --repo Glacier-Jellyfin/glacier-androidtv
+```
+
+The same attestation is attached to each release as
+`glacier-androidtv.apk.intoto.jsonl`. Download it next to the APK to verify
+offline:
+
+```sh
+gh attestation verify glacier-androidtv.apk \
+  --bundle glacier-androidtv.apk.intoto.jsonl \
+  --repo Glacier-Jellyfin/glacier-androidtv
 ```
 
 The in-app updater checks the SHA-256 digest GitHub publishes for the file,

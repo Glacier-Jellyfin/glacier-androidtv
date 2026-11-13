@@ -19,6 +19,8 @@ changes, and merges or closes the pull request.
 
 - Build and test with `./gradlew testDebugUnitTest lintDebug assembleDebug`;
   CI runs the same command on every pull request.
+- New features and bug fixes come with automated tests where practical, as unit
+  tests under the module's `src/test`.
 - Test focus and navigation with a D-pad (remote or emulator), not with a mouse.
 - Follow the style of the surrounding code. `.editorconfig` defines formatting.
 - `./gradlew detekt` checks code style. `./gradlew detekt -PdetektAutoCorrect` fixes formatting findings automatically.
