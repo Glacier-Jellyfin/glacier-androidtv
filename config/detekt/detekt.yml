@@ -80,3 +80,10 @@ ktlint:
     useTrailingCommaOnCallSite: true
   TrailingCommaOnDeclarationSite:
     useTrailingCommaOnDeclarationSite: true
+
+# Project rules from the :detekt-rules module.
+glacier:
+  WhenConditionPerLine:
+    active: true
+  DanglingShortArguments:
+    active: true

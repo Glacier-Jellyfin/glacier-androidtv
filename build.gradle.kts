@@ -4,6 +4,7 @@ plugins {
     // Never applied: only puts the chosen Kotlin Gradle plugin on the build
     // classpath so AGP's built-in Kotlin compiles with it.
     alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.ksp) apply false
@@ -40,6 +41,8 @@ buildscript {
 }
 
 subprojects {
+    // The detekt rules module is plain JVM: the Android dependency constraints below do not apply to it.
+    val isJvmOnly = path == ":detekt-rules"
     apply(plugin = "dev.detekt")
     apply(plugin = "org.jetbrains.kotlinx.kover")
 
@@ -55,6 +58,7 @@ subprojects {
         autoCorrect = providers.gradleProperty("detektAutoCorrect").isPresent
     }
     dependencies.add("detektPlugins", rootProject.libs.detekt.formatting)
+    dependencies.add("detektPlugins", project(":detekt-rules"))
     // SARIF next to the HTML/XML lint reports, uploaded to code scanning by CI.
     plugins.withId("com.android.base") {
         extensions.configure<com.android.build.api.dsl.CommonExtension>("android") {
@@ -82,7 +86,7 @@ subprojects {
     // Media3 brings Guava into the app, Hilt and KSP into the annotation processors.
     // Raises all of them past a known vulnerability, keeping the Android flavour in
     // the APK. Remove once Media3, Hilt and KSP bring at least this version.
-    configurations.matching { it.isCanBeResolved && it.name != "androidLintTool" }.configureEach {
+    configurations.matching { it.isCanBeResolved && it.name != "androidLintTool" && !isJvmOnly }.configureEach {
         val processor = name.startsWith("ksp") || name.contains("AnnotationProcessor")
         val flavour = if (processor) "jre" else "android"
         dependencyConstraints.add(project.dependencies.constraints.create("com.google.guava:guava:33.7.2-$flavour"))
@@ -90,7 +94,7 @@ subprojects {
 
     // Robolectric brings Bouncy Castle into the unit tests. Raised past known
     // vulnerabilities. Remove once Robolectric brings at least this version.
-    configurations.matching { it.isCanBeResolved && it.name != "androidLintTool" }.configureEach {
+    configurations.matching { it.isCanBeResolved && it.name != "androidLintTool" && !isJvmOnly }.configureEach {
         listOf(
             "org.bouncycastle:bcprov-jdk18on:1.86",
             "org.bouncycastle:bcpkix-jdk18on:1.86",

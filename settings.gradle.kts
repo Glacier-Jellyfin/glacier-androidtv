@@ -25,4 +25,5 @@ include(
     ":core:ffmpeg",
     ":core:updater",
     ":core:log",
+    ":detekt-rules",
 )

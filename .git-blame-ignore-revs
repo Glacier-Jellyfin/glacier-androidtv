@@ -2,3 +2,6 @@
 
 # ktlint formatting (style: format Kotlin code with ktlint)
 a73b32a59c6d491667c8bae7dfa282694e48a7fb
+
+# Unwrapped short arguments after the ktlint formatting
+3eea9ef10f0923415393d84d5d4621cca87663a1
