@@ -28,6 +28,9 @@ qrcodegen = "1.8.0"
 tvprovider = "1.1.0"
 work = "2.12.0"
 junit = "4.13.2"
+# Fuzz tests (:fuzz) run on JUnit 5; Jazzer's JUnit integration builds on it.
+junit-jupiter = "5.14.4"
+jazzer = "0.30.0"
 # detekt 1.23 stops at Kotlin 2.0; the 2.0 line is built against Kotlin 2.4.
 detekt = "2.0.0-alpha.6"
 kover = "0.9.11"
@@ -71,6 +74,11 @@ media3-session = { module = "androidx.media3:media3-session", version.ref = "med
 libass-media = { module = "io.github.peerless2012:ass-media", version.ref = "libass-android" }
 jellyfin-core = { module = "org.jellyfin.sdk:jellyfin-core", version.ref = "jellyfin-sdk" }
 junit = { module = "junit:junit", version.ref = "junit" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit-jupiter" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+jazzer-api = { module = "com.code-intelligence:jazzer-api", version.ref = "jazzer" }
+jazzer-junit = { module = "com.code-intelligence:jazzer-junit", version.ref = "jazzer" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 media3-test-utils = { module = "androidx.media3:media3-test-utils", version.ref = "media3" }
 media3-test-utils-robolectric = { module = "androidx.media3:media3-test-utils-robolectric", version.ref = "media3" }

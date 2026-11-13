@@ -16,7 +16,7 @@ plugins {
 // Aggregated coverage report: ./gradlew koverHtmlReport koverXmlReport. No
 // verification rule, coverage is reported but never fails the build.
 dependencies {
-    subprojects.forEach { kover(it) }
+    subprojects.filter { it.path != ":fuzz" }.forEach { kover(it) }
 }
 
 // Libraries AGP brings onto the build classpath and Lint's own classpath,
@@ -41,10 +41,11 @@ buildscript {
 }
 
 subprojects {
-    // The detekt rules module is plain JVM: the Android dependency constraints below do not apply to it.
-    val isJvmOnly = path == ":detekt-rules"
+    // The detekt rules and fuzz modules are plain JVM: the Android dependency constraints below do not apply to them.
+    val isJvmOnly = path == ":detekt-rules" || path == ":fuzz"
     apply(plugin = "dev.detekt")
-    apply(plugin = "org.jetbrains.kotlinx.kover")
+    // The fuzz module compiles in copies of other modules' classes: their coverage counts there, not twice.
+    if (path != ":fuzz") apply(plugin = "org.jetbrains.kotlinx.kover")
 
     // Standard rules plus ktlint formatting; only findings missing from the
     // module's detekt-baseline.xml fail the build (./gradlew detektBaseline

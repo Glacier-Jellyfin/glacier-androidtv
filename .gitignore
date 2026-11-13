@@ -3,6 +3,15 @@
 build/
 .kotlin/
 
+# Corpus and findings Jazzer writes while fuzzing (JAZZER_FUZZ=1 ./gradlew :fuzz:test).
+# A crash kept as a regression seed is renamed (known-*) into the test's regressions/ folder.
+.cifuzz-corpus/
+crash-*
+timeout-*
+oom-*
+leak-*
+slow-unit-*
+
 # Android Studio / IntelliJ
 .idea/
 *.iml

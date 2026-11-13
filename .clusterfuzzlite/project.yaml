@@ -1,0 +1,2 @@
+# The fuzz targets are plain Kotlin on the JVM, run by Jazzer (see fuzz/build.gradle.kts).
+language: jvm

@@ -24,6 +24,9 @@ changes, and merges or closes the pull request.
 - Test focus and navigation with a D-pad (remote or emulator), not with a mouse.
 - Follow the style of the surrounding code. `.editorconfig` defines formatting.
 - `./gradlew detekt` checks code style. `./gradlew detekt -PdetektAutoCorrect` fixes formatting findings automatically.
+- The fuzz tests in `fuzz/` run on their saved inputs as part of `testDebugUnitTest`.
+  To fuzz for real, run one test class at a time with
+  `JAZZER_FUZZ=1 ./gradlew :fuzz:test --tests '*TracksFuzzTest'`, which saves crashing inputs next to the seeds.
 - Keep a pull request focused on one change.
 
 The maintainer takes care of the changelog, releases and the

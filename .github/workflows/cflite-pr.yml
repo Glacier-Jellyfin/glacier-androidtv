@@ -1,0 +1,47 @@
+name: Fuzzing (pull request)
+
+# ClusterFuzzLite fuzzes the targets of the :fuzz module for a few minutes on
+# every pull request that touches code they cover, starting from the corpus
+# the weekly run (cflite-batch.yml) built up.
+on:
+  pull_request:
+    paths:
+      - 'fuzz/**'
+      - 'core/data/src/main/**'
+      - 'core/player/src/main/**'
+      - '.clusterfuzzlite/**'
+      - 'gradle/libs.versions.toml'
+      - '.github/workflows/cflite-pr.yml'
+
+concurrency:
+  group: cflite-pr-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Downloads the corpus and builds of earlier runs, which are workflow artifacts.
+      actions: read
+    steps:
+      # The actions check out the repository themselves.
+      - name: Build fuzz targets
+        uses: google/clusterfuzzlite/actions/build_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          language: jvm
+          sanitizer: address
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fuzz the changed code
+        uses: google/clusterfuzzlite/actions/run_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          language: jvm
+          sanitizer: address
+          mode: code-change
+          # Shared by all targets.
+          fuzz-seconds: 300
+          github-token: ${{ secrets.GITHUB_TOKEN }}

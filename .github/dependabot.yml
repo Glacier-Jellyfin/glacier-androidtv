@@ -32,3 +32,14 @@ updates:
       # Every codeql-action step in a workflow must run the same version.
       codeql:
         patterns: ['github/codeql-action*']
+
+  # The ClusterFuzzLite image is pinned by digest.
+  - package-ecosystem: docker
+    directory: /.clusterfuzzlite
+    schedule:
+      interval: weekly
+    # Titles must pass the Conventional Commits check on pull requests.
+    commit-message:
+      prefix: 'ci(deps)'
+    cooldown:
+      default-days: 7

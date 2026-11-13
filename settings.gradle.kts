@@ -26,4 +26,5 @@ include(
     ":core:updater",
     ":core:log",
     ":detekt-rules",
+    ":fuzz",
 )
