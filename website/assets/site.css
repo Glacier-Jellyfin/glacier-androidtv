@@ -433,3 +433,27 @@ section { scroll-margin-top: 24px; }
   .sticky { padding: 22px 28px 26px; }
   .sticky .code { font-size: 68px; }
 }
+
+/* The request for a star: a note under the yellow one, in the left column of the download section ------------------ */
+.get-side { flex: 0 0 auto; max-width: 100%; display: flex; flex-direction: column; gap: 64px; }
+.cta-note { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px 14px; max-width: 400px; padding: 24px 26px 28px; background: var(--paper); color: var(--paper-ink); box-shadow: 3px 6px 0 var(--shadow); transform: rotate(1.2deg); }
+.cta-star { width: 68px; height: 68px; transform: rotate(-9deg); }
+.cta-star .fill { fill: var(--sticky); } .cta-star .line { stroke: #2b2520; }
+.cta-copy { display: contents; }
+.cta-copy .section-title { font-size: 32px; color: var(--paper-ink); }
+.cta-copy p { grid-column: 1 / -1; margin: 6px 0 10px; font-size: 17px; color: var(--paper-ink); }
+.cta-button { grid-column: 1 / -1; width: 100%; gap: 10px; }
+.cta-button .star-count { margin-inline-start: auto; }
+.star-count { padding-inline-start: 12px; border-inline-start: 1px solid currentColor; font-variant-numeric: tabular-nums; }
+.star-count[hidden] { display: none; }
+/* The two columns stop fitting side by side below about 976px (400 + 56 + 440 + 80).
+   From there on they stack, and the star note comes last, after the tester note. */
+@media (max-width: 980px) {
+  .get-side { display: contents; }
+  .get .sticky { order: 0; }
+  .get-copy { order: 1; flex-basis: 100%; }
+  .cta-note { order: 2; flex: 1 1 100%; max-width: none; transform: rotate(-0.6deg); }
+}
+@media (max-width: 860px) {
+  .cta-note { transform: none; padding: 20px 20px 22px; }
+}
