@@ -176,11 +176,7 @@ class UpdateManager @Inject constructor(@ApplicationContext private val context:
                         // A cancelled download may still report once; it must not come back.
                         _state.update {
                             if (it is UpdateState.Downloading) {
-                                UpdateState.Downloading(
-                                    candidate,
-                                    bytes,
-                                    install,
-                                )
+                                UpdateState.Downloading(candidate, bytes, install)
                             } else {
                                 it
                             }
@@ -301,10 +297,7 @@ class UpdateManager @Inject constructor(@ApplicationContext private val context:
         val text = prefs.getString(KEY_CANDIDATE, null) ?: return null
         if (prefs.getString(KEY_CANDIDATE_CHANNEL, null) != _channel.value.name) return null
         val candidate = runCatching {
-            json.decodeFromString(
-                UpdateCandidate.serializer(),
-                text,
-            )
+            json.decodeFromString(UpdateCandidate.serializer(), text)
         }.getOrNull() ?: return null
         val current = installed ?: return null
         return candidate.takeIf { it.version > current }

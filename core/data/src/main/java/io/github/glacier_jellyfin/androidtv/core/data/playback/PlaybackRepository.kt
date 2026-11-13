@@ -356,9 +356,7 @@ class PlaybackRepository @Inject constructor(
             }.also { started ->
                 inflight[key] = started
                 started.invokeOnCompletion {
-                    synchronized(
-                        inflight,
-                    ) { if (inflight[key] === started) inflight.remove(key) }
+                    synchronized(inflight) { if (inflight[key] === started) inflight.remove(key) }
                 }
             }
         }
@@ -446,9 +444,9 @@ class PlaybackRepository @Inject constructor(
         val second = if (measured >= PROBE_FAST_BPS) PROBE_BYTES else PROBE_SMALL_BYTES
         downloadBps(api, second)?.let { measured = maxOf(measured, it) }
         // After a stall the stream's own numbers count too: the link may carry less than a short test shows.
-        val value = synchronized(
-            this,
-        ) { StreamBudget.of(measured.toLong()).let { if (verify) minOf(it, budget ?: it) else it } }
+        val value = synchronized(this) {
+            StreamBudget.of(measured.toLong()).let { if (verify) minOf(it, budget ?: it) else it }
+        }
         Log.i(
             TAG,
             "Bandwidth to the server ${(measured / 1e6).toInt()} Mbit/s, streams may use ${value / 1_000_000} Mbit/s",
@@ -943,18 +941,14 @@ class PlaybackRepository @Inject constructor(
                 Log.i(
                     TAG,
                     "Demand of the tiers: " + resolutions.joinToString {
-                        "${it.height}p ${tierDemand.getValue(
-                            it.height,
-                        ) / 100_000 / 10.0} Mbit/s"
+                        "${it.height}p ${tierDemand.getValue(it.height) / 100_000 / 10.0} Mbit/s"
                     },
                 )
             }
             // The biggest picture the link carries: its measured speed against what a stream of that size takes.
             val linkBudget = currentBudget()
             val startTier = resolutions.indexOfFirst {
-                linkBudget == null || tierDemand.getValue(
-                    it.height,
-                ) <= linkBudget
+                linkBudget == null || tierDemand.getValue(it.height) <= linkBudget
             }
                 .takeIf { it >= 0 } ?: resolutions.lastIndex
             val reasons = source.transcodingUrl?.takeIf {
@@ -1046,11 +1040,7 @@ class PlaybackRepository @Inject constructor(
                     if (delivery == SubtitleDelivery.External && url == null) {
                         null
                     } else {
-                        PlaybackSubtitle(
-                            stream.toTrack(),
-                            delivery,
-                            url,
-                        )
+                        PlaybackSubtitle(stream.toTrack(), delivery, url)
                     }
                 },
                 file = SourceFile(
@@ -1058,8 +1048,7 @@ class PlaybackRepository @Inject constructor(
                     sizeBytes = source.size,
                     bitrate = source.bitrate,
                     streamContainer = source.transcodingContainer?.uppercase()?.takeIf {
-                        method !=
-                            PlaybackMethod.DirectPlay
+                        method != PlaybackMethod.DirectPlay
                     }?.let {
                         if (source.transcodingSubProtocol == MediaStreamProtocol.HLS) "HLS · $it" else it
                     },
@@ -1178,9 +1167,9 @@ class PlaybackRepository @Inject constructor(
             .let(::mergeOverlapping)
     }
 
-    fun reportStart(source: PlaybackSource, position: PlaybackPosition) = report(
-        "start",
-    ) { sendStart(source, position) }
+    fun reportStart(source: PlaybackSource, position: PlaybackPosition) = report("start") {
+        sendStart(source, position)
+    }
 
     private suspend fun ApiClient.sendStart(source: PlaybackSource, position: PlaybackPosition) {
         sessionApi.reportPlaybackStart(
@@ -1287,9 +1276,7 @@ class PlaybackRepository @Inject constructor(
             it != source.playSessionId
         }.forEach { id ->
             reportScope.launch {
-                stopTierJob(
-                    id,
-                )
+                stopTierJob(id)
             }
         }
     }

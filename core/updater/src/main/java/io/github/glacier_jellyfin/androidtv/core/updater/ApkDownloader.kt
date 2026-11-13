@@ -53,10 +53,7 @@ internal class ApkDownloader(private val context: Context) {
         val target = File(dir, candidate.apk.name)
         val partial = File(dir, candidate.apk.name + ".part")
         // A finished download from earlier is reused when it still matches.
-        if (target.exists() && sha256(
-                target,
-            ) == expected
-        ) {
+        if (target.exists() && sha256(target) == expected) {
             return@withContext target.also { verifyPackage(it, candidate.version) }
         }
 
@@ -74,10 +71,7 @@ internal class ApkDownloader(private val context: Context) {
                     throw UpdateException(UpdateError.Network, "Download failed", e)
                 }
                 if (status != HttpURLConnection.HTTP_OK) {
-                    throw UpdateException(
-                        UpdateError.Network,
-                        "Download answered $status",
-                    )
+                    throw UpdateException(UpdateError.Network, "Download answered $status")
                 }
             }
             var done = 0L

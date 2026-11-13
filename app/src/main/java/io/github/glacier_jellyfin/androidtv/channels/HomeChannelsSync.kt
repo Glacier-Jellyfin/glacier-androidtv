@@ -77,11 +77,7 @@ class HomeChannelsSync @Inject constructor(
             accounts.state
                 .map { state ->
                     state.users.filter { it.accessToken != null }.maxByOrNull { it.lastUsedAt }?.let {
-                        Triple(
-                            it.serverId,
-                            it.userId,
-                            it.protection,
-                        )
+                        Triple(it.serverId, it.userId, it.protection)
                     }
                 }
                 .distinctUntilChanged()

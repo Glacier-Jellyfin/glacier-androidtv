@@ -98,29 +98,21 @@ class HomeRepository @Inject constructor(
         val hasMusic = libraries.any { it.kind == LibraryKind.Music }
         val recentAlbums = if (hasMusic) {
             runSuspendCatching {
-                recentAlbums(
-                    session,
-                    mapper,
-                )
+                recentAlbums(session, mapper)
             }.getOrDefault(emptyList())
         } else {
             emptyList()
         }
         val favoriteSongs = if (hasMusic) {
             runSuspendCatching {
-                favoriteSongs(
-                    session,
-                    mapper,
-                )
+                favoriteSongs(session, mapper)
             }.getOrDefault(emptyList())
         } else {
             emptyList()
         }
         // Set by libraries(), so known here.
         val liveChannels = if (_liveTv.value) {
-            runSuspendCatching { liveChannels() }.getOrDefault(
-                emptyList(),
-            )
+            runSuspendCatching { liveChannels() }.getOrDefault(emptyList())
         } else {
             emptyList()
         }

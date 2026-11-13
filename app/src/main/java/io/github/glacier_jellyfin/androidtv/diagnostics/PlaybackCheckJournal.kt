@@ -46,9 +46,7 @@ class PlaybackCheckJournal(context: Context) {
             CheckResult(
                 sample = sample,
                 outcome = runCatching {
-                    CheckResult.Outcome.valueOf(
-                        fields[2],
-                    )
+                    CheckResult.Outcome.valueOf(fields[2])
                 }.getOrDefault(CheckResult.Outcome.Fails),
                 beyondDeclared = fields[3].toBoolean(),
                 decoder = fields[4].ifEmpty { null },

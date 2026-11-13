@@ -161,10 +161,9 @@ fun DetailScreen(
                 when {
                     details == null && state.failed -> ErrorState(onRetry = viewModel::load)
 
-                    details == null -> Box(
-                        Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) { SpinningDiamond(110) }
+                    details == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        SpinningDiamond(110)
+                    }
 
                     details.item.kind in VideoKinds -> MediaDetail(state, details, viewModel)
 
@@ -240,9 +239,7 @@ private fun MediaDetail(
                         Crumb(
                             listOfNotNull(
                                 stringResource(
-                                    if (item.kind ==
-                                        ItemKind.Series
-                                    ) {
+                                    if (item.kind == ItemKind.Series) {
                                         R.string.library_shows
                                     } else {
                                         R.string.library_movies
@@ -276,11 +273,7 @@ private fun MediaDetail(
                                 )
                             }
                             if (item.kind == ItemKind.Movie || item.kind == ItemKind.MusicVideo) {
-                                TrackChips(
-                                    state,
-                                    details,
-                                    viewModel,
-                                )
+                                TrackChips(state, details, viewModel)
                             }
                         }
                     }
@@ -467,9 +460,7 @@ internal fun ScrollingBackdrop(
         height = height,
         modifier = Modifier.graphicsLayer {
             translationY =
-                if (listState.firstVisibleItemIndex ==
-                    0
-                ) {
+                if (listState.firstVisibleItemIndex == 0) {
                     -listState.firstVisibleItemScrollOffset.toFloat()
                 } else {
                     -size.height

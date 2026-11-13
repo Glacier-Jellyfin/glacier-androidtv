@@ -65,9 +65,7 @@ fun GlacierNavHost(
         val base = if (event.leaveTitles) {
             navController.currentBackStack.value.lastOrNull { entry ->
                 TitlePages.none {
-                    entry.destination.hasRoute(
-                        it,
-                    )
+                    entry.destination.hasRoute(it)
                 }
             }
                 ?.also { entry ->
@@ -81,9 +79,7 @@ fun GlacierNavHost(
         // their screen on the back stack, in one go, so only the last one shows.
         val trail = folderMemory().takeIf {
             event.route == FolderRoute() && !event.clearBackStack && !event.replace &&
-                navController.currentDestination?.hasRoute(
-                    FolderRoute::class,
-                ) != true
+                navController.currentDestination?.hasRoute(FolderRoute::class) != true
         }?.takeIf { it.path.isNotEmpty() }
         val route = if (trail != null) FolderRoute(focus = trail.path.first().id.toString()) else event.route
         navController.navigate(route) {

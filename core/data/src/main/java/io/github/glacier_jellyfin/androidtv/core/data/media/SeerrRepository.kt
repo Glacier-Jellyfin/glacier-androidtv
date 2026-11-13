@@ -154,10 +154,7 @@ class SeerrRepository @Inject constructor(private val sessions: SessionManager) 
         // asked language; English fills the gaps.
         if (language != FALLBACK_LANGUAGE && (dto.overview.isNullOrBlank() || dto.youTubeTrailers().isEmpty())) {
             val english = runSuspendCatching {
-                session.get<DetailsDto>(
-                    "/${type.path}/$tmdbId",
-                    mapOf("language" to FALLBACK_LANGUAGE),
-                )
+                session.get<DetailsDto>("/${type.path}/$tmdbId", mapOf("language" to FALLBACK_LANGUAGE))
             }
                 .getOrNull()
             if (english != null) {

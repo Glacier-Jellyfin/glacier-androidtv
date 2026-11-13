@@ -420,9 +420,7 @@ fun LibraryScreen(
                         .focusProperties {
                             onEnter =
                                 {
-                                    if (requestedFocusDirection !=
-                                        FocusDirection.Enter
-                                    ) {
+                                    if (requestedFocusDirection != FocusDirection.Enter) {
                                         runCatching { restoreFocus.requestFocus() }
                                     }
                                 }
@@ -480,9 +478,7 @@ fun LibraryScreen(
                                     onLongClick = { viewModel.folderOptions(sub) },
                                     modifier = entryFocus(sub.id.toString(), first = index == 0)
                                         .then(
-                                            if (index ==
-                                                folder.folders.lastIndex
-                                            ) {
+                                            if (index == folder.folders.lastIndex) {
                                                 Modifier.focusProperties {
                                                     end =
                                                         FocusRequester.Cancel
@@ -536,10 +532,7 @@ fun LibraryScreen(
                                 // A group's last row is often short: Right goes to the rail, not up to the row above.
                                 .then(
                                     if (showRail && group != null && (
-                                            index == state.items.lastIndex || startsGroup(
-                                                state.items,
-                                                index + 1,
-                                            )
+                                            index == state.items.lastIndex || startsGroup(state.items, index + 1)
                                             )
                                     ) {
                                         Modifier.focusProperties { end = railFocus }
@@ -556,9 +549,7 @@ fun LibraryScreen(
                                     if (state.offset > 0 &&
                                         index < (if (songList) SONG_LOOKAHEAD else 3 * columns)
                                     ) {
-                                        viewModel.loadBefore(
-                                            columns,
-                                        )
+                                        viewModel.loadBefore(columns)
                                     }
                                 }
                             }
@@ -578,9 +569,7 @@ fun LibraryScreen(
                                 )
                             } else {
                                 GridCard(
-                                    imageUrl = if (item.kind ==
-                                        ItemKind.MusicVideo
-                                    ) {
+                                    imageUrl = if (item.kind == ItemKind.MusicVideo) {
                                         item.thumbUrl ?: item.posterUrl
                                     } else {
                                         item.posterUrl
@@ -593,10 +582,7 @@ fun LibraryScreen(
                                     // Music videos play in the music player, like songs.
                                     onClick = {
                                         if (item.kind == ItemKind.MusicVideo) {
-                                            viewModel.playVideo(
-                                                item,
-                                                videosTitle,
-                                            )
+                                            viewModel.playVideo(item, videosTitle)
                                         } else {
                                             viewModel.open(item)
                                         }
@@ -604,9 +590,7 @@ fun LibraryScreen(
                                     onLongClick = if (item.kind == ItemKind.MusicVideo) {
                                         (
                                             {
-                                                viewModel.videoOptions(
-                                                    item,
-                                                )
+                                                viewModel.videoOptions(item)
                                             }
                                             )
                                     } else {
@@ -852,9 +836,7 @@ private fun GroupHeading(
         overflow = TextOverflow.Ellipsis,
         // The grid keeps its row gap below the heading too: drawn lower, it sits with its cards.
         modifier = if (cards) {
-            Modifier.offset(
-                y = GROUP_HEADING_DROP.dp,
-            )
+            Modifier.offset(y = GROUP_HEADING_DROP.dp)
         } else {
             Modifier.padding(start = 24.dp, top = 8.dp)
         },
@@ -1203,11 +1185,7 @@ private fun baseCaption(item: MediaItem): String? = when (item.kind) {
     ItemKind.MusicVideo -> item.parentTitle
 
     ItemKind.Collection, ItemKind.Genre, ItemKind.Playlist -> item.childCount?.let {
-        pluralStringResource(
-            R.plurals.count_titles,
-            it,
-            it,
-        )
+        pluralStringResource(R.plurals.count_titles, it, it)
     }
 
     ItemKind.Artist -> item.childCount?.let { pluralStringResource(R.plurals.count_albums, it, it) }
@@ -1236,11 +1214,7 @@ private fun countText(
     LibraryScope.MusicVideos -> pluralStringResource(R.plurals.count_videos, count, count)
 
     else -> if (kind == LibraryKind.Music) {
-        pluralStringResource(
-            R.plurals.count_albums,
-            count,
-            count,
-        )
+        pluralStringResource(R.plurals.count_albums, count, count)
     } else {
         pluralStringResource(R.plurals.count_titles, count, count)
     }

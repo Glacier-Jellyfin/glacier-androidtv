@@ -148,9 +148,7 @@ fun PillButton(
                         .clip(PillShape)
                         .background(
                             if (focused || primary) {
-                                GlacierColors.Void.copy(
-                                    alpha = 0.12f,
-                                )
+                                GlacierColors.Void.copy(alpha = 0.12f)
                             } else {
                                 GlacierColors.GlassFill2
                             },
@@ -158,9 +156,7 @@ fun PillButton(
                         .border(
                             1.dp,
                             if (focused || primary) {
-                                GlacierColors.Void.copy(
-                                    alpha = 0.3f,
-                                )
+                                GlacierColors.Void.copy(alpha = 0.3f)
                             } else {
                                 GlacierColors.GlassBorder
                             },

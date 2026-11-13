@@ -78,9 +78,9 @@ class NameIndexStore @Inject constructor(@ApplicationContext context: Context) {
                         entry.artist, entry.albumId, entry.album, entry.disc, entry.track,
                     )
                     out.write(
-                        fields.joinToString(
-                            "\t",
-                        ) { it?.toString().orEmpty().replace('\t', ' ').replace('\n', ' ').replace('\r', ' ') },
+                        fields.joinToString("\t") {
+                            it?.toString().orEmpty().replace('\t', ' ').replace('\n', ' ').replace('\r', ' ')
+                        },
                     )
                     out.write("\n")
                 }

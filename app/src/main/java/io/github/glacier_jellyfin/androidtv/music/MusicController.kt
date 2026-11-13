@@ -222,10 +222,9 @@ class MusicController @Inject constructor(
     private var miniPictures = 0
 
     /** A music video plays with its picture on the player screen: the now-playing saver stays away, as in the video player. */
-    val videoVisible: StateFlow<Boolean> = combine(
-        state,
-        pictureOn,
-    ) { s, on -> on && s.radio == null && s.current?.isVideo == true }
+    val videoVisible: StateFlow<Boolean> = combine(state, pictureOn) { s, on ->
+        on && s.radio == null && s.current?.isVideo == true
+    }
         .distinctUntilChanged()
         .stateIn(scope, SharingStarted.Eagerly, false)
 
@@ -435,11 +434,7 @@ class MusicController @Inject constructor(
             val source = details.details(sourceId).item
             // A music video on its own: it has no page, so it comes here to play.
             if (source.kind == ItemKind.MusicVideo) {
-                return@QueueRequest LoadedQueue(
-                    null,
-                    source.title,
-                    music.tracks(listOf(sourceId)),
-                )
+                return@QueueRequest LoadedQueue(null, source.title, music.tracks(listOf(sourceId)))
             }
             val tracks = when (source.kind) {
                 ItemKind.Artist -> music.artistTracks(sourceId)
@@ -733,8 +728,7 @@ class MusicController @Inject constructor(
                 sourceOrder = entries
                 val start = request.startTrackId?.let { id ->
                     tracks.indexOfFirst { it.id.toString() == id }.takeIf {
-                        it >=
-                            0
+                        it >= 0
                     }
                 }
                 val shuffled = request.shuffle || shuffleSwitch.on.value
@@ -1224,9 +1218,7 @@ class MusicController @Inject constructor(
     private fun setStationFavorite(stationId: UUID, favorite: Boolean) {
         val change = { channel: LiveChannel ->
             if (channel.id == stationId) {
-                channel.copy(
-                    favorite = favorite,
-                )
+                channel.copy(favorite = favorite)
             } else {
                 channel
             }
@@ -1404,8 +1396,7 @@ class MusicController @Inject constructor(
     }
 
     private fun sourceTrack(source: PlaybackSource): MusicTrack? = sourceOrder.firstOrNull {
-        it.track.id ==
-            source.itemId
+        it.track.id == source.itemId
     }?.track
 
     private fun startTicker() {

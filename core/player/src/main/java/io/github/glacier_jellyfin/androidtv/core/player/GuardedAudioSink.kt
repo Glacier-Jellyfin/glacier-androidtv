@@ -175,11 +175,7 @@ internal class GuardedAudioSink(
             bufferSize: Int,
             bufferSizeMs: Long,
             elapsedSinceLastFeedMs: Long,
-        ) = inner.onUnderrun(
-            bufferSize,
-            bufferSizeMs,
-            elapsedSinceLastFeedMs,
-        )
+        ) = inner.onUnderrun(bufferSize, bufferSizeMs, elapsedSinceLastFeedMs)
         override fun onSkipSilenceEnabledChanged(skipSilenceEnabled: Boolean) = inner.onSkipSilenceEnabledChanged(
             skipSilenceEnabled,
         )
@@ -187,9 +183,7 @@ internal class GuardedAudioSink(
         override fun onOffloadBufferFull() = inner.onOffloadBufferFull()
         override fun onAudioSinkError(audioSinkError: Exception) = inner.onAudioSinkError(audioSinkError)
         override fun onAudioTrackInitialized(audioTrackConfig: AudioSink.AudioTrackConfig) =
-            inner.onAudioTrackInitialized(
-                audioTrackConfig,
-            )
+            inner.onAudioTrackInitialized(audioTrackConfig)
         override fun onAudioTrackReleased(audioTrackConfig: AudioSink.AudioTrackConfig) = inner.onAudioTrackReleased(
             audioTrackConfig,
         )

@@ -152,9 +152,7 @@ fun TopNav(
     val miniFocus = remember { FocusRequester() }
     val nowPlaying = LocalNowPlaying.current
     val middle = LocalNavTargets.current ?: (
-        listOf(
-            NavTarget.Home,
-        ) + kinds.map(NavTarget::Library) + NavTarget.Favorites
+        listOf(NavTarget.Home) + kinds.map(NavTarget::Library) + NavTarget.Favorites
         )
     // The page's own entry may be switched off: entering from below lands on search then.
     val focusTarget = active.takeIf { it in middle || it == NavTarget.Settings } ?: NavTarget.Search

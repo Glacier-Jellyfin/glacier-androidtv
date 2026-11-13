@@ -132,9 +132,7 @@ private fun Page(
                             stringResource(
                                 R.string.seerr_crumb,
                                 stringResource(
-                                    if (item.type ==
-                                        SeerrMediaType.Movie
-                                    ) {
+                                    if (item.type == SeerrMediaType.Movie) {
                                         R.string.seerr_movie
                                     } else {
                                         R.string.seerr_show
@@ -191,9 +189,7 @@ private fun Page(
                                     text = stringResource(seerrStatusLabel(settledStatus(details))),
                                     onClick = {},
                                     primary = true,
-                                    icon = if (details.item.status ==
-                                        SeerrStatus.Available
-                                    ) {
+                                    icon = if (details.item.status == SeerrStatus.Available) {
                                         GlacierIcons.Check
                                     } else {
                                         null
@@ -238,9 +234,7 @@ private fun Page(
                                         viewModel.openPerson(person)
                                     },
                                     modifier = if (person.tmdbId == lastPerson) {
-                                        Modifier.focusRequester(
-                                            personFocus,
-                                        )
+                                        Modifier.focusRequester(personFocus)
                                     } else {
                                         Modifier
                                     },

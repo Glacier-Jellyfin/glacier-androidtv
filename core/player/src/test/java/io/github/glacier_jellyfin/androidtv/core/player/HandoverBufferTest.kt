@@ -120,9 +120,7 @@ class HandoverBufferTest {
 
         override fun createMediaSource(mediaItem: MediaItem): MediaSource =
             if (mediaItem.localConfiguration?.mimeType == MimeTypes.APPLICATION_M3U8) {
-                hls.createMediaSource(
-                    mediaItem,
-                )
+                hls.createMediaSource(mediaItem)
             } else {
                 progressive.createMediaSource(mediaItem)
             }

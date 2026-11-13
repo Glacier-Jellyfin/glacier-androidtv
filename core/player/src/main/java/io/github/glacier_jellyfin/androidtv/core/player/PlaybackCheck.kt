@@ -120,9 +120,7 @@ class PlaybackCheck(private val context: Context, private val setup: PlaybackSet
                     val played = if (sample.audio) playback.audioEncoding != null else firstFrame
                     finish(
                         if (played) {
-                            result(
-                                CheckResult.Outcome.Plays,
-                            )
+                            result(CheckResult.Outcome.Plays)
                         } else {
                             result(CheckResult.Outcome.Fails, "nothing reached the screen or the speakers")
                         },

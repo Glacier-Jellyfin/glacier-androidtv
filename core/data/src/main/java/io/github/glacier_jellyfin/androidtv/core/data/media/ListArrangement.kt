@@ -130,9 +130,7 @@ object ListArrangement {
         val letters = if (query.railed) {
             groups.map {
                 (it as? ListGroup.Name)?.let { name ->
-                    railLetter(
-                        name.name,
-                    )
+                    railLetter(name.name)
                 }
             }
         } else {
@@ -154,10 +152,7 @@ object ListArrangement {
         LibrarySort.Artist -> entry.artist?.takeIf { it.isNotBlank() }?.let { ListGroup.Name(NameOrder.key(it), it) }
 
         LibrarySort.Album -> entry.album?.takeIf { it.isNotBlank() }?.let {
-            ListGroup.Name(
-                entry.albumId ?: NameOrder.key(it),
-                it,
-            )
+            ListGroup.Name(entry.albumId ?: NameOrder.key(it), it)
         }
 
         LibrarySort.Title -> null

@@ -17,12 +17,8 @@ class Iec61937PackerTest {
         var position = 0
         while (position < stream.size) {
             var end = position
-            repeat(
-                16,
-            ) {
-                if (end + 2 <=
-                    stream.size
-                ) {
+            repeat(16) {
+                if (end + 2 <= stream.size) {
                     end += (((stream[end].toInt() and 0x0f) shl 8) or (stream[end + 1].toInt() and 0xff)) * 2
                 }
             }

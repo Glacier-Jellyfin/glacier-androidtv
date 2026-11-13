@@ -76,9 +76,7 @@ fun FavoritesScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: Favorites
         if (favorites == null || rows.none { favorites.has(it) }) return@LaunchedEffect
         withFrameNanos { }
         val restored = lastFocus?.let { requesters[it] }?.let {
-            runCatching { it.requestFocus() }.getOrDefault(
-                false,
-            )
+            runCatching { it.requestFocus() }.getOrDefault(false)
         } == true
         if (!restored) runCatching { listFocus.requestFocus() }
     }
@@ -86,10 +84,9 @@ fun FavoritesScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: Favorites
     // A loader covers the page: the remote must not reach the navigation or anything else behind it.
     Box(Modifier.fillMaxSize().blockKeysWhile(state.loading && favorites == null, takeFocus = true)) {
         when {
-            state.loading && favorites == null -> Box(
-                Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) { SpinningDiamond(110) }
+            state.loading && favorites == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                SpinningDiamond(110)
+            }
 
             state.failed && favorites == null -> Message(
                 text = stringResource(R.string.favorites_error),
@@ -100,9 +97,7 @@ fun FavoritesScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: Favorites
             favorites == null -> Unit
 
             rows.none {
-                favorites.has(
-                    it,
-                )
+                favorites.has(it)
             } -> Message(
                 text = stringResource(R.string.favorites_empty),
                 body = stringResource(R.string.favorites_empty_body),
@@ -243,11 +238,7 @@ private fun episodeLine(item: MediaItem): String {
     val season = item.seasonNumber
     val episode = item.episodeNumber
     val number = if (season != null && episode != null) {
-        stringResource(
-            R.string.episode_short,
-            season,
-            episode,
-        )
+        stringResource(R.string.episode_short, season, episode)
     } else {
         null
     }

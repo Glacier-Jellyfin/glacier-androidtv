@@ -69,11 +69,7 @@ internal object AudioPath {
 
         "ac3" -> MimeTypes.AUDIO_AC3
 
-        "eac3" -> if (profile?.contains(
-                "atmos",
-                ignoreCase = true,
-            ) == true
-        ) {
+        "eac3" -> if (profile?.contains("atmos", ignoreCase = true) == true) {
             MimeTypes.AUDIO_E_AC3_JOC
         } else {
             MimeTypes.AUDIO_E_AC3
@@ -83,11 +79,7 @@ internal object AudioPath {
 
         "ac4" -> MimeTypes.AUDIO_AC4
 
-        "dts", "dca" -> if (profile?.contains(
-                "DTS-HD",
-                ignoreCase = true,
-            ) == true
-        ) {
+        "dts", "dca" -> if (profile?.contains("DTS-HD", ignoreCase = true) == true) {
             MimeTypes.AUDIO_DTS_HD
         } else {
             MimeTypes.AUDIO_DTS

@@ -113,10 +113,7 @@ fun PlayerTrackPanel(
             val index = indices[i]
             if (audio) {
                 index?.let {
-                    viewModel.pickAudio(
-                        it,
-                        rows[i].full,
-                    )
+                    viewModel.pickAudio(it, rows[i].full)
                 }
             } else {
                 viewModel.pickSubtitle(index, rows[i].full)

@@ -223,10 +223,7 @@ private fun ServerCard(
                     if (entry.server.isSupported) {
                         "Jellyfin $version"
                     } else {
-                        stringResource(
-                            R.string.setup_unsupported,
-                            version.ifEmpty { "?" },
-                        )
+                        stringResource(R.string.setup_unsupported, version.ifEmpty { "?" })
                     },
                     style = GlacierText.body(16),
                     color = GlacierColors.Mist,

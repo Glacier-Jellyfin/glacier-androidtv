@@ -406,8 +406,7 @@ private fun Timeline(
 enum class OsdButton { Audio, Subtitles, Chapters, Info }
 
 private fun chapterAt(chapters: List<Chapter>, positionMs: Long): Chapter? = chapters.lastOrNull {
-    it.startMs <=
-        positionMs
+    it.startMs <= positionMs
 }
 
 /**

@@ -361,9 +361,7 @@ class DetailViewModel @Inject constructor(
         // The PIN given for the collection counts for its movies too.
         if (details.item.id.toString() in parental.unlockedItems.value) {
             items.forEach {
-                parental.unlock(
-                    it.id.toString(),
-                )
+                parental.unlock(it.id.toString())
             }
         }
         _state.update { it.copy(collectionItems = items) }
@@ -460,9 +458,7 @@ class DetailViewModel @Inject constructor(
 
             ItemKind.Collection -> collectionNext()?.also {
                 if (it.kind == ItemKind.Series) {
-                    return playShow(
-                        it,
-                    )
+                    return playShow(it)
                 }
             } ?: return playCollectionMusic()
 
@@ -586,11 +582,7 @@ class DetailViewModel @Inject constructor(
     private fun reloadPlaylist() {
         viewModelScope.launch {
             runSuspendCatching {
-                Triple(
-                    repository.details(itemId),
-                    music.playlistQueue(itemId),
-                    repository.playlistVideos(itemId),
-                )
+                Triple(repository.details(itemId), music.playlistQueue(itemId), repository.playlistVideos(itemId))
             }
                 .onSuccess { (details, tracks, videos) ->
                     _state.update {
@@ -784,9 +776,7 @@ class DetailViewModel @Inject constructor(
             state.copy(
                 collectionItems = state.collectionItems.map {
                     if (it.kind in WatchableInCollection) {
-                        it.copy(
-                            played = played,
-                        )
+                        it.copy(played = played)
                     } else {
                         it
                     }
@@ -797,10 +787,7 @@ class DetailViewModel @Inject constructor(
             runSuspendCatching {
                 if (mixed) {
                     watchable.forEach {
-                        repository.setPlayed(
-                            it.id,
-                            played,
-                        )
+                        repository.setPlayed(it.id, played)
                     }
                 } else {
                     repository.setPlayed(collection.id, played)
@@ -810,9 +797,7 @@ class DetailViewModel @Inject constructor(
                 .onFailure { Log.w(TAG, "Marking the collection failed", it) }
             val details = _state.value.details ?: return@launch
             runSuspendCatching {
-                loadCollection(
-                    details,
-                )
+                loadCollection(details)
             }.onFailure { Log.w(TAG, "Reloading the collection failed", it) }
         }
     }

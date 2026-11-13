@@ -32,10 +32,7 @@ class MediaCapabilityDetector @Inject constructor(
         val decoders = MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.filterNot { it.isEncoder }
         fun decodersFor(mime: String) = decoders.filter { info ->
             info.supportedTypes.any {
-                it.equals(
-                    mime,
-                    ignoreCase = true,
-                )
+                it.equals(mime, ignoreCase = true)
             }
         }
         fun has(mime: String) = decodersFor(mime).isNotEmpty()
@@ -54,14 +51,9 @@ class MediaCapabilityDetector @Inject constructor(
             if (CodecProfileLevel.HEVCProfileMain10 in hevcProfiles &&
                 Display.HdrCapabilities.HDR_TYPE_HLG in displayHdr
             ) {
-                add(
-                    HdrType.Hlg,
-                )
+                add(HdrType.Hlg)
             }
-            if (has(
-                    MIME_DOLBY_VISION,
-                ) && Display.HdrCapabilities.HDR_TYPE_DOLBY_VISION in displayHdr
-            ) {
+            if (has(MIME_DOLBY_VISION) && Display.HdrCapabilities.HDR_TYPE_DOLBY_VISION in displayHdr) {
                 add(HdrType.DolbyVision)
             }
         }
@@ -105,9 +97,9 @@ class MediaCapabilityDetector @Inject constructor(
 
     /** Android's Dolby Vision profile constants are one bit per profile: DvavPer (profile 0) is 1, DvheDtb (7) is 0x80. */
     private fun dolbyVisionProfiles(constants: Set<Int>): Set<Int>? =
-        constants.filter { it > 0 && it and (it - 1) == 0 }.mapTo(
-            HashSet(),
-        ) { Integer.numberOfTrailingZeros(it) }.ifEmpty { null }
+        constants.filter { it > 0 && it and (it - 1) == 0 }
+            .mapTo(HashSet()) { Integer.numberOfTrailingZeros(it) }
+            .ifEmpty { null }
 
     private fun videoSupport(
         codecs: List<MediaCodecInfo>,
@@ -157,9 +149,7 @@ class MediaCapabilityDetector @Inject constructor(
             if (AudioFormat.ENCODING_AC3 in encodings) add("ac3")
             if (AudioFormat.ENCODING_E_AC3 in encodings || AudioFormat.ENCODING_E_AC3_JOC in encodings) add("eac3")
             if (AudioFormat.ENCODING_DTS in encodings || AudioFormat.ENCODING_DTS_HD in encodings) {
-                add(
-                    "dts",
-                )
+                add("dts")
                 add("dca")
             }
             if (AudioFormat.ENCODING_DOLBY_TRUEHD in encodings) add("truehd")

@@ -5,7 +5,7 @@
     <ID>BackingPropertyNaming:TrailerViewModel.kt:TrailerViewModel$private val _youTube = Channel&lt;YouTubeCommand&gt;(Channel.BUFFERED)</ID>
     <ID>ComplexCondition:FolderScreen.kt:onRow &amp;&amp; shown is FolderMedia.Video &amp;&amp; previewVideo.id == shown.id &amp;&amp; previewVideo.player != null</ID>
     <ID>ComplexCondition:LibraryScreen.kt:folder == null || folder.isEmpty || (initialFocusDone &amp;&amp; !enteredFolder)</ID>
-    <ID>ComplexCondition:LibraryScreen.kt:showRail &amp;&amp; group != null &amp;&amp; ( index == state.items.lastIndex || startsGroup( state.items, index + 1, ) )</ID>
+    <ID>ComplexCondition:LibraryScreen.kt:showRail &amp;&amp; group != null &amp;&amp; ( index == state.items.lastIndex || startsGroup(state.items, index + 1) )</ID>
     <ID>ComplexCondition:LibraryViewModel.kt:LibraryViewModel$current.inFolders || current.loading || current.failed || current.complete</ID>
     <ID>ComplexCondition:LibraryViewModel.kt:LibraryViewModel$current.offset == 0 || current.loading || current.failed || loadJob?.isActive == true</ID>
     <ID>ComplexCondition:LiveTvPlayerScreen.kt:bannerVisible &amp;&amp; !state.loading &amp;&amp; !state.failed &amp;&amp; !listOpen &amp;&amp; !programsOpen &amp;&amp; !infoOpen &amp;&amp; !(seeking &amp;&amp; state.paused)</ID>

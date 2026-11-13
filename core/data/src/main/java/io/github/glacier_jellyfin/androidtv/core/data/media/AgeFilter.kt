@@ -62,9 +62,7 @@ class AgeFilter @Inject constructor(private val sessions: SessionManager, privat
 
     private fun List<MediaItem>.markLocked(blocked: Set<UUID>) = map {
         if (it.id in blocked) {
-            it.copy(
-                ageLocked = true,
-            )
+            it.copy(ageLocked = true)
         } else {
             it
         }
@@ -193,9 +191,7 @@ internal suspend fun blockedTitles(
  */
 private suspend fun List<BaseItemDto>.filterRated(api: ApiClient, userId: UUID): List<BaseItemDto> {
     val seriesIds = filter {
-        !AgeFilter.isRated(
-            it.officialRating,
-        ) && it.type == BaseItemKind.EPISODE
+        !AgeFilter.isRated(it.officialRating) && it.type == BaseItemKind.EPISODE
     }.mapNotNull { it.seriesId }.distinct()
     val seriesRated = if (seriesIds.isEmpty()) {
         emptySet()

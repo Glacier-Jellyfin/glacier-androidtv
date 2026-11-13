@@ -152,10 +152,7 @@ class StartViewModel @Inject constructor(
         .map { session ->
             val tag = session?.user?.primaryImageTag ?: return@map null
             runCatching {
-                session.api.imageApi.getUserImageUrl(
-                    UUID.fromString(session.user.userId),
-                    tag = tag,
-                )
+                session.api.imageApi.getUserImageUrl(UUID.fromString(session.user.userId), tag = tag)
             }.getOrNull()
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -364,9 +361,7 @@ class MainActivity : ComponentActivity() {
                             }
                             // Nothing reacts to keys while an update downloads for the installation or Android installs it.
                             // Back still reaches the download dialog, which cancels the download (newer Android sends no Back key events at all).
-                            if ((update as? UpdateState.Downloading)?.install ==
-                                true
-                            ) {
+                            if ((update as? UpdateState.Downloading)?.install == true) {
                                 return@onPreviewKeyEvent event.key != Key.Back
                             }
                             update is UpdateState.Installing

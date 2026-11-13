@@ -802,10 +802,9 @@ private fun ChannelBanner(
                     }
                 }
                 if (now == null && !state.guideLoaded) {
-                    Box(
-                        Modifier.fillMaxWidth().height(56.dp),
-                        contentAlignment = Alignment.Center,
-                    ) { SpinningDiamond(48) }
+                    Box(Modifier.fillMaxWidth().height(56.dp), contentAlignment = Alignment.Center) {
+                        SpinningDiamond(48)
+                    }
                 } else {
                     Text(
                         now?.title ?: stringResource(R.string.livetv_no_guide),

@@ -35,9 +35,7 @@ object FfmpegAudio {
             return emptySet()
         }
         val codecs = FORMATS.filter { (mime, _) ->
-            FfmpegLibrary.supportsFormat(
-                mime,
-            )
+            FfmpegLibrary.supportsFormat(mime)
         }.flatMapTo(HashSet()) { it.second }
         Log.i(TAG, "FFmpeg ${FfmpegLibrary.getVersion()} decodes ${codecs.sorted()}")
         return codecs

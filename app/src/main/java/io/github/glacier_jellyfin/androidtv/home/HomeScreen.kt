@@ -180,9 +180,7 @@ fun HomeScreen(
         if (!initialFocusDone) return@LaunchedEffect
         withFrameNanos { }
         val restored = lastFocus?.let { requesters[it] }?.let {
-            runCatching { it.requestFocus() }.getOrDefault(
-                false,
-            )
+            runCatching { it.requestFocus() }.getOrDefault(false)
         } == true
         if (!restored) runCatching { listFocus.requestFocus() }
     }
@@ -228,9 +226,7 @@ fun HomeScreen(
         if (!dialogOpen && updateWasOpen) {
             withFrameNanos { }
             val restored = lastFocus?.let { requesters[it] }?.let {
-                runCatching { it.requestFocus() }.getOrDefault(
-                    false,
-                )
+                runCatching { it.requestFocus() }.getOrDefault(false)
             } == true
             if (!restored) runCatching { listFocus.requestFocus() }
         }
@@ -259,9 +255,7 @@ fun HomeScreen(
             withFrameNanos { }
             val restored =
                 !toTop && lastFocus?.let { requesters[it] }?.let {
-                    runCatching { it.requestFocus() }.getOrDefault(
-                        false,
-                    )
+                    runCatching { it.requestFocus() }.getOrDefault(false)
                 } == true
             if (!restored) runCatching { navFocus.requestFocus() }
         }
@@ -279,10 +273,9 @@ fun HomeScreen(
         val content = state.content
         val rows = state.settings
         when {
-            state.loading && content == null -> Box(
-                Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) { SpinningDiamond(110) }
+            state.loading && content == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                SpinningDiamond(110)
+            }
 
             state.failed && content == null -> ErrorState(onRetry = viewModel::load)
 
@@ -370,9 +363,7 @@ fun HomeScreen(
                                             ) {
                                                 items(content.continueWatching, key = { it.id }) { item ->
                                                     ContinueCard(
-                                                        title = if (item.kind ==
-                                                            ItemKind.Episode
-                                                        ) {
+                                                        title = if (item.kind == ItemKind.Episode) {
                                                             item.parentTitle ?: item.title
                                                         } else {
                                                             item.title
@@ -466,8 +457,7 @@ fun HomeScreen(
                                             .filter { it.shown }
                                             .mapNotNull { card ->
                                                 content.libraries.firstOrNull {
-                                                    it.id.toString() ==
-                                                        card.id
+                                                    it.id.toString() == card.id
                                                 }
                                             }
                                         if (cards.isNotEmpty()) {
@@ -532,9 +522,7 @@ fun HomeScreen(
                             }
                         }
                         // Room below the last row, whichever it is.
-                        item(
-                            key = "end",
-                        ) {
+                        item(key = "end") {
                             Spacer(
                                 Modifier.height((LastRowBottom - LocalCardSizes.current.rowBottom).coerceAtLeast(0).dp),
                             )

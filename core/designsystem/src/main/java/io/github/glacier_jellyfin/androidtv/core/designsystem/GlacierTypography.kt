@@ -44,9 +44,7 @@ private val OwnDirection = TextDirection.Content
  */
 @Composable
 @ReadOnlyComposable
-private fun layoutAlign(): TextAlign = if (LocalLayoutDirection.current ==
-    LayoutDirection.Rtl
-) {
+private fun layoutAlign(): TextAlign = if (LocalLayoutDirection.current == LayoutDirection.Rtl) {
     TextAlign.Right
 } else {
     TextAlign.Left

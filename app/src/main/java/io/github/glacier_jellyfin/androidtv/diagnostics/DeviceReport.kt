@@ -29,10 +29,7 @@ internal object DeviceReport {
         return PROFILED_VIDEO.flatMap { (mime, names) ->
             decoders.filter { info -> info.supportedTypes.any { it.equals(mime, ignoreCase = true) } }
                 .map { info ->
-                    "  $mime ${info.name}${info.kind()}: ${describe(
-                        info.getCapabilitiesForType(mime),
-                        names,
-                    )}"
+                    "  $mime ${info.name}${info.kind()}: ${describe(info.getCapabilitiesForType(mime), names)}"
                 }
         }
     }

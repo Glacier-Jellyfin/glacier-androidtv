@@ -145,9 +145,7 @@ fun RestoreOfferDialog(offer: RestoreOffer, onAnswer: (DeviceSettings?) -> Unit)
                                     format.format(Date(copy.savedAt)),
                                 ),
                                 tag = if (copy.deviceId == offer.thisDeviceId) {
-                                    stringResource(
-                                        R.string.settings_copy_this_device,
-                                    )
+                                    stringResource(R.string.settings_copy_this_device)
                                 } else {
                                     null
                                 },
@@ -379,10 +377,7 @@ fun DeleteCopyDialog(
             )
             Text(
                 if (own) {
-                    stringResource(
-                        R.string.settings_copy_delete_own_body,
-                        userName,
-                    )
+                    stringResource(R.string.settings_copy_delete_own_body, userName)
                 } else {
                     stringResource(R.string.settings_copy_delete_body, copy.deviceName)
                 },

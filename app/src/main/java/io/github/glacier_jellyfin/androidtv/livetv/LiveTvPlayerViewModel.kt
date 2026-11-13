@@ -428,20 +428,17 @@ class LiveTvPlayerViewModel @Inject constructor(
         }
     }
 
-    override fun record(program: LiveProgram) = changeTimers(
-        R.string.livetv_record_added,
-        program.title,
-    ) { repository.record(program.id) }
+    override fun record(program: LiveProgram) = changeTimers(R.string.livetv_record_added, program.title) {
+        repository.record(program.id)
+    }
 
-    override fun recordSeries(program: LiveProgram) = changeTimers(
-        R.string.livetv_series_added,
-        program.title,
-    ) { repository.recordSeries(program.id) }
+    override fun recordSeries(program: LiveProgram) = changeTimers(R.string.livetv_series_added, program.title) {
+        repository.recordSeries(program.id)
+    }
 
-    override fun cancelTimer(timerId: String, title: String) = changeTimers(
-        R.string.livetv_record_removed,
-        title,
-    ) { repository.cancelTimer(timerId) }
+    override fun cancelTimer(timerId: String, title: String) = changeTimers(R.string.livetv_record_removed, title) {
+        repository.cancelTimer(timerId)
+    }
 
     override fun cancelSeriesTimer(seriesTimerId: String, title: String) =
         changeTimers(R.string.livetv_series_removed, title) { repository.cancelSeriesTimer(seriesTimerId) }

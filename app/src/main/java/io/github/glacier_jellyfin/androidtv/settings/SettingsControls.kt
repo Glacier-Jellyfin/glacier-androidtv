@@ -415,10 +415,7 @@ internal fun ChoicesDialog(
                     val glide = if (reduceMotion) {
                         Modifier
                     } else {
-                        Modifier.animateItem(
-                            fadeInSpec = null,
-                            fadeOutSpec = null,
-                        )
+                        Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null)
                     }
                     Box(glide.then(if (index == 0) Modifier.focusRequester(first) else Modifier).focusGroup()) {
                         MovableCard(
@@ -542,10 +539,7 @@ internal fun ChoicePills(
                     Text(
                         label,
                         style = if (font == null) {
-                            GlacierText.body(
-                                18,
-                                FontWeight.SemiBold,
-                            )
+                            GlacierText.body(18, FontWeight.SemiBold)
                         } else {
                             GlacierText.body(18).copy(fontFamily = font)
                         },
@@ -833,10 +827,9 @@ private fun LanguageRow(
 internal fun SubtitlePreview(style: SubtitleStyle, image: String?) {
     val context = LocalContext.current
     val native = style.usesNative(context)
-    val typeface = remember(
-        style.font,
-        style.weight,
-    ) { FontFamily(subtitleTypeface(context, style.font, style.weight)) }
+    val typeface = remember(style.font, style.weight) {
+        FontFamily(subtitleTypeface(context, style.font, style.weight))
+    }
     val tag = when {
         style.mode == SubtitleStyleMode.Auto && native -> R.string.settings_preview_auto_system
         style.mode == SubtitleStyleMode.Auto -> R.string.settings_preview_auto_custom
@@ -872,9 +865,9 @@ internal fun SubtitlePreview(style: SubtitleStyle, image: String?) {
 
         // As tall as on a 16:9 picture of this width: the size setting is a share of the picture height.
         val pictureHeight = maxWidth * 9f / 16f
-        val fontSize = with(
-            LocalDensity.current,
-        ) { (pictureHeight * if (native) NATIVE_PREVIEW_SIZE else style.size.fraction).toSp() }
+        val fontSize = with(LocalDensity.current) {
+            (pictureHeight * if (native) NATIVE_PREVIEW_SIZE else style.size.fraction).toSp()
+        }
         val lineHeight = pictureHeight * (if (native) NATIVE_PREVIEW_SIZE else style.size.fraction) * 1.3f
         val margin = 18.dp
         val bottomLines = when (style.position) {

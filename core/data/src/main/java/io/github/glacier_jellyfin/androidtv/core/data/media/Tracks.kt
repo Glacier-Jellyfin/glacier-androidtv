@@ -302,9 +302,8 @@ object Languages {
     /** Languages Java knows only by their three-letter code. */
     private val withoutIso2 = setOf("yue")
 
-    private fun locale(iso3: String): Locale? = byIso3[iso3] ?: iso3.takeIf { it in withoutIso2 }?.let(
-        Locale::forLanguageTag,
-    )
+    private fun locale(iso3: String): Locale? = byIso3[iso3] ?: iso3.takeIf { it in withoutIso2 }
+        ?.let(Locale::forLanguageTag)
 
     /**
      * Flag for a language, as a file name in the app's flags/ assets ("gb",

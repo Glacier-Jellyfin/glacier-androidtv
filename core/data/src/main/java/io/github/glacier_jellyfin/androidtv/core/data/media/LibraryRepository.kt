@@ -523,11 +523,7 @@ class LibraryRepository @Inject constructor(
                                     if (it?.query == query && it.loaded >= now) {
                                         it
                                     } else {
-                                        LoadProgress(
-                                            query,
-                                            now,
-                                            total,
-                                        )
+                                        LoadProgress(query, now, total)
                                     }
                                 }
                             }

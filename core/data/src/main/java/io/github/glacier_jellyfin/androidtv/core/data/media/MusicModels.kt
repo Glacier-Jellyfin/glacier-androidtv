@@ -16,9 +16,7 @@ data class AudioFormat(
 ) {
     /** Stored without loss: FLAC, ALAC, WAV and the like. */
     val lossless: Boolean get() = codec?.lowercase()?.let {
-        it in LosslessCodecs || it.startsWith(
-            "pcm",
-        ) || it.startsWith("dsd")
+        it in LosslessCodecs || it.startsWith("pcm") || it.startsWith("dsd")
     } == true
 }
 

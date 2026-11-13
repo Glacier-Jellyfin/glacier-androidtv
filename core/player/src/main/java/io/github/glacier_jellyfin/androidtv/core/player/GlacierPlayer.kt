@@ -779,10 +779,7 @@ object GlacierPlayer {
             if (profile7 == DolbyVisionProfile7.AsIs) {
                 extractors
             } else {
-                DolbyVisionProfile7Extractors(
-                    extractors,
-                    profile7,
-                )
+                DolbyVisionProfile7Extractors(extractors, profile7)
             },
         )
             // Side-loaded .ass files go through the same parser.
@@ -949,9 +946,7 @@ object GlacierPlayer {
         // Media3 gives a start position of a file as it is and decodes from the seek point before it, discarding what it decodes.
         var startMs = request.startPositionMs
         val snapKey = if (request.snapStart && !request.live && !request.isHls && startMs > 0) {
-            SyncPoints.keyOf(
-                request.url,
-            )
+            SyncPoints.keyOf(request.url)
         } else {
             null
         }
@@ -1172,9 +1167,7 @@ class SteeredBandwidthMeter(private val real: BandwidthMeter) : BandwidthMeter b
     override fun getBitrateEstimate(): Long = steered.takeIf { it > 0 } ?: real.bitrateEstimate
 
     /** A transcode answers late for every segment; Media3 would take that off the speed it allows a tier. */
-    override fun getTimeToFirstByteEstimateUs(): Long = if (steered >
-        0
-    ) {
+    override fun getTimeToFirstByteEstimateUs(): Long = if (steered > 0) {
         C.TIME_UNSET
     } else {
         real.timeToFirstByteEstimateUs

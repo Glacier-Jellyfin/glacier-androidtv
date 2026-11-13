@@ -185,10 +185,7 @@ fun sortedChannels(
             compareBy<LiveChannel> { it.number == null }
                 .then(
                     Comparator<LiveChannel> { a, b ->
-                        compareChannelNumbers(
-                            a.number.orEmpty(),
-                            b.number.orEmpty(),
-                        )
+                        compareChannelNumbers(a.number.orEmpty(), b.number.orEmpty())
                     }.directed(),
                 )
                 .then(byName),
@@ -296,9 +293,7 @@ class LiveTvRepository @Inject constructor(
         channelIds: List<UUID>,
         fromMs: Long,
         toMs: Long,
-    ): Map<UUID, List<LiveProgram>> = withContext(
-        Dispatchers.IO,
-    ) {
+    ): Map<UUID, List<LiveProgram>> = withContext(Dispatchers.IO) {
         if (channelIds.isEmpty()) return@withContext emptyMap()
         val session = requireSession()
         val api = session.api
@@ -417,11 +412,7 @@ class LiveTvRepository @Inject constructor(
             imageUrl = imageOf(api, id, imageTags)
                 ?: seriesId?.let { show ->
                     seriesPrimaryImageTag?.let {
-                        imageOf(
-                            api,
-                            show,
-                            mapOf(ImageType.PRIMARY to it),
-                        )
+                        imageOf(api, show, mapOf(ImageType.PRIMARY to it))
                     }
                 },
             recording = status.equals("InProgress", ignoreCase = true),

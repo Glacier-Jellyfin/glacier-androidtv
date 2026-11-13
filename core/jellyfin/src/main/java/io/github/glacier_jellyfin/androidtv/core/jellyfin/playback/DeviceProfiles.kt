@@ -198,10 +198,7 @@ object DeviceProfiles {
             val dolbyVision = HdrType.DolbyVision in hdr
             fun declares(profile: Int) = dolbyVision && dolbyVisionProfiles?.contains(profile) != false
             if (declares(5)) add(VideoRangeType.DOVI)
-            if (HdrType.Hdr10 in hdr || declares(
-                    7,
-                )
-            ) {
+            if (HdrType.Hdr10 in hdr || declares(7)) {
                 addAll(listOf(VideoRangeType.DOVI_WITH_EL, VideoRangeType.DOVI_WITH_ELHDR10_PLUS))
             }
         }.distinct()

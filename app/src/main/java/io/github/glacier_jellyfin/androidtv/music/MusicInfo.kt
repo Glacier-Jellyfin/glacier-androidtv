@@ -171,9 +171,7 @@ private fun SongTab(
                         trackValue?.takeIf { !isVideo }?.let { stringResource(R.string.music_info_track) to it },
                         genres?.let { stringResource(R.string.music_info_genre) to it },
                         track.durationMs.takeIf { isVideo && it > 0 }?.let {
-                            stringResource(
-                                R.string.sort_runtime,
-                            ) to formatTime(it)
+                            stringResource(R.string.sort_runtime) to formatTime(it)
                         },
                     )
                     if (facts.isNotEmpty()) {

@@ -293,9 +293,7 @@ fun SettingsScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SettingsVi
             val restored = pinOrigins.restore() ||
                 (
                     state.category == SettingsCategory.Account &&
-                        runCatching { languageFocus.requestFocus() }.getOrDefault(
-                            false,
-                        )
+                        runCatching { languageFocus.requestFocus() }.getOrDefault(false)
                     )
             if (!restored) runCatching { categoryFocus.getValue(state.category).requestFocus() }
         }
@@ -438,14 +436,10 @@ fun SettingsScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SettingsVi
                 LaunchedEffect(homeOrder) {
                     val row = movingRow ?: return@LaunchedEffect
                     val keys = groups.flatMap { group ->
-                        listOf(
-                            group.title,
-                        ) + group.rows.map { "${group.title}/${it.key}" }
+                        listOf(group.title) + group.rows.map { "${group.title}/${it.key}" }
                     }
                     val index = keys.indexOfFirst {
-                        it.endsWith(
-                            "/row-$row",
-                        )
+                        it.endsWith("/row-$row")
                     }.takeIf { it >= 0 } ?: return@LaunchedEffect
                     withFrameNanos { }
                     val info = listState.layoutInfo
@@ -470,27 +464,22 @@ fun SettingsScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SettingsVi
                     contentPadding = PaddingValues(bottom = 60.dp),
                 ) {
                     groups.forEachIndexed { groupIndex, group ->
-                        item(
-                            key = "${state.category}/${group.title}",
-                        ) { GroupHeading(group.title, first = groupIndex == 0) }
+                        item(key = "${state.category}/${group.title}") {
+                            GroupHeading(group.title, first = groupIndex == 0)
+                        }
                         itemsIndexed(
                             group.rows,
                             key = { _, row -> "${state.category}/${group.title}/${row.key}" },
                         ) { rowIndex, row ->
                             // Home rows glide to their new place while one is moved.
                             val glide = if (row is SettingRow.Movable && !reduceMotion) {
-                                Modifier.animateItem(
-                                    fadeInSpec = null,
-                                    fadeOutSpec = null,
-                                )
+                                Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null)
                             } else {
                                 Modifier
                             }
                             // Every card has the same frame, so one moved onto or off the first place keeps its focus.
                             val first = if (groupIndex == 0 && rowIndex == 0) {
-                                Modifier.focusRequester(
-                                    firstCard,
-                                )
+                                Modifier.focusRequester(firstCard)
                             } else {
                                 Modifier
                             }
@@ -522,11 +511,7 @@ fun SettingsScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SettingsVi
                     movingSub = stringResource(R.string.settings_card_moving_sub),
                     cards = state.profile.home.libraryCards.arranged(ids).mapNotNull { card ->
                         allLibraries.firstOrNull { it.id.toString() == card.id }?.let {
-                            Triple(
-                                libraryTitle(it, allLibraries),
-                                card.shown,
-                                card.id,
-                            )
+                            Triple(libraryTitle(it, allLibraries), card.shown, card.id)
                         }
                     },
                     onToggle = { id ->
@@ -604,9 +589,7 @@ fun SettingsScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SettingsVi
 
                 else -> LanguagePicker(
                     title = stringResource(
-                        if (target ==
-                            LanguageTarget.Audio
-                        ) {
+                        if (target == LanguageTarget.Audio) {
                             R.string.settings_audio_lang
                         } else {
                             R.string.settings_sub_lang_title
@@ -1050,9 +1033,7 @@ private fun homeRows(
                     stringResource(R.string.settings_spot_rotation_sub),
                     SpotlightRotation.entries.map {
                         if (it == SpotlightRotation.Off) {
-                            stringResource(
-                                R.string.settings_off,
-                            )
+                            stringResource(R.string.settings_off)
                         } else {
                             stringResource(R.string.settings_seconds, it.seconds)
                         }
@@ -1087,10 +1068,7 @@ private fun homeRows(
                         stringResource(
                             R.string.home_new_in,
                             libraries.firstOrNull { it.id.toString() == choice.library }?.let {
-                                libraryTitle(
-                                    it,
-                                    allLibraries,
-                                )
+                                libraryTitle(it, allLibraries)
                             }.orEmpty(),
                         )
                     } else {
@@ -1157,9 +1135,7 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
         stringResource(R.string.settings_skip_hide_sub),
         SkipButtonHide.entries.map {
             if (it == SkipButtonHide.Off) {
-                stringResource(
-                    R.string.settings_off,
-                )
+                stringResource(R.string.settings_off)
             } else {
                 seconds(it.ms)
             }
@@ -1190,9 +1166,7 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
                     stringResource(R.string.settings_up_next_collapse_sub),
                     UpNextCollapse.entries.map {
                         if (it == UpNextCollapse.Off) {
-                            stringResource(
-                                R.string.settings_off,
-                            )
+                            stringResource(R.string.settings_off)
                         } else {
                             seconds(it.ms)
                         }
@@ -1215,9 +1189,7 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
                 SettingRow.Toggle(
                     stringResource(R.string.settings_match_frame_rate),
                     stringResource(
-                        if (platform ==
-                            TvPlatform.FireTv
-                        ) {
+                        if (platform == TvPlatform.FireTv) {
                             R.string.settings_match_frame_rate_sub_fire_tv
                         } else {
                             R.string.settings_match_frame_rate_sub
@@ -1363,10 +1335,7 @@ private fun audioRows(
                     stringResource(R.string.settings_audio_lang),
                     unavailable ?: stringResource(R.string.settings_audio_lang_sub),
                     value = server?.audioLanguage?.let {
-                        languageName(
-                            state,
-                            it,
-                        )
+                        languageName(state, it)
                     } ?: stringResource(R.string.settings_audio_original),
                     onClick = { viewModel.openLanguages(LanguageTarget.Audio) },
                     enabled = server != null,
@@ -1431,10 +1400,7 @@ private fun subtitleRows(
                     stringResource(R.string.settings_sub_lang),
                     unavailable ?: stringResource(R.string.settings_sub_lang_sub),
                     value = server?.subtitleLanguage?.let {
-                        languageName(
-                            state,
-                            it,
-                        )
+                        languageName(state, it)
                     } ?: stringResource(R.string.settings_lang_none),
                     onClick = { viewModel.openLanguages(LanguageTarget.Subtitles) },
                     enabled = server != null,
@@ -1597,9 +1563,7 @@ private fun subtitleRows(
                     style.position.ordinal,
                     onSelect = { i ->
                         viewModel.updateSubtitleStyle {
-                            it.copy(
-                                position = SubtitlePosition.entries[i],
-                            )
+                            it.copy(position = SubtitlePosition.entries[i])
                         }
                     },
                 ),
@@ -1664,9 +1628,7 @@ private fun accountRows(
                 SettingRow.Value(
                     stringResource(R.string.settings_ui_lang),
                     stringResource(
-                        if (state.profile.uiLanguage ==
-                            UiLanguage.System
-                        ) {
+                        if (state.profile.uiLanguage == UiLanguage.System) {
                             R.string.settings_ui_lang_system_sub
                         } else {
                             R.string.settings_ui_lang_profile_sub
@@ -1834,9 +1796,7 @@ private fun languageName(state: SettingsUiState, code: String): String =
 
 @Composable
 private fun seconds(ms: Long): String = if (ms >= 60_000) {
-    stringResource(
-        R.string.settings_minute,
-    )
+    stringResource(R.string.settings_minute)
 } else {
     stringResource(R.string.settings_seconds, (ms / 1000).toInt())
 }
@@ -1863,9 +1823,7 @@ private fun systemRows(state: SettingsUiState, viewModel: SettingsViewModel): Li
                     SettingRow.Choice(
                         stringResource(R.string.update_channel),
                         stringResource(
-                            if (state.updateChannel ==
-                                UpdateChannel.Beta
-                            ) {
+                            if (state.updateChannel == UpdateChannel.Beta) {
                                 R.string.update_channel_beta_sub
                             } else {
                                 R.string.update_channel_stable_sub
@@ -2210,10 +2168,7 @@ private fun updateRow(state: SettingsUiState, viewModel: SettingsViewModel): Set
 
         is UpdateState.Failed -> SettingRow.Update(
             update.candidate?.let {
-                stringResource(
-                    R.string.update_failed,
-                    it.version.displayName,
-                )
+                stringResource(R.string.update_failed, it.version.displayName)
             } ?: stringResource(R.string.update_check_failed),
             stringResource(update.error.message()),
             stringResource(R.string.update_retry),

@@ -396,9 +396,7 @@ private fun StationMain(
     ) {
         Box(Modifier.width(30.dp), contentAlignment = Alignment.Center) {
             if (current) {
-                Equalizer(
-                    playing,
-                )
+                Equalizer(playing)
             } else {
                 station.number?.let {
                     Text(

@@ -184,13 +184,9 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settings.settings.collect { profile -> _state.update { it.copy(profile = profile) } } }
         viewModelScope.launch {
             serverPreferences.preferences.collect { server ->
-                if (server !=
-                    null
-                ) {
+                if (server != null) {
                     _state.update {
-                        it.copy(
-                            server = server,
-                        )
+                        it.copy(server = server)
                     }
                 }
             }
@@ -209,9 +205,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             parental.settingsUnlocked.collect { unlocked ->
                 _state.update {
-                    it.copy(
-                        accountUnlocked = unlocked,
-                    )
+                    it.copy(accountUnlocked = unlocked)
                 }
             }
         }
@@ -220,9 +214,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             updates.channel.collect { channel ->
                 _state.update {
-                    it.copy(
-                        updateChannel = channel,
-                    )
+                    it.copy(updateChannel = channel)
                 }
             }
         }
@@ -241,12 +233,10 @@ class SettingsViewModel @Inject constructor(
                 _state.update { it.copy(startProfile = start, startCandidates = candidates) }
             }
         }
-        viewModelScope.launch(
-            Dispatchers.Default,
-        ) { FfmpegAudio.version()?.let { version -> _state.update { it.copy(ffmpegVersion = version) } } }
-        viewModelScope.launch(
-            Dispatchers.IO,
-        ) {
+        viewModelScope.launch(Dispatchers.Default) {
+            FfmpegAudio.version()?.let { version -> _state.update { it.copy(ffmpegVersion = version) } }
+        }
+        viewModelScope.launch(Dispatchers.IO) {
             Log.lastCrash()?.let { crash ->
                 _state.update {
                     it.copy(
@@ -300,11 +290,7 @@ class SettingsViewModel @Inject constructor(
     fun setStartMode(mode: StartMode) {
         val user = sessions.session.value?.user
         val start = if (mode == StartMode.Fixed) {
-            StartProfile(
-                mode,
-                user?.serverId,
-                user?.userId,
-            )
+            StartProfile(mode, user?.serverId, user?.userId)
         } else {
             StartProfile(mode)
         }

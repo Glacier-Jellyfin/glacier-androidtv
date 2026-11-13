@@ -193,9 +193,7 @@ fun MusicDetail(
                                 // A playlist of other videos only plays them in the video player.
                                 onClick = {
                                     if (videosOnly) {
-                                        viewModel.playVideo(
-                                            state.playlistVideos.first(),
-                                        )
+                                        viewModel.playVideo(state.playlistVideos.first())
                                     } else {
                                         viewModel.playMusic()
                                     }
@@ -335,12 +333,8 @@ fun MusicDetail(
                     }
                     item(key = "tracks-end") {
                         // A short album still leaves room for the whole cover before the next row.
-                        val coverRest = if (coverUrl !=
-                            null
-                        ) {
-                            (coverHeight - tracks.size * (SONG_ROW_HEIGHT + SONG_ROW_GAP)).coerceAtLeast(
-                                0,
-                            )
+                        val coverRest = if (coverUrl != null) {
+                            (coverHeight - tracks.size * (SONG_ROW_HEIGHT + SONG_ROW_GAP)).coerceAtLeast(0)
                         } else {
                             0
                         }
@@ -378,9 +372,7 @@ fun MusicDetail(
                         MediaRow(
                             // A playlist lists its music videos with its songs; this row holds its other videos.
                             title = stringResource(
-                                if (item.kind ==
-                                    ItemKind.Artist
-                                ) {
+                                if (item.kind == ItemKind.Artist) {
                                     R.string.library_music_videos
                                 } else {
                                     R.string.music_videos
@@ -573,11 +565,7 @@ private fun musicFacts(state: DetailState, item: MediaItem): List<String> {
                 item.year?.toString(),
                 listOfNotNull(
                     (tracks.size + state.playlistVideos.size).takeIf { it > 0 }?.let {
-                        pluralStringResource(
-                            R.plurals.count_titles,
-                            it,
-                            it,
-                        )
+                        pluralStringResource(R.plurals.count_titles, it, it)
                     },
                     minutes?.takeIf { it > 0 }?.let { runtimeText(it) },
                 ).joinToString(" · ").ifEmpty { null },

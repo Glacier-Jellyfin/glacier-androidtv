@@ -198,10 +198,7 @@ class LiveTvViewModel @Inject constructor(
         viewModelScope.launch {
             repository.radioMarks.collect { marks ->
                 _state.update {
-                    it.copy(
-                        sort = marks.sort,
-                        descending = marks.descending,
-                    )
+                    it.copy(sort = marks.sort, descending = marks.descending)
                 }
             }
         }
@@ -248,9 +245,7 @@ class LiveTvViewModel @Inject constructor(
                         if (loaded.channels.isNullOrEmpty() && loaded.stations.isNotEmpty() &&
                             state.channels == null
                         ) {
-                            loaded.copy(
-                                view = LiveTvView.Radio,
-                            )
+                            loaded.copy(view = LiveTvView.Radio)
                         } else {
                             loaded
                         }
@@ -277,9 +272,7 @@ class LiveTvViewModel @Inject constructor(
         _state.update { it.copy(favoritesOnly = on) }
         viewModelScope.launch {
             runSuspendCatching {
-                repository.setFavoritesOnly(
-                    on,
-                )
+                repository.setFavoritesOnly(on)
             }.onFailure { Log.w(TAG, "Saving the heart filter failed", it) }
         }
     }
@@ -297,10 +290,7 @@ class LiveTvViewModel @Inject constructor(
         }
         viewModelScope.launch {
             runSuspendCatching {
-                repository.setSort(
-                    sort,
-                    descending,
-                )
+                repository.setSort(sort, descending)
             }.onFailure { Log.w(TAG, "Saving the channel order failed", it) }
         }
     }
@@ -397,15 +387,13 @@ class LiveTvViewModel @Inject constructor(
         navigate(PlayerRoute(recording.id.toString()))
     }
 
-    override fun record(program: LiveProgram) = changeTimers(
-        R.string.livetv_record_added,
-        program.title,
-    ) { repository.record(program.id) }
+    override fun record(program: LiveProgram) = changeTimers(R.string.livetv_record_added, program.title) {
+        repository.record(program.id)
+    }
 
-    override fun recordSeries(program: LiveProgram) = changeTimers(
-        R.string.livetv_series_added,
-        program.title,
-    ) { repository.recordSeries(program.id) }
+    override fun recordSeries(program: LiveProgram) = changeTimers(R.string.livetv_series_added, program.title) {
+        repository.recordSeries(program.id)
+    }
 
     override fun cancelTimer(timerId: String, title: String) = changeTimers(
         R.string.livetv_record_removed,
@@ -676,18 +664,13 @@ class LiveTvViewModel @Inject constructor(
     private fun setFavorite(channelId: UUID, favorite: Boolean) {
         val change = { channel: LiveChannel ->
             if (channel.id == channelId) {
-                channel.copy(
-                    favorite = favorite,
-                )
+                channel.copy(favorite = favorite)
             } else {
                 channel
             }
         }
         _state.update { state ->
-            state.copy(
-                channels = state.channels?.map(change),
-                stations = state.stations.map(change),
-            )
+            state.copy(channels = state.channels?.map(change), stations = state.stations.map(change))
         }
     }
 

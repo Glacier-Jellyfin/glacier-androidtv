@@ -191,10 +191,9 @@ fun FolderScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: FolderViewMo
         }
     }
     // Subfolders in the profile's order like the media below them.
-    val content = remember(
-        state.content,
-        settings,
-    ) { state.content?.let { it.copy(folders = it.folders.sortedFor(settings)) } }
+    val content = remember(state.content, settings) {
+        state.content?.let { it.copy(folders = it.folders.sortedFor(settings)) }
+    }
     val empty = content?.isEmpty == true
     val gallery = settings.view == FolderView.Gallery
     // Back among the folders and pictures first goes up to the view's chip; from there to the bar or the folder above.
@@ -210,9 +209,7 @@ fun FolderScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: FolderViewMo
         if (content == null || empty) return@LaunchedEffect
         withFrameNanos { }
         fun focus(key: String?) = key?.let { requesters[it] }?.let {
-            runCatching { it.requestFocus() }.getOrDefault(
-                false,
-            )
+            runCatching { it.requestFocus() }.getOrDefault(false)
         } == true
         // A card further down is not composed yet: the grid scrolls to it first.
         if (!gallery && lastFocus != null && !focus(lastFocus)) {
@@ -244,10 +241,9 @@ fun FolderScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: FolderViewMo
     // A loader covers the page: the remote must not reach the navigation or anything else behind it.
     Box(Modifier.fillMaxSize().blockKeysWhile(state.loading && content == null, takeFocus = true)) {
         when {
-            state.loading && content == null -> Box(
-                Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) { SpinningDiamond(110) }
+            state.loading && content == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                SpinningDiamond(110)
+            }
 
             state.failed && content == null -> Message(
                 text = stringResource(R.string.library_error),
@@ -302,15 +298,11 @@ fun FolderScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: FolderViewMo
                 CompositionLocalProvider(LocalFolderAspect provides settings.aspect) {
                     if (gallery) {
                         GalleryLayout(content, sections, header, toolbar, viewModel, remembered, {
-                            requesters.getOrPut(
-                                it,
-                            ) { FocusRequester() }
+                            requesters.getOrPut(it) { FocusRequester() }
                         }, page, onStage = { stageInFront = it })
                     } else {
                         GridLayout(content, sections, settings, header, toolbar, viewModel, remembered, {
-                            requesters.getOrPut(
-                                it,
-                            ) { FocusRequester() }
+                            requesters.getOrPut(it) { FocusRequester() }
                         }, page, gridState)
                     }
                 }
@@ -449,9 +441,7 @@ private fun GridLayout(
                             modifier = remembered(folder.id.toString())
                                 .padding(bottom = sizes.gridGap.dp)
                                 .then(
-                                    if (folder ==
-                                        content.folders.last()
-                                    ) {
+                                    if (folder == content.folders.last()) {
                                         Modifier.focusProperties {
                                             end = FocusRequester.Cancel
                                         }
@@ -867,9 +857,7 @@ private fun Toolbar(
             // A request for one control (a dropdown's button after it closes) is left alone.
             .focusProperties {
                 onEnter = {
-                    if (requestedFocusDirection !=
-                        FocusDirection.Enter
-                    ) {
+                    if (requestedFocusDirection != FocusDirection.Enter) {
                         active.requestFocus()
                     }
                 }

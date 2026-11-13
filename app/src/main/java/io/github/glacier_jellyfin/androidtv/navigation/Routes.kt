@@ -81,9 +81,7 @@ data class DetailRoute(
 /** Where a title opens: a music video plays in the music player (it has no page of its own), anything else opens its page. */
 fun routeFor(item: io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem): Any =
     if (item.kind == io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind.MusicVideo) {
-        MusicRoute(
-            item.id.toString(),
-        )
+        MusicRoute(item.id.toString())
     } else {
         DetailRoute(item.id.toString())
     }

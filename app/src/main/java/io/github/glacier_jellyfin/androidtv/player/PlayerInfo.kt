@@ -289,14 +289,10 @@ private fun TitleTab(
                 }
                 val facts = listOfNotNull(
                     details.directors.takeIf { it.isNotEmpty() }?.let {
-                        stringResource(
-                            R.string.player_info_directors,
-                        ) to it.take(2).joinToString(", ")
+                        stringResource(R.string.player_info_directors) to it.take(2).joinToString(", ")
                     },
                     details.studios.takeIf { it.isNotEmpty() }?.let {
-                        stringResource(
-                            R.string.player_info_studios,
-                        ) to it.take(3).joinToString(", ")
+                        stringResource(R.string.player_info_studios) to it.take(3).joinToString(", ")
                     },
                     details.premiereDate?.takeIf { episode }?.let {
                         stringResource(
@@ -391,13 +387,8 @@ internal fun VideoCard(
     InfoCard(
         label = stringResource(R.string.player_info_video),
         status = decoder?.let {
-            if (isSoftwareDecoder(
-                    it,
-                )
-            ) {
-                stringResource(
-                    R.string.player_info_software,
-                ) to Tone.Plain
+            if (isSoftwareDecoder(it)) {
+                stringResource(R.string.player_info_software) to Tone.Plain
             } else {
                 stringResource(R.string.player_info_hardware) to Tone.Ok
             }
@@ -486,9 +477,7 @@ private fun DisplayCard(
         label = stringResource(R.string.player_info_tv),
         status = matches?.let {
             if (it) {
-                stringResource(
-                    R.string.player_info_refresh_ok,
-                ) to Tone.Ok
+                stringResource(R.string.player_info_refresh_ok) to Tone.Ok
             } else {
                 stringResource(R.string.player_info_refresh_off) to Tone.Warn
             }
@@ -656,11 +645,7 @@ private fun SwitchReason.text(): String {
     return when (cause) {
         SwitchCause.LinkSlow ->
             if (numbers != null) {
-                stringResource(
-                    R.string.player_info_reason_link_numbers,
-                    numbers.first,
-                    numbers.second,
-                )
+                stringResource(R.string.player_info_reason_link_numbers, numbers.first, numbers.second)
             } else {
                 stringResource(R.string.player_info_reason_link)
             }

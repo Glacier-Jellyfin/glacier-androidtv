@@ -179,9 +179,7 @@ class MusicActions(
             }
             _sheet.update {
                 if (it is MusicSheet.Playlists && it.target === target) {
-                    it.copy(
-                        playlists = playlists,
-                    )
+                    it.copy(playlists = playlists)
                 } else {
                     it
                 }

@@ -91,9 +91,7 @@ data class TrailerUiState(
             null
         } else {
             when (item?.kind) {
-                ItemKind.Movie -> if ((item?.resumePositionMs ?: 0) >
-                    0
-                ) {
+                ItemKind.Movie -> if ((item?.resumePositionMs ?: 0) > 0) {
                     TitleAction.ResumeMovie
                 } else {
                     TitleAction.PlayMovie

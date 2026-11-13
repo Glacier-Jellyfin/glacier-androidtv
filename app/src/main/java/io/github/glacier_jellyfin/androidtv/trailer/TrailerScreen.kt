@@ -820,11 +820,7 @@ private fun EndScreen(
                     ?.let { FactBadge(it, GlacierColors.GlassBorder2, 17, GlacierColors.Ice) }
                 val length = when (item.kind) {
                     ItemKind.Series -> state.details?.seasonCount?.let {
-                        pluralStringResource(
-                            R.plurals.count_seasons,
-                            it,
-                            it,
-                        )
+                        pluralStringResource(R.plurals.count_seasons, it, it)
                     }
 
                     else -> item.runtimeMinutes?.let { runtimeText(it) }

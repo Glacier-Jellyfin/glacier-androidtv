@@ -418,10 +418,7 @@ class PlayerViewModel @Inject constructor(
             }
             if (reason == Player.DISCONTINUITY_REASON_SEEK && started) {
                 source?.let {
-                    playback.reportProgress(
-                        it,
-                        position(),
-                    )
+                    playback.reportProgress(it, position())
                 }
             }
         }
@@ -859,9 +856,7 @@ class PlayerViewModel @Inject constructor(
         // new stream gets at the start, then the title is opened again.
         queued?.takeIf { !awaitingStart }?.let { handover ->
             if (currentPositionMs() >= handover.atMs - HANDOVER_EDGE_MS && stallWatch?.isActive != true) {
-                val timeout = if (handover.source.method ==
-                    PlaybackMethod.DirectPlay
-                ) {
+                val timeout = if (handover.source.method == PlaybackMethod.DirectPlay) {
                     STARTUP_MS
                 } else {
                     TRANSCODE_STARTUP_MS
@@ -1018,13 +1013,9 @@ class PlayerViewModel @Inject constructor(
                 )
                 if (!reduced) {
                     // The measurement before the start is old by now: a link that carries less than the file is no news at a stall.
-                    if (StreamBudget.exceeds(
-                            streamBitrate,
-                            budget,
-                        ) && lowerQuality(
-                            HandoverTrigger.Link,
-                            linkBps = budget,
-                        ) && qualitySteps >= MAX_QUALITY_STEPS
+                    if (StreamBudget.exceeds(streamBitrate, budget) &&
+                        lowerQuality(HandoverTrigger.Link, linkBps = budget) &&
+                        qualitySteps >= MAX_QUALITY_STEPS
                     ) {
                         return@launch
                     }
@@ -1363,9 +1354,7 @@ class PlayerViewModel @Inject constructor(
         val bitrates = formats.map { it.bitrate }
         val start = bitrates.indexOfLast {
             it <= (current.streamBitrate ?: bitrates.last()) * 105L / 100
-        }.coerceAtLeast(
-            0,
-        )
+        }.coerceAtLeast(0)
         val controller = TierController(
             bitrates,
             formats.map { current.tierDemand[it.height] ?: StreamBudget.expectedBitrate(it.height) },
@@ -1611,9 +1600,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun currentPositionMs(): Long = _state.value.player?.let {
-        time.position(
-            it.currentPosition,
-        )
+        time.position(it.currentPosition)
     } ?: _progress.value.positionMs
 
     private fun position() = PlaybackPosition(currentPositionMs(), paused = _state.value.player?.isPlaying != true)

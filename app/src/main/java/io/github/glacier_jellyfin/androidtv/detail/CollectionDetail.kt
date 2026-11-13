@@ -119,9 +119,7 @@ fun CollectionDetail(
             height = COLLECTION_BACKDROP,
             modifier = Modifier.graphicsLayer {
                 translationY =
-                    if (listState.firstVisibleItemIndex ==
-                        0
-                    ) {
+                    if (listState.firstVisibleItemIndex == 0) {
                         -listState.firstVisibleItemScrollOffset.toFloat()
                     } else {
                         -size.height
@@ -172,11 +170,7 @@ fun CollectionDetail(
                                 val more = others.takeIf {
                                     watchable.isNotEmpty() && it > 0
                                 }?.let {
-                                    pluralStringResource(
-                                        R.plurals.collection_more,
-                                        it,
-                                        it,
-                                    )
+                                    pluralStringResource(R.plurals.collection_more, it, it)
                                 }
                                 Text(
                                     listOfNotNull(
@@ -410,11 +404,7 @@ private fun CollectionCard(item: MediaItem, viewModel: DetailViewModel) {
             val season = item.seasonNumber
             val episode = item.episodeNumber
             val number = if (item.kind == ItemKind.Episode && season != null && episode != null) {
-                stringResource(
-                    R.string.episode_short,
-                    season,
-                    episode,
-                )
+                stringResource(R.string.episode_short, season, episode)
             } else {
                 null
             }
@@ -438,9 +428,7 @@ private fun CollectionCard(item: MediaItem, viewModel: DetailViewModel) {
             caption = item.parentTitle,
             onClick = {
                 if (item.kind == ItemKind.Song) {
-                    viewModel.playCollectionSong(
-                        item,
-                    )
+                    viewModel.playCollectionSong(item)
                 } else {
                     viewModel.openItem(item)
                 }
@@ -474,9 +462,7 @@ private fun CollectionCard(item: MediaItem, viewModel: DetailViewModel) {
                 },
                 onClick = {
                     if (item.kind == ItemKind.Season) {
-                        viewModel.openSeason(
-                            item,
-                        )
+                        viewModel.openSeason(item)
                     } else {
                         viewModel.openItem(item)
                     }

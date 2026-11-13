@@ -255,9 +255,7 @@ fun PersonScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: PersonViewMo
                     height = 700,
                     modifier = Modifier.graphicsLayer {
                         translationY =
-                            if (listState.firstVisibleItemIndex ==
-                                0
-                            ) {
+                            if (listState.firstVisibleItemIndex == 0) {
                                 -listState.firstVisibleItemScrollOffset.toFloat()
                             } else {
                                 -size.height
@@ -335,9 +333,7 @@ fun PersonScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: PersonViewMo
                                             label = stringResource(R.string.person_search),
                                             icon = GlacierIcons.Search,
                                             modifier = if (person.id == null) {
-                                                Modifier.focusRequester(
-                                                    favoriteFocus,
-                                                )
+                                                Modifier.focusRequester(favoriteFocus)
                                             } else {
                                                 Modifier
                                             },
@@ -374,9 +370,7 @@ fun PersonScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: PersonViewMo
                                                 locked = credit.item.showsLock(),
                                             )
                                             KindPill(
-                                                if (credit.item.kind ==
-                                                    ItemKind.Series
-                                                ) {
+                                                if (credit.item.kind == ItemKind.Series) {
                                                     R.string.kind_show
                                                 } else {
                                                     R.string.kind_movie
@@ -400,9 +394,7 @@ fun PersonScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: PersonViewMo
                                                 tag = stringResource(seerrStatusLabel(credit.item.status)),
                                             )
                                             KindPill(
-                                                if (credit.item.type ==
-                                                    SeerrMediaType.Tv
-                                                ) {
+                                                if (credit.item.type == SeerrMediaType.Tv) {
                                                     R.string.kind_show
                                                 } else {
                                                     R.string.kind_movie

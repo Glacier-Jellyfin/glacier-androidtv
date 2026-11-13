@@ -135,9 +135,7 @@ internal class HomeChannels(context: Context) {
                     if (!old.isBrowsable &&
                         old.lastPlaybackPositionMillis != title.item.resumePositionMs.toInt()
                     ) {
-                        builder.setBrowsable(
-                            true,
-                        )
+                        builder.setBrowsable(true)
                     }
                     helper.updateWatchNextProgram(builder.build(), old.id)
                 }

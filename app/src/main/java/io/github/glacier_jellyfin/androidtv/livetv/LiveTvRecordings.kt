@@ -269,9 +269,7 @@ fun RecordingsView(
                                 ).joinToString(" · "),
                             ),
                             imageUrl = null,
-                            icon = if (entry.timer.seriesTimerId !=
-                                null
-                            ) {
+                            icon = if (entry.timer.seriesTimerId != null) {
                                 GlacierIcons.RecordSeries
                             } else {
                                 GlacierIcons.Record

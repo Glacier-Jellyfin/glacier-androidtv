@@ -195,10 +195,7 @@ fun ItemDetails.forVersion(id: String?): ItemDetails {
             progress = if (runtimeMs != null && runtimeMs > 0 &&
                 position > 0
             ) {
-                (position.toFloat() / runtimeMs).coerceIn(
-                    0f,
-                    1f,
-                )
+                (position.toFloat() / runtimeMs).coerceIn(0f, 1f)
             } else {
                 item.progress
             },

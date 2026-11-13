@@ -637,13 +637,8 @@ private fun FullscreenView(
                         }
                     }
                 }
-                val fraction = if (progress.durationMs >
-                    0
-                ) {
-                    (progress.positionMs.toFloat() / progress.durationMs).coerceIn(
-                        0f,
-                        1f,
-                    )
+                val fraction = if (progress.durationMs > 0) {
+                    (progress.positionMs.toFloat() / progress.durationMs).coerceIn(0f, 1f)
                 } else {
                     0f
                 }
@@ -981,9 +976,7 @@ private fun LyricLines(
         LaunchedEffect(track.id, current, focusedInside) {
             if (focusedInside) return@LaunchedEffect
             if (current < 0) {
-                listState.animateScrollToItem(
-                    0,
-                )
+                listState.animateScrollToItem(0)
             } else {
                 listState.animateScrollToItem(current, -anchor + with(density) { 90.dp.roundToPx() })
             }
@@ -1173,10 +1166,7 @@ private fun SeekBar(
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val fraction = if (progress.durationMs > 0) {
-        (progress.positionMs.toFloat() / progress.durationMs).coerceIn(
-            0f,
-            1f,
-        )
+        (progress.positionMs.toFloat() / progress.durationMs).coerceIn(0f, 1f)
     } else {
         0f
     }
@@ -1301,9 +1291,7 @@ private fun QueuePanel(
     var focusedInside by remember { mutableStateOf(false) }
     LaunchedEffect(state.index, focusedInside) {
         if (!focusedInside && state.queue.isNotEmpty()) {
-            listState.animateScrollToItem(
-                (state.index - 1).coerceAtLeast(0),
-            )
+            listState.animateScrollToItem((state.index - 1).coerceAtLeast(0))
         }
     }
     Column(
@@ -1401,9 +1389,7 @@ private fun QueueRow(
     ) {
         Box(Modifier.width(30.dp), contentAlignment = Alignment.Center) {
             if (current) {
-                Equalizer(
-                    playing,
-                )
+                Equalizer(playing)
             } else {
                 Text("%02d".format(number), style = GlacierText.mono(17), color = GlacierColors.Mist)
             }

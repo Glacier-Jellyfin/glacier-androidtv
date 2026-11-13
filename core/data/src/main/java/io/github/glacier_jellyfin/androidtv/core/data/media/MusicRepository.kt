@@ -202,10 +202,8 @@ class MusicRepository @Inject constructor(private val sessions: SessionManager) 
     /** Removes entries ([MusicTrack.playlistItemId]) from the playlist. */
     suspend fun removeFromPlaylist(playlistId: UUID, entryIds: List<String>) {
         withContext(Dispatchers.IO) {
-            requireSession().api.playlistApi.removeItemFromPlaylist(
-                playlistId = playlistId.toString(),
-                entryIds = entryIds,
-            )
+            requireSession().api.playlistApi
+                .removeItemFromPlaylist(playlistId = playlistId.toString(), entryIds = entryIds)
         }
     }
 
@@ -256,16 +254,14 @@ class MusicRepository @Inject constructor(private val sessions: SessionManager) 
         val (albumCount, artist) = coroutineScope {
             val count = async {
                 albumId?.let { id ->
-                    optional(
-                        "album $id",
-                    ) { session.api.libraryApi.getItem(itemId = id, userId = session.userId).content.childCount }
+                    optional("album $id") {
+                        session.api.libraryApi.getItem(itemId = id, userId = session.userId).content.childCount
+                    }
                 }
             }
             val info = async {
                 artistRef?.let { ref ->
-                    optional(
-                        "artist ${ref.id}",
-                    ) { artistInfo(session, ref.id, ref.name) }
+                    optional("artist ${ref.id}") { artistInfo(session, ref.id, ref.name) }
                 }
             }
             count.await() to info.await()

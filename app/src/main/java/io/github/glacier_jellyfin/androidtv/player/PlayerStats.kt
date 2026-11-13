@@ -68,9 +68,7 @@ internal fun videoHeadline(format: Format): String = listOfNotNull(
 internal fun videoDetails(format: Format): String = listOfNotNull(
     format.frameRate.takeIf { it > 0 }?.let { fpsText(it) },
     when (format.colorInfo?.colorTransfer) {
-        C.COLOR_TRANSFER_ST2084 -> if (format.sampleMimeType ==
-            MimeTypes.VIDEO_DOLBY_VISION
-        ) {
+        C.COLOR_TRANSFER_ST2084 -> if (format.sampleMimeType == MimeTypes.VIDEO_DOLBY_VISION) {
             "Dolby Vision"
         } else {
             "HDR10"

@@ -104,9 +104,7 @@ fun ProfilesScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: ProfilesVi
                     )
                     val focusIndex = state.profiles.indexOfFirst {
                         it.profile.userId == state.focusUserId
-                    }.coerceAtLeast(
-                        0,
-                    )
+                    }.coerceAtLeast(0)
                     Row(horizontalArrangement = Arrangement.spacedBy(52.dp)) {
                         state.profiles.forEachIndexed { index, card ->
                             ProfileTile(

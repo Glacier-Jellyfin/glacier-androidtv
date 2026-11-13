@@ -133,9 +133,7 @@ class FolderRepository @Inject constructor(
     suspend fun videosBelow(
         folderId: UUID?,
         type: CollectionType = CollectionType.HOMEVIDEOS,
-    ): List<FolderMedia.Video> = withContext(
-        Dispatchers.IO,
-    ) {
+    ): List<FolderMedia.Video> = withContext(Dispatchers.IO) {
         val session = checkNotNull(sessions.session.value) { "No profile is signed in" }
         val parents = folderId?.let(::listOf) ?: libraries(session, type).map { it.id }
         val items = coroutineScope {

@@ -124,10 +124,8 @@ fun SkipButton(
             }
             Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxSize()) {
-                    val played = ((position.longValue - segment.startMs).toFloat() / (segment.endMs - segment.startMs)).coerceIn(
-                        0f,
-                        1f,
-                    )
+                    val played = ((position.longValue - segment.startMs).toFloat() / (segment.endMs - segment.startMs))
+                        .coerceIn(0f, 1f)
                     val stroke = 4.dp.toPx()
                     val inset = stroke / 2 + 1.5.dp.toPx()
                     val arcSize = Size(size.width - 2 * inset, size.height - 2 * inset)

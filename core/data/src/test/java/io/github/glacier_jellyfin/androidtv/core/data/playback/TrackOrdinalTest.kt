@@ -20,11 +20,7 @@ class TrackOrdinalTest {
         subtitleIndex = null,
         audioTracks = audio.map { Track(it, null, null, null) },
         subtitles = subtitles.map { (index, delivery) ->
-            PlaybackSubtitle(
-                Track(index, null, null, null),
-                delivery,
-                null,
-            )
+            PlaybackSubtitle(Track(index, null, null, null), delivery, null)
         },
     )
 

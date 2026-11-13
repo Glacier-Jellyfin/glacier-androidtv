@@ -46,9 +46,7 @@ class LogServer(
             thread(name = "log-server-client", isDaemon = true) {
                 client.use {
                     runCatching {
-                        answer(
-                            it,
-                        )
+                        answer(it)
                     }.onFailure { e -> Log.w(TAG, "Answering a log download failed", e) }
                 }
             }

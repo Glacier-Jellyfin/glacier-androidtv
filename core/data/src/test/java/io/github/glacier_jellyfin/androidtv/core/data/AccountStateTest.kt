@@ -74,10 +74,9 @@ class AccountStateTest {
     fun `signing in again keeps parental control`() {
         val state = AccountState()
             .withSignIn(signIn(anna, "Anna"), now = 1)
-            .updateUser(
-                "s1",
-                anna.toString(),
-            ) { it.copy(protection = Protection(maxAge = AgeLimit.A12, pinForLocked = true)) }
+            .updateUser("s1", anna.toString()) {
+                it.copy(protection = Protection(maxAge = AgeLimit.A12, pinForLocked = true))
+            }
             .withSignIn(signIn(anna, "Anna", token = "new"), now = 2)
         assertEquals(Protection(maxAge = AgeLimit.A12, pinForLocked = true), state.users.single().protection)
     }
@@ -185,10 +184,9 @@ class AccountStateTest {
     fun `a profile with a pin on switching is focused instead of opened`() {
         val pin = Pins.hash("1234", salt = ByteArray(16), iterations = 1)
         val state = twoProfiles(StartMode.Fixed)
-            .updateUser(
-                "s1",
-                anna.toString(),
-            ) { it.copy(pin = pin, protection = Protection(pinOnProfileSwitch = true)) }
+            .updateUser("s1", anna.toString()) {
+                it.copy(pin = pin, protection = Protection(pinOnProfileSwitch = true))
+            }
         assertEquals(StartChoice.Focus(anna.toString()), state.choice())
     }
 
@@ -198,10 +196,9 @@ class AccountStateTest {
         val profiles = state.profilesFor("s1", publicUsers = null)
         assertEquals(StartChoice.Open(anna.toString()), profileChoice(anna.toString(), profiles))
         val pin = Pins.hash("1234", salt = ByteArray(16), iterations = 1)
-        val locked = state.updateUser(
-            "s1",
-            anna.toString(),
-        ) { it.copy(pin = pin, protection = Protection(pinOnProfileSwitch = true)) }
+        val locked = state.updateUser("s1", anna.toString()) {
+            it.copy(pin = pin, protection = Protection(pinOnProfileSwitch = true))
+        }
         assertEquals(
             StartChoice.Focus(anna.toString()),
             profileChoice(anna.toString(), locked.profilesFor("s1", publicUsers = null)),

@@ -164,10 +164,9 @@ fun PhotoScreen(
     ) {
         val current = state.current
         when {
-            state.loading && current == null -> Box(
-                Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) { SpinningDiamond(110) }
+            state.loading && current == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                SpinningDiamond(110)
+            }
 
             state.failed -> Column(
                 Modifier.fillMaxSize(),

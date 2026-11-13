@@ -197,9 +197,7 @@ private fun Keypad(
                         width = KeyWidth,
                         height = KeyHeight,
                         modifier = if (rowIndex == 0 && index == 0) {
-                            Modifier.focusRequester(
-                                firstKeyFocus,
-                            )
+                            Modifier.focusRequester(firstKeyFocus)
                         } else {
                             Modifier
                         },

@@ -121,9 +121,7 @@ class SearchViewModel @Inject constructor(
                 emptyList()
             } else {
                 softly {
-                    seerr.search(
-                        term,
-                    )
+                    seerr.search(term)
                 }
             }
         }

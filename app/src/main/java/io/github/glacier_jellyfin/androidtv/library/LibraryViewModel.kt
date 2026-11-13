@@ -220,10 +220,7 @@ class LibraryViewModel @Inject constructor(
                     if (it.query == query && it.offset == current.offset &&
                         loadJob?.isActive != true
                     ) {
-                        it.copy(
-                            items = page.items,
-                            total = page.total,
-                        )
+                        it.copy(items = page.items, total = page.total)
                     } else {
                         it
                     }
@@ -618,9 +615,7 @@ class LibraryViewModel @Inject constructor(
                     .onSuccess { letters ->
                         _state.update {
                             if (it.query == query) {
-                                it.copy(
-                                    letters = letters,
-                                )
+                                it.copy(letters = letters)
                             } else {
                                 it
                             }

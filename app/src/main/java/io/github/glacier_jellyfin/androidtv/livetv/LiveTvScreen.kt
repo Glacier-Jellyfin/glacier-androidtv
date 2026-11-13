@@ -267,10 +267,9 @@ fun LiveTvScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: LiveTvViewMo
     ) {
         val channels = state.channels
         when {
-            state.loading && channels == null -> Box(
-                Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) { SpinningDiamond(110) }
+            state.loading && channels == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                SpinningDiamond(110)
+            }
 
             state.failed && channels == null -> Message(
                 text = stringResource(R.string.livetv_error),
@@ -311,9 +310,7 @@ fun LiveTvScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: LiveTvViewMo
                             active = state.view == LiveTvView.Channels,
                             onClick = { viewModel.setView(LiveTvView.Channels) },
                             modifier = if (state.view == LiveTvView.Channels) {
-                                Modifier.focusRequester(
-                                    activeChip,
-                                )
+                                Modifier.focusRequester(activeChip)
                             } else {
                                 Modifier
                             },
@@ -323,9 +320,7 @@ fun LiveTvScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: LiveTvViewMo
                             active = state.view == LiveTvView.Guide,
                             onClick = { viewModel.setView(LiveTvView.Guide) },
                             modifier = if (state.view == LiveTvView.Guide) {
-                                Modifier.focusRequester(
-                                    activeChip,
-                                )
+                                Modifier.focusRequester(activeChip)
                             } else {
                                 Modifier
                             },
@@ -337,9 +332,7 @@ fun LiveTvScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: LiveTvViewMo
                             active = state.view == LiveTvView.Radio,
                             onClick = { viewModel.setView(LiveTvView.Radio) },
                             modifier = if (state.view == LiveTvView.Radio) {
-                                Modifier.focusRequester(
-                                    activeChip,
-                                )
+                                Modifier.focusRequester(activeChip)
                             } else {
                                 Modifier
                             },
@@ -350,9 +343,7 @@ fun LiveTvScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: LiveTvViewMo
                         active = state.view == LiveTvView.Recordings,
                         onClick = { viewModel.setView(LiveTvView.Recordings) },
                         modifier = if (state.view == LiveTvView.Recordings) {
-                            Modifier.focusRequester(
-                                activeChip,
-                            )
+                            Modifier.focusRequester(activeChip)
                         } else {
                             Modifier
                         },
@@ -474,9 +465,7 @@ fun LiveTvScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: LiveTvViewMo
                                             .onFocusChanged {
                                                 if (it.isFocused) {
                                                     focusedRow = key
-                                                } else if (focusedRow ==
-                                                    key
-                                                ) {
+                                                } else if (focusedRow == key) {
                                                     focusedRow = null
                                                 }
                                             },
@@ -508,9 +497,7 @@ fun LiveTvScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: LiveTvViewMo
             userName = state.userName,
             onSelect = viewModel::onNav,
             down = when {
-                state.view == LiveTvView.Recordings -> if (state.recordings?.isEmpty ==
-                    false
-                ) {
+                state.view == LiveTvView.Recordings -> if (state.recordings?.isEmpty == false) {
                     recordingsFocus
                 } else {
                     chipsFocus
@@ -700,9 +687,7 @@ private fun ProgramPanel(
                     Box(
                         Modifier.fillMaxSize().background(
                             if (preview != null) {
-                                GlacierColors.GlassFill.compositeOver(
-                                    GlacierColors.Deep,
-                                )
+                                GlacierColors.GlassFill.compositeOver(GlacierColors.Deep)
                             } else {
                                 GlacierColors.GlassFill
                             },

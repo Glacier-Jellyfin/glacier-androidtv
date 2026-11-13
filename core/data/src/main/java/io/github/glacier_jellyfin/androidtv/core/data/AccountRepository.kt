@@ -70,10 +70,7 @@ class AccountRepository @Inject constructor(private val store: DataStore<Account
         transform: (Protection) -> Protection,
     ) {
         store.updateData {
-            it.updateUser(
-                serverId,
-                userId,
-            ) { user -> user.copy(protection = transform(user.protection)) }
+            it.updateUser(serverId, userId) { user -> user.copy(protection = transform(user.protection)) }
         }
     }
 

@@ -64,9 +64,7 @@ internal class DolbyVisionProfile7Extractors(
             // A dual layer MKV can keep its RPUs in block additions.
             (inner.underlyingImplementation as? BlockAdditionSource)?.blockAdditions =
                 {
-                    tracks.byId[it.trackNumber]?.onBlockAddition(
-                        it,
-                    )
+                    tracks.byId[it.trackNumber]?.onBlockAddition(it)
                 }
             inner.init(tracks)
         }

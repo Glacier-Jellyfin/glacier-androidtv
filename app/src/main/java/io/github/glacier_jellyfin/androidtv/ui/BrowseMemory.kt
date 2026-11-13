@@ -85,15 +85,11 @@ class BrowseMemory internal constructor(sessionKeys: Flow<Any?>, dispatcher: Cor
     @Synchronized
     fun openFolder(parent: UUID?, folder: MediaFolder) {
         val path = folders.path
-        val above = if (parent ==
-            null
-        ) {
+        val above = if (parent == null) {
             emptyList()
         } else {
             path.indexOfFirst { it.id == parent }.takeIf { it >= 0 }?.let {
-                path.take(
-                    it + 1,
-                )
+                path.take(it + 1)
             } ?: return
         }
         folders = FolderMemory(above + folder)

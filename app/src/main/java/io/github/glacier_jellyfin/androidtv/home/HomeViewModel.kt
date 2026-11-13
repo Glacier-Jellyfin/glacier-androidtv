@@ -135,9 +135,7 @@ class HomeViewModel @Inject constructor(
                     _state.update { it.copy(content = content) }
                     // Only "continue watching" follows what was just watched; the other sources stay put.
                     if (SpotlightSource.ContinueWatching in _state.value.settings.spotlightSources) {
-                        updateSpotlight(
-                            content,
-                        )
+                        updateSpotlight(content)
                     }
                 }
                 .onFailure { Log.w(TAG, "Refreshing home failed", it) }

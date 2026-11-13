@@ -74,9 +74,9 @@ class SettingsBackup @Inject constructor() {
 
     suspend fun save(session: Session, copy: DeviceSettings) = change(session) { withDeviceSettings(it, copy = copy) }
 
-    suspend fun delete(session: Session, deviceId: String) = change(
-        session,
-    ) { withDeviceSettings(it, removeDeviceId = deviceId) }
+    suspend fun delete(session: Session, deviceId: String) = change(session) {
+        withDeviceSettings(it, removeDeviceId = deviceId)
+    }
 
     private suspend fun change(session: Session, transform: (Map<String, String?>) -> Map<String, String?>) =
         writing.withLock {

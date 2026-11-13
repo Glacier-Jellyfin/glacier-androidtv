@@ -71,9 +71,7 @@ class Authenticator @Inject constructor(private val jellyfin: Jellyfin) {
         server: ServerInfo,
         username: String,
         password: String,
-    ): SignInResult = withContext(
-        Dispatchers.IO,
-    ) { signInBlocking(server, username, password) }
+    ): SignInResult = withContext(Dispatchers.IO) { signInBlocking(server, username, password) }
 
     private suspend fun signInBlocking(
         server: ServerInfo,
