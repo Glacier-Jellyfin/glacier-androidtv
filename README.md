@@ -45,22 +45,30 @@
 ## What Glacier does differently
 
 <p align="center">
-  <img src="website/assets/screenshots/player.jpg" width="32%" alt="The player with Skip intro">
-  <img src="website/assets/screenshots/trickplay.jpg" width="32%" alt="Seeking with a preview picture">
-  <img src="website/assets/screenshots/picker.jpg" width="32%" alt="Who's watching with three profiles">
+  <img src="website/assets/screenshots/detail.jpg" width="32%" alt="A title's page with the audio track list, including Commentary and Audio description">
+  <img src="website/assets/screenshots/player.jpg" width="32%" alt="The player skipping a recap, with Skip intro on screen">
+  <img src="website/assets/screenshots/music.jpg" width="32%" alt="The music player in full screen with large lyrics">
 </p>
 
-**For the system under the TV.** TrueHD and DTS-HD reach your receiver exactly
-as they are on the disc, even where Android only passes the DTS core or gives
-up on TrueHD. If nothing gets through, the server converts to E-AC-3 and
-surround stays.
+**Playback that does not stall.** Glacier keeps an eye on your connection. If
+it gets slower, the picture steps down to 4K, 1080p or 720p and back up later,
+without a pause. The TV switches to the frame rate of the film, so movement
+stays smooth.
 
-**For the TV itself.** Dolby Vision plays even from UHD Blu-rays with profile
-7, converted on the device. The TV switches to the frame rate of the film, and
-Settings › System › Check playback tests with real files what your TV can
-play.
+**Help with audio and subtitles.** Forced subtitles, commentary, audio
+description and more carry a clear mark, even when the file does not say so.
+Every language shows its flag, so you see at once which track is which. Glacier
+never starts a commentary by mistake and can keep your choice for each show.
 
-**For everyone on the sofa.** Everyone gets a profile with their own picture,
+**Sound and picture as on the disc.** TrueHD and DTS-HD reach your receiver
+untouched, even where Android usually gives up. Dolby Vision plays even from
+UHD Blu-rays. If something does not get through, surround stays anyway.
+
+**A music player of its own.** Songs and music videos play in one queue. The
+lyrics run along in time, the music keeps playing while you browse, and radio
+stations play like music too.
+
+**For everyone in the house.** Everyone gets a profile with their own picture,
 colour and progress. The kids profile only shows what suits their age, and the
 PIN goes in with the D-pad. The settings come along to a new TV.
 
@@ -78,22 +86,16 @@ PIN goes in with the D-pad. The settings come along to a new TV.
   shrink out of the way
 - The A–Z rail jumps straight to the letter. Large libraries open fast, and
   sorts by year, date added or artist show a heading over each group
-- A title's page names every audio and subtitle track in full, with region,
-  flag and marks for forced, commentary, audio description or sing-along
 - Several versions of a title, such as 2160p and 1080p or a director's cut,
   with the right one picked for your TV and your pick kept per movie or show
 
 ## The shelf next to it
 
 <p align="center">
-  <img src="website/assets/screenshots/music.jpg" width="32%" alt="The music player in full screen with large lyrics">
-  <img src="website/assets/screenshots/photos.jpg" width="32%" alt="The photo gallery">
-  <img src="website/assets/screenshots/livetv.jpg" width="32%" alt="Live TV with the channel list and a preview">
+  <img src="website/assets/screenshots/photos.jpg" width="49%" alt="The photo gallery">
+  <img src="website/assets/screenshots/livetv.jpg" width="49%" alt="Live TV with the channel list and a preview">
 </p>
 
-- **Music** that keeps playing while you browse: a mini player, a full screen
-  with large lyrics, queue, playlists, instant mix and music videos mixed in
-  with the songs
 - **Photos and home videos** by folder, as cards or a gallery, full screen with
   a slideshow on OK
 - **Live TV** with a running preview on every channel, a programme guide,
@@ -112,8 +114,8 @@ PIN goes in with the D-pad. The settings come along to a new TV.
 - A Favorites page with everything you marked with the heart, in the rows you
   pick
 - Audio and subtitle preferences synced with your Jellyfin account
-- Android TV home screen: "Watch next" and three optional channels (not on
-  Fire TV)
+- On the Android TV home screen itself, before you open Glacier: "Watch next"
+  and up to three rows of your choice
 - English, German and Spanish user interface, accent colours and a compact layout
 - When playback fails, the message names the error and shows a QR code to
   download the log for a bug report. Settings › System also sends a cleaned
