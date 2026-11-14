@@ -32,7 +32,7 @@ workflow, so both run as part of a release.
 | `make-promo-video.py` | Renders the promo video for the stores and the website from the recorded takes. | By hand |
 | `make-playback-samples.py` | Makes the sample files for the playback check and for the Dolby Vision and IEC 61937 tests. | By hand (needs ffmpeg and dovi_tool) |
 | `make-readme-badges.py` | Writes the README's wordmark and buttons as SVG files in `docs/badges/`, in light and dark. | By hand |
-| `make-social-preview.py` | Writes the website's social preview image (`website/assets/social-preview.png`) from a frame of the promo video. | By hand |
+| `make-social-preview.py` | Writes the website's social preview image (`website/assets/social-preview.png`) from the home screen still (`website/assets/screenshots/home.jpg`). | By hand |
 
 ## website
 

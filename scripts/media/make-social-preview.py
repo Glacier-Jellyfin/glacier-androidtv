@@ -1,25 +1,20 @@
 """Writes the website's social preview (og:image and GitHub social preview, 1280x640) with
-the current home screen: a frame of the promo video, cropped to its UI card, next to the
+the current home screen: the website's home screen still as a rounded card, next to the
 brand, headline and tagline.
 
-Usage: scripts/media/make-social-preview.py (needs ffmpeg and Pillow; writes
+Usage: scripts/media/make-social-preview.py (needs Pillow; writes
 website/assets/social-preview.png)
 """
-import subprocess
-import tempfile
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parents[2]
-VIDEO = ROOT / "website" / "assets" / "promo" / "glacier-promo.mp4"
+SHOT = ROOT / "website" / "assets" / "screenshots" / "home.jpg"
 FONT = ROOT / "core" / "designsystem" / "src" / "main" / "res" / "font" / "google_sans.ttf"
 OUT = ROOT / "website" / "assets" / "social-preview.png"
 
-FRAME_AT = "5.5"  # seconds: the home screen, settled, no cross-fade
-# The UI card inside the 1280x720 frame, inset by a pixel to drop its anti-aliased edge.
-CARD_BOX = (129, 128, 1151, 701)
-CARD_RADIUS = 22  # corner radius in frame pixels
+CARD_RADIUS = 17  # corner radius in output pixels
 W, H = 1280, 640
 ACCENT = (125, 199, 217)
 WHITE = (238, 248, 250)
@@ -48,14 +43,6 @@ def background():
     return img
 
 
-def grab_frame(dest):
-    subprocess.run(
-        ["ffmpeg", "-v", "error", "-y", "-ss", FRAME_AT, "-i", str(VIDEO), "-frames:v", "1", str(dest)],
-        check=True,
-    )
-    return Image.open(dest).convert("RGB")
-
-
 def rounded_mask(size, radius):
     w, h = size
     m = Image.new("L", (w * SS, h * SS), 0)
@@ -67,7 +54,7 @@ def place_card(img, shot):
     card_h = 452
     scale = card_h / shot.height
     card = shot.resize((round(shot.width * scale), card_h), Image.LANCZOS)
-    radius = round(CARD_RADIUS * scale)
+    radius = CARD_RADIUS
     x, y = 540, (H - card_h) // 2
     mask = rounded_mask(card.size, radius)
 
@@ -109,10 +96,8 @@ def left_column(img):
 
 
 def main():
-    with tempfile.TemporaryDirectory() as tmp:
-        frame = grab_frame(Path(tmp) / "frame.png")
     img = background()
-    place_card(img, frame.crop(CARD_BOX))
+    place_card(img, Image.open(SHOT).convert("RGB"))
     left_column(img)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     img.save(OUT, optimize=True)
