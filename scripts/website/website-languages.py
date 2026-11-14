@@ -15,7 +15,6 @@ To add a language:
   - translate website/<code>/index.html and privacy.html, and add the <link rel="alternate" hreflang="<code>">
     to every page (this script says which pages lack it),
   - add the language to TEXT in website/assets/lang.js (the hint for visitors whose browser speaks it),
-  - add its link to the footer of every page,
   - mention the language in the privacy policy only if its storage text changes.
 
 Usage: scripts/website/website-languages.py [--check]   (--check changes nothing and fails if a page is out of date)

@@ -172,10 +172,10 @@ SHOTS = [
 HIGHLIGHT = [(0, 2.7, 6.4), (1, 3.5, 10.3), (2, 5.0, 12.8), (3, 6.8, 11.0), (4, 2.2, 7.2), (5, 3.4, 10.0),
              (6, 2.8, 8.4), (7, 10.0, 16.2)]
 # The website's section pictures: a moment of an English take each, found again in the other languages.
-STILLS = {"home": ("family", 3.8), "library": ("library", 12.2), "detail": ("detail", 10.6),
+STILLS = {"home": ("family", 25.0), "library": ("library", 12.2), "detail": ("detail", 10.6),
           "player": ("skip", 7.8), "music": ("music", 24.5), "photos": ("photos", 18.2), "livetv": ("livetv", 9.0)}
 # Website-only pictures: the TV in the living room and the family scene (not in the stores).
-SITE_STILLS = {"picker": ("family", 2.5), "kids": ("family", 9.5), "trickplay": ("trickplay", 24.0)}
+SITE_STILLS = {"picker": ("family", 2.5), "kids": ("family", 8.5), "trickplay": ("trickplay", 24.0)}
 SITE_DIR = ROOT / "website" / "assets"
 STORE_DIR = ROOT / "fastlane" / "metadata" / "android"
 STORE_LOCALES = {"en": "en-US", "de": "de-DE", "es": "es-ES"}

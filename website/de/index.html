@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Glacier</title>
-  <meta name="description" content="Glacier bringt deinen Jellyfin-Server auf Android TV, Google TV und Fire TV: gebaut für die Fernbedienung, mit verlustfreiem Ton und Dolby Vision.">
+  <meta name="description" content="Glacier bringt deinen Jellyfin-Server auf Android TV, Google TV und Fire TV: Wiedergabe, die sich deiner Verbindung anpasst, Ton und Bild wie auf der Disc und klar benannte Ton- und Untertitelspuren.">
   <link rel="canonical" href="https://glacier-jellyfin.github.io/glacier-androidtv/de/">
   <link rel="alternate" hreflang="en" href="https://glacier-jellyfin.github.io/glacier-androidtv/">
   <link rel="alternate" hreflang="de" href="https://glacier-jellyfin.github.io/glacier-androidtv/de/">
@@ -12,7 +12,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Glacier">
   <meta property="og:title" content="Glacier">
-  <meta property="og:description" content="Glacier bringt deinen Jellyfin-Server auf Android TV, Google TV und Fire TV: gebaut für die Fernbedienung, mit verlustfreiem Ton und Dolby Vision.">
+  <meta property="og:description" content="Glacier bringt deinen Jellyfin-Server auf Android TV, Google TV und Fire TV: Wiedergabe, die sich deiner Verbindung anpasst, Ton und Bild wie auf der Disc und klar benannte Ton- und Untertitelspuren.">
   <meta property="og:url" content="https://glacier-jellyfin.github.io/glacier-androidtv/de/">
   <meta property="og:locale" content="de_DE">
   <meta property="og:locale:alternate" content="en_US">
@@ -31,8 +31,9 @@
   <header class="wrap top">
     <a class="brand" href="#top"><img src="../assets/mark.svg" width="26" height="26" alt="">glacier</a>
     <nav aria-label="Abschnitte">
-      <a href="#different">Was anders ist</a>
-      <a href="#shelf">Musik, Fotos, TV</a>
+      <a href="#player">Der Player</a>
+      <a href="#family">Profile</a>
+      <a href="#shelf">Fotos, TV</a>
       <a href="#film">Der Film</a>
       <a href="#get">Holen</a>
     </nav>
@@ -57,7 +58,7 @@
     <section class="wrap hero">
       <h1>Der Fernseher gehört wieder dir.</h1>
       <div class="hero-copy">
-        <p>Glacier holt deinen Jellyfin-Server ins Wohnzimmer. Nimm die Fernbedienung und drück ein paar Tasten.</p>
+        <p>Glacier holt deinen Jellyfin-Server ins Wohnzimmer: Wiedergabe, die sich anpasst statt zu stocken, Ton und Bild wie auf der Disc und Hilfe bei jeder Ton- und Untertitelspur.</p>
         <a class="version" href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases/latest" data-latest-release="Version {v} ist da">Kostenlos für Android TV, Google TV und Fire TV</a>
       </div>
     </section>
@@ -91,7 +92,7 @@
         <div class="remote" role="group" aria-label="Fernbedienung">
           <span class="remote-led"></span>
           <div class="dpad">
-            <button class="key k-up" type="button" data-key="up" aria-pressed="false" aria-label="Hoch" data-label="Hoch gedrückt" data-text="Alles über den Titel: Fassungen, Tonspuren und Untertitel, klar beschriftet." data-img="../assets/screenshots/detail-de.jpg" data-alt="Die Seite eines Films mit Besetzung und ähnlichen Titeln" data-receiver="STANDBY"><svg viewBox="0 0 20 14" aria-hidden="true"><path d="M10 0 20 14H0Z"/></svg></button>
+            <button class="key k-up" type="button" data-key="up" aria-pressed="false" aria-label="Hoch" data-label="Hoch gedrückt" data-text="Jede Ton- und Untertitelspur ausgeschrieben, mit Markierungen für erzwungene Spuren, Kommentar oder Audiodeskription." data-img="../assets/screenshots/detail-de.jpg" data-alt="Die Seite eines Films mit Besetzung und ähnlichen Titeln" data-receiver="STANDBY"><svg viewBox="0 0 20 14" aria-hidden="true"><path d="M10 0 20 14H0Z"/></svg></button>
             <button class="key k-left" type="button" data-key="left" aria-pressed="false" aria-label="Links" data-label="Links gedrückt" data-text="Die A–Z-Leiste springt direkt zum Buchstaben, auch in großen Bibliotheken." data-img="../assets/screenshots/library-de.jpg" data-alt="Die Filmbibliothek mit der A–Z-Leiste" data-receiver="STANDBY"><svg viewBox="0 0 14 20" aria-hidden="true"><path d="M0 10 14 0v20Z"/></svg></button>
             <button class="key k-ok" type="button" data-key="ok" aria-pressed="false" data-label="OK gedrückt" data-text="Das Intro ist weg. Den Rückblick davor hatte Glacier schon selbst übersprungen." data-img="../assets/screenshots/player-de.jpg" data-alt="Der Player überspringt einen Rückblick, Intro überspringen ist zu sehen" data-receiver="TRUEHD 7.1">OK</button>
             <button class="key k-right" type="button" data-key="right" aria-pressed="false" aria-label="Rechts" data-label="Rechts gedrückt" data-text="Spulen mit Vorschaubildern. Du siehst, wo du landest." data-img="../assets/screenshots/trickplay-de.jpg" data-alt="Spulen mit Vorschaubild über der Zeitleiste" data-receiver="TRUEHD 7.1"><svg viewBox="0 0 14 20" aria-hidden="true"><path d="M14 10 0 0v20Z"/></svg></button>
@@ -110,38 +111,72 @@
       </div>
     </section>
 
-    <section class="wrap different" id="different">
-      <h2 class="section-title">Was Glacier anders macht</h2>
-      <p class="lede">Drei Dinge im Wohnzimmer, um die sich Glacier besonders kümmert.</p>
-      <div class="objects">
-        <div class="object">
+    <section class="wrap player" id="player">
+      <h2 class="section-title">Was der Player anders macht</h2>
+      <p class="lede">Vier Dinge, um die sich der Player von Glacier besonders kümmert.</p>
+
+      <div class="feature">
+        <div class="feature-pic" role="img" aria-label="Stufen der Bildqualität: Original, 4K, 1080p, 720p, 1080p leuchtet">
+          <div class="amp ladder" aria-hidden="true"><span class="ladder-steps"><span class="rung">Original</span><span class="rung">4K</span><span class="rung on">1080p</span><span class="rung">720p</span></span><span class="amp-led"></span></div>
+        </div>
+        <div class="feature-copy">
+          <h3>Wiedergabe, die nicht stockt</h3>
+          <p>Glacier behält deine Verbindung im Blick. Wird sie langsamer, geht das Bild auf 4K, 1080p oder 720p herunter und später wieder hoch, ohne Pause. Der Film läuft weiter.</p>
+          <p>Der Fernseher wechselt auf die Bildrate des Films, damit Bewegungen ruhig laufen.</p>
+          <p class="hand">Kein Kreisel. Der Film läuft weiter.</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-pic">
+          <div class="frame"><img src="../assets/screenshots/detail-zoom-de.jpg" width="1280" height="720" alt="Die Seite eines Titels mit der Liste der Tonspuren, darunter Kommentar und Audiodeskription" loading="lazy"></div>
+          <ul class="marks"><li>Erzwungen</li><li>Hörgeschädigt</li><li>Kommentar</li><li>Audiodeskription</li><li>Sing-Along</li></ul>
+        </div>
+        <div class="feature-copy">
+          <h3>Hilfe bei Ton und Untertiteln</h3>
+          <p>Erzwungene Untertitel, Kommentare, Audiodeskription und mehr tragen eine klare Markierung, auch wenn die Datei sie nicht kennzeichnet. Jede Sprache zeigt ihre Flagge, so siehst du sofort, welche Spur welche ist.</p>
+          <p>Glacier startet nie aus Versehen einen Kommentar und kann sich deine Wahl für jede Serie merken.</p>
+          <p class="hand">Jede Spur so benannt, dass du weißt, was sie ist.</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-pic">
           <div class="prop" aria-hidden="true"><div class="amp"><span class="amp-display">TRUEHD 7.1</span><span class="amp-knob"></span><span class="amp-led"></span></div></div>
-          <h3>Für die Anlage unter dem Fernseher</h3>
-          <p>TrueHD und DTS-HD kommen am Receiver so an, wie sie auf der Platte liegen, auch dort, wo Android sonst nur den DTS-Kern durchlässt oder an TrueHD scheitert.</p>
-          <p class="hand">Und wenn gar nichts durchgeht: E-AC-3, damit Surround bleibt.</p>
+          <div class="prop"><div class="mini-tv"><img src="../assets/screenshots/picture-de.jpg" width="1280" height="720" alt="Ein Film läuft: Eisberge in der Abendsonne" loading="lazy"></div><div class="mini-tv-neck"></div><div class="mini-tv-foot"></div></div>
         </div>
-        <div class="object">
-          <div class="prop"><div class="mini-tv"><img src="../assets/screenshots/trickplay-de.jpg" width="1280" height="720" alt="Spulen mit Vorschaubild" loading="lazy"></div><div class="mini-tv-neck"></div><div class="mini-tv-foot"></div></div>
-          <h3>Für den Fernseher selbst</h3>
-          <p>Dolby Vision auch von UHD-Blu-rays mit Profil 7, direkt auf dem Gerät umgerechnet. Der Fernseher wechselt auf die Bildrate des Films, und vorher prüft Glacier mit echten Testdateien, was er abspielen kann.</p>
-          <p class="hand">Einstellungen › System › Wiedergabe prüfen</p>
+        <div class="feature-copy">
+          <h3>Ton und Bild wie auf der Disc</h3>
+          <p>TrueHD und DTS-HD kommen unverändert am Receiver an, auch dort, wo Android sonst aufgibt. Dolby Vision läuft sogar von UHD-Blu-rays.</p>
+          <p>Kommt etwas nicht durch, bleibt der Surround-Ton trotzdem erhalten.</p>
+          <p class="hand">Direkt zum Receiver, nichts dazwischen.</p>
         </div>
-        <div class="object">
-          <div class="prop" aria-hidden="true"><div class="sofa"><span class="seat"></span><span class="arm l"></span><span class="arm r"></span><span class="cushion c1"></span><span class="cushion c2"></span><span class="cushion c3"></span><span class="cushion c4"></span></div></div>
-          <h3>Für alle auf dem Sofa</h3>
-          <p>Jeder hat sein Profil mit Bild, Farbe und eigenem Fortschritt. Das Kinderprofil zeigt nur, was zum Alter passt, die PIN geht per Steuerkreuz. Neuer Fernseher? Die Einstellungen ziehen mit.</p>
-          <p class="hand">Ein Kissen pro Profil.</p>
+      </div>
+
+      <div class="feature">
+        <div class="feature-pic">
+          <div class="record-sleeve"><div class="frame"><img src="../assets/screenshots/musicvideo-de.jpg" width="1280" height="720" alt="Ein Musikvideo im Musikplayer, neben der Warteschlange" loading="lazy"></div></div>
+        </div>
+        <div class="feature-copy">
+          <h3>Ein eigener Musikplayer</h3>
+          <p>Songs und Musikvideos laufen in einer Warteschlange. Die Songtexte laufen im Takt mit, und die Musik spielt beim Stöbern weiter.</p>
+          <p>Auch Radiosender laufen wie Musik.</p>
+          <p class="hand">Songs und Videos, eine Warteschlange.</p>
         </div>
       </div>
     </section>
 
-    <section class="wrap family" aria-label="Profile">
+    <section class="wrap family" id="family">
+      <div class="family-head">
+        <h2 class="section-title">Für alle im Haus</h2>
+        <p class="lede">Jeder hat sein Profil mit Bild, Farbe und eigenem Fortschritt. Das Kinderprofil zeigt nur, was zum Alter passt, die PIN geht per Steuerkreuz. Neuer Fernseher? Die Einstellungen ziehen mit.</p>
+      </div>
       <div class="family-pictures">
         <div class="frame"><img src="../assets/screenshots/picker-de.jpg" width="1280" height="720" alt="Wer schaut? mit den Profilen Alex, Kids und Nora" loading="lazy"></div>
         <div class="frame"><img src="../assets/screenshots/kids-de.jpg" width="1280" height="720" alt="Die Startseite des Kinderprofils" loading="lazy"></div>
       </div>
       <div class="family-copy">
-        <p class="hand">20 Uhr, alle aufs Sofa.</p>
+        <p class="hand">18 Uhr, alle aufs Sofa.</p>
         <p class="story">Wer schaut? Die Kleine nimmt den Fuchs und sieht nur, was für sie passt. Du bekommst nachher deine Serie genau da zurück, wo du gestern eingeschlafen bist.</p>
       </div>
     </section>
@@ -149,13 +184,8 @@
     <section class="shelf" id="shelf">
       <div class="wrap">
         <h2 class="section-title">Das Regal daneben</h2>
-        <p class="lede">Musik, Fotos und Fernsehen in derselben App, mit derselben Fernbedienung.</p>
+        <p class="lede">Fotos und Fernsehen in derselben App, mit derselben Fernbedienung.</p>
         <div class="shelf-items">
-          <figure class="shelf-item">
-            <div class="shelf-pic"><div class="record-sleeve"><div class="frame"><img src="../assets/screenshots/music-de.jpg" width="1280" height="720" alt="Der Musikplayer im Vollbild mit großem Songtext" loading="lazy"></div></div></div>
-            <div class="board" aria-hidden="true"></div>
-            <figcaption><h3>Musik</h3><p>Songtexte groß im Takt, Musikvideos mitten in der Warteschlange. Beim Stöbern bleibt der Mini-Player.</p></figcaption>
-          </figure>
           <figure class="shelf-item">
             <div class="shelf-pic"><div class="photo-frame"><img src="../assets/screenshots/photos-de.jpg" width="1280" height="720" alt="Die Fotogalerie mit Nordlicht" loading="lazy"></div></div>
             <div class="board" aria-hidden="true"></div>
@@ -177,8 +207,9 @@
         <div class="pin photo"><img src="../assets/screenshots/library-de.jpg" width="1280" height="720" alt="Die Filmbibliothek nach einem Sprung über die A–Z-Leiste" loading="lazy"><p>Große Bibliotheken öffnen schnell</p></div>
         <div class="pin"><h3>Finden &amp; anfragen</h3><p>Die Suche findet auch Filme und Serien, die noch nicht auf deinem Server sind. Anfragen gehen über Seerr direkt vom Fernseher, mit dem Plugin Jellyfin Enhanced.</p></div>
         <div class="pin"><h3>Fassungen eines Titels</h3><p>2160p und 1080p oder der Director's Cut: Glacier wählt die passende für deinen Fernseher.</p></div>
-        <div class="pin"><h3>Auf dem Startbildschirm</h3><p>Weiterschauen und drei optionale Kanäle auf dem Startbildschirm von Android TV. Nicht auf Fire TV.</p></div>
-        <div class="pin photo"><img src="../assets/screenshots/detail-de.jpg" width="1280" height="720" alt="Die Seite eines Films mit Besetzung und ähnlichen Titeln" loading="lazy"><p>Jede Tonspur klar beschriftet</p></div>
+        <div class="pin"><h3>Auf dem Startbildschirm von Android TV</h3><p>Weiterschauen und bis zu drei Reihen deiner Wahl erscheinen direkt auf dem Startbildschirm des Fernsehers, noch bevor du Glacier öffnest.</p></div>
+        <div class="pin photo"><img src="../assets/screenshots/player-de.jpg" width="1280" height="720" alt="Der Player überspringt einen Rückblick, Intro überspringen ist zu sehen" loading="lazy"><p>Rückblicke überspringen sich selbst, OK das Intro</p></div>
+        <div class="pin"><h3>Als Nächstes wartet auf die Szene nach dem Abspann</h3><p>Die nächste Episode steht vor dem Ende des Abspanns bereit, mit Countdown. Folgt nach dem Abspann noch eine Szene, wartet Glacier darauf.</p></div>
         <div class="pin"><h3>Bleibt aktuell</h3><p>Aus dem Store aktualisiert sich Glacier wie jede App. Von GitHub holt der eingebaute Updater Stable- oder Beta-Versionen.</p></div>
       </div>
     </section>
@@ -216,7 +247,7 @@
         <h2 class="section-title">In zwei Minuten auf dem Fernseher</h2>
         <ol class="steps">
           <li>Die kostenlose App <a href="https://www.aftvnews.com/downloader/">Downloader</a> aus dem App-Store des Fernsehers installieren.</li>
-          <li>Öffnen, den Code eintippen und die Installation erlauben.</li>
+          <li>Öffnen, den Code <strong>2423112</strong> eintippen und die Installation erlauben.</li>
           <li>Fertig. Ab jetzt hält sich Glacier selbst aktuell.</li>
         </ol>
         <p>Kostenlos, ohne Konto und ohne Werbung, ab Android 9. Lieber aus dem Store?</p>
@@ -250,8 +281,6 @@
         <a href="https://github.com/Glacier-Jellyfin/glacier-androidtv/releases">Releases</a>
         <a href="https://www.amazon.de/dp/B0HPL2YVVQ">Amazon Appstore</a>
         <a href="privacy.html">Datenschutz</a>
-        <a href="../" hreflang="en">English</a>
-        <a href="../es/" hreflang="es">Español</a>
       </nav>
       <p class="foot-legal">Lizenziert unter GPL-3.0-or-later. Nicht mit dem Jellyfin-Projekt verbunden.</p>
     </div>
