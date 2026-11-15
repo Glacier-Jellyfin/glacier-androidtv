@@ -1,34 +1,24 @@
 #!/usr/bin/env python3
-"""Renders the promo video for the stores and the website from recorded takes.
+"""Stills for the website and the stores from the recorded takes (and the first, now superseded, promo film renderer).
 
-Takes come from scripts/media/capture-website-media.py --takes DIR. Every frame is
-composed here and piped to ffmpeg: the app runs in a rounded frame on Glacier's
-dark background, a camera eases into the part of the screen a caption talks
-about, captions slide in and out, scenes push into each other on the beat of
-the music, and the title and end cards are animated. Writes into build/promo/:
+The promo film, the highlight video and the website's video media are made by scripts/media/promo/film.py (see
+scripts/README.md, "The promo film"). This script still makes:
 
-  glacier-promo[-de].mp4        the full film, 1080p, with music (stores, YouTube)
-  glacier-promo-short[-de].mp4  a 30-second cut
-  glacier-promo-web[-de].mp4    the full film at 720p for the website
+  --only stills   the website's section pictures, website/assets/screenshots/<name>[-de|-es].jpg (1280x720): home, library,
+                  detail, player, music, photos, livetv, picker, kids, trickplay
+  --only store    the Google Play screenshots, fastlane/metadata/android/<locale>/images/tvScreenshots/<n>-<name>.jpg (1080p)
 
-The shots are timed on the English takes. The German takes run a little
-differently (loading takes as long as it takes), so each part of a shot is
-matched to the German take by comparing the motion in both.
+Each picture is one frame of a take at a moment where the take is settled in every language (STILLS and SITE_STILLS below: no
+dialog, no spinner), so one time serves all languages. The hand-made crops (detail-zoom, picture, musicvideo) are not touched.
 
-Music: "Inspired" by Kevin MacLeod (incompetech.com), CC BY 4.0, which asks for
-credit where the video is published; the end card carries it too. Font: Google
-Sans, SIL Open Font License. Both are downloaded once and checked against their
-sha256.
+The older film renderer in this file (--only full,short,website: shots in a rounded frame with captions, music "Inspired" by
+Kevin MacLeod, CC BY 4.0, Google Sans, both downloaded once and checked against their sha256) is kept for reference; its output
+is no longer used by the website or the stores.
 
-Needs Python 3.9+ with Pillow and numpy, and ffmpeg on PATH (or FFMPEG set).
+Takes come from scripts/media/capture-website-media.py --takes DIR. Needs Python 3.9+ with Pillow and numpy, and ffmpeg on PATH
+(or FFMPEG set).
 
-With --only website it also writes the website's media: the section pictures and
-the highlight video into website/assets/screenshots/, the film into
-website/assets/promo/ (render the full film first). With --only store it
-writes the same pictures at 1080p as the Google Play screenshots into
-fastlane/metadata/android/<locale>/images/tvScreenshots/.
-
-Usage: scripts/media/make-promo-video.py --takes DIR [--lang en,de] [--only full,short,website,store]
+Usage: scripts/media/make-promo-video.py --takes DIR [--lang en,de,es] [--only stills,store]
 """
 from __future__ import annotations
 
@@ -172,10 +162,10 @@ SHOTS = [
 HIGHLIGHT = [(0, 2.7, 6.4), (1, 3.5, 10.3), (2, 5.0, 12.8), (3, 6.8, 11.0), (4, 2.2, 7.2), (5, 3.4, 10.0),
              (6, 2.8, 8.4), (7, 10.0, 16.2)]
 # The website's section pictures: a moment of an English take each, found again in the other languages.
-STILLS = {"home": ("family", 25.0), "library": ("library", 12.2), "detail": ("detail", 10.6),
-          "player": ("skip", 7.8), "music": ("music", 24.5), "photos": ("photos", 18.2), "livetv": ("livetv", 9.0)}
+STILLS = {"home": ("family", 26.0), "library": ("library", 5.0), "detail": ("detail", 18.6),
+          "player": ("skip", 10.6), "music": ("music", 24.5), "photos": ("photos", 18.2), "livetv": ("livetv", 10.8)}
 # Website-only pictures: the TV in the living room and the family scene (not in the stores).
-SITE_STILLS = {"picker": ("family", 2.5), "kids": ("family", 8.5), "trickplay": ("trickplay", 24.0)}
+SITE_STILLS = {"picker": ("family", 2.0), "kids": ("family", 8.5), "trickplay": ("trickplay", 24.0)}
 SITE_DIR = ROOT / "website" / "assets"
 STORE_DIR = ROOT / "fastlane" / "metadata" / "android"
 STORE_LOCALES = {"en": "en-US", "de": "de-DE", "es": "es-ES"}
@@ -693,12 +683,10 @@ def encode(source: Path, out: Path, *args) -> None:
 
 
 def still(takes: Path, lang: str, take: str, at: float) -> Image.Image:
-    """A picture from a take. A still moment has little motion to match on, so the other languages are
-    matched on the seconds that lead up to it."""
+    """A picture from a take. The moments are chosen where every language's take is settled (no dialog,
+    no spinner), so one time serves all of them."""
     suffix = "" if lang == "en" else f"-{lang}"
     path = takes / f"{take}{suffix}.mp4"
-    if suffix:
-        at += offset(takes / f"{take}.mp4", path, max(0.0, at - 6), at + 2, search=6.0)
     reader = Reader(path, at, at + 0.2, 1.0)
     picture = reader.next()
     reader.close()
@@ -758,8 +746,8 @@ def website(art: Art, takes: Path, lang: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--takes", type=Path, required=True, help="folder with the takes of capture-website-media.py")
-    parser.add_argument("--lang", default="en,de", help="comma-separated languages")
-    parser.add_argument("--only", default="full,short,website", help="any of full, short, website, stills, store")
+    parser.add_argument("--lang", default="en,de,es", help="comma-separated languages")
+    parser.add_argument("--only", default="stills", help="any of stills, store (older: full, short, website)")
     args = parser.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     art = Art(fetch(*FONT))

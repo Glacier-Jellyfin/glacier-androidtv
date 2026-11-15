@@ -217,15 +217,16 @@ promo film once by hand in the Developer Console. A video that is already there
 is kept.
 
 - Screenshots (1920×1080, one set per language in
-  `fastlane/metadata/android/{en-US,de-DE}/images/tvScreenshots/`) come from
-  the takes of the promo video: `scripts/media/make-promo-video.py --takes DIR
-  --only store`. They show the same moments as the website's section
-  pictures. A language without its own images, such as `es-ES` for now,
-  shows the English ones in both stores.
-- Promo video: Google Play only takes a YouTube link. Upload
-  `build/promo/glacier-promo[-de].mp4` to YouTube (public or unlisted, ads
-  off, with the music credit from the end card in the description) and put
-  the link into `fastlane/metadata/android/<language>/video.txt`.
+  `fastlane/metadata/android/{en-US,de-DE,es-ES}/images/tvScreenshots/`) come
+  from the takes of the promo film: `scripts/media/make-promo-video.py --takes
+  DIR --only store`. They show the same moments as the website's section
+  pictures. A language without its own images shows the English ones in both
+  stores.
+- Promo video: Google Play only takes a YouTube link. Upload the 1080p master
+  `build/promo/film/glacier-promo[-de|-es].mp4` (made by
+  `scripts/media/promo/film.py`) to YouTube (public or unlisted, ads off,
+  with "Music: generated with ACE-Step 1.5 (MIT license)" in the description)
+  and put the link into `fastlane/metadata/android/<language>/video.txt`.
 
 ### Trying a store version locally
 
