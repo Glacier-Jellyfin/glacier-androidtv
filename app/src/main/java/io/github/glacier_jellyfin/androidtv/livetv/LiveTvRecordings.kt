@@ -166,7 +166,7 @@ fun RecordingsView(
             return
         }
     }
-    val data = recordings ?: return
+    val data = recordings
     SideEffect { hadEntries = true }
     val sections = listOf(
         R.string.livetv_recorded to data.recorded.map { Entry.Recorded(it) },

@@ -205,10 +205,10 @@ class MediaCapabilityDetector @Inject constructor(
                     movieAttributes,
                 ) != AudioManager.DIRECT_PLAYBACK_NOT_SUPPORTED
 
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> AudioTrack.isDirectPlaybackSupported(
-                iecFormat(),
-                movieAttributes,
-            )
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                @Suppress("DEPRECATION")
+                AudioTrack.isDirectPlaybackSupported(iecFormat(), movieAttributes)
+            }
 
             else -> false
         }
@@ -248,13 +248,13 @@ class MediaCapabilityDetector @Inject constructor(
         const val MIME_VP9 = "video/x-vnd.on2.vp9"
         const val MIME_DOLBY_VISION = "video/dolby-vision"
 
-        // eARC is a plain number compiled in; older devices never report it.
-        @SuppressLint("InlinedApi")
         const val IEC_SAMPLE_RATE = 192_000
 
         /** One TrueHD burst, the largest the 8-channel carrier takes. */
         const val MAT_BURST_BYTES = 61440
 
+        // eARC is a plain number compiled in; older devices never report it.
+        @SuppressLint("InlinedApi")
         val HDMI_OUTPUTS = setOf(
             AudioDeviceInfo.TYPE_HDMI,
             AudioDeviceInfo.TYPE_HDMI_ARC,

@@ -676,10 +676,10 @@ private fun FullscreenView(
 private const val LYRICS_PAGE_PX = 360f
 
 /** Lyrics to show in the full screen: loaded, with lines, and not just "instrumental". */
-private fun fullscreenLyrics(state: MusicUiState): Lyrics? =
+private fun lyricsForFullscreen(state: MusicUiState): Lyrics? =
     (state.lyrics as? LyricsState.Loaded)?.lyrics?.takeUnless { it.instrumental || it.lines.isEmpty() }
 
-private fun hasLyrics(state: MusicUiState) = fullscreenLyrics(state) != null
+private fun hasLyrics(state: MusicUiState) = lyricsForFullscreen(state) != null
 
 /** The small cover beside the title in the full screen's bottom bar. */
 private const val FULLSCREEN_COVER = 112
@@ -705,7 +705,7 @@ private fun BoxScope.SongFullscreen(
     val blurs = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     Artwork(track.largeCoverUrl, Modifier.fillMaxSize().then(if (blurs) Modifier.blur(56.dp) else Modifier))
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (blurs) 0.6f else 0.78f)))
-    val lyrics = fullscreenLyrics(state)
+    val lyrics = lyricsForFullscreen(state)
     Box(Modifier.fillMaxSize().padding(bottom = FULLSCREEN_BAR.dp)) {
         when {
             lyrics != null -> FullscreenLyrics(track, lyrics, positionMs, listState)
