@@ -228,7 +228,7 @@ internal class DolbyVisionProfile7Extractors(
             end: Int,
             flags: Int,
         ): ByteArray {
-            val wrapped = flags and C.BUFFER_FLAG_HAS_SUPPLEMENTAL_DATA != 0
+            val wrapped = (flags and C.BUFFER_FLAG_HAS_SUPPLEMENTAL_DATA) != 0
             val dataStart = if (wrapped) start + 4 else start
             val dataEnd = if (wrapped) dataStart + readLength(pending, start) else end
             check(dataEnd in dataStart..end) { "A sample's video data runs past the sample" }

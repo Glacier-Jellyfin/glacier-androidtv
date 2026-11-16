@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
+import androidx.core.content.ContextCompat
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -72,7 +73,7 @@ class GlacierApplication :
                 }
             }
         }
-        registerReceiver(receiver, IntentFilter(THROTTLE_ACTION), RECEIVER_EXPORTED)
+        ContextCompat.registerReceiver(this, receiver, IntentFilter(THROTTLE_ACTION), ContextCompat.RECEIVER_EXPORTED)
     }
 
     private companion object {

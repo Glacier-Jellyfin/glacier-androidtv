@@ -46,9 +46,10 @@ internal object DeviceReport {
 
     /** How Media3 sees the output: the bitstreams it passes through and the channels it allows. */
     @OptIn(UnstableApi::class)
-    fun media3Audio(context: Context): String =
-        runCatching { AudioCapabilities.getCapabilities(context, AudioAttributes.DEFAULT, null).toString() }
-            .getOrElse { "unknown (${it.javaClass.simpleName})" }
+    fun media3Audio(context: Context): String = runCatching {
+        AudioCapabilities.getCapabilities(context, AudioAttributes.DEFAULT, null, emptyList()).toString()
+    }
+        .getOrElse { "unknown (${it.javaClass.simpleName})" }
 
     /** What the device profile sent to the server is built from. */
     fun capabilities(device: DeviceCapabilities, iec61937: Boolean): List<String> = buildList {

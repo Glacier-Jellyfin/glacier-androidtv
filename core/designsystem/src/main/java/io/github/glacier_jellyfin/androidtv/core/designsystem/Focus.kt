@@ -149,7 +149,7 @@ fun Modifier.focusScale(focused: Boolean, maxWidthGrowth: Dp = Dp.Unspecified): 
         scaleX = if (maxWidthGrowth == Dp.Unspecified || size.width <= 0f) {
             scale
         } else {
-            val growth = (scale - 1f) / (FocusScale - 1f) * maxWidthGrowth.toPx()
+            val growth = ((scale - 1f) / (FocusScale - 1f)) * maxWidthGrowth.toPx()
             minOf(scale, 1f + growth / size.width)
         }
     }

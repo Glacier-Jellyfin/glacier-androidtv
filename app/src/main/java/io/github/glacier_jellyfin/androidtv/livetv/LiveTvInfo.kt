@@ -61,6 +61,7 @@ import io.github.glacier_jellyfin.androidtv.player.streamStats
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 /** What this device decodes, read from the stream's player once a second. */
 private data class LiveStats(
@@ -84,11 +85,14 @@ internal fun LiveTvInfoPanel(
     val context = LocalContext.current
     val playback = state.playback
     val stats by produceState<LiveStats?>(null, playback) {
-        while (playback != null) {
+        if (playback == null) {
+            value = null
+            return@produceState
+        }
+        while (isActive) {
             value = playback.liveStats(context)
             delay(1_000)
         }
-        value = null
     }
     InfoPanelFrame(
         tabs = listOf(
@@ -217,7 +221,8 @@ private fun ServerTab(
     val file = source.file
     val direct = method == PlaybackMethod.DirectPlay
     val status by produceState<TranscodeStatus?>(null, source) {
-        while (!direct) {
+        if (direct) return@produceState
+        while (isActive) {
             value = transcodeStatus()
             delay(2_000)
         }

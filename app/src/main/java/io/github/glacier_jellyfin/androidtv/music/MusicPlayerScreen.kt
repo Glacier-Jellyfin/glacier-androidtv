@@ -168,7 +168,7 @@ fun MusicPlayerScreen(onBack: () -> Unit, viewModel: MusicPlayerViewModel = hilt
     // Each key in the full screen brings up its title and timeline for a while.
     var fullscreenPokes by remember { mutableIntStateOf(0) }
     // Up and Down page through a song's lyrics in the full screen when they do not follow the song.
-    val fullscreenLyrics = rememberLazyListState()
+    val lyricsListState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val canFullscreen = state.current != null && state.radio == null && !state.failed
     LaunchedEffect(canFullscreen) { if (!canFullscreen) fullscreen = false }
@@ -242,7 +242,7 @@ fun MusicPlayerScreen(onBack: () -> Unit, viewModel: MusicPlayerViewModel = hilt
                                 val lyrics = (state.lyrics as? LyricsState.Loaded)?.lyrics
                                 if (state.current?.isVideo == false && lyrics != null && !lyrics.synced) {
                                     val page = if (event.key == Key.DirectionUp) -LYRICS_PAGE_PX else LYRICS_PAGE_PX
-                                    scope.launch { fullscreenLyrics.animateScrollBy(page) }
+                                    scope.launch { lyricsListState.animateScrollBy(page) }
                                 }
                             }
 
@@ -343,7 +343,7 @@ fun MusicPlayerScreen(onBack: () -> Unit, viewModel: MusicPlayerViewModel = hilt
                     current,
                     player,
                     progress,
-                    fullscreenLyrics,
+                    lyricsListState,
                     overlay = overlay || !state.playWhenReady,
                 )
             }

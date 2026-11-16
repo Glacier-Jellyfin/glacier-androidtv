@@ -66,6 +66,7 @@ import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 /** Lossless as it reaches the TV: a transcode turns it into AAC. */
 internal fun MusicUiState.playsLossless(track: MusicTrack): Boolean =
@@ -86,7 +87,8 @@ internal fun MusicInfoPanel(
     val track = state.current ?: return
     val context = LocalContext.current
     val stats by produceState<StreamStats?>(null, player) {
-        while (player != null) {
+        if (player == null) return@produceState
+        while (isActive) {
             value = player.streamStats(context)
             delay(1_000)
         }
@@ -316,7 +318,8 @@ private fun ServerTab(
     val method = state.method ?: return
     val direct = method == PlaybackMethod.DirectPlay
     val status by produceState<TranscodeStatus?>(null, method, track.id) {
-        while (!direct) {
+        if (direct) return@produceState
+        while (isActive) {
             value = transcodeStatus()
             delay(2_000)
         }

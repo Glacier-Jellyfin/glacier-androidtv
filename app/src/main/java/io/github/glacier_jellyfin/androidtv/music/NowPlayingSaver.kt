@@ -221,7 +221,7 @@ private fun CoverRow(
                     SaverVideo(
                         entry.track.largeCoverUrl ?: entry.track.coverUrl,
                         player,
-                        CENTER_COVER + (CENTER_VIDEO_WIDTH - CENTER_COVER) * (1f - videoNear),
+                        CENTER_COVER + ((CENTER_VIDEO_WIDTH - CENTER_COVER) * (1f - videoNear)),
                         layer,
                     )
                 } else {

@@ -72,7 +72,7 @@ internal object DolbyVisionRpu {
                 return null
             }
             w.bits(3, r.bits(3)) // vdr_rpu_normalized_idc, bl_video_full_range_flag
-            if (rpuFormat and 0x700 == 0L) {
+            if ((rpuFormat and 0x700) == 0L) {
                 val bl = r.ue()
                 val el = r.ue()
                 blBitDepth = bl.toInt() + 8
@@ -110,7 +110,7 @@ internal object DolbyVisionRpu {
                 pieces[component] = count - 1
                 pivots[component] = LongArray(count) { r.bits(blBitDepth) }
             }
-            val hasNlq = rpuFormat and 0x700 == 0L && !disableResidual
+            val hasNlq = (rpuFormat and 0x700) == 0L && !disableResidual
             if (hasNlq) {
                 if (r.bits(3) != 0L) return null // nlq_method_idc: only the linear dead zone exists
                 r.bits(blBitDepth)
@@ -319,11 +319,11 @@ private class BitReader(
 
     fun se(): Long {
         val code = ue()
-        return if (code and 1L == 1L) (code + 1) / 2 else -(code / 2)
+        return if ((code and 1L) == 1L) (code + 1) / 2 else -(code / 2)
     }
 
     fun alignToByte() {
-        while (position and 7 != 0) bit()
+        while ((position and 7) != 0) bit()
     }
 }
 

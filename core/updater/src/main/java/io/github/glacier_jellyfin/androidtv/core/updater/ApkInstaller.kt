@@ -10,6 +10,7 @@ import android.content.pm.PackageInstaller
 import android.os.Build
 import android.provider.Settings
 import androidx.core.content.ContextCompat
+import androidx.core.content.IntentCompat
 import androidx.core.net.toUri
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import java.io.File
@@ -107,12 +108,7 @@ internal class ApkInstaller(private val context: Context) {
 
     /** The installer's confirmation screen. */
     private fun confirm(status: Intent) {
-        val confirmation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            status.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            status.getParcelableExtra(Intent.EXTRA_INTENT)
-        }
+        val confirmation = IntentCompat.getParcelableExtra(status, Intent.EXTRA_INTENT, Intent::class.java)
         confirmation?.let { context.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
 

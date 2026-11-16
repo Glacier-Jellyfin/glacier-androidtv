@@ -91,6 +91,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 /** Good news on the sheet: hardware decoding, direct play, a track passed on as it is. */
 internal val InfoOk = Color(0xFF8FD6B0)
@@ -123,7 +124,8 @@ fun InfoPanel(
     val maxBufferMs = state.playback?.maxBufferMs
     val playback = state.playback
     val stats by produceState<StreamStats?>(null, player, maxBufferMs, playback) {
-        while (player != null) {
+        if (player == null) return@produceState
+        while (isActive) {
             value = player.streamStats(context, maxBufferMs, playback)
             delay(1_000)
         }
@@ -681,7 +683,8 @@ private fun ServerTab(
     val file = state.file
     val direct = method == PlaybackMethod.DirectPlay
     val status by produceState<TranscodeStatus?>(null, method) {
-        while (!direct) {
+        if (direct) return@produceState
+        while (isActive) {
             value = transcodeStatus()
             delay(2_000)
         }

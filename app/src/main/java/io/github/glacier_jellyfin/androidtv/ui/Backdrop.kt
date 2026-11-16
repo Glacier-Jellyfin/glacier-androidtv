@@ -25,6 +25,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
 import io.github.glacier_jellyfin.androidtv.core.designsystem.startGradient
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlinx.coroutines.isActive
 
 /**
  * The design's `gKen`: a slow 22 s zoom and drift, alternating. Off with "reduce motion".
@@ -40,8 +41,9 @@ fun KenBurns(animate: Boolean = true, content: @Composable () -> Unit) {
     val t = remember { Animatable(0f) }
     var forward by remember { mutableStateOf(true) }
     LaunchedEffect(animate) {
+        if (!animate) return@LaunchedEffect
         // Pausing cancels this effect, which stops the animation at its current value.
-        while (animate) {
+        while (isActive) {
             val target = if (forward) 1f else 0f
             t.animateTo(target, tween((abs(target - t.value) * KEN_BURNS_MS).roundToInt()))
             forward = !forward

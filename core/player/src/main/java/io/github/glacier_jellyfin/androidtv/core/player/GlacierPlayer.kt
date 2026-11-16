@@ -1017,7 +1017,7 @@ object GlacierPlayer {
         val mime = AudioPath.mimeOf(audio.codec, audio.profile)
         val passthrough = mime != null && mime in AudioPath.COMPRESSED && runCatching {
             val attributes = androidx.media3.common.AudioAttributes.DEFAULT
-            AudioCapabilities.getCapabilities(context, attributes, null)
+            AudioCapabilities.getCapabilities(context, attributes, null, emptyList())
                 .isPassthroughPlaybackSupported(
                     Format.Builder().setSampleMimeType(mime).setChannelCount(6).setSampleRate(48_000).build(),
                     attributes,

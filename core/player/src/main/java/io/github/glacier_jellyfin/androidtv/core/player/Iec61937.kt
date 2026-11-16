@@ -264,7 +264,7 @@ internal class Iec61937Bursts {
             i += 2
         }
         // A last lone byte goes in the upper half of a word.
-        if (length and 1 != 0) putWord((payload[length - 1].toInt() and 0xff) shl 8)
+        if ((length and 1) != 0) putWord((payload[length - 1].toInt() and 0xff) shl 8)
         val end = start + burstSize
         bytes.fill(0, size, end)
         size = end
