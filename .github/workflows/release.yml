@@ -61,7 +61,7 @@ jobs:
         with:
           cache-disabled: true
 
-      - uses: ./.github/actions/ffmpeg
+      - uses: $/.github/actions/ffmpeg
         with:
           cache: 'false'
 
@@ -157,7 +157,7 @@ jobs:
   stores:
     needs: release
     if: needs.release.outputs.prerelease == 'false'
-    uses: ./.github/workflows/stores.yml
+    uses: $/.github/workflows/stores.yml
     with:
       version: ${{ needs.release.outputs.version }}
     permissions:
