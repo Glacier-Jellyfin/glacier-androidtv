@@ -9,7 +9,8 @@
 
 <p align="center">
   Glacier brings your Jellyfin server to Android TV, Google TV and Fire TV.<br>
-  Built for the remote, with the sound and picture your files really have.
+  Playback that adapts instead of stalling, sound and picture as on the disc,<br>
+  and help with every audio and subtitle track.
 </p>
 
 <p align="center">
@@ -45,9 +46,9 @@
 ## What Glacier does differently
 
 <p align="center">
-  <img src="website/assets/screenshots/detail.jpg" width="32%" alt="A title's page with the audio track list, including Commentary and Audio description">
-  <img src="website/assets/screenshots/player.jpg" width="32%" alt="The player skipping a recap, with Skip intro on screen">
-  <img src="website/assets/screenshots/music.jpg" width="32%" alt="The music player in full screen with large lyrics">
+  <img src="website/assets/screenshots/detail-zoom.jpg" width="32%" alt="A title's page with the audio track list, including Commentary and Audio description">
+  <img src="website/assets/screenshots/picture.jpg" width="32%" alt="A film plays: icebergs in the evening sun">
+  <img src="website/assets/screenshots/musicvideo.jpg" width="32%" alt="A music video in the music player, next to the queue">
 </p>
 
 **Playback that does not stall.** Glacier keeps an eye on your connection. If
@@ -68,22 +69,30 @@ UHD Blu-rays. If something does not get through, surround stays anyway.
 lyrics run along in time, the music keeps playing while you browse, and radio
 stations play like music too.
 
-**For everyone in the house.** Everyone gets a profile with their own picture,
-colour and progress. The kids profile only shows what suits their age, and the
-PIN goes in with the D-pad. The settings come along to a new TV.
+## For everyone in the house
+
+<p align="center">
+  <img src="website/assets/screenshots/picker.jpg" width="49%" alt="Who's watching? with the profiles Alex, Kids and Nora">
+  <img src="website/assets/screenshots/kids.jpg" width="49%" alt="The home screen of the kids profile">
+</p>
+
+Everyone gets a profile with their own picture, colour and progress. The kids
+profile only shows what suits their age, and the PIN goes in with the D-pad.
+New TV? The settings come along.
 
 ## What the remote does
 
 <p align="center">
   <img src="website/assets/screenshots/library.jpg" width="49%" alt="The movie library with the A–Z rail">
-  <img src="website/assets/screenshots/detail.jpg" width="49%" alt="A title's page with audio tracks">
+  <img src="website/assets/screenshots/trickplay.jpg" width="49%" alt="Seeking with a preview picture above the timeline">
 </p>
 
 - OK skips the intro, and recaps skip themselves. Credits can skip too
 - Seeking shows preview pictures, so you land on the right scene. Chapters are
   one press away
 - The next episode is ready before the credits end, with a countdown that can
-  shrink out of the way
+  shrink out of the way. If a scene still follows the credits, Glacier waits
+  for it
 - The A–Z rail jumps straight to the letter. Large libraries open fast, and
   sorts by year, date added or artist show a heading over each group
 - Several versions of a title, such as 2160p and 1080p or a director's cut,
@@ -237,8 +246,10 @@ Bug reports, ideas, pull requests and translations are welcome. Please read
 
 ## Support
 
-Glacier is built in spare time and stays free. If it makes your evenings a
-little better, a coffee on Ko-fi keeps it going.
+Glacier is built in spare time and stays free. A
+[star on GitHub](https://github.com/Glacier-Jellyfin/glacier-androidtv) takes
+one click and helps other Jellyfin fans find Glacier. If it makes your evenings
+a little better, a coffee on Ko-fi keeps it going.
 
 <a href="https://ko-fi.com/jeansy91"><img src="docs/badges/kofi.svg" height="56" alt="Buy me a coffee on Ko-fi"></a>
 
