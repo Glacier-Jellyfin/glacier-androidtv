@@ -152,14 +152,16 @@ jobs:
             --notes-file "$RUNNER_TEMP/notes.md" \
             "${flags[@]}"
 
-  # Waits for approval in the environment "stores", which holds the store secrets
-  # (they resolve inside stores.yml, so none are passed from here).
+  # Waits for approval in the environment "stores", which holds the store secrets.
+  # A called workflow sees them only when the caller inherits its secrets: without
+  # "secrets: inherit", 0.10.1 reached both stores with empty secrets.
   stores:
     needs: release
     if: needs.release.outputs.prerelease == 'false'
     uses: $/.github/workflows/stores.yml
     with:
       version: ${{ needs.release.outputs.version }}
+    secrets: inherit # zizmor: ignore[secrets-inherit]
     permissions:
       contents: read
       actions: read
