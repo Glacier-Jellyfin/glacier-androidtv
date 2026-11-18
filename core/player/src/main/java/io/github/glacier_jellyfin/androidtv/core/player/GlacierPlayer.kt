@@ -501,9 +501,9 @@ class GlacierPlayback(
                 eventTime: AnalyticsListener.EventTime,
                 playoutStartSystemTimeMs: Long,
             ) {
-                audioStart(
-                    "position advancing, playout start ${playoutStartSystemTimeMs - SystemClock.elapsedRealtime()} ms from now (system time)",
-                )
+                // Media3 gives the wall-clock time (System.currentTimeMillis), not elapsedRealtime.
+                val fromNowMs = playoutStartSystemTimeMs - System.currentTimeMillis()
+                audioStart("position advancing, playout start $fromNowMs ms from now")
             }
 
             override fun onAudioUnderrun(

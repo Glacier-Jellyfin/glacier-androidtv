@@ -55,7 +55,6 @@
     <ID>MagicNumber:ThrottledDataSource.kt:ThrottledDataSource$1_000_000</ID>
     <ID>MaxLineLength:GlacierPlayer.kt:GlacierPlayback$"Hand over point reached at $position ms (${loaded / 1000} s of the next stream loaded, load control ${fromLoadControl / 1000} s, completed loads ${loadedToLog()}), moving on to the next stream"</ID>
     <ID>MaxLineLength:GlacierPlayer.kt:GlacierPlayback$"Hand over point reached at $position ms, the next stream has ${loaded / 1000} s (load control ${fromLoadControl / 1000} s, completed loads ${loadedToLog()}): waiting, now $postponedMs ms past the plan"</ID>
-    <ID>MaxLineLength:GlacierPlayer.kt:GlacierPlayback.&lt;no name provided&gt;$"position advancing, playout start ${playoutStartSystemTimeMs - SystemClock.elapsedRealtime()} ms from now (system time)"</ID>
     <ID>MaxLineLength:GlacierPlayer.kt:GlacierPlayback.&lt;no name provided&gt;$}</ID>
     <ID>MaxLineLength:GlacierPlayer.kt:GlacierPlayer$bufferForPlaybackMs = if (request.patient) RUN_UP_MS else DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS</ID>
     <ID>MaxLineLength:GlacierPlayer.kt:GlacierPlayer.&lt;no name provided&gt;$"$kind ${loadEventInfo.bytesLoaded / 1024} KiB in $ms ms (${loadEventInfo.bytesLoaded * 8 / ms} kbit/s), "</ID>
