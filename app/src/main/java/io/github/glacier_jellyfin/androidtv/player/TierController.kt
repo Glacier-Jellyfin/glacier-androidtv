@@ -1,7 +1,9 @@
 package io.github.glacier_jellyfin.androidtv.player
 
+import io.github.glacier_jellyfin.androidtv.core.data.playback.StreamBudget
+
 /**
- * Keeps the tier of a ladder (see `PlaybackSource.ladder`), the size of the picture (4K, 1080p, 720p), within what the link
+ * Keeps the tier of a ladder (see `PlaybackSource.ladder`), the size of the picture (4K down to 240p), within what the link
  * carries. A move is expensive: the server starts a new transcode for the tier, and its first segment comes about 16 s
  * later. With a buffer of up to two minutes that run-up is covered, so a move is cheap as long as the buffer is full. The
  * server also hands out its segments about as fast as they play, so a small buffer says nothing about the link. The reason
@@ -36,7 +38,9 @@ internal class TierController(
     fun limitTo(budget: Int, nowMs: Long): Int? {
         val ceiling = startFor(expected, budget)
         if (index <= ceiling || nowMs - changedAtMs < MOVE_PAUSE_MS) return null
-        reason = "the link carries ${budget / 1_000_000} Mbit/s, the tier asks ${expected[index] / 1_000_000}"
+        reason = "the link carries ${StreamBudget.describe(
+            budget,
+        )}, the tier asks ${StreamBudget.describe(expected[index])}"
         index--
         changedAtMs = nowMs
         return bitrates[index]
@@ -55,7 +59,9 @@ internal class TierController(
         if (index >= bitrates.lastIndex || bufferedMs < UP_BUFFER_MS || nowMs - changedAtMs < UP_PAUSE_MS) return null
         if (budget < expected[index + 1] * UP_MARGIN) return null
         reason =
-            "the link carries ${budget / 1_000_000} Mbit/s, the next tier asks ${expected[index + 1] / 1_000_000}, ${bufferedMs / 1000} s buffered"
+            "the link carries ${StreamBudget.describe(
+                budget,
+            )}, the next tier asks ${StreamBudget.describe(expected[index + 1])}, ${bufferedMs / 1000} s buffered"
         index++
         changedAtMs = nowMs
         return bitrates[index]

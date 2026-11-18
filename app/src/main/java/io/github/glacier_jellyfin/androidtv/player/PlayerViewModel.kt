@@ -256,13 +256,20 @@ class PlayerViewModel @Inject constructor(
     /** Keeps a ladder's tier within what the link carries; null for a stream of one tier. */
     private var tiers: TierController? = null
 
-    /** Picture height of each tier by its bitrate, as the player lists them. */
+    /**
+     * Picture height (as delivered, which can differ from the size asked for) of each tier by its bitrate, as the player lists
+     * them. The bitrate (BANDWIDTH of the master playlist) is the key of a tier everywhere: `PlaybackSource.tierDemand` and
+     * `tierSessions` use it too.
+     */
     private var tierHeights: Map<Int, Int> = emptyMap()
 
-    /** Height of the tier asked for last; its transcode is the one running now or about to. */
-    private var pinnedHeight: Int? = null
+    /** Bitrate of the tier asked for last; its transcode is the one running now or about to. */
+    private var pinnedBitrate: Int? = null
 
-    /** Heights of tiers left behind whose server job still runs, until the current tier has loaded its first segment. */
+    /** Delivered height of the tier asked for last, for the info panel. */
+    private val pinnedHeight: Int? get() = pinnedBitrate?.let { tierHeights[it] }
+
+    /** Bitrates of tiers left behind whose server job still runs, until the current tier has loaded its first segment. */
     private val retired = mutableSetOf<Int>()
     private var slowLoads = SlowLoads()
 
@@ -339,9 +346,9 @@ class PlayerViewModel @Inject constructor(
         ) {
             val controller = tiers ?: return
             if (mediaLoadData.dataType != C.DATA_TYPE_MEDIA) return
-            val height = mediaLoadData.trackFormat?.height?.takeIf { it > 0 } ?: return
+            val loaded = mediaLoadData.trackFormat?.bitrate?.takeIf { it > 0 } ?: return
             // The first segment of the new tier is here: the old tier's transcode has nothing left to give.
-            if (height == pinnedHeight && retired.isNotEmpty()) endRetiredJobs(height)
+            if (loaded == pinnedBitrate && retired.isNotEmpty()) endRetiredJobs(loaded)
             val playMs = mediaLoadData.mediaEndTimeMs - mediaLoadData.mediaStartTimeMs
             if (mediaLoadData.mediaStartTimeMs != C.TIME_UNSET && mediaLoadData.mediaEndTimeMs != C.TIME_UNSET &&
                 playMs > 0 &&
@@ -1009,7 +1016,9 @@ class PlayerViewModel @Inject constructor(
                 val budget = playback.probeBudget() ?: continue
                 Log.i(
                     TAG,
-                    "The link carries ${budget / 1_000_000} Mbit/s, the stream asks ${streamBitrate / 1_000_000}",
+                    "The link carries ${StreamBudget.describe(
+                        budget,
+                    )}, the stream asks ${StreamBudget.describe(streamBitrate)}",
                 )
                 if (!reduced) {
                     // The measurement before the start is old by now: a link that carries less than the file is no news at a stall.
@@ -1025,7 +1034,9 @@ class PlayerViewModel @Inject constructor(
                         returns++
                         Log.i(
                             TAG,
-                            "The link carries ${budget / 1_000_000} Mbit/s again, back to the file's ${wanted / 1_000_000}",
+                            "The link carries ${StreamBudget.describe(
+                                budget,
+                            )} again, back to the file's ${StreamBudget.describe(wanted)}",
                         )
                         beginHandover(
                             plan,
@@ -1155,7 +1166,7 @@ class PlayerViewModel @Inject constructor(
         // Everything that belonged to the old stream: tiers and their server jobs, the stalls, the buffer's history.
         tiers = null
         tierHeights = emptyMap()
-        pinnedHeight = null
+        pinnedBitrate = null
         retired.clear()
         slowLoads = SlowLoads()
         stalls.clear()
@@ -1177,7 +1188,9 @@ class PlayerViewModel @Inject constructor(
         recordTracks(opened.audioIndex, opened.subtitleIndex)
         Log.i(
             TAG,
-            "Handed over at ${handover.atMs / 1000} s to ${opened.method}, ${(opened.streamBitrate ?: 0) / 1_000_000} Mbit/s",
+            "Handed over at ${handover.atMs / 1000} s to ${opened.method}, ${StreamBudget.describe(
+                opened.streamBitrate ?: 0,
+            )}",
         )
         if (old != null) playback.reportHandOver(old, opened, position()) else playback.reportStart(opened, position())
         viewModelScope.launch {
@@ -1282,7 +1295,7 @@ class PlayerViewModel @Inject constructor(
      */
     private suspend fun checkLink(controller: TierController, current: PlaybackSource? = null) {
         val budget = playback.probeBudget() ?: return
-        Log.i(TAG, "The link carries ${budget / 1_000_000} Mbit/s")
+        Log.i(TAG, "The link carries ${StreamBudget.describe(budget)}")
         // The measurement took a while: the stream may have been replaced meanwhile.
         if (tiers !== controller) return
         val now = SystemClock.elapsedRealtime()
@@ -1305,7 +1318,9 @@ class PlayerViewModel @Inject constructor(
                 returns++
                 Log.i(
                     TAG,
-                    "The link carries ${budget / 1_000_000} Mbit/s again, back to the file's ${wanted / 1_000_000}",
+                    "The link carries ${StreamBudget.describe(
+                        budget,
+                    )} again, back to the file's ${StreamBudget.describe(wanted)}",
                 )
                 beginHandover(plan, trigger = null, lowering = false, reason = switchReason(null, linkBps = budget))
                 return
@@ -1324,12 +1339,18 @@ class PlayerViewModel @Inject constructor(
         val sessions = source?.tierSessions.orEmpty()
         val ended = retired.filter { it != current }
         retired.clear()
-        for (height in ended) {
-            val id = sessions[height] ?: continue
-            Log.i(TAG, "${current}p has its first segment, ending the transcode of ${height}p")
+        for (bitrate in ended) {
+            val id = sessions[bitrate] ?: continue
+            Log.i(
+                TAG,
+                "${tierName(current)} has its first segment, ending the transcode of ${tierName(bitrate)}",
+            )
             viewModelScope.launch { playback.stopTierJob(id) }
         }
     }
+
+    /** A tier for the log: its delivered height and bitrate. */
+    private fun tierName(bitrate: Int): String = "${tierHeights[bitrate] ?: "?"}p (${bitrate / 1000} kbit/s)"
 
     /** The tiers of a ladder, once Media3 lists them: the stream starts at the one that fits the budget. */
     @OptIn(UnstableApi::class)
@@ -1357,7 +1378,7 @@ class PlayerViewModel @Inject constructor(
         }.coerceAtLeast(0)
         val controller = TierController(
             bitrates,
-            formats.map { current.tierDemand[it.height] ?: StreamBudget.expectedBitrate(it.height) },
+            formats.map { current.tierDemand[it.bitrate] ?: it.bitrate },
             start,
         )
         tiers = controller
@@ -1380,12 +1401,11 @@ class PlayerViewModel @Inject constructor(
             TAG,
             "Tier ${bitrate / 1000} kbit/s" + tiers?.reason?.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty(),
         )
-        val height = tierHeights[bitrate]
-        val before = pinnedHeight
+        val before = pinnedBitrate
         // The tier left behind keeps its job until the new one has a segment; one that is asked for again stays.
-        if (before != null && height != null && before != height) retired += before
-        if (height != null) retired -= height
-        pinnedHeight = height
+        if (before != null && before != bitrate) retired += before
+        retired -= bitrate
+        pinnedBitrate = bitrate
         _state.value.playback?.steer(bitrate)
     }
 
@@ -1623,7 +1643,7 @@ class PlayerViewModel @Inject constructor(
         time.reset()
         trend.clear()
         tiers = null
-        pinnedHeight = null
+        pinnedBitrate = null
         retired.clear()
         _state.value.playback?.fileAudioDecoded?.let { fileAudioDecoded = it }
         _state.value.player?.let {

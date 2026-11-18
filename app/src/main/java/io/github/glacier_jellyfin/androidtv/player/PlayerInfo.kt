@@ -643,7 +643,8 @@ private fun StreamLabel.labelText(): String = when (this) {
 /** Why the stream changed, with the numbers behind it where the cause has them. */
 @Composable
 private fun SwitchReason.text(): String {
-    val numbers = mbit
+    val locale = LocalConfiguration.current.locales[0]
+    val numbers = mbit(locale)
     return when (cause) {
         SwitchCause.LinkSlow ->
             if (numbers != null) {

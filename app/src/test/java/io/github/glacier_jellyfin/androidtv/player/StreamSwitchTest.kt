@@ -2,6 +2,7 @@ package io.github.glacier_jellyfin.androidtv.player
 
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackMethod
 import io.github.glacier_jellyfin.androidtv.core.player.HandOverProgress
+import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -40,17 +41,19 @@ class StreamSwitchTest {
     }
 
     @Test
-    fun `a slow link shows its numbers in whole Mbit per second`() {
-        assertEquals(15 to 37, switchReason(HandoverTrigger.Link, 15_200_000, 36_800_000).mbit)
-        assertEquals(2 to 8, switchReason(HandoverTrigger.Throughput, 2_400_000, 7_600_000).mbit)
+    fun `a slow link shows its numbers in whole Mbit per second from 10 on and with a decimal below`() {
+        assertEquals("15" to "37", switchReason(HandoverTrigger.Link, 15_200_000, 36_800_000).mbit(Locale.ROOT))
+        assertEquals("2.4" to "7.6", switchReason(HandoverTrigger.Throughput, 2_400_000, 7_600_000).mbit(Locale.ROOT))
+        assertEquals("0.4" to "1.2", switchReason(HandoverTrigger.Link, 400_000, 1_200_000).mbit(Locale.ROOT))
+        assertEquals("0,8" to "1,2", switchReason(HandoverTrigger.Link, 800_000, 1_200_000).mbit(Locale.GERMANY))
     }
 
     @Test
     fun `numbers are only shown when both are known and the cause is about the link`() {
-        assertNull(switchReason(HandoverTrigger.Link, 15_000_000).mbit)
-        assertNull(switchReason(HandoverTrigger.Link).mbit)
-        assertNull(switchReason(HandoverTrigger.Draining, 15_000_000, 37_000_000).mbit)
-        assertNull(switchReason(null, 80_000_000, 37_000_000).mbit)
+        assertNull(switchReason(HandoverTrigger.Link, 15_000_000).mbit(Locale.ROOT))
+        assertNull(switchReason(HandoverTrigger.Link).mbit(Locale.ROOT))
+        assertNull(switchReason(HandoverTrigger.Draining, 15_000_000, 37_000_000).mbit(Locale.ROOT))
+        assertNull(switchReason(null, 80_000_000, 37_000_000).mbit(Locale.ROOT))
     }
 
     @Test

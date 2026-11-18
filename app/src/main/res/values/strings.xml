@@ -511,11 +511,11 @@
     <string name="player_info_switch_in">%1$s → %2$s in %3$d s</string>
     <string name="player_info_switch_waiting">%1$s → %2$s · waiting for %2$s</string>
     <string name="player_info_reason_link">Link too slow</string>
-    <string name="player_info_reason_link_numbers">Link too slow (%1$d of %2$d Mbit/s)</string>
+    <string name="player_info_reason_link_numbers">Link too slow (%1$s of %2$s Mbit/s)</string>
     <string name="player_info_reason_draining">Buffer draining</string>
     <string name="player_info_reason_stalls">Playback stalled</string>
     <string name="player_info_reason_throughput">Link loads too slowly</string>
-    <string name="player_info_reason_throughput_numbers">Link loads too slowly (%1$d of %2$d Mbit/s)</string>
+    <string name="player_info_reason_throughput_numbers">Link loads too slowly (%1$s of %2$s Mbit/s)</string>
     <string name="player_info_reason_recovered">Link good again</string>
     <string name="player_lower_quality">Connection too slow · switching to a lower quality</string>
     <string name="player_full_quality">Connection is fine again · back to full quality</string>

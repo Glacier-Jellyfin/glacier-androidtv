@@ -505,11 +505,11 @@
     <string name="player_info_switch_in">%1$s → %2$s in %3$d s</string>
     <string name="player_info_switch_waiting">%1$s → %2$s · wartet auf %2$s</string>
     <string name="player_info_reason_link">Leitung zu langsam</string>
-    <string name="player_info_reason_link_numbers">Leitung zu langsam (%1$d von %2$d Mbit/s)</string>
+    <string name="player_info_reason_link_numbers">Leitung zu langsam (%1$s von %2$s Mbit/s)</string>
     <string name="player_info_reason_draining">Puffer leert sich</string>
     <string name="player_info_reason_stalls">Wiedergabe stockte</string>
     <string name="player_info_reason_throughput">Leitung lädt zu langsam</string>
-    <string name="player_info_reason_throughput_numbers">Leitung lädt zu langsam (%1$d von %2$d Mbit/s)</string>
+    <string name="player_info_reason_throughput_numbers">Leitung lädt zu langsam (%1$s von %2$s Mbit/s)</string>
     <string name="player_info_reason_recovered">Leitung wieder gut</string>
     <string name="player_lower_quality">Verbindung zu langsam · wechselt zu niedrigerer Qualität</string>
     <string name="player_full_quality">Verbindung wieder gut · zurück zur vollen Qualität</string>

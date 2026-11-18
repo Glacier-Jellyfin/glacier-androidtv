@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.player
 
+import io.github.glacier_jellyfin.androidtv.core.data.playback.StreamBudget
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -137,5 +138,23 @@ class TierControllerTest {
         assertFalse(s.record(11_000, 10_000, 2_000))
         assertFalse(s.record(11_000, 10_000, 30_999))
         assertTrue(s.record(11_000, 10_000, 31_000))
+    }
+
+    @Test
+    fun `five tiers step down one at a time on a link of half a Mbit per second`() {
+        // 4K, 1080p, 720p, 480p, 360p and 240p as the player lists them, smallest first.
+        val all = listOf(450_000, 800_000, 1_400_000, 10_000_000, 30_000_000, 60_000_000)
+        val demand = listOf(400_000, 650_000, 1_200_000, 2_500_000, 8_000_000, 25_000_000)
+        val c = TierController(all, demand, 5)
+        val budget = StreamBudget.of(500_000)
+        assertEquals(0, TierController.startFor(demand, budget))
+        var now = 0L
+        val moves = generateSequence { c.limitTo(budget, now).also { now += TierController.MOVE_PAUSE_MS } }
+            .takeWhile { true }
+            .take(6)
+            .filterNotNull()
+            .toList()
+        assertEquals(listOf(30_000_000, 10_000_000, 1_400_000, 800_000, 450_000), moves)
+        assertEquals(0, c.index)
     }
 }

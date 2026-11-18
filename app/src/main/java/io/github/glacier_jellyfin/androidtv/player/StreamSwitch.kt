@@ -2,6 +2,7 @@ package io.github.glacier_jellyfin.androidtv.player
 
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackMethod
 import io.github.glacier_jellyfin.androidtv.core.player.HandOverProgress
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /** What a stream is called on the info panel: the file as it is, or the size of its picture. */
@@ -50,14 +51,27 @@ data class SwitchReason(
     val linkBps: Int? = null,
     val needBps: Int? = null,
 ) {
-    /** "15 von 37 Mbit/s" as the two whole numbers of Mbit/s, or null when the cause has none to show. */
-    val mbit: Pair<Int, Int>?
-        get() {
-            val link = linkBps ?: return null
-            val need = needBps ?: return null
-            if (cause != SwitchCause.LinkSlow && cause != SwitchCause.Throughput) return null
-            return (link / 1_000_000.0).roundToInt() to (need / 1_000_000.0).roundToInt()
-        }
+    /**
+     * "15 von 37 Mbit/s" as the two numbers of Mbit/s, or null when the cause has none to show. From 10 Mbit/s on they are whole
+     * numbers; below, one decimal, so a link of 0.8 Mbit/s does not read as 1.
+     */
+    fun mbit(locale: Locale): Pair<String, String>? {
+        val link = linkBps ?: return null
+        val need = needBps ?: return null
+        if (cause != SwitchCause.LinkSlow && cause != SwitchCause.Throughput) return null
+        return mbitText(link, locale) to mbitText(need, locale)
+    }
+
+    private fun mbitText(bps: Int, locale: Locale): String = if (bps >= WHOLE_MBIT) {
+        (bps / MEGA).roundToInt().toString()
+    } else {
+        String.format(locale, "%.1f", bps / MEGA)
+    }
+
+    private companion object {
+        const val WHOLE_MBIT = 10_000_000
+        const val MEGA = 1_000_000.0
+    }
 }
 
 /** The reason of a step to another stream; no trigger is the way back, which the recovered link allows. */

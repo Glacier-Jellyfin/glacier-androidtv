@@ -22,6 +22,9 @@ collapsed block, and the app shows it when its language is German or Spanish.
 
 ## [Unreleased]
 
+### Improved
+- Playback works on slow connections of about 1 Mbit/s and less: the speed test measures them correctly, small pictures are sized to the connection, and the audio is small too
+
 ### Fixed
 - The detail page and the player no longer crash on a track with an unknown language code
 - A damaged DTS stream no longer stops playback with audio passthrough

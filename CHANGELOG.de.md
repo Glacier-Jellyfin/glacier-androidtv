@@ -7,6 +7,9 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ## [Unreleased]
 
+### Verbessert
+- Die Wiedergabe funktioniert auch bei langsamen Verbindungen von etwa 1 Mbit/s und weniger: Der Geschwindigkeitstest misst sie richtig, kleine Bilder passen sich der Verbindung an, und auch der Ton ist klein
+
 ### Behoben
 - Detailseite und Player stürzen bei einer Spur mit unbekannter Sprachangabe nicht mehr ab
 - Ein beschädigter DTS-Stream bricht die Wiedergabe mit Audio-Passthrough nicht mehr ab

@@ -8,6 +8,9 @@ only in English.
 
 ## [Unreleased]
 
+### Mejoras
+- La reproducción funciona también con conexiones lentas de 1 Mbit/s o menos: la prueba de velocidad las mide bien, las imágenes pequeñas se ajustan a la conexión y el audio también es pequeño
+
 ### Correcciones
 - La página de detalles y el reproductor ya no se cierran con una pista de idioma desconocido
 - Un flujo DTS dañado ya no detiene la reproducción con audio passthrough

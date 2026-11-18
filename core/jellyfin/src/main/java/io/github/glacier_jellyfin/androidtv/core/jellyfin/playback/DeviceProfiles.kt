@@ -28,12 +28,18 @@ object DeviceProfiles {
     /** Picture subtitles Media3 renders only from inside the container. */
     private val PictureSubtitles = listOf("pgs", "pgssub", "dvdsub", "vobsub", "dvbsub")
 
+    /**
+     * [smallAudioBitrate]: for a stream on a slow link, the server converts the audio to stereo AAC of at most this bit/s. A
+     * bitstream codec (E-AC-3, AC-3) or six channels would take 384 to 640 kbit/s, more than such a link has to give. The
+     * server takes the limit from the audio bitrate condition of the audio profile below (see its `ApplyTranscodingConditions`).
+     */
     fun build(
         capabilities: DeviceCapabilities,
         maxBitrate: Int,
         burnIn: SubtitleBurnIn = SubtitleBurnIn.Auto,
         segments: HlsSegments = HlsSegments.preferredFor(capabilities),
         videoSegmentSeconds: Int = HLS_SEGMENT_SECONDS,
+        smallAudioBitrate: Int? = null,
     ): DeviceProfile = buildDeviceProfile {
         name = "Glacier"
         maxStreamingBitrate = maxBitrate
@@ -63,13 +69,18 @@ object DeviceProfiles {
         // Transcoding target: HLS, HEVC when the device decodes it. The server converts
         // audio to the first codec listed: a bitstream the receiver takes beats AAC,
         // because AAC arrives as PCM, and HDMI ARC carries PCM in stereo only.
-        val hlsAudio = (
-            hlsAudioOrder(
-                capabilities.passthroughAudio,
-            ) + if (segments == HlsSegments.Fmp4) listOf("flac", "opus") else emptyList()
-            )
-            .filter { it in capabilities.audioCodecs }
-            .ifEmpty { listOf("aac") }
+        val hlsAudio = if (smallAudioBitrate != null) {
+            listOf("aac")
+        } else {
+            (
+                hlsAudioOrder(
+                    capabilities.passthroughAudio,
+                ) + if (segments == HlsSegments.Fmp4) listOf("flac", "opus") else emptyList()
+                )
+                .filter { it in capabilities.audioCodecs }
+                .ifEmpty { listOf("aac") }
+        }
+        val audioChannels = capabilities.maxAudioChannels.let { if (smallAudioBitrate != null) minOf(it, 2) else it }
         transcodingProfile {
             type = DlnaProfileType.VIDEO
             context = EncodingContext.STREAMING
@@ -77,7 +88,7 @@ object DeviceProfiles {
             protocol = MediaStreamProtocol.HLS
             videoCodec(*listOfNotNull("hevc".takeIf { capabilities.hevc != null }, "h264").toTypedArray())
             audioCodec(*hlsAudio.toTypedArray())
-            maxAudioChannels = capabilities.maxAudioChannels.toString()
+            maxAudioChannels = audioChannels.toString()
             copyTimestamps = false
             // The server answers every segment request after about 3 s, one after the other, however fast ffmpeg is. With
             // segments of 3 s that is real time, and the buffer cannot grow; longer segments carry more per request.
@@ -135,7 +146,10 @@ object DeviceProfiles {
 
         codecProfile {
             type = CodecType.VIDEO_AUDIO
-            conditions { ProfileConditionValue.AUDIO_CHANNELS lowerThanOrEquals capabilities.maxAudioChannels }
+            conditions {
+                ProfileConditionValue.AUDIO_CHANNELS lowerThanOrEquals audioChannels
+                smallAudioBitrate?.let { ProfileConditionValue.AUDIO_BITRATE lowerThanOrEquals it }
+            }
         }
 
         // DTS with its core plays on; the lossless profiles go to the server, like TrueHD above.

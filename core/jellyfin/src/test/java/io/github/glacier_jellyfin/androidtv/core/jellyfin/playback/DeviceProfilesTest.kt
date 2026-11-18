@@ -72,6 +72,25 @@ class DeviceProfilesTest {
     }
 
     @Test
+    fun `a small stream asks for stereo AAC of a small bitrate`() {
+        val tv = fullHdTv.copy(passthroughAudio = setOf("eac3", "ac3"))
+        val profile = DeviceProfiles.build(tv, 800_000, smallAudioBitrate = 96_000)
+        val video = profile.transcodingProfiles.single { it.type == DlnaProfileType.VIDEO }
+        assertEquals("aac", video.audioCodec)
+        assertEquals("2", video.maxAudioChannels)
+        val audio = profile.codecProfiles.single { it.type == CodecType.VIDEO_AUDIO && it.codec == null }
+        assertTrue(audio.conditions.any { it.property == ProfileConditionValue.AUDIO_CHANNELS && it.value == "2" })
+        assertTrue(audio.conditions.any { it.property == ProfileConditionValue.AUDIO_BITRATE && it.value == "96000" })
+    }
+
+    @Test
+    fun `a normal stream has no audio bitrate condition`() {
+        val profile = DeviceProfiles.build(fullHdTv, MAX)
+        val audio = profile.codecProfiles.single { it.type == CodecType.VIDEO_AUDIO && it.codec == null }
+        assertTrue(audio.conditions.none { it.property == ProfileConditionValue.AUDIO_BITRATE })
+    }
+
+    @Test
     fun `transcoding prefers hevc and keeps the device's surround codecs`() {
         val video = DeviceProfiles.build(fullHdTv, MAX).transcodingProfiles.single { it.type == DlnaProfileType.VIDEO }
         assertEquals("hevc,h264", video.videoCodec)
