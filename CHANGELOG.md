@@ -22,6 +22,8 @@ collapsed block, and the app shows it when its language is German or Spanish.
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-11-18
+
 ### Improved
 - Playback works on slow connections of about 1 Mbit/s and less: the speed test measures them correctly, small pictures are sized to the connection, and the audio is small too
 

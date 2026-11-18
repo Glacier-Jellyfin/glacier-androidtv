@@ -1,0 +1,1 @@
+La reproducción ahora funciona también con conexiones lentas de 1 Mbit/s o menos. Con la reproducción en pausa vuelve a iniciarse el salvapantallas del televisor. Corrige un cierre con pistas de idioma desconocido y la interrupción de la reproducción con un flujo DTS dañado y audio passthrough.

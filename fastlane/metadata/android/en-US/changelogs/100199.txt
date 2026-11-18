@@ -1,0 +1,1 @@
+Playback now also works on slow connections of about 1 Mbit/s and less. With playback paused, the TV's screensaver starts again. Fixes a crash on tracks with an unknown language and playback stopping on a damaged DTS stream with audio passthrough.

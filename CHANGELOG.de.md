@@ -7,6 +7,8 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-11-18
+
 ### Verbessert
 - Die Wiedergabe funktioniert auch bei langsamen Verbindungen von etwa 1 Mbit/s und weniger: Der Geschwindigkeitstest misst sie richtig, kleine Bilder passen sich der Verbindung an, und auch der Ton ist klein
 

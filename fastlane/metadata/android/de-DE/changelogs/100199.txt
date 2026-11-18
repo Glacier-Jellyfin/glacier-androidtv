@@ -1,0 +1,1 @@
+Die Wiedergabe funktioniert jetzt auch bei langsamen Verbindungen von etwa 1 Mbit/s und weniger. Bei pausierter Wiedergabe startet wieder der Bildschirmschoner des Fernsehers. Behebt einen Absturz bei Spuren mit unbekannter Sprache und den Abbruch der Wiedergabe bei einem beschädigten DTS-Stream mit Audio-Passthrough.

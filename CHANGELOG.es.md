@@ -8,6 +8,8 @@ only in English.
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-11-18
+
 ### Mejoras
 - La reproducción funciona también con conexiones lentas de 1 Mbit/s o menos: la prueba de velocidad las mide bien, las imágenes pequeñas se ajustan a la conexión y el audio también es pequeño
 
