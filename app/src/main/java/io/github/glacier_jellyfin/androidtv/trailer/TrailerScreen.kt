@@ -160,8 +160,10 @@ fun TrailerScreen(
     BackHandler { viewModel.close() }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.pause() }
     val view = LocalView.current
-    DisposableEffect(view) {
-        view.keepScreenOn = true
+    // Only while playback is meant to run: a paused, ended or failed screen lets the TV start its screensaver (OLED burn-in).
+    val keepOn = state.playWhenReady && !state.ended && !state.failed
+    DisposableEffect(view, keepOn) {
+        view.keepScreenOn = keepOn
         onDispose { view.keepScreenOn = false }
     }
 

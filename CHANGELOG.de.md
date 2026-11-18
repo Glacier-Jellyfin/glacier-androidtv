@@ -13,6 +13,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 ### Behoben
 - Detailseite und Player stürzen bei einer Spur mit unbekannter Sprachangabe nicht mehr ab
 - Ein beschädigter DTS-Stream bricht die Wiedergabe mit Audio-Passthrough nicht mehr ab
+- Bei pausierter Wiedergabe startet wieder der Bildschirmschoner des Fernsehers, statt dass der Bildschirm nur dunkler wird
 
 ## [0.10.0] - 2026-11-13
 

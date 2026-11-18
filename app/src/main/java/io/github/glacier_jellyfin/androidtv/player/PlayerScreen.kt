@@ -92,8 +92,10 @@ fun PlayerScreen(onBack: () -> Unit, viewModel: PlayerViewModel = hiltViewModel(
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.pause() }
     MatchFrameRate(state.file?.video?.frameRate?.takeIf { it > 0 }, state.matchFrameRate)
     val view = LocalView.current
-    DisposableEffect(view) {
-        view.keepScreenOn = true
+    // Only while playback is meant to run: a paused or failed screen lets the TV start its screensaver (OLED burn-in).
+    val keepOn = state.playWhenReady && !state.failed
+    DisposableEffect(view, keepOn) {
+        view.keepScreenOn = keepOn
         onDispose { view.keepScreenOn = false }
     }
 

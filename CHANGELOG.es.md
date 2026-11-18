@@ -14,6 +14,7 @@ only in English.
 ### Correcciones
 - La página de detalles y el reproductor ya no se cierran con una pista de idioma desconocido
 - Un flujo DTS dañado ya no detiene la reproducción con audio passthrough
+- Con la reproducción en pausa vuelve a iniciarse el salvapantallas del televisor, en lugar de solo atenuarse la pantalla
 
 ## [0.10.0] - 2026-11-13
 
