@@ -9,7 +9,6 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
@@ -36,7 +35,7 @@ internal fun LockBadge(modifier: Modifier = Modifier) {
             .padding(14.dp)
             .size(34.dp)
             .clip(PillShape)
-            .background(Color(0xCC05090F)),
+            .background(GlacierColors.GlassOnImage),
         contentAlignment = Alignment.Center,
     ) {
         Icon(GlacierIcons.Lock, contentDescription = null, tint = GlacierColors.Ice, modifier = Modifier.size(17.dp))

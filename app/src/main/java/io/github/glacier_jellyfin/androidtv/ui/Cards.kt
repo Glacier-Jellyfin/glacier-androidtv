@@ -276,7 +276,7 @@ fun PosterCard(
                         .padding(14.dp)
                         .height(34.dp)
                         .clip(PillShape)
-                        .background(Color(0xCC05090F))
+                        .background(GlacierColors.GlassOnImage)
                         .padding(horizontal = 14.dp),
                     contentAlignment = Alignment.Center,
                 ) {

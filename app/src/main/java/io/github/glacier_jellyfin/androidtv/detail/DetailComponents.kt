@@ -388,6 +388,7 @@ fun EpisodeCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     current: Boolean = false,
+    special: Boolean = false,
 ) {
     val accent = LocalAccent.current
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
@@ -406,12 +407,21 @@ fun EpisodeCard(
                 ),
             )
             if (episode.played) Box(Modifier.fillMaxSize().background(Color(0x8505090F)))
-            episode.episodeNumber?.let {
+            val badge = when {
+                special -> stringResource(R.string.episode_special_badge)
+                else -> episode.episodeNumber?.let { stringResource(R.string.episode_badge, it) }
+            }
+            badge?.let {
                 Pill(
-                    stringResource(R.string.episode_badge, it),
+                    it,
                     Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 14.dp),
-                    background = if (current) accent.main else GlacierColors.GlassFill2,
-                    color = if (current) GlacierColors.Void else GlacierColors.Ice,
+                    // The dark glass keeps the text readable on bright stills.
+                    background = if (current) accent.main else GlacierColors.GlassOnImage,
+                    color = when {
+                        current -> GlacierColors.Void
+                        special -> accent.main
+                        else -> GlacierColors.Ice
+                    },
                     bold = true,
                 )
             }
@@ -472,7 +482,7 @@ fun EpisodeCard(
 private fun Pill(
     text: String,
     modifier: Modifier,
-    background: Color = GlacierColors.GlassFill,
+    background: Color = GlacierColors.GlassOnImage,
     color: Color = GlacierColors.Ice,
     bold: Boolean = false,
 ) {
@@ -481,7 +491,7 @@ private fun Pill(
             .height(32.dp)
             .clip(PillShape)
             .background(background)
-            .border(1.dp, if (bold) GlacierColors.GlassBorder2 else GlacierColors.GlassBorder, PillShape)
+            .border(1.dp, if (bold) GlacierColors.GlassBorder2 else GlacierColors.GlassOnImageBorder, PillShape)
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
     ) {

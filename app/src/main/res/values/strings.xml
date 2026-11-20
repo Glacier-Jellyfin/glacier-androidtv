@@ -317,6 +317,9 @@
         <item quantity="other">%1$d episodes</item>
     </plurals>
     <string name="episode_badge">E%1$d</string>
+    <string name="episode_special_badge">Special</string>
+    <string name="episode_short_special">Specials · E%1$d</string>
+    <string name="episode_crumb_special">%1$s · Specials · Episode %2$d</string>
     <string name="episode_play">Play episode</string>
     <string name="episode_more">More episodes · %1$s</string>
     <string name="episode_crumb">%1$s · Season %2$d · Episode %3$d</string>

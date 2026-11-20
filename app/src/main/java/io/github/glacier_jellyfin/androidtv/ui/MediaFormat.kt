@@ -62,8 +62,19 @@ fun yearText(item: MediaItem): String? {
 fun episodeText(item: MediaItem): String? {
     val season = item.seasonNumber ?: return null
     val episode = item.episodeNumber ?: return null
-    return stringResource(R.string.episode_short, season, episode)
+    return if (season == 0) {
+        stringResource(R.string.episode_short_special, episode)
+    } else {
+        stringResource(R.string.episode_short, season, episode)
+    }
 }
+
+/**
+ * Jellyfin sorts specials into a regular season's list when they air before or after one of its
+ * episodes. Those carry season number 0 while the listed season is not the specials season.
+ */
+fun isInsertedSpecial(episode: MediaItem, listedSeasonNumber: Int?): Boolean =
+    episode.seasonNumber == 0 && listedSeasonNumber != null && listedSeasonNumber != 0
 
 /** "Season 2"; season 0 holds a show's specials and is named so. */
 @Composable

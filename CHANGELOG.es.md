@@ -8,6 +8,14 @@ only in English.
 
 ## [Unreleased]
 
+### Mejoras
+- Los especiales que una temporada muestra entre sus episodios llevan la etiqueta «Especial»
+- Las etiquetas sobre imágenes de episodios y pósteres tienen un fondo más oscuro y se leen bien en imágenes claras
+- Los detalles del episodio llaman a un especial «Especiales» en lugar de temporada 0
+
+### Correcciones
+- La temporada de especiales muestra sus episodios en orden y no por título
+
 ## [0.10.1] - 2026-11-18
 
 ### Mejoras

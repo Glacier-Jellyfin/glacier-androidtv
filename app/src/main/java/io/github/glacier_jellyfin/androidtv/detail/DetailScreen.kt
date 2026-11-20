@@ -106,6 +106,7 @@ import io.github.glacier_jellyfin.androidtv.ui.MediaRow
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.ProgressBar
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.ui.isInsertedSpecial
 import io.github.glacier_jellyfin.androidtv.ui.qualityText
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import io.github.glacier_jellyfin.androidtv.ui.seasonLabel
@@ -292,6 +293,7 @@ private fun MediaDetail(
                             episodes = state.episodes,
                             focusIndex = state.focusEpisode,
                             currentId = null,
+                            seasonNumber = state.season?.number,
                             onClick = viewModel::openEpisode,
                             modifier = Modifier.padding(top = 4.dp, bottom = 20.dp),
                         )
@@ -364,7 +366,13 @@ private fun EpisodeDetail(
                             val season = episode.seasonNumber
                             val number = episode.episodeNumber
                             Crumb(
-                                if (season != null && number != null) {
+                                if (season == 0 && number != null) {
+                                    stringResource(
+                                        R.string.episode_crumb_special,
+                                        episode.parentTitle.orEmpty(),
+                                        number,
+                                    )
+                                } else if (season != null && number != null) {
                                     stringResource(
                                         R.string.episode_crumb,
                                         episode.parentTitle.orEmpty(),
@@ -427,8 +435,9 @@ private fun EpisodeDetail(
                 }
                 if (state.episodes.size > 1) {
                     item(key = "more") {
+                        val listedSeason = state.season?.number ?: episode.seasonNumber ?: 1
                         Text(
-                            stringResource(R.string.episode_more, seasonLabel(episode.seasonNumber ?: 1)),
+                            stringResource(R.string.episode_more, seasonLabel(listedSeason)),
                             style = GlacierText.display(28),
                             color = GlacierColors.Ice,
                             modifier = Modifier.padding(start = PageEdge.dp, top = 44.dp),
@@ -437,6 +446,7 @@ private fun EpisodeDetail(
                             episodes = state.episodes,
                             focusIndex = state.focusEpisode,
                             currentId = episode.id,
+                            seasonNumber = state.season?.number,
                             onClick = viewModel::showEpisode,
                             modifier = Modifier.padding(bottom = 70.dp),
                         )
@@ -867,6 +877,7 @@ private fun EpisodeRow(
     episodes: List<MediaItem>,
     focusIndex: Int,
     currentId: UUID?,
+    seasonNumber: Int?,
     onClick: (MediaItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -889,6 +900,7 @@ private fun EpisodeRow(
                 episode = episode,
                 onClick = { onClick(episode) },
                 current = episode.id == currentId,
+                special = isInsertedSpecial(episode, seasonNumber),
                 modifier = if (index == focusIndex) Modifier.focusRequester(target) else Modifier,
             )
         }
@@ -918,7 +930,7 @@ private fun EpisodeStill(episode: MediaItem) {
                     .padding(start = 20.dp, top = 18.dp)
                     .height(36.dp)
                     .clip(PillShape)
-                    .background(GlacierColors.GlassFill2)
+                    .background(GlacierColors.GlassOnImage)
                     .border(1.dp, GlacierColors.GlassBorder2, PillShape)
                     .padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center,

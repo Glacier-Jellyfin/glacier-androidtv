@@ -13,6 +13,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 
 /**
@@ -31,7 +32,7 @@ fun HoldOkMark(
     Box(modifier.size(size.dp), contentAlignment = Alignment.Center) {
         if (!visible) return@Box
         // On a picture it sits on a dark disc, so it reads on any image.
-        val back = if (onPicture) Modifier.background(Color(0xB305090F), CircleShape) else Modifier
+        val back = if (onPicture) Modifier.background(GlacierColors.GlassOnImage, CircleShape) else Modifier
         Box(
             Modifier.size(size.dp).then(back).border(1.5.dp, tint.copy(alpha = 0.7f), CircleShape),
             contentAlignment = Alignment.Center,

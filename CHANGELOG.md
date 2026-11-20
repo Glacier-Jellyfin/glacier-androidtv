@@ -22,6 +22,14 @@ collapsed block, and the app shows it when its language is German or Spanish.
 
 ## [Unreleased]
 
+### Improved
+- Specials that a season lists between its episodes are marked with a "Special" badge
+- Badges on episode pictures and posters have a darker background and stay readable on bright images
+- Episode details name a special as "Specials" instead of season 0
+
+### Fixed
+- The specials season lists its episodes in order instead of by title
+
 ## [0.10.1] - 2026-11-18
 
 ### Improved

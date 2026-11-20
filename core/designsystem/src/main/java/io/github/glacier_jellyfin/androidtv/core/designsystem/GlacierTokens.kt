@@ -21,6 +21,15 @@ object GlacierColors {
     val GlassFill2 = Color(red = 173, green = 214, blue = 224, alpha = (0.13f * 255).toInt())
     val GlassBorder2 = Color(red = 196, green = 226, blue = 234, alpha = (0.28f * 255).toInt())
 
+    /**
+     * Fill for pills and badges that sit on artwork. GlassFill is too thin over bright
+     * images, so this is a dense dark fill. Do not use it on the plain page ground.
+     */
+    val GlassOnImage = Color(0xB805090F)
+
+    /** Border for pills on artwork, a little stronger than [GlassBorder]. */
+    val GlassOnImageBorder = Color(red = 196, green = 226, blue = 234, alpha = (0.32f * 255).toInt())
+
     val Ice = Color(0xFFE8F4F7)
     val Mist = Color(0xFF8FA6B3)
 }

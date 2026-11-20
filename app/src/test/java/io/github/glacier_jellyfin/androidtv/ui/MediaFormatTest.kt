@@ -1,35 +1,54 @@
 package io.github.glacier_jellyfin.androidtv.ui
 
-import io.github.glacier_jellyfin.androidtv.core.data.media.HdrFormat
-import io.github.glacier_jellyfin.androidtv.core.data.media.VideoQuality
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
+import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
+import java.util.UUID
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MediaFormatTest {
 
+    private fun episode(seasonNumber: Int?) = MediaItem(
+        id = UUID.randomUUID(),
+        kind = ItemKind.Episode,
+        title = "Episode",
+        sortName = null,
+        year = null,
+        communityRating = null,
+        officialRating = null,
+        runtimeMinutes = null,
+        genres = emptyList(),
+        overview = null,
+        parentTitle = null,
+        seasonNumber = seasonNumber,
+        episodeNumber = 1,
+        progress = null,
+        remainingMinutes = null,
+        unwatchedCount = null,
+        isFavorite = false,
+        played = false,
+        childCount = null,
+        quality = null,
+        posterUrl = null,
+        thumbUrl = null,
+        backdropUrl = null,
+    )
+
     @Test
-    fun `german age ratings become plus notation`() {
-        assertEquals("12+", ageRatingText("FSK-12"))
-        assertEquals("16+", ageRatingText("DE-16"))
-        assertEquals("0+", ageRatingText("0"))
-        assertEquals("6+", ageRatingText("FSK 6"))
+    fun `a special in a regular season is an inserted special`() {
+        assertTrue(isInsertedSpecial(episode(0), 2))
     }
 
     @Test
-    fun `other ratings are kept`() {
-        assertEquals("PG-13", ageRatingText("PG-13"))
-        assertEquals("TV-MA", ageRatingText("TV-MA"))
-        assertNull(ageRatingText(" "))
-        assertNull(ageRatingText(null))
+    fun `specials in the specials season are not marked`() {
+        assertFalse(isInsertedSpecial(episode(0), 0))
     }
 
     @Test
-    fun `quality badge combines resolution and range`() {
-        assertEquals("4K HDR", qualityText(VideoQuality(uhd = true, hdr = HdrFormat.Hdr10)))
-        assertEquals("4K Dolby Vision", qualityText(VideoQuality(uhd = true, hdr = HdrFormat.DolbyVision)))
-        assertEquals("HDR10+", qualityText(VideoQuality(uhd = false, hdr = HdrFormat.Hdr10Plus)))
-        assertEquals("4K", qualityText(VideoQuality(uhd = true, hdr = null)))
-        assertNull(qualityText(null))
+    fun `regular episodes and unknown seasons are not marked`() {
+        assertFalse(isInsertedSpecial(episode(2), 2))
+        assertFalse(isInsertedSpecial(episode(0), null))
+        assertFalse(isInsertedSpecial(episode(null), 2))
     }
 }

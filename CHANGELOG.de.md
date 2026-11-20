@@ -7,6 +7,14 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ## [Unreleased]
 
+### Verbessert
+- Specials, die eine Staffel zwischen ihren Folgen zeigt, tragen ein Abzeichen „Special“
+- Abzeichen auf Folgenbildern und Plakaten haben einen dunkleren Hintergrund und bleiben auf hellen Bildern lesbar
+- Die Folgendetails nennen ein Special „Specials“ statt Staffel 0
+
+### Behoben
+- Die Specials-Staffel zeigt ihre Folgen in der richtigen Reihenfolge statt nach Titel
+
 ## [0.10.1] - 2026-11-18
 
 ### Verbessert

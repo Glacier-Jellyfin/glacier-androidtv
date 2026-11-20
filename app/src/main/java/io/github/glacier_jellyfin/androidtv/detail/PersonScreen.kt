@@ -468,8 +468,8 @@ private fun KindPill(label: Int) {
             .padding(14.dp)
             .height(32.dp)
             .clip(PillShape)
-            .background(GlacierColors.Void.copy(alpha = 0.75f))
-            .border(1.dp, GlacierColors.GlassBorder2, PillShape)
+            .background(GlacierColors.GlassOnImage)
+            .border(1.dp, GlacierColors.GlassOnImageBorder, PillShape)
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
     ) {

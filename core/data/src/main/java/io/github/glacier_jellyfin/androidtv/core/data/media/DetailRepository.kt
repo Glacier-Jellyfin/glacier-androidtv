@@ -199,7 +199,7 @@ class DetailRepository @Inject constructor(
             seasonId = seasonId,
             fields = listOf(ItemFields.OVERVIEW, ItemFields.MEDIA_STREAMS),
             enableUserData = true,
-        ).content.items.map(mapper::item).let { ageFilter.screen(it) }
+        ).content.items.let(::specialsOrder).map(mapper::item).let { ageFilter.screen(it) }
     }
 
     /** The episode to play for a show: in progress, else the next unwatched one. */
@@ -424,6 +424,21 @@ class DetailRepository @Inject constructor(
         const val CAST_LIMIT = 20
         const val PERSON_MATCH_LIMIT = 20
     }
+}
+
+/**
+ * The server sorts the specials season by name, so "10" comes before "2".
+ * Puts it in episode order. Other seasons are returned as they are, since their
+ * inserted specials are already placed where they aired.
+ */
+internal fun specialsOrder(items: List<BaseItemDto>): List<BaseItemDto> {
+    if (items.isEmpty() || items.any { it.parentIndexNumber != 0 }) return items
+    return items.sortedWith(
+        compareBy<BaseItemDto> { it.indexNumber == null }
+            .thenBy { it.indexNumber }
+            .thenBy(nullsLast()) { it.premiereDate }
+            .thenBy { it.name.orEmpty().lowercase() },
+    )
 }
 
 /**
