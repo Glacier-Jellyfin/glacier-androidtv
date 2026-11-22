@@ -27,7 +27,7 @@ dependencies {
 buildscript {
     dependencies {
         constraints {
-            classpath("org.bouncycastle:bcprov-jdk18on:1.86")
+            classpath("org.bouncycastle:bcprov-jdk18on:1.87")
             classpath("org.bouncycastle:bcpkix-jdk18on:1.86")
             classpath("org.bouncycastle:bcutil-jdk18on:1.86")
             classpath("org.bitbucket.b_c:jose4j:0.9.7")
@@ -75,7 +75,7 @@ subprojects {
 
     configurations.matching { it.name == "androidLintTool" }.configureEach {
         listOf(
-            "org.bouncycastle:bcprov-jdk18on:1.86",
+            "org.bouncycastle:bcprov-jdk18on:1.87",
             "org.bouncycastle:bcpkix-jdk18on:1.86",
             "org.bouncycastle:bcutil-jdk18on:1.86",
             "org.apache.commons:commons-lang3:3.21.0",
@@ -97,7 +97,7 @@ subprojects {
     // vulnerabilities. Remove once Robolectric brings at least this version.
     configurations.matching { it.isCanBeResolved && it.name != "androidLintTool" && !isJvmOnly }.configureEach {
         listOf(
-            "org.bouncycastle:bcprov-jdk18on:1.86",
+            "org.bouncycastle:bcprov-jdk18on:1.87",
             "org.bouncycastle:bcpkix-jdk18on:1.86",
             "org.bouncycastle:bcutil-jdk18on:1.86",
         ).forEach { dependencyConstraints.add(project.dependencies.constraints.create(it)) }
