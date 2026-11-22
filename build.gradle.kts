@@ -28,7 +28,7 @@ buildscript {
     dependencies {
         constraints {
             classpath("org.bouncycastle:bcprov-jdk18on:1.86")
-            classpath("org.bouncycastle:bcpkix-jdk18on:1.86")
+            classpath("org.bouncycastle:bcpkix-jdk18on:1.87")
             classpath("org.bouncycastle:bcutil-jdk18on:1.86")
             classpath("org.bitbucket.b_c:jose4j:0.9.7")
             classpath("org.jdom:jdom2:2.0.6.1")
@@ -76,7 +76,7 @@ subprojects {
     configurations.matching { it.name == "androidLintTool" }.configureEach {
         listOf(
             "org.bouncycastle:bcprov-jdk18on:1.86",
-            "org.bouncycastle:bcpkix-jdk18on:1.86",
+            "org.bouncycastle:bcpkix-jdk18on:1.87",
             "org.bouncycastle:bcutil-jdk18on:1.86",
             "org.apache.commons:commons-lang3:3.21.0",
             "org.apache.httpcomponents:httpclient:4.5.14",
@@ -98,7 +98,7 @@ subprojects {
     configurations.matching { it.isCanBeResolved && it.name != "androidLintTool" && !isJvmOnly }.configureEach {
         listOf(
             "org.bouncycastle:bcprov-jdk18on:1.86",
-            "org.bouncycastle:bcpkix-jdk18on:1.86",
+            "org.bouncycastle:bcpkix-jdk18on:1.87",
             "org.bouncycastle:bcutil-jdk18on:1.86",
         ).forEach { dependencyConstraints.add(project.dependencies.constraints.create(it)) }
     }
