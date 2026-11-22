@@ -29,7 +29,7 @@ buildscript {
         constraints {
             classpath("org.bouncycastle:bcprov-jdk18on:1.86")
             classpath("org.bouncycastle:bcpkix-jdk18on:1.86")
-            classpath("org.bouncycastle:bcutil-jdk18on:1.86")
+            classpath("org.bouncycastle:bcutil-jdk18on:1.87")
             classpath("org.bitbucket.b_c:jose4j:0.9.7")
             classpath("org.jdom:jdom2:2.0.6.1")
             classpath("org.freemarker:freemarker:2.3.35")
@@ -77,7 +77,7 @@ subprojects {
         listOf(
             "org.bouncycastle:bcprov-jdk18on:1.86",
             "org.bouncycastle:bcpkix-jdk18on:1.86",
-            "org.bouncycastle:bcutil-jdk18on:1.86",
+            "org.bouncycastle:bcutil-jdk18on:1.87",
             "org.apache.commons:commons-lang3:3.21.0",
             "org.apache.httpcomponents:httpclient:4.5.14",
             "com.google.guava:guava:33.8.0-jre",
@@ -99,7 +99,7 @@ subprojects {
         listOf(
             "org.bouncycastle:bcprov-jdk18on:1.86",
             "org.bouncycastle:bcpkix-jdk18on:1.86",
-            "org.bouncycastle:bcutil-jdk18on:1.86",
+            "org.bouncycastle:bcutil-jdk18on:1.87",
         ).forEach { dependencyConstraints.add(project.dependencies.constraints.create(it)) }
     }
 }
