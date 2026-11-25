@@ -26,6 +26,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - Specials that a season lists between its episodes are marked with a "Special" badge
 - Badges on episode pictures and posters have a darker background and stay readable on bright images
 - Episode details name a special as "Specials" instead of season 0
+- The audio and subtitle choice during playback no longer adds "Applies now" below the title
 
 ### Fixed
 - The specials season lists its episodes in order instead of by title

@@ -582,7 +582,6 @@
     <string name="up_next_episode">Season %1$d · Episode %2$d</string>
     <string name="up_next_play">Play now</string>
     <string name="up_next_credits">Watch credits</string>
-    <string name="track_applies_now">Applies now</string>
     <string name="trailer_index">Trailer %1$d of %2$d</string>
     <string name="trailer_fallback_name">Trailer %1$d</string>
     <string name="trailer_strip">Trailers &amp; teasers</string>

@@ -11,6 +11,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Specials, die eine Staffel zwischen ihren Folgen zeigt, tragen ein Abzeichen „Special“
 - Abzeichen auf Folgenbildern und Plakaten haben einen dunkleren Hintergrund und bleiben auf hellen Bildern lesbar
 - Die Folgendetails nennen ein Special „Specials“ statt Staffel 0
+- Die Tonspur- und Untertitelwahl während der Wiedergabe zeigt unter dem Titel kein „Gilt ab sofort“ mehr
 
 ### Behoben
 - Die Specials-Staffel zeigt ihre Folgen in der richtigen Reihenfolge statt nach Titel

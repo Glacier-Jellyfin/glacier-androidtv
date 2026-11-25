@@ -576,7 +576,6 @@
     <string name="up_next_episode">Staffel %1$d · Folge %2$d</string>
     <string name="up_next_play">Jetzt abspielen</string>
     <string name="up_next_credits">Abspann ansehen</string>
-    <string name="track_applies_now">Gilt ab sofort</string>
     <string name="trailer_index">Trailer %1$d von %2$d</string>
     <string name="trailer_fallback_name">Trailer %1$d</string>
     <string name="trailer_strip">Trailer &amp; Teaser</string>

@@ -93,20 +93,20 @@ fun PlayerTrackPanel(
         subtitle = !audio,
     )
     val item = state.details?.item
-    val prefix = when {
+    val name = when {
         item == null -> ""
 
         item.kind == ItemKind.Episode && item.episodeNumber != null -> stringResource(
             R.string.episode_badge,
             item.episodeNumber!!,
-        ) + " · " + item.title + " · "
+        ) + " · " + item.title
 
-        else -> item.title + " · "
+        else -> item.title
     }
     val current = if (audio) state.audioIndex else state.subtitleIndex
     TrackPanel(
         title = stringResource(if (audio) R.string.track_audio else R.string.track_subtitles),
-        subtitle = prefix + stringResource(R.string.track_applies_now),
+        subtitle = name,
         options = rows,
         selected = indices.indexOf(current).coerceAtLeast(0),
         onPick = { i ->

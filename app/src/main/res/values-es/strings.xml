@@ -595,7 +595,6 @@
     <string name="up_next_episode">Temporada %1$d · Episodio %2$d</string>
     <string name="up_next_play">Reproducir ahora</string>
     <string name="up_next_credits">Ver créditos</string>
-    <string name="track_applies_now">Se aplica ahora</string>
     <string name="trailer_index">Tráiler %1$d de %2$d</string>
     <string name="trailer_fallback_name">Tráiler %1$d</string>
     <string name="trailer_strip">Tráileres y teasers</string>
