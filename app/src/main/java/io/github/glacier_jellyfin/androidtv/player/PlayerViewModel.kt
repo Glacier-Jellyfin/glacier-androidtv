@@ -654,6 +654,7 @@ class PlayerViewModel @Inject constructor(
         playlist = opened.ladder,
         patient = opened.isHls && !opened.live,
         title = true,
+        videoRotation = opened.file?.video?.rotation,
         // The tier the link carries; Media3 takes the one this estimate allows.
         startBitrate = opened.streamBitrate?.let { it * 110L / 100 }?.toInt(),
         subtitles = opened.subtitles

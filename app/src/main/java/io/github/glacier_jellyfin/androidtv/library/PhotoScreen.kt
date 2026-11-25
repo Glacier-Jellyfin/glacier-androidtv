@@ -78,7 +78,6 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.core.designsystem.endKey
 import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
-import io.github.glacier_jellyfin.androidtv.ui.Artwork
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
@@ -320,12 +319,20 @@ private fun PhotoImage(photo: MediaPhoto) {
     }
 }
 
-/** A video's frame until it plays; the play sign while its stream is not open yet. */
+/**
+ * A video's frame until it plays, whole like a photo and like the video after it (a portrait video's frame
+ * is not cropped to the screen); the play sign while its stream is not open yet.
+ */
 @Composable
 private fun VideoStill(video: MediaItem, playing: Boolean) {
     val accent = LocalAccent.current
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Artwork(video.thumbUrl, Modifier.fillMaxSize())
+        AsyncImage(
+            model = video.thumbUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize(),
+        )
         if (!playing) {
             Box(
                 Modifier

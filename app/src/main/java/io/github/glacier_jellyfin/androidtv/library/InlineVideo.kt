@@ -75,6 +75,7 @@ class InlineVideo(
                         isHls = source.isHls,
                         headers = source.headers,
                         startPositionMs = startMs,
+                        videoRotation = source.file?.video?.rotation,
                     ),
                 ).player
                 player.addListener(listener)

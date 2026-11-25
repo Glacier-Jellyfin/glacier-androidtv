@@ -95,6 +95,8 @@ data class StreamRequest(
      * title that only ever plays as a transcode). The player keeps the sound of all its streams on one output path, see [AudioPath].
      */
     val audio: TitleAudio? = null,
+    /** Degrees the picture is turned for display, from the video stream; null or 0 when upright. */
+    val videoRotation: Int? = null,
 )
 
 /** How this device plays what it cannot take as it is, decided by the app from its capabilities and settings. */
@@ -956,6 +958,13 @@ object GlacierPlayer {
                 Log.i("Player", "Start moved ${startMs - point!!} ms back to the file's sync point at $point ms")
                 startMs = point
             }
+        }
+        // Media3 only hands the rotation to the decoder, and the compositor of some TVs ignores it on a SurfaceView. With
+        // the effects pipeline on (even with no effect) the frames are turned by the app and come out upright. Upright
+        // videos stay on the direct path.
+        if (VideoRotation.appliedByApp(request.videoRotation)) {
+            player.setVideoEffects(emptyList())
+            Log.i("Player", "Rotated video (${VideoRotation.normalized(request.videoRotation)}°): app applies rotation")
         }
         player.apply {
             if (request.live) setMediaItem(item) else setMediaItem(item, startMs)

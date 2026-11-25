@@ -188,6 +188,8 @@ data class SourceVideo(
     /** "SDR", "HDR10", "DOVIWithHDR10", "HLG", … */
     val rangeType: String?,
     val dolbyVisionProfile: Int?,
+    /** Degrees the picture is turned for display, from the server's video stream; null or 0 when upright. */
+    val rotation: Int? = null,
 )
 
 data class SourceAudio(
@@ -1140,6 +1142,7 @@ class PlaybackRepository @Inject constructor(
                             frameRate = it.realFrameRate ?: it.averageFrameRate,
                             rangeType = it.videoRangeType.serialName,
                             dolbyVisionProfile = it.dvProfile,
+                            rotation = it.rotation,
                         )
                     },
                     audio = streams.filter { it.type == MediaStreamType.AUDIO && !it.isExternal }.map {
