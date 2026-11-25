@@ -17,11 +17,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
+import io.github.glacier_jellyfin.androidtv.core.designsystem.RowFocus
 import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberCardPivotSpec
+import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberRowFocus
+import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberingFocus
+import io.github.glacier_jellyfin.androidtv.core.designsystem.rowFocus
 
 /** Left and right page margin of rows. */
 const val PageEdge = 80
@@ -37,6 +42,10 @@ fun MediaRow(
     bottomPadding: Int? = null,
     gap: Int = LocalCardSizes.current.rowGap,
     state: LazyListState = rememberLazyListState(),
+    /** The row's focus memory: the first entry lands on the first card, then on the last focused one. */
+    focus: RowFocus = rememberRowFocus(),
+    /** Where the first entry lands instead of the first card. */
+    entry: FocusRequester? = null,
     content: LazyListScope.() -> Unit,
 ) {
     // The row's 26px vertical content padding leaves room for focus scale and ring;
@@ -75,8 +84,8 @@ fun MediaRow(
                 contentPadding = PaddingValues(horizontal = PageEdge.dp, vertical = 26.dp),
                 horizontalArrangement = Arrangement.spacedBy(gap.dp),
                 state = state,
-                modifier = Modifier.offset(y = (-8).dp),
-                content = content,
+                modifier = Modifier.offset(y = (-8).dp).rowFocus(focus, entry),
+                content = { rememberingFocus(focus).content() },
             )
         }
     }

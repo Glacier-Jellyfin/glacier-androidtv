@@ -62,6 +62,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.ModalSheet
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.blockKeysWhile
+import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberRowFocus
 import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.core.updater.UpdateCandidate
 import io.github.glacier_jellyfin.androidtv.core.updater.WhatsNewPrompt
@@ -152,6 +153,7 @@ fun HomeScreen(
     // "Continue watching" changed (back from the player, marked watched): the row starts at its
     // left end again, where the title just watched now sits, and a focus in it goes along.
     val continueRow = rememberLazyListState()
+    val continueFocus = rememberRowFocus()
     var continueIds by rememberSaveable { mutableStateOf<String?>(null) }
     var inContinue by remember { mutableStateOf(false) }
     val continueItems = state.content?.continueWatching
@@ -162,6 +164,7 @@ fun HomeScreen(
         if (before == null || before == ids) return@LaunchedEffect
         val first = continueItems.firstOrNull()?.let { "continue-${it.id}" }
         if (lastFocus?.startsWith("continue-") == true) lastFocus = first
+        continueFocus.reset()
         continueRow.scrollToItem(0)
         if (inContinue && first != null) {
             withFrameNanos { }
@@ -242,6 +245,7 @@ fun HomeScreen(
     var toTop by remember { mutableStateOf(false) }
     BackHandler(enabled = !exitAsked && inList) {
         toTop = true
+        continueFocus.reset()
         runCatching { navFocus.requestFocus() }
         scope.launch {
             listState.scrollToItem(0)
@@ -359,6 +363,7 @@ fun HomeScreen(
                                             MediaRow(
                                                 title = stringResource(R.string.home_continue_watching),
                                                 state = continueRow,
+                                                focus = continueFocus,
                                                 modifier = Modifier.onFocusChanged { inContinue = it.hasFocus },
                                             ) {
                                                 items(content.continueWatching, key = { it.id }) { item ->

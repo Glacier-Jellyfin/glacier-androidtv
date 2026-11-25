@@ -28,6 +28,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - Episode details name a special as "Specials" instead of season 0
 - The audio and subtitle choice during playback no longer adds "Applies now" below the title
 - Sorted by year, titles of the same year follow their release date instead of the alphabet
+- Moving up or down into a row now starts at its first card. After that the row remembers the card you left it on, also when you come back from a detail page
 
 ### Fixed
 - The specials season lists its episodes in order instead of by title

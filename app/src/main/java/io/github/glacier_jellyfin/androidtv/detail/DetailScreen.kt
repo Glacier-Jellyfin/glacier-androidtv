@@ -86,6 +86,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberEdgeSpec
+import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberRowFocus
 import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.music.LocalNowPlaying
 import io.github.glacier_jellyfin.androidtv.music.MINI_PLAYER_TOP
@@ -871,7 +872,10 @@ private fun SeasonSheet(
     }
 }
 
-/** Episodes of a season; entering the row lands on [focusIndex] (the first unwatched one). */
+/**
+ * Episodes of a season; the first entry lands on [focusIndex] (the first unwatched one), then
+ * on the episode last focused. Another season starts over; coming back to the page does not.
+ */
 @Composable
 private fun EpisodeRow(
     episodes: List<MediaItem>,
@@ -883,17 +887,29 @@ private fun EpisodeRow(
 ) {
     val rowState = rememberLazyListState()
     val target = remember { FocusRequester() }
+    val focus = rememberRowFocus()
+    // The season shown last (its first episode); saved, so a return from the back stack keeps the memory.
+    var shownSeason by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(episodes, focusIndex) {
-        if (episodes.isNotEmpty()) rowState.scrollToItem(focusIndex.coerceIn(0, episodes.lastIndex))
+        val first = episodes.firstOrNull()?.id?.toString() ?: return@LaunchedEffect
+        val remembered = if (first == shownSeason) {
+            episodes.indexOfFirst { it.id == focus.lastKey }
+        } else {
+            focus.reset()
+            -1
+        }
+        shownSeason = first
+        // The card must be composed for the redirect to find it.
+        rowState.scrollToItem((if (remembered >= 0) remembered else focusIndex).coerceIn(0, episodes.lastIndex))
     }
     MediaRow(
         title = null,
         gap = 26,
         state = rowState,
         bottomPadding = 0,
-        modifier = modifier
-            .focusProperties { onEnter = { target.requestFocus() } }
-            .focusGroup(),
+        focus = focus,
+        entry = target,
+        modifier = modifier,
     ) {
         itemsIndexed(episodes, key = { _, episode -> episode.id }) { index, episode ->
             EpisodeCard(

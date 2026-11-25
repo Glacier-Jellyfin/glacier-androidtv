@@ -55,7 +55,10 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.blockKeysWhile
+import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberRowFocus
 import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberRowPivotSpec
+import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberingFocus
+import io.github.glacier_jellyfin.androidtv.core.designsystem.rowFocus
 import io.github.glacier_jellyfin.androidtv.detail.CastCard
 import io.github.glacier_jellyfin.androidtv.detail.Crumb
 import io.github.glacier_jellyfin.androidtv.detail.ErrorState
@@ -295,12 +298,14 @@ private fun Seasons(
             style = GlacierText.body(16).copy(letterSpacing = 0.08.em),
             color = GlacierColors.Mist,
         )
+        val focus = rememberRowFocus()
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             // Room for the focus scale at the start.
             contentPadding = PaddingValues(vertical = 6.dp),
+            modifier = Modifier.rowFocus(focus),
         ) {
-            items(seasons, key = { it.number }) { season ->
+            rememberingFocus(focus).items(seasons, key = { it.number }) { season ->
                 val label = if (season.requestable) {
                     seasonLabel(season.number)
                 } else {
