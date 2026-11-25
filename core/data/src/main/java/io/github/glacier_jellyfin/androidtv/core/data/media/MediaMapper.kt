@@ -263,6 +263,11 @@ internal class MediaMapper(private val api: ApiClient) {
         return parentBackdrop(dto, ImageWidth.BACKDROP)
     }
 
+    fun movieBackdrops(dto: BaseItemDto): List<String> = dto.backdropImageTags.orEmpty()
+        .mapIndexedNotNull { index, tag ->
+            if (tag.isBlank()) null else image(dto.id, ImageType.BACKDROP, tag, ImageWidth.BACKDROP, index)
+        }
+
     private fun parentBackdrop(dto: BaseItemDto, width: Int): String? {
         val parent = dto.parentBackdropItemId ?: return null
         val tag = dto.parentBackdropImageTags?.firstOrNull() ?: return null
@@ -285,5 +290,6 @@ internal class MediaMapper(private val api: ApiClient) {
         type: ImageType,
         tag: String,
         maxWidth: Int,
-    ) = api.imageApi.getItemImageUrl(itemId = id, imageType = type, tag = tag, maxWidth = maxWidth)
+        index: Int? = null,
+    ) = api.imageApi.getItemImageUrl(itemId = id, imageType = type, imageIndex = index, tag = tag, maxWidth = maxWidth)
 }

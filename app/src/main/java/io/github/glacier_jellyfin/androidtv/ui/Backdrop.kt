@@ -1,7 +1,12 @@
 package io.github.glacier_jellyfin.androidtv.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -18,13 +24,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import coil3.SingletonImageLoader
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.size.Scale
+import coil3.toBitmap
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
 import io.github.glacier_jellyfin.androidtv.core.designsystem.startGradient
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
 /**
@@ -79,9 +100,17 @@ fun DetailBackdrop(
     url: String?,
     height: Int,
     modifier: Modifier = Modifier,
+    rotation: List<String> = emptyList(),
+    visible: Boolean = true,
 ) {
     Box(modifier.fillMaxWidth().height(height.dp).clipToBounds()) {
-        KenBurns { Artwork(url, Modifier.fillMaxSize()) }
+        KenBurns(animate = visible) {
+            if (rotation.size > 1 && !LocalReduceMotion.current) {
+                RotatingBackdrop(rotation, visible)
+            } else {
+                Artwork(rotation.firstOrNull() ?: url, Modifier.fillMaxSize())
+            }
+        }
         Box(
             Modifier
                 .fillMaxSize()
@@ -101,3 +130,48 @@ fun DetailBackdrop(
         )
     }
 }
+
+/** Loads each next backdrop before replacing the one on screen. */
+@Composable
+private fun RotatingBackdrop(urls: List<String>, visible: Boolean) {
+    val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    var size by remember { mutableStateOf(IntSize.Zero) }
+    var next by remember(urls) { mutableIntStateOf(1) }
+    var image by remember(urls) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(urls, visible, size, lifecycle, context) {
+        if (!visible || size.width == 0 || size.height == 0) return@LaunchedEffect
+        val loader = SingletonImageLoader.get(context)
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            while (isActive) {
+                delay(BACKDROP_INTERVAL_MS)
+                val request = ImageRequest.Builder(context)
+                    .data(urls[next])
+                    .size(size.width, size.height)
+                    .scale(Scale.FILL)
+                    .build()
+                val result = loader.execute(request)
+                next = (next + 1) % urls.size
+                if (result is SuccessResult) image = result.image.toBitmap().asImageBitmap()
+            }
+        }
+    }
+    AnimatedContent(
+        targetState = image,
+        modifier = Modifier.fillMaxSize().onSizeChanged { size = it },
+        transitionSpec = {
+            // Keeping the old image opaque prevents the page ground from showing through the dissolve.
+            (fadeIn(tween(BACKDROP_FADE_MS)) togetherWith ExitTransition.KeepUntilTransitionsFinished).using(null)
+        },
+        label = "detail backdrop",
+    ) { shown ->
+        if (shown == null) {
+            Artwork(urls.first(), Modifier.fillMaxSize())
+        } else {
+            Image(shown, contentDescription = null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        }
+    }
+}
+
+private const val BACKDROP_INTERVAL_MS = 9_000L
+private const val BACKDROP_FADE_MS = 1_500

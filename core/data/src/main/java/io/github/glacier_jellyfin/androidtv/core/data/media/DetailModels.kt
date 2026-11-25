@@ -42,6 +42,8 @@ data class ItemDetails(
     val studios: List<String> = emptyList(),
     /** The title's files when it has several, in the server's order; empty for a single file. */
     val versions: List<MediaVersion> = emptyList(),
+    /** The film's own backdrops, in the server's order. */
+    val backdropUrls: List<String> = emptyList(),
 )
 
 data class EpisodeNeighbours(val previous: MediaItem?, val next: MediaItem?)
