@@ -12,6 +12,8 @@ class IndexEntry(
     /** The month it was added, as year * 12 + month - 1. */
     val addedMonth: Int? = null,
     val year: Int? = null,
+    /** The premiere date as an epoch day, to order titles of the same year. */
+    val premiereDay: Int? = null,
     val rating: Float? = null,
     val runtimeMs: Long? = null,
     /** Album artist of an album, first artist of a song. */
@@ -24,7 +26,8 @@ class IndexEntry(
 
 /**
  * The heading over a part of a library list sorted by something else than the title. The list
- * goes group by group in the chosen order, and A to Z inside a group.
+ * goes group by group in the chosen order, and A to Z inside a group. Sorted by year, a group
+ * follows the premiere date first.
  */
 sealed interface ListGroup {
     /** Added in that month (1 to 12). */
@@ -77,7 +80,8 @@ object ListArrangement {
     /**
      * Puts [entries] (in any order) in the order of [query]. By title they go by name, turned round
      * for Z to A. Otherwise they go group by group (turned round for descending, the titles without
-     * a value last) and by name inside a group, songs of an album by disc and track.
+     * a value last) and by name inside a group. Songs of an album go by disc and track, titles of
+     * a year by premiere date in the direction of the list (those without one after the others).
      */
     fun arrange(entries: List<IndexEntry>, query: LibraryQuery): ArrangedList {
         val keys = HashMap<UUID, String>(entries.size * 2)
@@ -118,10 +122,16 @@ object ListArrangement {
                 }
             }
         }
-        val inGroup = if (query.sort == LibrarySort.Album) {
-            compareBy<IndexEntry, Int?>(nullsLast()) { it.disc }.thenBy(nullsLast()) { it.track }.then(byName)
-        } else {
-            byName
+        val inGroup = when (query.sort) {
+            LibrarySort.Album ->
+                compareBy<IndexEntry, Int?>(nullsLast()) { it.disc }.thenBy(nullsLast()) { it.track }.then(byName)
+
+            LibrarySort.Year -> {
+                val dayOrder = if (query.orderDescending) reverseOrder<Int>() else naturalOrder()
+                compareBy<IndexEntry, Int?>(nullsLast(dayOrder)) { it.premiereDay }.then(byName)
+            }
+
+            else -> byName
         }
         val sorted = entries.sortedWith { a, b ->
             byGroup.compare(groupOf.getValue(a.id), groupOf.getValue(b.id)).takeIf { it != 0 } ?: inGroup.compare(a, b)

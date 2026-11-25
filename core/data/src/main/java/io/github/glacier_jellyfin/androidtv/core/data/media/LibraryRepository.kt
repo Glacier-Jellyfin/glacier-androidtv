@@ -289,6 +289,7 @@ class LibraryRepository @Inject constructor(
             name = nameOf(dto, query),
             addedMonth = dto.dateCreated?.let { it.year * 12 + it.monthValue - 1 },
             year = dto.productionYear,
+            premiereDay = dto.premiereDate?.toLocalDate()?.toEpochDay()?.toInt(),
             rating = dto.communityRating,
             runtimeMs = dto.runTimeTicks?.div(10_000),
             artist = when (query.scope) {

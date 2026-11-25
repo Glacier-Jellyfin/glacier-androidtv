@@ -13,6 +13,7 @@ only in English.
 - Las etiquetas sobre imágenes de episodios y pósteres tienen un fondo más oscuro y se leen bien en imágenes claras
 - Los detalles del episodio llaman a un especial «Especiales» en lugar de temporada 0
 - La elección de audio y subtítulos durante la reproducción ya no muestra «Se aplica ahora» bajo el título
+- Al ordenar por año, los títulos del mismo año siguen su fecha de estreno en lugar del orden alfabético
 
 ### Correcciones
 - La temporada de especiales muestra sus episodios en orden y no por título

@@ -109,10 +109,15 @@ class SearchRepository @Inject constructor(private val sessions: SessionManager,
             } else {
                 listOf(
                     ItemSortBy.PRODUCTION_YEAR,
+                    ItemSortBy.PREMIERE_DATE,
                     ItemSortBy.SORT_NAME,
                 )
             },
-            sortOrder = if (f.searchTerm != null) emptyList() else listOf(SortOrder.DESCENDING),
+            sortOrder = if (f.searchTerm != null) {
+                emptyList()
+            } else {
+                listOf(SortOrder.DESCENDING, SortOrder.DESCENDING, SortOrder.ASCENDING)
+            },
         ).content.items
     }
 

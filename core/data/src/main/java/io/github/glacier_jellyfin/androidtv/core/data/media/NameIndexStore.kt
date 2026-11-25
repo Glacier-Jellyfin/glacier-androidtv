@@ -54,6 +54,7 @@ class NameIndexStore @Inject constructor(@ApplicationContext context: Context) {
                     album = text(8),
                     disc = text(9)?.toInt(),
                     track = text(10)?.toInt(),
+                    premiereDay = fields.getOrNull(FIELDS)?.ifEmpty { null }?.toInt(),
                 )
             }
             SavedIndex(at, entries)
@@ -76,6 +77,7 @@ class NameIndexStore @Inject constructor(@ApplicationContext context: Context) {
                     val fields = listOf(
                         entry.id, entry.name, entry.addedMonth, entry.year, entry.rating, entry.runtimeMs,
                         entry.artist, entry.albumId, entry.album, entry.disc, entry.track,
+                        entry.premiereDay,
                     )
                     out.write(
                         fields.joinToString("\t") {
@@ -99,7 +101,10 @@ class NameIndexStore @Inject constructor(@ApplicationContext context: Context) {
     private companion object {
         const val TAG = "NameIndex"
 
-        /** Values per line: id, name and the values of the other sorts (see [IndexEntry]). */
+        /**
+         * Values per line that older files have too: id, name and the values of the other sorts (see
+         * [IndexEntry]). The premiere day is a 12th value at the end, read when it is there.
+         */
         const val FIELDS = 11
     }
 }

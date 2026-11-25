@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.core.data.media
 
+import java.time.LocalDate
 import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -10,6 +11,7 @@ class ListArrangementTest {
     private fun entry(
         name: String,
         year: Int? = null,
+        premiere: LocalDate? = null,
         runtimeMinutes: Int? = null,
         artist: String? = null,
         album: String? = null,
@@ -18,6 +20,7 @@ class ListArrangementTest {
         id = UUID.randomUUID(),
         name = name,
         year = year,
+        premiereDay = premiere?.toEpochDay()?.toInt(),
         runtimeMs = runtimeMinutes?.let { it * 60_000L },
         artist = artist,
         albumId = album?.let { "id-$it" },
@@ -48,6 +51,42 @@ class ListArrangementTest {
         val entries = listOf(entry("Zulu", 2020), entry("Alpha", 2021), entry("Mike", 2020), entry("None"))
         val list = ListArrangement.arrange(entries, movies(LibrarySort.Year, descending = true))
         assertEquals(listOf("Alpha", "Mike", "Zulu", "None"), list.entries.map { it.name })
+    }
+
+    @Test
+    fun `titles of a year go by premiere date, oldest first`() {
+        val entries = listOf(
+            entry("Alpha", 2020, LocalDate.of(2020, 9, 1)),
+            entry("Zulu", 2020, LocalDate.of(2020, 2, 1)),
+            entry("Mike", 2020, LocalDate.of(2020, 5, 1)),
+        )
+        val list = ListArrangement.arrange(entries, movies(LibrarySort.Year))
+        assertEquals(listOf("Zulu", "Mike", "Alpha"), list.entries.map { it.name })
+    }
+
+    @Test
+    fun `descending gives the newest date first inside the year`() {
+        val entries = listOf(
+            entry("Alpha", 2020, LocalDate.of(2020, 2, 1)),
+            entry("Zulu", 2021, LocalDate.of(2021, 1, 1)),
+            entry("Mike", 2020, LocalDate.of(2020, 9, 1)),
+        )
+        val list = ListArrangement.arrange(entries, movies(LibrarySort.Year, descending = true))
+        assertEquals(listOf("Zulu", "Mike", "Alpha"), list.entries.map { it.name })
+    }
+
+    @Test
+    fun `undated titles of a year come after the dated ones, by name`() {
+        val entries = listOf(
+            entry("Bravo", 2020),
+            entry("Zulu", 2020, LocalDate.of(2020, 8, 1)),
+            entry("Alpha", 2020),
+            entry("Mike", 2020, LocalDate.of(2020, 3, 1)),
+        )
+        val expected = listOf("Mike", "Zulu", "Alpha", "Bravo")
+        assertEquals(expected, ListArrangement.arrange(entries, movies(LibrarySort.Year)).entries.map { it.name })
+        val descending = ListArrangement.arrange(entries, movies(LibrarySort.Year, descending = true))
+        assertEquals(listOf("Zulu", "Mike", "Alpha", "Bravo"), descending.entries.map { it.name })
     }
 
     @Test

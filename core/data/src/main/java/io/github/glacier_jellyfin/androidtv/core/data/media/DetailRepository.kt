@@ -237,8 +237,8 @@ class DetailRepository @Inject constructor(
             includeItemTypes = listOf(BaseItemKind.MUSIC_VIDEO),
             recursive = true,
             enableUserData = true,
-            sortBy = listOf(ItemSortBy.PRODUCTION_YEAR, ItemSortBy.SORT_NAME),
-            sortOrder = listOf(SortOrder.DESCENDING, SortOrder.ASCENDING),
+            sortBy = listOf(ItemSortBy.PRODUCTION_YEAR, ItemSortBy.PREMIERE_DATE, ItemSortBy.SORT_NAME),
+            sortOrder = listOf(SortOrder.DESCENDING, SortOrder.DESCENDING, SortOrder.ASCENDING),
         ).content.items.map(mapper::item)
     }
 
@@ -303,8 +303,8 @@ class DetailRepository @Inject constructor(
             includeItemTypes = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
             fields = listOf(ItemFields.PEOPLE, ItemFields.GENRES),
             enableUserData = true,
-            sortBy = listOf(ItemSortBy.PRODUCTION_YEAR, ItemSortBy.SORT_NAME),
-            sortOrder = listOf(SortOrder.DESCENDING),
+            sortBy = listOf(ItemSortBy.PRODUCTION_YEAR, ItemSortBy.PREMIERE_DATE, ItemSortBy.SORT_NAME),
+            sortOrder = listOf(SortOrder.DESCENDING, SortOrder.DESCENDING, SortOrder.ASCENDING),
         ).content.items.map { item ->
             Credit(mapper.item(item), item.people?.firstOrNull { it.id == id }?.role?.takeIf { it.isNotBlank() })
         }.let { credits ->

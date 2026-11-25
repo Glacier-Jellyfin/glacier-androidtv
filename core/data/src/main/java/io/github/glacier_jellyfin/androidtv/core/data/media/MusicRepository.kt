@@ -86,11 +86,18 @@ class MusicRepository @Inject constructor(private val sessions: SessionManager) 
             enableUserData = true,
             sortBy = listOf(
                 ItemSortBy.PRODUCTION_YEAR,
+                ItemSortBy.PREMIERE_DATE,
                 ItemSortBy.ALBUM,
                 ItemSortBy.PARENT_INDEX_NUMBER,
                 ItemSortBy.INDEX_NUMBER,
             ),
-            sortOrder = listOf(SortOrder.DESCENDING, SortOrder.ASCENDING, SortOrder.ASCENDING, SortOrder.ASCENDING),
+            sortOrder = listOf(
+                SortOrder.DESCENDING,
+                SortOrder.DESCENDING,
+                SortOrder.ASCENDING,
+                SortOrder.ASCENDING,
+                SortOrder.ASCENDING,
+            ),
         ).content.items.map(mapper::track)
     }
 

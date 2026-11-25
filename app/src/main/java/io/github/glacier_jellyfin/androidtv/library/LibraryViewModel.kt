@@ -752,15 +752,19 @@ private fun List<MediaFolder>.foldersFor(query: LibraryQuery): List<MediaFolder>
 /** A folder's videos in [query]'s order; those without what it sorts by come last, by title. */
 private fun List<FolderMedia.Video>.videosFor(query: LibraryQuery): List<FolderMedia.Video> {
     val byTitle = compareBy<FolderMedia.Video, String>(NameOrder) { it.item.title }
-    fun <K : Comparable<K>> by(key: (FolderMedia.Video) -> K?): List<FolderMedia.Video> {
+    fun <K : Comparable<K>> by(
+        thenBy: Comparator<FolderMedia.Video> = byTitle,
+        key: (FolderMedia.Video) -> K?,
+    ): List<FolderMedia.Video> {
         val (known, unknown) = partition { key(it) != null }
-        val order = compareBy<FolderMedia.Video> { key(it) }.then(byTitle)
+        val order = compareBy<FolderMedia.Video> { key(it) }.then(thenBy)
         return known.sortedWith(if (query.descending) order.reversed() else order) + unknown.sortedWith(byTitle)
     }
     return when (query.sort) {
         LibrarySort.DateAdded -> by { it.added }
 
-        LibrarySort.Year -> by { it.item.year }
+        // Inside a year the release date counts before the title.
+        LibrarySort.Year -> by(compareBy<FolderMedia.Video> { it.date }.then(byTitle)) { it.item.year }
 
         LibrarySort.Artist -> {
             val (known, unknown) = partition { it.item.parentTitle != null }
