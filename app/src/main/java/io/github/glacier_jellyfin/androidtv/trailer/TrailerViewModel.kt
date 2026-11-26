@@ -264,7 +264,7 @@ class TrailerViewModel @Inject constructor(
                 playWhenReady = true, countdown = null, subtitleTracks = emptyList(), subtitle = null, subtitlesOpen = false,
             )
         }
-        startLoadTimeout()
+        startLoadTimeout(if (trailer is YouTubeTrailer) YOUTUBE_LOAD_TIMEOUT_MS else LOAD_TIMEOUT_MS)
         when (trailer) {
             is LocalTrailer -> openLocal(trailer)
 
@@ -319,12 +319,12 @@ class TrailerViewModel @Inject constructor(
     }
 
     /** A trailer that shows nothing for this long counts as failed (a stuck WebView, an unreachable server). */
-    private fun startLoadTimeout() {
+    private fun startLoadTimeout(timeoutMs: Long) {
         loadTimeout?.cancel()
         loadTimeout = viewModelScope.launch {
-            delay(LOAD_TIMEOUT_MS)
+            delay(timeoutMs)
             if (_state.value.loading) {
-                Log.w(TAG, "Trailer showed nothing for ${LOAD_TIMEOUT_MS / 1000} s, giving up")
+                Log.w(TAG, "Trailer showed nothing for ${timeoutMs / 1000} s, giving up")
                 fail()
             }
         }
@@ -492,7 +492,12 @@ class TrailerViewModel @Inject constructor(
         positionMs: Long,
         durationMs: Long,
     ) {
-        if (!isCurrent(videoId) || _state.value.loading) return
+        if (!isCurrent(videoId)) return
+        // Some WebViews receive progress while the IFrame still reports buffering.
+        if (_state.value.loading) {
+            if (positionMs <= 0) return
+            _state.update { it.copy(loading = false) }
+        }
         seekTarget?.let { target ->
             val settled = kotlin.math.abs(positionMs - target) < SEEK_TOLERANCE_MS
             if (!settled && System.currentTimeMillis() - seekStartedAt < SEEK_SETTLE_MS) return
@@ -537,6 +542,7 @@ class TrailerViewModel @Inject constructor(
         const val TAG = "Trailer"
         const val TICK_MS = 500L
         const val LOAD_TIMEOUT_MS = 20_000L
+        const val YOUTUBE_LOAD_TIMEOUT_MS = 45_000L
         const val COUNTDOWN_SECONDS = 8
         const val SEEK_SETTLE_MS = 2_000L
         const val SEEK_TOLERANCE_MS = 3_000L
