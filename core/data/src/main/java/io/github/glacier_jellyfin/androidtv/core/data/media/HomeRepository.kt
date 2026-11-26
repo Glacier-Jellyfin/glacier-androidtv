@@ -6,6 +6,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightSource
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightType
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
+import java.time.ZoneOffset
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -121,6 +122,14 @@ class HomeRepository @Inject constructor(
             emptyList()
         }
 
+        val recordings = if (_liveTv.value) {
+            runSuspendCatching {
+                ageFilter.screen(liveTvRepository.recordingDtos().newestRecordings(ROW_LIMIT).map(mapper::item))
+            }.getOrDefault(emptyList())
+        } else {
+            emptyList()
+        }
+
         HomeContent(
             libraries = libraries,
             continueWatching = ageFilter.screen(
@@ -132,6 +141,7 @@ class HomeRepository @Inject constructor(
             recentAlbums = recentAlbums,
             favoriteSongs = favoriteSongs,
             liveChannels = liveChannels,
+            recordings = recordings,
         )
     }
 
@@ -224,6 +234,16 @@ class HomeRepository @Inject constructor(
             .map(mapper::item)
             .let { ageFilter.screen(it) }
         val unwatched = settings.spotlightUnwatched
+
+        // These are the recordings the other sources leave out.
+        suspend fun recordingsSpotlight(): List<MediaItem> = runSuspendCatching {
+            liveTvRepository.recordingDtos()
+                .spotlightRecordings(settings.spotlightType, unwatched)
+                .map(mapper::item)
+                .filter { it.backdropUrl != null }
+                .let { ageFilter.screen(it) }
+                .take(count)
+        }.getOrDefault(emptyList())
         val started = if (SpotlightSource.ContinueWatching in sources) {
             continueWatching.filter { it.backdropUrl != null && settings.spotlightType.matches(it.kind) }
         } else {
@@ -235,6 +255,7 @@ class HomeRepository @Inject constructor(
                 SpotlightSource.RecentlyAdded -> async { fromServer(ItemSortBy.DATE_CREATED, false, unwatched) }
                 SpotlightSource.Favorites -> async { fromServer(ItemSortBy.DATE_CREATED, true, unwatched) }
                 SpotlightSource.Random -> async { fromServer(ItemSortBy.RANDOM, false, unwatched) }
+                SpotlightSource.Recordings -> async { recordingsSpotlight() }
             }
         }.awaitAll()
         spotlightPool(started, others, count, Random.Default) { it.id }
@@ -427,6 +448,29 @@ internal fun <T> spotlightPool(
     val mixed = other.flatten().filter { seen.add(id(it)) }.shuffled(random)
     return (started.distinctBy(id) + mixed).take(count)
 }
+
+/** The [limit] newest of the recordings [items], by the time they were made. */
+internal fun List<BaseItemDto>.newestRecordings(limit: Int): List<BaseItemDto> =
+    sortedByDescending { (it.startDate ?: it.dateCreated)?.toEpochSecond(ZoneOffset.UTC) ?: 0L }.take(limit)
+
+/**
+ * The recordings a spotlight of [type] may show, newest first: movies for
+ * "Movies", episodes (and shows) for "Shows", both for "All". With [unwatched],
+ * not the watched ones.
+ */
+internal fun List<BaseItemDto>.spotlightRecordings(type: SpotlightType, unwatched: Boolean): List<BaseItemDto> =
+    filter { dto ->
+        when (type) {
+            SpotlightType.All -> dto.type in RecordedMovies || dto.type in RecordedShows
+            SpotlightType.Movies -> dto.type in RecordedMovies
+            SpotlightType.Shows -> dto.type in RecordedShows
+        }
+    }
+        .filterNot { unwatched && it.userData?.played == true }
+        .newestRecordings(Int.MAX_VALUE)
+
+private val RecordedMovies = setOf(BaseItemKind.MOVIE)
+private val RecordedShows = setOf(BaseItemKind.EPISODE, BaseItemKind.SERIES)
 
 /**
  * Started titles first (most recent first, as the server orders them, one

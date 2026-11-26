@@ -781,6 +781,7 @@
     <string name="settings_row_libraries_sub">Eine Karte für jede deiner Bibliotheken</string>
     <string name="settings_row_live_now_sub">Was gerade im Live-TV läuft, Favoriten zuerst</string>
     <string name="settings_row_live_channels_sub">Deine TV-Sender, Favoriten zuerst</string>
+    <string name="settings_row_recordings_sub">Deine neuesten Live-TV-Aufnahmen</string>
     <string name="settings_card_library_sub">Karte unter „Meine Medien“</string>
     <string name="settings_card_moving_sub">Hoch und Runter verschieben die Karte. OK oder Zurück legt sie ab.</string>
     <string name="settings_cards_body">Wähle, welche Bibliotheken eine Karte bekommen und in welcher Reihenfolge.</string>

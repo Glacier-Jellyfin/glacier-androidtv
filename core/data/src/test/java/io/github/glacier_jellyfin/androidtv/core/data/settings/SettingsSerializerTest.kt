@@ -124,4 +124,22 @@ class SettingsSerializerTest {
         assertEquals(SegmentAction.Skip, policy.action(SegmentKind.Recap))
         assertEquals(UpNextMode.Off, policy.upNext)
     }
+
+    @Test
+    fun `a spotlight source of a later version is dropped, the others stay`() = runTest {
+        val json = """{"profiles":{"s/u":{"home":{"spotlightSources":["Favorites","Future","Recordings"]}}}}"""
+        val home = SettingsSerializer.readFrom(ByteArrayInputStream(json.toByteArray())).profiles.getValue("s/u").home
+        assertEquals(setOf(SpotlightSource.Favorites, SpotlightSource.Recordings), home.spotlightSources)
+    }
+
+    @Test
+    fun `the recordings source is off by default and survives a round trip`() = runTest {
+        assertEquals(false, SpotlightSource.Recordings in HomeSettings().spotlightSources)
+        val state = SettingsState(
+            mapOf("s/u" to ProfileSettings(home = HomeSettings(spotlightSources = setOf(SpotlightSource.Recordings)))),
+        )
+        val out = ByteArrayOutputStream()
+        SettingsSerializer.writeTo(state, out)
+        assertEquals(state, SettingsSerializer.readFrom(ByteArrayInputStream(out.toByteArray())))
+    }
 }

@@ -16,7 +16,18 @@ class HomeRowsTest {
     @Test
     fun `new in is one row per library, at the place of the general entry`() {
         assertEquals(
-            listOf("ContinueWatching", "Favorites", "Latest:movies", "Latest:shows", "RecentAlbums", "FavoriteSongs", "Libraries", "LiveTvOnNow", "LiveTvChannels"),
+            listOf(
+                "ContinueWatching",
+                "Favorites",
+                "Latest:movies",
+                "Latest:shows",
+                "RecentAlbums",
+                "FavoriteSongs",
+                "Libraries",
+                "LiveTvOnNow",
+                "LiveTvChannels",
+                "Recordings",
+            ),
             HomeSettings().order(),
         )
     }
@@ -27,7 +38,18 @@ class HomeRowsTest {
             rows = listOf(HomeRowChoice(HomeRow.Libraries), HomeRowChoice(HomeRow.Favorites, shown = false)),
         )
         assertEquals(
-            listOf("Libraries", "Favorites", "ContinueWatching", "Latest:movies", "Latest:shows", "RecentAlbums", "FavoriteSongs", "LiveTvOnNow", "LiveTvChannels"),
+            listOf(
+                "Libraries",
+                "Favorites",
+                "ContinueWatching",
+                "Latest:movies",
+                "Latest:shows",
+                "RecentAlbums",
+                "FavoriteSongs",
+                "LiveTvOnNow",
+                "LiveTvChannels",
+                "Recordings",
+            ),
             settings.order(),
         )
         assertFalse(settings.homeRows(libraries).first { it.row == HomeRow.Favorites }.shown)
@@ -37,11 +59,22 @@ class HomeRowsTest {
     fun `moving swaps with the neighbour and stops at the ends`() {
         val settings = HomeSettings()
         assertEquals(
-            listOf("ContinueWatching", "Favorites", "Latest:shows", "Latest:movies", "RecentAlbums", "FavoriteSongs", "Libraries", "LiveTvOnNow", "LiveTvChannels"),
+            listOf(
+                "ContinueWatching",
+                "Favorites",
+                "Latest:shows",
+                "Latest:movies",
+                "RecentAlbums",
+                "FavoriteSongs",
+                "Libraries",
+                "LiveTvOnNow",
+                "LiveTvChannels",
+                "Recordings",
+            ),
             settings.withRowMoved("Latest:shows", -1, libraries).order(),
         )
         assertEquals(settings.order(), settings.withRowMoved("ContinueWatching", -1, libraries).order())
-        assertEquals(settings.order(), settings.withRowMoved("LiveTvChannels", 1, libraries).order())
+        assertEquals(settings.order(), settings.withRowMoved("Recordings", 1, libraries).order())
     }
 
     @Test
@@ -51,7 +84,18 @@ class HomeRowsTest {
                 choice.row != HomeRow.FavoriteSongs
         }
         assertEquals(
-            listOf("ContinueWatching", "Favorites", "Latest:movies", "Libraries", "RecentAlbums", "FavoriteSongs", "Latest:shows", "LiveTvOnNow", "LiveTvChannels"),
+            listOf(
+                "ContinueWatching",
+                "Favorites",
+                "Latest:movies",
+                "Libraries",
+                "RecentAlbums",
+                "FavoriteSongs",
+                "Latest:shows",
+                "LiveTvOnNow",
+                "LiveTvChannels",
+                "Recordings",
+            ),
             HomeSettings().withRowMoved("Libraries", -1, libraries, noMusic).order(),
         )
     }
@@ -62,7 +106,19 @@ class HomeRowsTest {
             .withRowShown("Latest:movies", false, libraries)
         val withMusic = moved.homeRows(libraries + "music")
         assertEquals(
-            listOf("ContinueWatching", "Favorites", "Latest:shows", "Latest:movies", "Latest:music", "RecentAlbums", "FavoriteSongs", "Libraries", "LiveTvOnNow", "LiveTvChannels"),
+            listOf(
+                "ContinueWatching",
+                "Favorites",
+                "Latest:shows",
+                "Latest:movies",
+                "Latest:music",
+                "RecentAlbums",
+                "FavoriteSongs",
+                "Libraries",
+                "LiveTvOnNow",
+                "LiveTvChannels",
+                "Recordings",
+            ),
             withMusic.map { it.id },
         )
         assertFalse(withMusic.first { it.id == "Latest:movies" }.shown)
@@ -89,5 +145,20 @@ class HomeRowsTest {
         assertFalse(arranged[1].shown)
         // A library gone from the server is left out.
         assertEquals(listOf("shows"), cards.arranged(listOf("shows")).map { it.id })
+    }
+
+    @Test
+    fun `rows saved before the recordings row existed get it last, shown`() = runTest {
+        val old = """{"profiles":{"s|u":{"home":{"rows":[
+            {"row":"Libraries"},{"row":"ContinueWatching"},{"row":"LiveTvOnNow"},{"row":"LiveTvChannels"}
+        ]}}}}"""
+        val home = SettingsSerializer.readFrom(ByteArrayInputStream(old.toByteArray())).profiles.values.single().home
+        val rows = home.homeRows(libraries)
+        assertEquals("Recordings", rows.last().id)
+        assertEquals(true, rows.last().shown)
+        assertEquals(
+            listOf("Libraries", "ContinueWatching", "LiveTvOnNow", "LiveTvChannels"),
+            rows.map { it.id }.take(4),
+        )
     }
 }

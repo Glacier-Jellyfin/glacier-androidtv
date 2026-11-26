@@ -22,6 +22,10 @@ collapsed block, and the app shows it when its language is German or Spanish.
 
 ## [Unreleased]
 
+### New
+- A Recordings row on the home screen and recordings as an optional spotlight source
+- A Recordings row on the favorites page
+
 ### Improved
 - Specials that a season lists between its episodes are marked with a "Special" badge
 - Badges on episode pictures and posters have a darker background and stay readable on bright images

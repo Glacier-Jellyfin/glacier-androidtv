@@ -7,6 +7,10 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ## [Unreleased]
 
+### Neu
+- Eine Reihe Aufnahmen auf der Startseite und Aufnahmen als wählbare Quelle für das Spotlight
+- Eine Reihe Aufnahmen auf der Favoritenseite
+
 ### Verbessert
 - Specials, die eine Staffel zwischen ihren Folgen zeigt, tragen ein Abzeichen „Special“
 - Abzeichen auf Folgenbildern und Plakaten haben einen dunkleren Hintergrund und bleiben auf hellen Bildern lesbar

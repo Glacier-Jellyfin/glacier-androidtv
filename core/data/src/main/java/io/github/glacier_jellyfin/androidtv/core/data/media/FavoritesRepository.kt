@@ -25,6 +25,8 @@ data class Favorites(
     val albums: List<MediaItem> = emptyList(),
     val artists: List<MediaItem> = emptyList(),
     val songs: List<MusicTrack> = emptyList(),
+    /** Favorite Live TV recordings, newest first; the lists above leave recordings out. */
+    val recordings: List<MediaItem> = emptyList(),
 )
 
 /** The favorites page: titles by library, music, and songs. */
@@ -33,12 +35,23 @@ class FavoritesRepository @Inject constructor(
     private val sessions: SessionManager,
     private val ageFilter: AgeFilter,
     private val recordingFolders: RecordingFolders,
+    private val liveTv: LiveTvRepository,
 ) {
     suspend fun load(): Favorites = withContext(Dispatchers.IO) {
         val session = checkNotNull(sessions.session.value) { "No profile is signed in" }
         val mapper = MediaMapper(session.api)
         coroutineScope {
             val songs = async { runSuspendCatching { songs(session, mapper) }.getOrDefault(emptyList()) }
+            // No Live TV or a failing server: no row.
+            val recordings = async {
+                runSuspendCatching {
+                    liveTv.recordingDtos()
+                        .filter { it.userData?.isFavorite == true }
+                        .newestRecordings(RECORDINGS)
+                        .map(mapper::item)
+                        .let { ageFilter.screen(it) }
+                }.getOrDefault(emptyList())
+            }
             val items = ageFilter.screen(titles(session).map(mapper::item))
             fun of(kind: ItemKind) = items.filter { it.kind == kind }
             Favorites(
@@ -48,6 +61,7 @@ class FavoritesRepository @Inject constructor(
                 albums = of(ItemKind.Album),
                 artists = of(ItemKind.Artist),
                 songs = songs.await(),
+                recordings = recordings.await(),
             )
         }
     }
@@ -110,5 +124,6 @@ class FavoritesRepository @Inject constructor(
         const val TITLES = 600
         const val SONGS = 200
         val TITLE_FIELDS = listOf(ItemFields.OVERVIEW, ItemFields.GENRES, ItemFields.MEDIA_STREAMS)
+        const val RECORDINGS = 200
     }
 }

@@ -3,7 +3,9 @@ package io.github.glacier_jellyfin.androidtv.favorites
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.media.AgeFilter
 import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.Favorites
 import io.github.glacier_jellyfin.androidtv.core.data.media.FavoritesRepository
@@ -19,8 +21,10 @@ import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.NavTarget
+import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.navigation.navEvent
 import io.github.glacier_jellyfin.androidtv.navigation.routeFor
+import io.github.glacier_jellyfin.androidtv.parental.PinGate
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
@@ -46,6 +50,8 @@ class FavoritesViewModel @Inject constructor(
     private val repository: FavoritesRepository,
     private val sessions: SessionManager,
     private val music: MusicController,
+    private val ageFilter: AgeFilter,
+    parental: ParentalControl,
     details: DetailRepository,
     playback: PlaybackRepository,
     settings: SettingsRepository,
@@ -66,6 +72,8 @@ class FavoritesViewModel @Inject constructor(
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
+
+    val pin = PinGate(viewModelScope, parental) { _events.send(it) }
 
     init {
         load()
@@ -96,6 +104,17 @@ class FavoritesViewModel @Inject constructor(
     }
 
     fun open(item: MediaItem) = navigate(routeFor(item))
+
+    /** A recording plays at once, as on the home page, after the age limit and its PIN. */
+    fun play(recording: MediaItem) = pin.openTitle(
+        ageFilter,
+        id = recording.id,
+        name = recording.title,
+        rating = recording.officialRating,
+        parents = listOfNotNull(recording.seriesId),
+    ) {
+        navigate(PlayerRoute(recording.id.toString()))
+    }
 
     /** All favorite songs play, from this one, and the player opens; [title] names the queue. */
     fun play(track: MusicTrack, title: String) {

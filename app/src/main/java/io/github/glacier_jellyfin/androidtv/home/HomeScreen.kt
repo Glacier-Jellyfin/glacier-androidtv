@@ -82,6 +82,7 @@ import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.LocalToaster
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
 import io.github.glacier_jellyfin.androidtv.ui.PosterCard
+import io.github.glacier_jellyfin.androidtv.ui.RecordingCard
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.yearText
 import io.github.glacier_jellyfin.androidtv.update.UpdateDialog
@@ -516,6 +517,21 @@ fun HomeScreen(
                                                         channel = channel,
                                                         onClick = { viewModel.playChannel(channel) },
                                                         modifier = Modifier.remembered("live-channel-${channel.id}"),
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    HomeRow.Recordings -> if (content.recordings.isNotEmpty()) {
+                                        item(key = "recordings") {
+                                            MediaRow(title = stringResource(R.string.livetv_recordings)) {
+                                                items(content.recordings, key = { it.id }) { recording ->
+                                                    RecordingCard(
+                                                        recording,
+                                                        // As under Live TV: a recording plays.
+                                                        onClick = { viewModel.play(recording) },
+                                                        modifier = Modifier.remembered("recording-${recording.id}"),
                                                     )
                                                 }
                                             }

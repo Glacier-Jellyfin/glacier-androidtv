@@ -87,4 +87,6 @@ data class HomeContent(
     val favoriteSongs: List<MusicTrack> = emptyList(),
     /** Live TV channels (no radio stations), favorites first, each with what runs on it now. */
     val liveChannels: List<LiveChannel> = emptyList(),
+    /** Finished Live TV recordings, newest first. */
+    val recordings: List<MediaItem> = emptyList(),
 )

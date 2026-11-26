@@ -360,6 +360,21 @@ class LiveTvRepository @Inject constructor(
         Unit
     }
 
+    /**
+     * The recordings the server finished, for the home and favorites rows, which ask the same
+     * way. One still being recorded cannot be played from the start yet.
+     */
+    suspend fun recordingDtos(): List<BaseItemDto> = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        session.api.liveTvApi.getRecordings(
+            userId = session.userId,
+            isInProgress = false,
+            enableImages = true,
+            fields = listOf(ItemFields.OVERVIEW, ItemFields.GENRES, ItemFields.MEDIA_STREAMS),
+            enableUserData = true,
+        ).content.items
+    }
+
     suspend fun deleteRecording(id: UUID) = withContext(Dispatchers.IO) {
         requireSession().api.liveTvApi.deleteRecording(id)
         recordingFolders.invalidate()

@@ -7,8 +7,14 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentPolicy
 import io.github.glacier_jellyfin.androidtv.core.data.playback.UpNextMode
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.playback.SubtitleBurnIn
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.SetSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 
 /**
  * What one profile set on this device (Settings screen). Audio and subtitle
@@ -202,6 +208,7 @@ data class HomeSettings(
     /** The single source of earlier versions; only read, as the default of [spotlightSources]. */
     @SerialName("spotlightSource") val legacySpotlightSource: SpotlightSource? = null,
     /** Mixed into one spotlight; none switches the spotlight off. */
+    @Serializable(with = SpotlightSourcesSerializer::class)
     val spotlightSources: Set<SpotlightSource> =
         setOf(legacySpotlightSource ?: SpotlightSource.ContinueWatching),
     val spotlightType: SpotlightType = SpotlightType.All,
@@ -272,7 +279,9 @@ fun List<Choice>.withMoved(
     id: String,
     by: Int,
     available: List<String>,
-): List<Choice> = arranged(available).swapped(by, { it.id == id }) { true }
+    /** The entries the list shows; a swap skips the others, e.g. recordings on a server without Live TV. */
+    visible: (Choice) -> Boolean = { true },
+): List<Choice> = arranged(available).swapped(by, { it.id == id }, visible)
 
 /** Top navigation and the favorites page (Settings › Appearance). */
 @Serializable
@@ -285,7 +294,7 @@ data class NavigationSettings(
 
 /** The rows of the favorites page, in their default order. */
 @Serializable
-enum class FavoriteRow { Movies, Shows, Episodes, Albums, Artists, Songs }
+enum class FavoriteRow { Movies, Shows, Episodes, Albums, Artists, Songs, Recordings }
 
 /**
  * The entry matching [which] swapped with the nearest entry [by] steps away
@@ -307,7 +316,17 @@ private fun <T> List<T>.swapped(
 
 /** The rows of the home screen below the spotlight; each shows only when it has something in it. */
 @Serializable
-enum class HomeRow { ContinueWatching, Favorites, Latest, RecentAlbums, FavoriteSongs, Libraries, LiveTvOnNow, LiveTvChannels }
+enum class HomeRow {
+    ContinueWatching,
+    Favorites,
+    Latest,
+    RecentAlbums,
+    FavoriteSongs,
+    Libraries,
+    LiveTvOnNow,
+    LiveTvChannels,
+    Recordings,
+}
 
 /** One home row, switched on or off. */
 @Serializable
@@ -327,7 +346,25 @@ data class HomeRowChoice(
 private val DefaultHomeRows = HomeRow.entries.map { HomeRowChoice(it) }
 
 @Serializable
-enum class SpotlightSource { ContinueWatching, RecentlyAdded, Favorites, Random }
+enum class SpotlightSource { ContinueWatching, RecentlyAdded, Favorites, Random, Recordings }
+
+/**
+ * The chosen spotlight sources, stored by name. A name this version does not know
+ * (from a newer one) is left out instead of failing the whole settings file.
+ */
+internal object SpotlightSourcesSerializer : KSerializer<Set<SpotlightSource>> {
+    private val names = SetSerializer(String.serializer())
+
+    override val descriptor: SerialDescriptor = names.descriptor
+
+    override fun serialize(encoder: Encoder, value: Set<SpotlightSource>) =
+        encoder.encodeSerializableValue(names, value.mapTo(LinkedHashSet()) { it.name })
+
+    override fun deserialize(decoder: Decoder): Set<SpotlightSource> {
+        val known = SpotlightSource.entries.associateBy { it.name }
+        return decoder.decodeSerializableValue(names).mapNotNullTo(LinkedHashSet()) { known[it] }
+    }
+}
 
 @Serializable
 enum class SpotlightType { All, Movies, Shows }

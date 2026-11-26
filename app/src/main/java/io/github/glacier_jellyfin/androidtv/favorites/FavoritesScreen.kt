@@ -44,12 +44,14 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.navigation.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.navigation.NavTarget
 import io.github.glacier_jellyfin.androidtv.navigation.TopNav
+import io.github.glacier_jellyfin.androidtv.parental.PinDialog
 import io.github.glacier_jellyfin.androidtv.parental.showsLock
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.ContinueCard
 import io.github.glacier_jellyfin.androidtv.ui.MediaRow
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.PosterCard
+import io.github.glacier_jellyfin.androidtv.ui.RecordingCard
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.yearText
 
@@ -59,6 +61,7 @@ import io.github.glacier_jellyfin.androidtv.ui.yearText
 fun FavoritesScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: FavoritesViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val rows by viewModel.rows.collectAsStateWithLifecycle()
+    val pinPrompt by viewModel.pin.prompt.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
     val listFocus = remember { FocusRequester() }
     // Back among the rows first goes up to the navigation bar. The page keeps its place below.
@@ -135,6 +138,17 @@ fun FavoritesScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: Favorites
                                         )
                                     }
                                 }
+                            } else if (row == FavoriteRow.Recordings) {
+                                MediaRow(title = stringResource(row.title)) {
+                                    items(favorites.recordings, key = { it.id }) { recording ->
+                                        RecordingCard(
+                                            recording,
+                                            // As under Live TV: a recording plays.
+                                            onClick = { viewModel.play(recording) },
+                                            modifier = Modifier.remembered(recording.id.toString()),
+                                        )
+                                    }
+                                }
                             } else {
                                 MediaRow(title = stringResource(row.title)) {
                                     items(favorites.titles(row), key = { it.id }) { item ->
@@ -163,6 +177,8 @@ fun FavoritesScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: Favorites
             focusRequester = navFocus,
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 34.dp),
         )
+
+        pinPrompt?.let { PinDialog(it, onKey = viewModel.pin::key, onDismiss = viewModel.pin::dismiss) }
     }
 }
 
@@ -176,6 +192,7 @@ val FavoriteRow.title: Int
         FavoriteRow.Albums -> R.string.scope_albums
         FavoriteRow.Artists -> R.string.scope_artists
         FavoriteRow.Songs -> R.string.favorites_songs
+        FavoriteRow.Recordings -> R.string.livetv_recordings
     }
 
 /** The titles of a row; songs are [Favorites.songs]. */
@@ -186,6 +203,7 @@ private fun Favorites.titles(row: FavoriteRow): List<MediaItem> = when (row) {
     FavoriteRow.Albums -> albums
     FavoriteRow.Artists -> artists
     FavoriteRow.Songs -> emptyList()
+    FavoriteRow.Recordings -> recordings
 }
 
 private fun Favorites.has(row: FavoriteRow): Boolean = if (row == FavoriteRow.Songs) {

@@ -787,6 +787,7 @@
     <string name="settings_row_libraries_sub">A card for each of your libraries</string>
     <string name="settings_row_live_now_sub">What runs on Live TV now, favorites first</string>
     <string name="settings_row_live_channels_sub">Your TV channels, favorites first</string>
+    <string name="settings_row_recordings_sub">Your newest Live TV recordings</string>
     <string name="settings_card_library_sub">Card in "My media"</string>
     <string name="settings_card_moving_sub">Up and Down move the card. OK or Back puts it down.</string>
     <string name="settings_cards_body">Pick which libraries get a card and in which order.</string>

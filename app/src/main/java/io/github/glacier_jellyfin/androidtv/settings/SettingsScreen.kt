@@ -69,6 +69,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.UpNextMode
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AccentColor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AudioChannels
+import io.github.glacier_jellyfin.androidtv.core.data.settings.Choice
 import io.github.glacier_jellyfin.androidtv.core.data.settings.DolbyVisionProfile7Choice
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FavoriteRow
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderAspect
@@ -537,14 +538,17 @@ fun SettingsScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SettingsVi
 
             ListDialog.FavoriteRows -> {
                 val ids = FavoriteRow.entries.map { it.name }
+                val hasLiveTv = LocalLiveTv.current
                 ChoicesDialog(
                     title = stringResource(R.string.nav_favorites),
                     body = stringResource(R.string.settings_favorites_body),
                     sub = stringResource(R.string.settings_favorite_row_sub),
                     movingSub = stringResource(R.string.settings_row_moving_sub),
-                    cards = state.profile.navigation.favoriteRows.arranged(ids).map { row ->
-                        Triple(stringResource(FavoriteRow.valueOf(row.id).title), row.shown, row.id)
-                    },
+                    cards = state.profile.navigation.favoriteRows.arranged(ids)
+                        .filter { it.offered(hasLiveTv) }
+                        .map { row ->
+                            Triple(stringResource(FavoriteRow.valueOf(row.id).title), row.shown, row.id)
+                        },
                     onToggle = { id ->
                         viewModel.updateNavigation { nav ->
                             nav.copy(
@@ -559,7 +563,9 @@ fun SettingsScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SettingsVi
                     onMove = { id, by ->
                         viewModel.updateNavigation {
                             it.copy(
-                                favoriteRows = it.favoriteRows.withMoved(id, by, ids),
+                                favoriteRows = it.favoriteRows.withMoved(id, by, ids) { choice ->
+                                    choice.offered(hasLiveTv)
+                                },
                             )
                         }
                     },
@@ -815,7 +821,9 @@ private fun appearanceRows(
     val kinds = LocalLibraryKinds.current
     val navIds = navEntryIds(kinds, LocalLiveTv.current)
     val favoriteIds = FavoriteRow.entries.map { it.name }
-    val favoriteRows = navigation.favoriteRows.arranged(favoriteIds)
+    // Recordings only on servers with Live TV, so they do not count either.
+    val hasLiveTv = LocalLiveTv.current
+    val favoriteRows = navigation.favoriteRows.arranged(favoriteIds).filter { it.offered(hasLiveTv) }
     val shownRows = favoriteRows.count { it.shown }
     val rowsValue = if (shownRows == favoriteRows.size) {
         pluralStringResource(R.plurals.settings_rows_count, favoriteRows.size, favoriteRows.size)
@@ -957,21 +965,22 @@ private fun homeRows(
     onLibraryCards: () -> Unit,
 ): List<SettingGroup> {
     val home = state.profile.home
-    val sources = listOf(
+    // The Live TV rows and the recordings only on servers with Live TV.
+    val hasLiveTv = LocalLiveTv.current
+    val sources = listOfNotNull(
         SpotlightSource.ContinueWatching to R.string.settings_spot_continue,
         SpotlightSource.RecentlyAdded to R.string.settings_spot_recent,
         SpotlightSource.Favorites to R.string.settings_spot_favorites,
         SpotlightSource.Random to R.string.settings_spot_random,
+        (SpotlightSource.Recordings to R.string.livetv_recordings).takeIf { hasLiveTv },
     )
     val on = home.spotlightSources.isNotEmpty()
     // The music rows only exist on servers with a music library.
     val hasMusic = LibraryKind.Music in LocalLibraryKinds.current
-    // The Live TV rows only on servers with Live TV.
-    val hasLiveTv = LocalLiveTv.current
     val visible = { choice: HomeRowChoice ->
         when (choice.row) {
             HomeRow.RecentAlbums, HomeRow.FavoriteSongs -> hasMusic
-            HomeRow.LiveTvOnNow, HomeRow.LiveTvChannels -> hasLiveTv
+            HomeRow.LiveTvOnNow, HomeRow.LiveTvChannels, HomeRow.Recordings -> hasLiveTv
             else -> true
         }
     }
@@ -1782,6 +1791,7 @@ private val rowTexts = mapOf(
     HomeRow.Libraries to (R.string.home_my_media to R.string.settings_row_libraries_sub),
     HomeRow.LiveTvOnNow to (R.string.home_live_now to R.string.settings_row_live_now_sub),
     HomeRow.LiveTvChannels to (R.string.home_live_channels to R.string.settings_row_live_channels_sub),
+    HomeRow.Recordings to (R.string.livetv_recordings to R.string.settings_row_recordings_sub),
 )
 
 /** Languages of Glacier itself, each named in its own language. */
@@ -2223,3 +2233,6 @@ private fun deviceSummary(context: Context): DeviceSummary {
 private fun hostOf(address: String): String = address.substringAfter("://").trimEnd('/')
 
 private const val SOURCE_URL = "github.com/Glacier-Jellyfin/glacier-androidtv"
+
+/** Whether the profile can pick this favorites row here: recordings need a server with Live TV. */
+private fun Choice.offered(hasLiveTv: Boolean): Boolean = hasLiveTv || id != FavoriteRow.Recordings.name

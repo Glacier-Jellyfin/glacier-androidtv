@@ -802,6 +802,7 @@
     <string name="settings_row_libraries_sub">Una tarjeta por cada una de tus bibliotecas</string>
     <string name="settings_row_live_now_sub">Lo que se emite ahora en TV en directo, primero los favoritos</string>
     <string name="settings_row_live_channels_sub">Tus canales de TV, primero los favoritos</string>
+    <string name="settings_row_recordings_sub">Tus grabaciones de TV en directo más recientes</string>
     <string name="settings_card_library_sub">Tarjeta en “Mis medios”</string>
     <string name="settings_card_moving_sub">Arriba y Abajo mueven la tarjeta. OK o Atrás la sueltan.</string>
     <string name="settings_cards_body">Elige qué bibliotecas tienen tarjeta y en qué orden.</string>

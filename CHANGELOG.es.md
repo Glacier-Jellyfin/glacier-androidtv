@@ -8,6 +8,10 @@ only in English.
 
 ## [Unreleased]
 
+### Novedades
+- Una fila de Grabaciones en la pantalla de inicio y las grabaciones como fuente opcional del destacado
+- Una fila de Grabaciones en la página de favoritos
+
 ### Mejoras
 - Los especiales que una temporada muestra entre sus episodios llevan la etiqueta «Especial»
 - Las etiquetas sobre imágenes de episodios y pósteres tienen un fondo más oscuro y se leen bien en imágenes claras
