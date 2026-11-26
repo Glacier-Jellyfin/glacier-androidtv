@@ -30,6 +30,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -280,7 +281,7 @@ private fun MediaDetail(
     }
 
     Box(Modifier.fillMaxSize().background(ImagePageGround)) {
-        ScrollingBackdrop(item.backdropUrl, MEDIA_BACKDROP, listState)
+        ScrollingBackdrop(item.backdropUrl, MEDIA_BACKDROP, listState, details.backdropUrls)
         CompositionLocalProvider(LocalBringIntoViewSpec provides rememberRowPivotSpec(listState, HEADER_REGION)) {
             LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                 item(key = "header") {
@@ -510,10 +511,20 @@ internal fun ScrollingBackdrop(
     url: String?,
     height: Int,
     listState: LazyListState,
+    urls: List<String> = emptyList(),
 ) {
+    val heightPx = with(LocalDensity.current) { height.dp.roundToPx() }
+    // Derived, so the page recomposes only when the backdrop leaves or enters the view, not per scrolled pixel.
+    val scrolledAway by remember(listState, heightPx) {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset >= heightPx
+        }
+    }
     DetailBackdrop(
         url = url,
         height = height,
+        urls = urls,
+        paused = scrolledAway,
         modifier = Modifier.graphicsLayer {
             translationY =
                 if (listState.firstVisibleItemIndex == 0) {

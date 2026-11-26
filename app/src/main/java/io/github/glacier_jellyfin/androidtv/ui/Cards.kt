@@ -101,9 +101,12 @@ object CardSize {
  * times at once (the same cover down a music queue) until the first one is cached.
  */
 @Composable
-fun Artwork(url: String?, modifier: Modifier = Modifier) {
-    val accent = LocalAccent.current
-    Box(modifier.background(Brush.linearGradient(listOf(accent.deep.copy(alpha = 0.45f), GlacierColors.Deep)))) {
+fun Artwork(
+    url: String?,
+    modifier: Modifier = Modifier,
+    fill: Boolean = true,
+) {
+    Box(if (fill) modifier.artworkFill() else modifier) {
         if (url != null) {
             var attempt by remember(url) { mutableIntStateOf(0) }
             var failed by remember(url) { mutableStateOf(false) }
@@ -125,6 +128,13 @@ fun Artwork(url: String?, modifier: Modifier = Modifier) {
             }
         }
     }
+}
+
+/** The accent-tinted ground of [Artwork]; a caller stacking several layers draws it once and passes `fill = false`. */
+@Composable
+internal fun Modifier.artworkFill(): Modifier {
+    val accent = LocalAccent.current
+    return background(Brush.linearGradient(listOf(accent.deep.copy(alpha = 0.45f), GlacierColors.Deep)))
 }
 
 private const val ARTWORK_RETRIES = 1

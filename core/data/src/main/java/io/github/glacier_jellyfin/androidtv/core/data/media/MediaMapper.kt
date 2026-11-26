@@ -232,6 +232,11 @@ internal class MediaMapper(private val api: ApiClient) {
         return parentBackdrop(dto, ImageWidth.THUMB)
     }
 
+    /** Every backdrop of the item in server order, else those of its parent; the first is [backdrop]'s. */
+    fun backdrops(dto: BaseItemDto): List<String> =
+        backdropRefs(dto.id, dto.backdropImageTags, dto.parentBackdropItemId, dto.parentBackdropImageTags)
+            .map { image(it.itemId, ImageType.BACKDROP, it.tag, ImageWidth.BACKDROP, it.index.takeIf { i -> i > 0 }) }
+
     /** For episodes, the show's own 16:9 art; null for everything else. */
     private fun showThumb(dto: BaseItemDto): String? {
         if (dto.type != BaseItemKind.EPISODE) return null
@@ -285,5 +290,36 @@ internal class MediaMapper(private val api: ApiClient) {
         type: ImageType,
         tag: String,
         maxWidth: Int,
-    ) = api.imageApi.getItemImageUrl(itemId = id, imageType = type, tag = tag, maxWidth = maxWidth)
+        index: Int? = null,
+    ) = api.imageApi.getItemImageUrl(
+        itemId = id,
+        imageType = type,
+        imageIndex = index,
+        tag = tag,
+        maxWidth = maxWidth,
+    )
+}
+
+/** One backdrop picture: the item holding it, its tag and its position among that item's backdrops. */
+internal data class BackdropRef(
+    val itemId: UUID,
+    val tag: String,
+    val index: Int,
+)
+
+/**
+ * The backdrops to show, in server order. [index] is the position in the original tag list, so skipped
+ * blank tags do not shift the others. An item without backdrops of its own uses its parent's.
+ */
+internal fun backdropRefs(
+    id: UUID,
+    tags: List<String?>?,
+    parentId: UUID?,
+    parentTags: List<String?>?,
+): List<BackdropRef> {
+    fun refs(owner: UUID, list: List<String?>?) = list.orEmpty()
+        .mapIndexedNotNull { index, tag -> tag?.takeIf { it.isNotBlank() }?.let { BackdropRef(owner, it, index) } }
+    val own = refs(id, tags)
+    if (own.isNotEmpty() || parentId == null) return own
+    return refs(parentId, parentTags)
 }

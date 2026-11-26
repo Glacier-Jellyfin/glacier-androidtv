@@ -42,6 +42,8 @@ data class ItemDetails(
     val studios: List<String> = emptyList(),
     /** The title's files when it has several, in the server's order; empty for a single file. */
     val versions: List<MediaVersion> = emptyList(),
+    /** All backdrops in server order (the first is [MediaItem.backdropUrl]); empty without any. */
+    val backdropUrls: List<String> = emptyList(),
 )
 
 /**

@@ -11,6 +11,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Eine Reihe Aufnahmen auf der Startseite und Aufnahmen als wählbare Quelle für das Spotlight
 - Eine Reihe Aufnahmen auf der Favoritenseite
 - Foto- und Videodetails in der Fotoansicht. Mit Unten oder der Info-Taste zeigt der erste Reiter, wann und wo es entstand und in welchem Ordner es liegt, der Reiter Technik die Kamera, die Belichtung und die Datei. Ein Video zeigt dieselben Reiter Technik und Server wie der Player (#43)
+- Detailseiten von Filmen und Serien mit mehreren Hintergrundbildern zeigen sie nacheinander
 
 ### Verbessert
 - Die Zeile über einem Titel ist jetzt ein Pfad. Seine Ebenen öffnen die Bibliothek, die Serie, die Staffel oder einen übergeordneten Ordner

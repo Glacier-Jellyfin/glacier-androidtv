@@ -82,6 +82,7 @@ class DetailRepository @Inject constructor(
                 .distinct(),
             studios = dto.studios.orEmpty().mapNotNull { it.name?.takeIf(String::isNotBlank) },
             versions = versions(session, dto),
+            backdropUrls = mapper.backdrops(dto),
         )
     }
 
