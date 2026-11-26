@@ -58,6 +58,9 @@ data class LibraryRef(
 
 data class EpisodeNeighbours(val previous: MediaItem?, val next: MediaItem?)
 
+/** What the player plays one after another; [upNextPrompt] is false when no "next up" countdown is shown (home videos). */
+data class VideoQueue(val items: List<MediaItem>, val upNextPrompt: Boolean = true)
+
 data class Chapter(
     val name: String,
     val startMs: Long,

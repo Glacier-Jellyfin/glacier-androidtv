@@ -36,6 +36,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - YouTube-Trailer bleiben nicht mehr auf dem Ladebildschirm hängen und schlagen nicht mehr fehl, obwohl sie schon laufen
 - Die Wiedergabe wechselt wegen eines einzelnen langsamen Verbindungstests nicht mehr auf einen kleineren Stream, solange sie mithält. Der Test teilt sich die Leitung mit dem Video, daher wird er wiederholt und zuerst mit der Geschwindigkeit des Players abgeglichen
 - Eine Folge startet nicht mehr mit Untertiteln (oder Ton), die der Server für eine frühere Folge gewählt hat, etwa japanischen Untertiteln. Die nächste Folge übernimmt nur Spuren, die du selbst gewählt hast
+- Heimvideos zeigen kurz vor dem Ende keinen Countdown „Nächste Folge“ mehr. Das nächste Video des Ordners startet weiterhin, wenn eines endet
 
 ## [0.10.1] - 2026-11-18
 

@@ -37,6 +37,7 @@ only in English.
 - Los tráileres de YouTube ya no se quedan en la pantalla de carga ni fallan cuando ya se están reproduciendo
 - La reproducción ya no pasa a un flujo más pequeño por una sola prueba de conexión lenta mientras sigue al día. La prueba comparte la conexión con el vídeo, así que se repite y se contrasta antes con la velocidad del reproductor
 - Un episodio ya no empieza con subtítulos (o audio) que el servidor eligió para un episodio anterior, como subtítulos en japonés. El siguiente episodio solo adopta las pistas que elegiste tú
+- Los vídeos caseros ya no muestran la cuenta atrás «Siguiente episodio» cerca del final. El siguiente vídeo de la carpeta sigue empezando cuando termina uno
 
 ## [0.10.1] - 2026-11-18
 

@@ -30,6 +30,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.Track
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelection
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelections
+import io.github.glacier_jellyfin.androidtv.core.data.media.VideoQueue
 import io.github.glacier_jellyfin.androidtv.core.data.media.forVersion
 import io.github.glacier_jellyfin.androidtv.core.data.playback.MediaSegment
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackMethod
@@ -199,9 +200,9 @@ class PlayerViewModel @Inject constructor(
     /** The file that plays of a title with several; null until known, and for a single file. */
     private var versionId: String? = null
 
-    /** Playlist or artist whose videos play one after another; its list once loaded. */
+    /** Playlist, artist or home video folder whose videos play one after another; its queue once loaded. */
     private val queueOf = route.queueOf?.let(UUID::fromString)
-    private var queue: List<MediaItem>? = null
+    private var queue: VideoQueue? = null
     private var policy = SegmentPolicy()
 
     private val _state = MutableStateFlow(PlayerUiState())
@@ -679,7 +680,7 @@ class PlayerViewModel @Inject constructor(
             viewModelScope.launch {
                 try {
                     val list = queue ?: details.videoQueue(queueSource).also { queue = it }
-                    val neighbours = details.neighboursIn(list, id)
+                    val neighbours = details.neighboursIn(list.items, id)
                     if (id == itemId) _state.update { it.copy(previous = neighbours.previous, next = neighbours.next) }
                 } catch (e: CancellationException) {
                     throw e
@@ -1659,6 +1660,7 @@ class PlayerViewModel @Inject constructor(
     private fun upNext(positionMs: Long, durationMs: Long): UpNextCountdown? {
         val state = _state.value
         if (state.next == null || state.upNextDismissed || state.loading) return null
+        if (queue?.upNextPrompt == false) return null
         val at = policy.upNextAtMs(state.segments, durationMs) ?: return null
         if (positionMs < at) return null
         val remaining = (durationMs - positionMs).coerceAtLeast(0)
