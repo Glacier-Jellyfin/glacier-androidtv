@@ -38,6 +38,9 @@ data object HomeRoute
  */
 const val RETURN_FOCUS = "returnFocus"
 
+/** Saved state key of a show page reached again through a breadcrumb: the season to show and the episode to focus in it. */
+const val FOCUS_EPISODE = "focusEpisode"
+
 /** Set on the home screen's entry when it was opened through the navigation: the focus stays on the bar. */
 const val FOCUS_NAV = "focusNav"
 
@@ -49,6 +52,10 @@ data class LibraryRoute(
     /** Library or genre name shown as the title; the kind name when null. */
     val title: String? = null,
     val genreId: String? = null,
+    /** A title to focus when the library opens, such as the one a breadcrumb came from. */
+    val focusId: String? = null,
+    /** The tab to open (a LibraryScope name) instead of the one the library was left on; only music has several. */
+    val scope: String? = null,
 )
 
 /**
@@ -69,13 +76,15 @@ data class PhotoRoute(val folderId: String, val photoId: String)
 
 /**
  * [themeArea] is the show of an episode opened from its show, known before the page loads (theme song).
- * [seasonId] opens a show on that season instead of the first one with something unwatched.
+ * [seasonId] opens a show on that season instead of the first one with something unwatched;
+ * [focusEpisodeId] puts the focus on that episode of the season.
  */
 @Serializable
 data class DetailRoute(
     val itemId: String,
     val themeArea: String? = null,
     val seasonId: String? = null,
+    val focusEpisodeId: String? = null,
 )
 
 /** Where a title opens: a music video plays in the music player (it has no page of its own), anything else opens its page. */

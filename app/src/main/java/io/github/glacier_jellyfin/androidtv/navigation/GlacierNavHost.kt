@@ -5,10 +5,13 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavGraph
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.toRoute
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.detail.DetailScreen
 import io.github.glacier_jellyfin.androidtv.detail.PersonScreen
@@ -48,6 +51,43 @@ private val TitlePages = listOf(DetailRoute::class, PersonRoute::class, SeerrRou
 
 private const val TAG = "Navigation"
 
+/** Saved state key of a library entry whose route's title to focus was used. */
+private const val OPEN_FOCUS_TAKEN = "openFocusTaken"
+
+/** The route a back stack entry shows, for the kinds of page a breadcrumb leads to or passes; null for any other. */
+private fun routeOf(entry: NavBackStackEntry): Any? = with(entry.destination) {
+    when {
+        hasRoute(DetailRoute::class) -> entry.toRoute<DetailRoute>()
+        hasRoute(PersonRoute::class) -> entry.toRoute<PersonRoute>()
+        hasRoute(SeerrRoute::class) -> entry.toRoute<SeerrRoute>()
+        hasRoute(LibraryRoute::class) -> entry.toRoute<LibraryRoute>()
+        hasRoute(FolderRoute::class) -> entry.toRoute<FolderRoute>()
+        else -> null
+    }
+}
+
+/**
+ * A breadcrumb level to [target]: when the page is on the back stack with only title pages (or folders) above it,
+ * Back goes to it, so the way back stays what it was. A show gets the season and episode to show, a library the
+ * title to focus. Returns false when [target] is to replace the current page instead.
+ */
+@SuppressLint("RestrictedApi")
+private fun goBackTo(navController: NavHostController, target: Any): Boolean {
+    val entries = navController.currentBackStack.value.filter { it.destination !is NavGraph }
+    val routes = entries.map(::routeOf)
+    val index = upwardPopIndex(routes, target) ?: return false
+    val handle = entries[index].savedStateHandle
+    when (target) {
+        is DetailRoute -> if (target.seasonId != null && target.focusEpisodeId != null) {
+            handle[FOCUS_EPISODE] = target.seasonId to target.focusEpisodeId
+        }
+
+        is LibraryRoute -> (routes[index + 1] as? DetailRoute)?.let { handle[RETURN_FOCUS] = it.itemId }
+    }
+    repeat(entries.size - 1 - index) { navController.popBackStack() }
+    return true
+}
+
 @Composable
 fun GlacierNavHost(
     navController: NavHostController,
@@ -57,8 +97,9 @@ fun GlacierNavHost(
     // The whole back stack is readable only through currentBackStack, which lint reports as
     // library-restricted although Navigation offers no public way to it.
     @SuppressLint("RestrictedApi")
-    val navigate: (UiEvent.Navigate) -> Unit = { event ->
+    val navigate: (UiEvent.Navigate) -> Unit = navigate@{ event ->
         Log.d(TAG, "Open ${event.route}")
+        if (event.upward && goBackTo(navController, event.route)) return@navigate
         val current = navController.currentDestination?.id
         // The screen under the title and cast pages on top, such as a library or search.
         // It learns the title opened last, to focus that one when Back returns to it.
@@ -128,11 +169,27 @@ fun GlacierNavHost(
             LibraryScreen(
                 onNavigate = navigate,
                 takeReturnFocus = { entry.savedStateHandle.remove<String>(RETURN_FOCUS) },
+                // Once: coming back to the library later keeps the title the user left it on.
+                takeOpenFocus = {
+                    val handle = entry.savedStateHandle
+                    if (handle.get<Boolean>(OPEN_FOCUS_TAKEN) == true) {
+                        null
+                    } else {
+                        handle[OPEN_FOCUS_TAKEN] = true
+                        entry.toRoute<LibraryRoute>().focusId
+                    }
+                },
             )
         }
         composable<FolderRoute> { FolderScreen(onNavigate = navigate) }
         composable<PhotoRoute> { PhotoScreen(onNavigate = navigate) }
-        composable<DetailRoute> { DetailScreen(onNavigate = navigate, onBack = back) }
+        composable<DetailRoute> { entry ->
+            DetailScreen(
+                onNavigate = navigate,
+                onBack = back,
+                takeEpisodeFocus = { entry.savedStateHandle.remove<Pair<String, String>>(FOCUS_EPISODE) },
+            )
+        }
         composable<PersonRoute> { PersonScreen(onNavigate = navigate) }
 
         // Later development steps; placeholders keep the navigation testable.

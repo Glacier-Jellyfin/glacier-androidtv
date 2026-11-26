@@ -105,6 +105,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderShow
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSort
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderView
+import io.github.glacier_jellyfin.androidtv.core.designsystem.Breadcrumb
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierCard
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
@@ -119,7 +120,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.core.designsystem.focusFrame
 import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberEdgeSpec
-import io.github.glacier_jellyfin.androidtv.detail.Crumb
+import io.github.glacier_jellyfin.androidtv.detail.crumbLevel
 import io.github.glacier_jellyfin.androidtv.navigation.BackFromTop
 import io.github.glacier_jellyfin.androidtv.navigation.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.navigation.NavTarget
@@ -155,6 +156,7 @@ fun FolderScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: FolderViewMo
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onStop() }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.shown() }
     val pageFocus = remember { FocusRequester() }
+    val crumbFocus = remember { FocusRequester() }
     // At the top, Back on the page first goes up to the navigation bar. In a folder it goes up a folder.
     val navFocus = remember { FocusRequester() }
     var onPage by remember { mutableStateOf(false) }
@@ -256,13 +258,21 @@ fun FolderScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: FolderViewMo
                 val sections = remember(content, settings) { mediaSections(content, settings) }
                 val header: @Composable () -> Unit = {
                     Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                        // In a folder: the way down to it, from the kind's name. Too long, it loses its start.
+                        // In a folder: the way down to it, from the kind's name; each folder above opens. Too long, it loses its start.
                         if (!viewModel.inNavBar) {
-                            Crumb(
-                                (listOf(stringResource(LibraryKind.HomeVideos.title)) + content.trail)
-                                    .joinToString(" › "),
-                                overflow = TextOverflow.StartEllipsis,
-                            )
+                            val top = stringResource(LibraryKind.HomeVideos.title)
+                            val topFocus = content.trail.firstOrNull()?.id ?: content.id
+                            val levels = listOf(crumbLevel(top) { viewModel.openLevel(null, null, topFocus) }) +
+                                content.trail.mapIndexed { index, folder ->
+                                    crumbLevel(folder.name) {
+                                        viewModel.openLevel(
+                                            folder.id,
+                                            folder.name,
+                                            content.trail.getOrNull(index + 1)?.id ?: content.id,
+                                        )
+                                    }
+                                }
+                            Breadcrumb(levels, lowestFocus = crumbFocus, startEllipsis = true)
                         }
                         Text(
                             title,
@@ -285,6 +295,8 @@ fun FolderScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: FolderViewMo
                             onAnchor = { menu, rect -> anchors[menu] = rect },
                             menuButtons = menuButtons,
                             active = activeView,
+                            // Up lands on the lowest level of the breadcrumb, not on the one nearest.
+                            crumb = crumbFocus.takeIf { !viewModel.inNavBar },
                         )
                     }
                 }
@@ -347,7 +359,9 @@ fun FolderScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: FolderViewMo
                 onSelect = viewModel::onNav,
                 // Down goes back to the card left last. Not a focus restorer on the page: it would also
                 // take a focus request meant for another card, such as Left from the A–Z rail.
-                down = lastFocus?.let { key -> requesters.getOrPut(key) { FocusRequester() } } ?: pageFocus,
+                // Not the page itself: its first focusable thing is the breadcrumb now.
+                down = lastFocus?.let { key -> requesters.getOrPut(key) { FocusRequester() } }
+                    ?: if (empty) pageFocus else activeView,
                 focusRequester = navFocus,
                 modifier = Modifier.padding(top = 34.dp),
                 backHome = viewModel.inNavBar,
@@ -847,6 +861,7 @@ private fun Toolbar(
     onAnchor: (FolderMenu, Rect) -> Unit,
     menuButtons: Map<FolderMenu, FocusRequester>,
     active: FocusRequester,
+    crumb: FocusRequester?,
 ) {
     Row(
         Modifier
@@ -859,7 +874,9 @@ private fun Toolbar(
                     }
                 }
             }
-            .focusGroup(),
+            .focusGroup()
+            // After the group, so it holds for the controls in it.
+            .then(if (crumb != null) Modifier.focusProperties { up = crumb } else Modifier),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {

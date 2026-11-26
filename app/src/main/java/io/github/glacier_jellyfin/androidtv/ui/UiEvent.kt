@@ -10,6 +10,8 @@ sealed interface UiEvent {
      * cast page on top, so Back goes to where the first of them was opened from.
      * [focusNav] asks the new screen to leave the focus on its navigation entry, as after a
      * pick in the navigation bar (only the home screen reads it).
+     * [upward] is a breadcrumb level: the page it opens (with [replace]) is brought back by going Back to it
+     * when it is on the back stack just below titles (or folders, for a folder), else it replaces the current page.
      */
     data class Navigate(
         val route: Any,
@@ -17,6 +19,7 @@ sealed interface UiEvent {
         val replace: Boolean = false,
         val leaveTitles: Boolean = false,
         val focusNav: Boolean = false,
+        val upward: Boolean = false,
     ) : UiEvent
     data class Toast(@StringRes val message: Int, val args: List<Any> = emptyList()) : UiEvent
 }

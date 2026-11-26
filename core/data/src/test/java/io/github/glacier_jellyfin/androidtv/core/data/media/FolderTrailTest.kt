@@ -27,23 +27,26 @@ class FolderTrailTest {
 
     @Test
     fun `the path runs from the top down and leaves out the server's root`() {
-        assertEquals(listOf("Family", "2024"), trail(ancestors, severalLibraries = true))
+        assertEquals(
+            listOf(TrailFolder(UUID(0, 2), "Family"), TrailFolder(UUID(0, 1), "2024")),
+            trail(ancestors, severalLibraries = true),
+        )
     }
 
     @Test
     fun `the only library is left out`() {
-        assertEquals(listOf("2024"), trail(ancestors, severalLibraries = false))
+        assertEquals(listOf(TrailFolder(UUID(0, 1), "2024")), trail(ancestors, severalLibraries = false))
     }
 
     @Test
     fun `a folder right in the only library has no path`() {
-        assertEquals(emptyList<String>(), trail(ancestors.drop(1), severalLibraries = false))
+        assertEquals(emptyList<TrailFolder>(), trail(ancestors.drop(1), severalLibraries = false))
     }
 
     @Test
     fun `no library among the ancestors gives no path`() {
         assertEquals(
-            emptyList<String>(),
+            emptyList<TrailFolder>(),
             trail(listOf(item(3, BaseItemKind.AGGREGATE_FOLDER, "root")), severalLibraries = true),
         )
     }

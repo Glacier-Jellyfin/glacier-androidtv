@@ -12,6 +12,9 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.CastMember
 import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
+import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
+import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryRef
+import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryScope
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
@@ -35,6 +38,7 @@ import io.github.glacier_jellyfin.androidtv.music.MusicActions
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.music.MusicTarget
 import io.github.glacier_jellyfin.androidtv.navigation.DetailRoute
+import io.github.glacier_jellyfin.androidtv.navigation.LibraryRoute
 import io.github.glacier_jellyfin.androidtv.navigation.MusicRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PersonRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
@@ -87,6 +91,12 @@ data class DetailState(
     val artistVideos: List<MediaItem> = emptyList(),
     /** Videos of a playlist (its songs are in [musicTracks]). */
     val playlistVideos: List<MediaItem> = emptyList(),
+    /** The library the title is in, for the breadcrumb; null until found, or when it has none. */
+    val library: LibraryRef? = null,
+    /** A show page opened for an episode: it takes the focus once the episode row is there. */
+    val episodeFocus: UUID? = null,
+    /** The page waits for the episode row, so its focus can start there: the loader stays until then. */
+    val awaitingEpisode: Boolean = false,
     /** The title stays locked (PIN dialog dismissed, or hidden for this profile): leave the page. */
     val leave: Boolean = false,
 ) {
@@ -116,11 +126,15 @@ class DetailViewModel @Inject constructor(
     /** The season a show opens on, when its page was opened for one (a season in a collection). */
     private val routeSeasonId: UUID? = savedStateHandle.toRoute<DetailRoute>().seasonId?.let(UUID::fromString)
 
+    private val routeFocusEpisode: UUID? = savedStateHandle.toRoute<DetailRoute>().focusEpisodeId?.let(UUID::fromString)
+
     /** Settings › Appearance: a collection's movies and shows in one row. */
     val collectionMoviesWithShows: Boolean get() = settings.settings.value.appearance.collectionMoviesWithShows
     private var themeSongLoaded = false
 
-    private val _state = MutableStateFlow(DetailState())
+    private val _state = MutableStateFlow(
+        DetailState(episodeFocus = routeFocusEpisode, awaitingEpisode = routeFocusEpisode != null),
+    )
     val state: StateFlow<DetailState> = _state.asStateFlow()
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
@@ -166,6 +180,7 @@ class DetailViewModel @Inject constructor(
                     return@launch
                 }
                 _state.update { it.copy(details = details, selection = selection) }
+                resolveLibrary(details.item)
                 when (details.item.kind) {
                     ItemKind.Series -> loadSeries(details)
 
@@ -202,6 +217,7 @@ class DetailViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         loading = false,
+                        awaitingEpisode = false,
                         similar = if (withSimilar) similarAsync.await() else emptyList(),
                     )
                 }
@@ -209,8 +225,30 @@ class DetailViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Loading details failed", e)
-                _state.update { it.copy(loading = false, failed = true) }
+                _state.update { it.copy(loading = false, failed = true, awaitingEpisode = false) }
             }
+        }
+    }
+
+    /** Finds the library of [item] beside the rest of the page: its breadcrumb level stays plain until then. */
+    private fun resolveLibrary(item: MediaItem) {
+        if (_state.value.library != null) return
+        val kind = when (item.kind) {
+            ItemKind.Movie -> LibraryKind.Movies
+            ItemKind.Series, ItemKind.Episode -> LibraryKind.Shows
+            ItemKind.Album, ItemKind.Artist, ItemKind.Playlist -> LibraryKind.Music
+            else -> return
+        }
+        // Artists and playlists belong to no one library: the music of every library.
+        if (item.kind == ItemKind.Artist || item.kind == ItemKind.Playlist) {
+            _state.update { it.copy(library = LibraryRef(null, kind, null)) }
+            return
+        }
+        viewModelScope.launch {
+            val library = runSuspendCatching { repository.library(item.id, kind) }
+                .onFailure { Log.w(TAG, "Finding the library failed", it) }
+                .getOrNull()
+            if (library != null) _state.update { it.copy(library = library) }
         }
     }
 
@@ -340,7 +378,8 @@ class DetailViewModel @Inject constructor(
             ?: regular.firstOrNull { (it.unwatchedCount ?: 0) > 0 } ?: regular.lastOrNull()
         val next = runSuspendCatching { repository.nextEpisode(details.item.id) }.getOrNull()
         _state.update { it.copy(seasons = seasons, nextEpisode = next) }
-        season?.let { selectSeason(it, details.item.id) }
+        season?.let { selectSeason(it, details.item.id, focusId = routeFocusEpisode) }
+        _state.update { it.copy(awaitingEpisode = false) }
     }
 
     private suspend fun loadSeasonOf(details: ItemDetails) {
@@ -408,6 +447,82 @@ class DetailViewModel @Inject constructor(
         val seriesId = season.seriesId ?: return openItem(season)
         navigate(DetailRoute(seriesId.toString(), themeArea = seriesId.toString(), seasonId = season.id.toString()))
     }
+
+    /** The library level of the breadcrumb: its page replaces this one, or is gone back to. */
+    fun openLibrary() {
+        val library = _state.value.library ?: return
+        val details = _state.value.details ?: return
+        // The library lists the show, not its episode.
+        val title = details.seriesId.takeIf { details.item.kind == ItemKind.Episode } ?: details.item.id
+        upward(
+            LibraryRoute(
+                library.kind.name,
+                library.id?.toString(),
+                title = library.name,
+                focusId = title.toString(),
+            ),
+        )
+    }
+
+    /** The "Artists" or "Playlists" level of a music page: the music library on that tab, with this page's artist or playlist focused. */
+    fun openMusicList() {
+        val library = _state.value.library ?: return
+        val item = _state.value.item ?: return
+        val (scope, focus) = when (item.kind) {
+            ItemKind.Playlist -> LibraryScope.Playlists to item.id
+            ItemKind.Artist -> LibraryScope.Artists to item.id
+            else -> LibraryScope.Artists to (item.artistId ?: return)
+        }
+        upward(
+            LibraryRoute(
+                library.kind.name,
+                library.id?.toString(),
+                title = library.name,
+                focusId = focus.toString(),
+                scope = scope.name,
+            ),
+        )
+    }
+
+    /** The show level of an episode's breadcrumb. */
+    fun openShow() {
+        val seriesId = _state.value.details?.seriesId ?: return
+        upward(DetailRoute(seriesId.toString(), themeArea = seriesId.toString()))
+    }
+
+    /** The season level of an episode's breadcrumb: the show's page on that season, with this episode in focus. */
+    fun openSeasonOfEpisode() {
+        val details = _state.value.details ?: return
+        val seriesId = details.seriesId ?: return
+        val seasonId = details.seasonId ?: return
+        upward(
+            DetailRoute(
+                seriesId.toString(),
+                themeArea = seriesId.toString(),
+                seasonId = seasonId.toString(),
+                focusEpisodeId = details.item.id.toString(),
+            ),
+        )
+    }
+
+    /** The show page is shown again after going back to it from [episodeId]: it switches to [seasonId] with that episode in focus. */
+    fun showEpisodeOf(seasonId: UUID, episodeId: UUID) {
+        val current = _state.value
+        val season = current.seasons.firstOrNull { it.id == seasonId } ?: return
+        val inList = current.episodes.indexOfFirst { it.id == episodeId }
+        if (current.season?.id == seasonId && inList >= 0) {
+            _state.update { it.copy(focusEpisode = inList, episodeFocus = episodeId) }
+            return
+        }
+        _state.update { it.copy(episodeFocus = episodeId, awaitingEpisode = true) }
+        viewModelScope.launch {
+            selectSeason(season, itemId, focusId = episodeId)
+            _state.update { it.copy(awaitingEpisode = false) }
+        }
+    }
+
+    /** The episode row took the focus (or could not): there is nothing left to focus. */
+    fun episodeFocusTaken() = _state.update { it.copy(episodeFocus = null) }
 
     fun openPerson(person: MediaItem) = navigate(
         PersonRoute(person.id.toString(), fromTitle = _state.value.item?.title),
@@ -880,6 +995,12 @@ class DetailViewModel @Inject constructor(
      */
     fun openSimilar(item: MediaItem) = navigate(routeFor(item), leaveTitles = true)
 
+    /** The artist level of an album's breadcrumb: the artist's page replaces this one, or is gone back to. */
+    fun openArtistLevel() {
+        val artistId = _state.value.item?.artistId ?: return
+        upward(DetailRoute(artistId.toString()))
+    }
+
     /** An album's artist page. */
     fun openArtist() {
         val artistId = _state.value.item?.artistId ?: return
@@ -898,6 +1019,11 @@ class DetailViewModel @Inject constructor(
 
     private fun toast(message: Int) {
         viewModelScope.launch { _events.send(UiEvent.Toast(message)) }
+    }
+
+    /** A breadcrumb level: [route] replaces this page, unless Back leads there anyway. */
+    private fun upward(route: Any) {
+        viewModelScope.launch { _events.send(UiEvent.Navigate(route, replace = true, upward = true)) }
     }
 
     private fun navigate(route: Any, leaveTitles: Boolean = false) {

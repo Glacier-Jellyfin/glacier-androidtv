@@ -48,6 +48,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrMediaType
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrSeason
 import io.github.glacier_jellyfin.androidtv.core.data.media.SeerrStatus
 import io.github.glacier_jellyfin.androidtv.core.designsystem.ActionButton
+import io.github.glacier_jellyfin.androidtv.core.designsystem.Breadcrumb
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
@@ -60,12 +61,12 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberRowPivotSp
 import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberingFocus
 import io.github.glacier_jellyfin.androidtv.core.designsystem.rowFocus
 import io.github.glacier_jellyfin.androidtv.detail.CastCard
-import io.github.glacier_jellyfin.androidtv.detail.Crumb
 import io.github.glacier_jellyfin.androidtv.detail.ErrorState
 import io.github.glacier_jellyfin.androidtv.detail.HEADER_REGION
 import io.github.glacier_jellyfin.androidtv.detail.Overview
 import io.github.glacier_jellyfin.androidtv.detail.ScrollingBackdrop
 import io.github.glacier_jellyfin.androidtv.detail.Title
+import io.github.glacier_jellyfin.androidtv.detail.crumbLevel
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.FactBadge
 import io.github.glacier_jellyfin.androidtv.ui.FilterChip
@@ -131,15 +132,18 @@ private fun Page(
                         Modifier.padding(start = PageEdge.dp, end = PageEdge.dp, top = 130.dp, bottom = 20.dp),
                         verticalArrangement = Arrangement.spacedBy(22.dp),
                     ) {
-                        Crumb(
-                            stringResource(
-                                R.string.seerr_crumb,
-                                stringResource(
-                                    if (item.type == SeerrMediaType.Movie) {
-                                        R.string.seerr_movie
-                                    } else {
-                                        R.string.seerr_show
-                                    },
+                        // There is no Seerr page to open: both levels are plain.
+                        Breadcrumb(
+                            listOf(
+                                crumbLevel(stringResource(R.string.seerr_name)),
+                                crumbLevel(
+                                    stringResource(
+                                        if (item.type == SeerrMediaType.Movie) {
+                                            R.string.seerr_movie
+                                        } else {
+                                            R.string.seerr_show
+                                        },
+                                    ),
                                 ),
                             ),
                         )

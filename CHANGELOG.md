@@ -27,6 +27,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - A Recordings row on the favorites page
 
 ### Improved
+- The line above a title is now a breadcrumb. Its levels open the library, the show, the season or a parent folder
 - Specials that a season lists between its episodes are marked with a "Special" badge
 - Badges on episode pictures and posters have a darker background and stay readable on bright images
 - Episode details name a special as "Specials" instead of season 0

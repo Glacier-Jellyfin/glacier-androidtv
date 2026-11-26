@@ -29,6 +29,9 @@ interface FolderEntry {
     val date: LocalDateTime?
 }
 
+/** A folder above the one shown, with the id that opens it. */
+data class TrailFolder(val id: UUID, val name: String)
+
 /** A folder of a home video library, or the library itself when there are several; dated like a photo. */
 data class MediaFolder(
     val id: UUID,
@@ -66,14 +69,14 @@ sealed interface FolderMedia : FolderEntry {
 
 /**
  * What a folder holds: its subfolders and its videos and photos ([media]), both by name; the page sorts them for the profile.
- * [id] is the folder shown, null for the list of several libraries. [trail] names the folders
+ * [id] is the folder shown, null for the list of several libraries. [trail] lists the folders
  * above it, from the top: the library only when there are several. Empty at the top.
  */
 data class FolderContent(
     val id: UUID?,
     val folders: List<MediaFolder>,
     val media: List<FolderMedia> = emptyList(),
-    val trail: List<String> = emptyList(),
+    val trail: List<TrailFolder> = emptyList(),
 ) {
     val isEmpty: Boolean get() = folders.isEmpty() && media.isEmpty()
 }
@@ -218,12 +221,12 @@ fun <T : FolderEntry> List<T>.sortedFor(settings: FolderSettings): List<T> {
 }
 
 /**
- * Names of the folders above one, from the top: [ancestors] (parent first, up to the server's root)
+ * The folders above one, from the top: [ancestors] (parent first, up to the server's root)
  * up to the library, which counts only when there are [severalLibraries].
  */
-internal fun trail(ancestors: List<BaseItemDto>, severalLibraries: Boolean): List<String> {
+internal fun trail(ancestors: List<BaseItemDto>, severalLibraries: Boolean): List<TrailFolder> {
     val library = ancestors.indexOfFirst { it.type == BaseItemKind.COLLECTION_FOLDER }
     if (library < 0) return emptyList()
     val below = ancestors.take(if (severalLibraries) library + 1 else library)
-    return below.reversed().map { it.name.orEmpty() }
+    return below.reversed().map { TrailFolder(it.id, it.name.orEmpty()) }
 }

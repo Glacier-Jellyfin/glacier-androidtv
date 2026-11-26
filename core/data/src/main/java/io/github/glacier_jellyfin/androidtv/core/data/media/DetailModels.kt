@@ -44,6 +44,16 @@ data class ItemDetails(
     val versions: List<MediaVersion> = emptyList(),
 )
 
+/**
+ * The library a title is in, to open it from the page's breadcrumb. Without [id], every library of [kind]
+ * (music pages that are in no one library, such as an artist's).
+ */
+data class LibraryRef(
+    val id: UUID?,
+    val kind: LibraryKind,
+    val name: String?,
+)
+
 data class EpisodeNeighbours(val previous: MediaItem?, val next: MediaItem?)
 
 data class Chapter(

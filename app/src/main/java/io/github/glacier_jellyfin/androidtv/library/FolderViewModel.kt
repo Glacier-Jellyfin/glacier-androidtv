@@ -153,6 +153,20 @@ class FolderViewModel @Inject constructor(
         navigate(FolderRoute(folder.id.toString(), folder.name))
     }
 
+    /**
+     * A level of the breadcrumb: the folder [id] named [name] (null: the top), or the way back to it.
+     * It replaces this folder; [focus] is the folder below it on the way here, to focus there.
+     */
+    fun openLevel(
+        id: UUID?,
+        name: String?,
+        focus: UUID?,
+    ) = navigate(
+        FolderRoute(id?.toString(), name, focus?.toString()),
+        replace = true,
+        upward = true,
+    )
+
     /** The screen is shown (again): the folders below it were left, so Back from them lands here. */
     fun shown() = memory.folderShown(folderId)
 
@@ -220,8 +234,12 @@ class FolderViewModel @Inject constructor(
         viewModelScope.launch { _events.send(event) }
     }
 
-    private fun navigate(route: Any) {
-        viewModelScope.launch { _events.send(UiEvent.Navigate(route)) }
+    private fun navigate(
+        route: Any,
+        replace: Boolean = false,
+        upward: Boolean = false,
+    ) {
+        viewModelScope.launch { _events.send(UiEvent.Navigate(route, replace = replace, upward = upward)) }
     }
 
     private companion object {

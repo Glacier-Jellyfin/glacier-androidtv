@@ -13,6 +13,7 @@ only in English.
 - Una fila de Grabaciones en la página de favoritos
 
 ### Mejoras
+- La línea sobre un título ahora es una ruta. Sus niveles abren la biblioteca, la serie, la temporada o una carpeta superior
 - Los especiales que una temporada muestra entre sus episodios llevan la etiqueta «Especial»
 - Las etiquetas sobre imágenes de episodios y pósteres tienen un fondo más oscuro y se leen bien en imágenes claras
 - Los detalles del episodio llaman a un especial «Especiales» en lugar de temporada 0

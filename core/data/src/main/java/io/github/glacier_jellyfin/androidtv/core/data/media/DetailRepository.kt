@@ -4,6 +4,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleMode
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -175,6 +176,18 @@ class DetailRepository @Inject constructor(
                 },
             )
         }
+    }
+
+    /**
+     * The library [id] is in, found through its ancestors: null when none is among them or the server fails.
+     * [fallback] is the kind to assume when the library does not name its own.
+     */
+    suspend fun library(id: UUID, fallback: LibraryKind): LibraryRef? = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        runSuspendCatching { session.api.libraryApi.getAncestors(itemId = id, userId = session.userId).content }
+            .getOrNull()
+            ?.firstOrNull { it.type == BaseItemKind.COLLECTION_FOLDER }
+            ?.let { LibraryRef(it.id, it.collectionType.toLibraryKind() ?: fallback, it.name) }
     }
 
     suspend fun seasons(seriesId: UUID): List<Season> = withContext(Dispatchers.IO) {

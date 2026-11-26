@@ -137,6 +137,8 @@ fun LibraryScreen(
     onNavigate: (UiEvent.Navigate) -> Unit,
     /** The title Back came from after "More like this" led away from the one opened here, once. */
     takeReturnFocus: () -> String? = { null },
+    /** The title the library was opened for (from a breadcrumb), once: focused when it is among the first ones. */
+    takeOpenFocus: () -> String? = { null },
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -324,8 +326,11 @@ fun LibraryScreen(
         focusPlaced = true
         // Back after "More like this": the title the user came back from, when it is here.
         val returned = takeReturnFocus()?.takeIf { viewModel.reveal(it, columns) }
-        if (returned != null) {
-            lastFocusId = returned
+        // Only a title already loaded: no waiting for the server, else the first title takes the focus as before.
+        val opened = takeOpenFocus()?.takeIf { id -> state.items.any { it.id.toString() == id } }
+        if (returned != null || opened != null) {
+            lastFocusId = returned ?: opened
+            initialFocusDone = true
         } else if (!initialFocusDone && !keyPressed) {
             // Back through the navigation bar: the title focused when the library was left, if still there.
             viewModel.restoredFocus?.takeIf { viewModel.reveal(it, columns) }?.let {

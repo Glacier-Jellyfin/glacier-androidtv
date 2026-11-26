@@ -61,7 +61,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -74,6 +73,8 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.Season
 import io.github.glacier_jellyfin.androidtv.core.data.media.versionLabels
 import io.github.glacier_jellyfin.androidtv.core.designsystem.ActionButton
+import io.github.glacier_jellyfin.androidtv.core.designsystem.Breadcrumb
+import io.github.glacier_jellyfin.androidtv.core.designsystem.BreadcrumbLevel
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
@@ -85,6 +86,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.blockKeysWhile
+import io.github.glacier_jellyfin.androidtv.core.designsystem.hasFocusable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberEdgeSpec
 import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberRowFocus
 import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberRowPivotSpec
@@ -118,6 +120,9 @@ import java.time.format.FormatStyle
 import java.util.UUID
 import kotlinx.coroutines.delay
 
+/** Header, season chips, episode row: where the episodes sit in a show's page. */
+private const val EPISODES_INDEX = 2
+
 private const val MEDIA_BACKDROP = 760
 private const val EPISODE_BACKDROP = 720
 
@@ -139,10 +144,17 @@ private val VideoKinds = setOf(ItemKind.Movie, ItemKind.Series, ItemKind.MusicVi
 fun DetailScreen(
     onNavigate: (UiEvent.Navigate) -> Unit,
     onBack: () -> Unit,
+    /** The season and episode a breadcrumb went back to this show page for, once. */
+    takeEpisodeFocus: () -> Pair<String, String>? = { null },
     viewModel: DetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
+    LaunchedEffect(Unit) {
+        takeEpisodeFocus()?.let { (season, episode) ->
+            viewModel.showEpisodeOf(UUID.fromString(season), UUID.fromString(episode))
+        }
+    }
     val details = state.details
     val pinPrompt by viewModel.pin.prompt.collectAsStateWithLifecycle()
     LaunchedEffect(state.leave) { if (state.leave) onBack() }
@@ -154,7 +166,10 @@ fun DetailScreen(
     // A locked title asks for its PIN with no details yet: the dialog must stay operable.
     // A loader covers the page: the remote must not reach the navigation or anything else behind it.
     Box(
-        Modifier.fillMaxSize().blockKeysWhile(details == null && !state.failed && pinPrompt == null, takeFocus = true),
+        Modifier.fillMaxSize().blockKeysWhile(
+            (details == null || state.awaitingEpisode) && !state.failed && pinPrompt == null,
+            takeFocus = true,
+        ),
     ) {
         // Down from the mini player lands where Up left.
         Box(Modifier.fillMaxSize().focusRequester(pageFocus).focusRestorer()) {
@@ -162,7 +177,11 @@ fun DetailScreen(
                 when {
                     details == null && state.failed -> ErrorState(onRetry = viewModel::load)
 
-                    details == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    // A show opened for one of its episodes waits for the episode row, which takes the focus.
+                    details == null || state.awaitingEpisode -> Box(
+                        Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         SpinningDiamond(110)
                     }
 
@@ -216,6 +235,24 @@ internal val LocalMiniPlayerFocus = compositionLocalOf<FocusRequester?> { null }
 /** Up from the buttons in this row goes to the [mini] player; focus search does not get there out of the page's list. */
 internal fun Modifier.upTo(mini: FocusRequester?): Modifier = if (mini == null) this else focusProperties { up = mini }
 
+/** Up from the buttons goes to the breadcrumb's lowest level [crumb] (null: it has none), else to the [mini] player. */
+internal fun Modifier.upTo(crumb: FocusRequester?, mini: FocusRequester?): Modifier =
+    if (crumb != null) focusProperties { up = crumb } else upTo(mini)
+
+/** Up from the breadcrumb goes to the [mini] player when there is one; Down to the page's [play] button. */
+internal fun Modifier.aroundCrumb(mini: FocusRequester?, play: FocusRequester): Modifier = focusProperties {
+    down = play
+    if (mini != null) up = mini
+}
+
+/** A level of a page's breadcrumb; with an [onClick] it opens that place and reads as "Open <label>". */
+@Composable
+internal fun crumbLevel(label: String, onClick: (() -> Unit)? = null) = BreadcrumbLevel(
+    label,
+    onClick,
+    contentDescription = onClick?.let { stringResource(R.string.breadcrumb_open, label) },
+)
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MediaDetail(
@@ -226,7 +263,21 @@ private fun MediaDetail(
     val item = details.item
     val listState = rememberLazyListState()
     val playFocus = remember { FocusRequester() }
+    val crumbFocus = remember { FocusRequester() }
     var initialFocusDone by rememberSaveable(item.id) { mutableStateOf(false) }
+    val crumb = listOfNotNull(
+        crumbLevel(
+            stringResource(if (item.kind == ItemKind.Series) R.string.library_shows else R.string.library_movies),
+            viewModel::openLibrary.takeIf { state.library != null },
+        ),
+        state.season?.number?.let { crumbLevel(seasonLabel(it)) }.takeIf { item.kind == ItemKind.Series },
+    )
+    // A show opened for an episode: the episode row is out of sight until the page has scrolled to it.
+    LaunchedEffect(state.episodeFocus) {
+        if (state.episodeFocus != null && listState.layoutInfo.visibleItemsInfo.none { it.key == "episodes" }) {
+            listState.scrollToItem(EPISODES_INDEX)
+        }
+    }
 
     Box(Modifier.fillMaxSize().background(ImagePageGround)) {
         ScrollingBackdrop(item.backdropUrl, MEDIA_BACKDROP, listState)
@@ -237,23 +288,17 @@ private fun MediaDetail(
                         Modifier.padding(start = PageEdge.dp, end = PageEdge.dp, top = 130.dp),
                         verticalArrangement = Arrangement.spacedBy(22.dp),
                     ) {
-                        Crumb(
-                            listOfNotNull(
-                                stringResource(
-                                    if (item.kind == ItemKind.Series) {
-                                        R.string.library_shows
-                                    } else {
-                                        R.string.library_movies
-                                    },
-                                ),
-                                state.season?.number?.let { seasonLabel(it) }.takeIf { item.kind == ItemKind.Series },
-                            ).joinToString(" · "),
+                        Breadcrumb(
+                            crumb,
+                            modifier = Modifier.aroundCrumb(LocalMiniPlayerFocus.current, playFocus),
+                            lowestFocus = crumbFocus,
                         )
                         Title(item.title, size = 84, maxWidth = 1180)
                         FactsRow(item, mediaFacts(details), tech = techLine(details))
                         item.overview?.let { Overview(it, maxWidth = 900) }
                         Row(
-                            Modifier.padding(top = 10.dp).upTo(LocalMiniPlayerFocus.current),
+                            Modifier.padding(top = 10.dp)
+                                .upTo(crumbFocus.takeIf { crumb.hasFocusable }, LocalMiniPlayerFocus.current),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(14.dp),
                         ) {
@@ -278,8 +323,9 @@ private fun MediaDetail(
                             }
                         }
                     }
-                    LaunchedEffect(item.id) {
-                        if (!initialFocusDone) {
+                    // Not while an episode is to take the focus: the first frame must not show Play focused.
+                    LaunchedEffect(item.id, state.episodeFocus == null) {
+                        if (!initialFocusDone && state.episodeFocus == null) {
                             withFrameNanos { }
                             initialFocusDone = runCatching { playFocus.requestFocus() }.isSuccess
                         }
@@ -296,6 +342,11 @@ private fun MediaDetail(
                             currentId = null,
                             seasonNumber = state.season?.number,
                             onClick = viewModel::openEpisode,
+                            autoFocus = state.episodeFocus,
+                            onAutoFocused = { focused ->
+                                if (focused) initialFocusDone = true
+                                viewModel.episodeFocusTaken()
+                            },
                             modifier = Modifier.padding(top = 4.dp, bottom = 20.dp),
                         )
                     }
@@ -350,7 +401,16 @@ private fun EpisodeDetail(
     val episode = details.item
     val listState = rememberLazyListState()
     val playFocus = remember { FocusRequester() }
+    val crumbFocus = remember { FocusRequester() }
     var initialFocusDone by rememberSaveable(details.item.id) { mutableStateOf(false) }
+    val showOpens = viewModel::openShow.takeIf { details.seriesId != null }
+    val seasonOpens = viewModel::openSeasonOfEpisode.takeIf { details.seriesId != null && details.seasonId != null }
+    val crumb = listOfNotNull(
+        crumbLevel(stringResource(R.string.library_shows), viewModel::openLibrary.takeIf { state.library != null }),
+        episode.parentTitle?.takeIf { it.isNotBlank() }?.let { crumbLevel(it, showOpens) },
+        episode.seasonNumber?.let { crumbLevel(seasonLabel(it), seasonOpens) },
+        episode.episodeNumber?.let { crumbLevel(stringResource(R.string.episode_number, it)) },
+    )
     val locale = LocalConfiguration.current.locales[0]
 
     Box(Modifier.fillMaxSize().background(ImagePageGround)) {
@@ -364,25 +424,10 @@ private fun EpisodeDetail(
                     ) {
                         EpisodeStill(episode)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                            val season = episode.seasonNumber
-                            val number = episode.episodeNumber
-                            Crumb(
-                                if (season == 0 && number != null) {
-                                    stringResource(
-                                        R.string.episode_crumb_special,
-                                        episode.parentTitle.orEmpty(),
-                                        number,
-                                    )
-                                } else if (season != null && number != null) {
-                                    stringResource(
-                                        R.string.episode_crumb,
-                                        episode.parentTitle.orEmpty(),
-                                        season,
-                                        number,
-                                    )
-                                } else {
-                                    episode.parentTitle.orEmpty()
-                                },
+                            Breadcrumb(
+                                crumb,
+                                modifier = Modifier.aroundCrumb(LocalMiniPlayerFocus.current, playFocus),
+                                lowestFocus = crumbFocus,
                             )
                             Title(episode.title, size = 64, maxWidth = 1000)
                             val aired = details.premiereDate?.format(
@@ -409,7 +454,8 @@ private fun EpisodeDetail(
                                 )
                             }
                             Row(
-                                Modifier.padding(top = 6.dp).upTo(LocalMiniPlayerFocus.current),
+                                Modifier.padding(top = 6.dp)
+                                    .upTo(crumbFocus.takeIf { crumb.hasFocusable }, LocalMiniPlayerFocus.current),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                             ) {
@@ -477,26 +523,6 @@ internal fun ScrollingBackdrop(
                 }
         },
     )
-}
-
-/** One line; too long, it gives up [overflow]'s end (a folder path keeps its nearest part with a start ellipsis). */
-@Composable
-internal fun Crumb(text: String, overflow: TextOverflow = TextOverflow.Ellipsis) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Icon(
-            GlacierIcons.ChevronLeft,
-            contentDescription = null,
-            tint = GlacierColors.Mist,
-            modifier = Modifier.size(16.dp),
-        )
-        Text(
-            text.uppercase(),
-            style = GlacierText.body(17).copy(letterSpacing = 0.06.em),
-            color = GlacierColors.Mist,
-            maxLines = 1,
-            overflow = overflow,
-        )
-    }
 }
 
 @Composable
@@ -884,15 +910,22 @@ private fun EpisodeRow(
     seasonNumber: Int?,
     onClick: (MediaItem) -> Unit,
     modifier: Modifier = Modifier,
+    /** An episode to take the focus once, as soon as its card is there; [onAutoFocused] tells whether it did. */
+    autoFocus: UUID? = null,
+    onAutoFocused: (Boolean) -> Unit = {},
 ) {
     val rowState = rememberLazyListState()
     val target = remember { FocusRequester() }
     val focus = rememberRowFocus()
     // The season shown last (its first episode); saved, so a return from the back stack keeps the memory.
     var shownSeason by rememberSaveable { mutableStateOf<String?>(null) }
-    LaunchedEffect(episodes, focusIndex) {
+    LaunchedEffect(episodes, focusIndex, autoFocus) {
         val first = episodes.firstOrNull()?.id?.toString() ?: return@LaunchedEffect
-        val remembered = if (first == shownSeason) {
+        val wanted = autoFocus?.let { id -> episodes.indexOfFirst { it.id == id } }?.takeIf { it >= 0 }
+        val remembered = if (wanted != null) {
+            focus.reset()
+            -1
+        } else if (first == shownSeason) {
             episodes.indexOfFirst { it.id == focus.lastKey }
         } else {
             focus.reset()
@@ -901,6 +934,10 @@ private fun EpisodeRow(
         shownSeason = first
         // The card must be composed for the redirect to find it.
         rowState.scrollToItem((if (remembered >= 0) remembered else focusIndex).coerceIn(0, episodes.lastIndex))
+        if (autoFocus != null) {
+            withFrameNanos { }
+            onAutoFocused(wanted != null && wanted == focusIndex && runCatching { target.requestFocus() }.isSuccess)
+        }
     }
     MediaRow(
         title = null,

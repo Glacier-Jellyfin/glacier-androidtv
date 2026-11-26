@@ -12,6 +12,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Eine Reihe Aufnahmen auf der Favoritenseite
 
 ### Verbessert
+- Die Zeile über einem Titel ist jetzt ein Pfad. Seine Ebenen öffnen die Bibliothek, die Serie, die Staffel oder einen übergeordneten Ordner
 - Specials, die eine Staffel zwischen ihren Folgen zeigt, tragen ein Abzeichen „Special“
 - Abzeichen auf Folgenbildern und Plakaten haben einen dunkleren Hintergrund und bleiben auf hellen Bildern lesbar
 - Die Folgendetails nennen ein Special „Specials“ statt Staffel 0

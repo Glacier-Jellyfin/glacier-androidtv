@@ -52,11 +52,13 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.designsystem.ActionButton
+import io.github.glacier_jellyfin.androidtv.core.designsystem.Breadcrumb
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierShapes
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.RowPivot
+import io.github.glacier_jellyfin.androidtv.core.designsystem.hasFocusable
 import io.github.glacier_jellyfin.androidtv.core.designsystem.rememberRowPivotSpec
 import io.github.glacier_jellyfin.androidtv.music.MusicActionsSheet
 import io.github.glacier_jellyfin.androidtv.music.SONG_ROW_GAP
@@ -98,11 +100,27 @@ fun MusicDetail(
     val item = details.item
     val listState = rememberLazyListState()
     val playFocus = remember { FocusRequester() }
+    val crumbFocus = remember { FocusRequester() }
     val moreFocus = remember { FocusRequester() }
     val trackFocus = remember { mutableMapOf<UUID, FocusRequester>() }
     // What had focus, to land there again when the user comes back (from the player, say).
     var focusKey by rememberSaveable(item.id) { mutableStateOf<String?>(null) }
     val tracks = state.musicTracks
+    val crumb = listOfNotNull(
+        crumbLevel(stringResource(R.string.library_music), viewModel::openLibrary.takeIf { state.library != null }),
+        // The list the page belongs to: it opens that tab of the music library.
+        crumbLevel(
+            stringResource(if (item.kind == ItemKind.Playlist) R.string.scope_playlists else R.string.scope_artists),
+            viewModel::openMusicList.takeIf { state.library != null },
+        ),
+        if (item.kind == ItemKind.Album) {
+            item.parentTitle?.let { artist ->
+                crumbLevel(artist, viewModel::openArtistLevel.takeIf { item.artistId != null })
+            }
+        } else {
+            null
+        },
+    )
 
     /** A playlist with videos and neither songs nor music videos: Play starts the videos in the video player. */
     val videosOnly = item.kind == ItemKind.Playlist && tracks.isEmpty() && state.playlistVideos.isNotEmpty() &&
@@ -172,20 +190,18 @@ fun MusicDetail(
                             .onFocusChanged { headerFocused = it.hasFocus },
                         verticalArrangement = Arrangement.spacedBy(22.dp),
                     ) {
-                        val music = stringResource(R.string.library_music)
-                        Crumb(
-                            when (item.kind) {
-                                ItemKind.Artist -> music + " · " + stringResource(R.string.music_artist)
-                                ItemKind.Playlist -> music + " · " + stringResource(R.string.music_playlist)
-                                else -> listOfNotNull(music, item.parentTitle).joinToString(" · ")
-                            },
+                        Breadcrumb(
+                            crumb,
+                            modifier = Modifier.aroundCrumb(LocalMiniPlayerFocus.current, playFocus),
+                            lowestFocus = crumbFocus,
                         )
                         Title(item.title, size = 84, maxWidth = 1180)
                         // Age ratings are a film thing: the design leaves them off music.
                         FactsRow(item.copy(officialRating = null), musicFacts(state, item), tech = musicTech(tracks))
                         item.overview?.takeIf { it.isNotBlank() }?.let { Overview(it, maxWidth = 900) }
                         Row(
-                            Modifier.padding(top = 10.dp).upTo(LocalMiniPlayerFocus.current),
+                            Modifier.padding(top = 10.dp)
+                                .upTo(crumbFocus.takeIf { crumb.hasFocusable }, LocalMiniPlayerFocus.current),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(14.dp),
                         ) {

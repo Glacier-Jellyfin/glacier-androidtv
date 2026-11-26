@@ -326,10 +326,10 @@
     <string name="episode_badge">E%1$d</string>
     <string name="episode_special_badge">Especial</string>
     <string name="episode_short_special">Especiales · E%1$d</string>
-    <string name="episode_crumb_special">%1$s · Especiales · Episodio %2$d</string>
+    <string name="episode_number">Episodio %1$d</string>
     <string name="episode_play">Reproducir episodio</string>
     <string name="episode_more">Más episodios · %1$s</string>
-    <string name="episode_crumb">%1$s · Temporada %2$d · Episodio %3$d</string>
+    <string name="breadcrumb_open">Abrir %1$s</string>
     <string name="episode_progress">%1$d%% visto · quedan %2$d min</string>
     <string name="track_audio">Pista de audio</string>
     <string name="track_subtitles">Subtítulos</string>
@@ -409,7 +409,7 @@
     <!-- Seerr (through the Jellyfin Enhanced plugin) -->
     <string name="seerr_movie">Película</string>
     <string name="seerr_show">Serie</string>
-    <string name="seerr_crumb">Seerr · %1$s</string>
+    <string name="seerr_name">Seerr</string>
     <string name="seerr_status_request">Solicitar</string>
     <string name="seerr_status_pending">Solicitado</string>
     <string name="seerr_status_processing">En proceso</string>

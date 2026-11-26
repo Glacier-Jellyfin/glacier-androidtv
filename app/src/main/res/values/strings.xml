@@ -319,10 +319,10 @@
     <string name="episode_badge">E%1$d</string>
     <string name="episode_special_badge">Special</string>
     <string name="episode_short_special">Specials · E%1$d</string>
-    <string name="episode_crumb_special">%1$s · Specials · Episode %2$d</string>
+    <string name="episode_number">Episode %1$d</string>
     <string name="episode_play">Play episode</string>
     <string name="episode_more">More episodes · %1$s</string>
-    <string name="episode_crumb">%1$s · Season %2$d · Episode %3$d</string>
+    <string name="breadcrumb_open">Open %1$s</string>
     <string name="episode_progress">%1$d%% watched · %2$d min left</string>
     <string name="track_audio">Audio track</string>
     <string name="track_subtitles">Subtitles</string>
@@ -399,7 +399,7 @@
     <!-- Seerr (through the Jellyfin Enhanced plugin) -->
     <string name="seerr_movie">Movie</string>
     <string name="seerr_show">Show</string>
-    <string name="seerr_crumb">Seerr · %1$s</string>
+    <string name="seerr_name">Seerr</string>
     <string name="seerr_status_request">Request</string>
     <string name="seerr_status_pending">Requested</string>
     <string name="seerr_status_processing">Processing</string>
