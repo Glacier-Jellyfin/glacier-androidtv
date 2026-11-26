@@ -78,14 +78,18 @@ internal object HandoverPlanner {
         return HandoverPlan.At(positionMs + boundedLead, boundedLead)
     }
 
-    /** The way back from a reduced stream to the file: only with a buffer of [RETURN_MIN_BUFFER_MS]. */
+    /**
+     * The way back from a reduced stream to the file: only with a buffer of [RETURN_MIN_BUFFER_MS], and always with the
+     * short lead [RETURN_MIN_LEAD_MS]. The file starts fast, and a longer lead only keeps the smaller stream on the screen
+     * for as long (the buffer is far more than the lead needs).
+     */
     fun back(
         aheadMs: Long,
         positionMs: Long,
         durationMs: Long,
     ): HandoverPlan {
         if (aheadMs < RETURN_MIN_BUFFER_MS) return HandoverPlan.Wait
-        val lead = (aheadMs - RESERVE_MS).coerceIn(RETURN_MIN_LEAD_MS, MAX_LEAD_MS)
+        val lead = RETURN_MIN_LEAD_MS
         if (nearEnd(positionMs + lead, durationMs)) return HandoverPlan.Wait
         return HandoverPlan.At(positionMs + lead, lead)
     }

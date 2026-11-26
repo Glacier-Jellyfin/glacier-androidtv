@@ -533,6 +533,8 @@
     <string name="player_info_switch">Switch</string>
     <string name="player_info_switch_in">%1$s → %2$s in %3$d s</string>
     <string name="player_info_switch_waiting">%1$s → %2$s · waiting for %2$s</string>
+    <string name="player_info_link_check_in">Next connection check in %1$d s</string>
+    <string name="player_info_link_checking">Checking the connection …</string>
     <string name="player_info_reason_link">Link too slow</string>
     <string name="player_info_reason_link_numbers">Link too slow (%1$s of %2$s Mbit/s)</string>
     <string name="player_info_reason_draining">Buffer draining</string>

@@ -25,6 +25,8 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Beim Blättern erscheinen Name und Datum des nächsten Fotos sofort, dazu eine unscharfe Vorschau mit Ladeanzeige, bis das Foto scharf ist. Die nächsten Fotos laden vorab, so wartet das Blättern seltener. Ein Foto, das nicht lädt, lässt sich mit OK erneut versuchen (#43)
 - Die Fotoansicht zeigt ihre Tasten beim Öffnen als Tastenkappen in der unteren Ecke, mit Oben erscheinen sie wieder (#43)
 - Videos in einem Fotoordner tragen ein Wiedergabezeichen, und Clips unter einer Minute zeigen ihre Länge in Sekunden (#43)
+- Nach einem Wechsel auf einen kleineren Stream kehrt die Wiedergabe viel früher zur vollen Qualität zurück: nach etwa 40 Sekunden statt nach mehreren Minuten, mit weniger Wartezeit vor dem Wechsel
+- Das Infofenster zeigt, wann die nächste Prüfung der Leitung läuft, solange ein kleinerer Stream spielt
 
 ### Behoben
 - Fotos und Videos zeigen die Aufnahmezeit in der Zeitzone des Fernsehers. Vorher lag sie um den Abstand zu UTC daneben (#43)
@@ -32,6 +34,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Gedrehte Heimvideos stehen jetzt auch auf Fernsehern aufrecht, die die Drehung ignorierten (#43)
 - Live-TV-Aufnahmen erscheinen nicht mehr unter Filmen und Serien. Sie bleiben unter Live-TV > Aufnahmen und die Suche findet sie weiterhin
 - YouTube-Trailer bleiben nicht mehr auf dem Ladebildschirm hängen und schlagen nicht mehr fehl, obwohl sie schon laufen
+- Die Wiedergabe wechselt wegen eines einzelnen langsamen Verbindungstests nicht mehr auf einen kleineren Stream, solange sie mithält. Der Test teilt sich die Leitung mit dem Video, daher wird er wiederholt und zuerst mit der Geschwindigkeit des Players abgeglichen
 
 ## [0.10.1] - 2026-11-18
 

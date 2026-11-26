@@ -41,6 +41,29 @@ class StreamBudgetTest {
     }
 
     @Test
+    fun `a weak test is believed when both tests and the estimate say the stream does not fit`() {
+        assertTrue(StreamBudget.weakLinkConfirmed(10_800_000, 1_900_000, 2_300_000, 3_000_000))
+        // No estimate at all: the two tests decide.
+        assertTrue(StreamBudget.weakLinkConfirmed(10_800_000, 1_900_000, 2_300_000, null))
+        assertTrue(StreamBudget.weakLinkConfirmed(10_800_000, 1_900_000, 2_300_000, 0))
+    }
+
+    @Test
+    fun `a single weak test is not believed`() {
+        assertFalse(StreamBudget.weakLinkConfirmed(10_800_000, 1_900_000, 15_000_000, 3_000_000))
+        assertFalse(StreamBudget.weakLinkConfirmed(10_800_000, 1_900_000, null, 3_000_000))
+        assertFalse(StreamBudget.weakLinkConfirmed(10_800_000, 15_000_000, 1_900_000, 3_000_000))
+    }
+
+    @Test
+    fun `a stream the player's estimate carries is left alone`() {
+        // 20 Mbit/s estimate: 17 Mbit/s budget, the 10.8 Mbit/s stream fits.
+        assertFalse(StreamBudget.weakLinkConfirmed(10_800_000, 1_900_000, 2_300_000, 20_000_000))
+        // 12 Mbit/s estimate: 10.2 Mbit/s budget, the stream does not fit.
+        assertTrue(StreamBudget.weakLinkConfirmed(10_800_000, 1_900_000, 2_300_000, 12_000_000))
+    }
+
+    @Test
     fun `a fast link leaves the file alone`() {
         assertFalse(StreamBudget.exceeds(60_000_000, StreamBudget.of(500_000_000)))
     }

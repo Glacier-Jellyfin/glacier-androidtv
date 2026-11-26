@@ -26,6 +26,8 @@ only in English.
 - Al pasar fotos, el nombre y la fecha de la siguiente aparecen al instante, con una vista previa desenfocada y un indicador de carga hasta que la foto está nítida. Las siguientes fotos se cargan por adelantado, así que pasar fotos hace esperar menos. Una foto que no carga se puede reintentar con OK (#43)
 - El visor de fotos muestra sus teclas como teclas dibujadas en la esquina inferior al abrirse, y con Arriba vuelven a aparecer (#43)
 - Los vídeos de una carpeta de fotos llevan el símbolo de reproducción, y los clips de menos de un minuto muestran su duración en segundos (#43)
+- Tras pasar a un flujo más pequeño, la reproducción vuelve mucho antes a la calidad completa: en unos 40 segundos en lugar de varios minutos, con menos espera antes del cambio
+- El panel de información muestra cuándo se hace la próxima comprobación de la conexión mientras se reproduce un flujo más pequeño
 
 ### Correcciones
 - Las fotos y los vídeos muestran la hora en que se tomaron en la zona horaria del televisor. Antes se desviaba por la diferencia con UTC (#43)
@@ -33,6 +35,7 @@ only in English.
 - Los vídeos caseros girados se ven derechos también en televisores que ignoraban el giro (#43)
 - Las grabaciones de TV en directo ya no aparecen entre las películas y series. Siguen en TV en directo > Grabaciones y la búsqueda las sigue encontrando
 - Los tráileres de YouTube ya no se quedan en la pantalla de carga ni fallan cuando ya se están reproduciendo
+- La reproducción ya no pasa a un flujo más pequeño por una sola prueba de conexión lenta mientras sigue al día. La prueba comparte la conexión con el vídeo, así que se repite y se contrasta antes con la velocidad del reproductor
 
 ## [0.10.1] - 2026-11-18
 

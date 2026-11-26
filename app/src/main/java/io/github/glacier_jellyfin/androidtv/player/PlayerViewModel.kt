@@ -16,6 +16,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
+import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -90,6 +91,9 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** The next test of the link: due at [atMs] (`SystemClock.elapsedRealtime`), or [running] now. */
+data class LinkCheck(val atMs: Long, val running: Boolean = false)
+
 data class PlayerUiState(
     val details: ItemDetails? = null,
     val player: ExoPlayer? = null,
@@ -148,6 +152,8 @@ data class PlayerUiState(
     val upNextCollapseMs: Long = 0,
     /** The hand over to another stream that is under way, for the info sheet; null without one. */
     val switch: StreamSwitch? = null,
+    /** The next test of the link while a stream that was lowered waits to go back, for the info sheet; null otherwise. */
+    val linkCheck: LinkCheck? = null,
     /** The last completed changes of stream of this title (hand overs and moves between tiers), newest last. */
 ) {
     val chapters: List<Chapter> get() = details?.chapters.orEmpty()
@@ -949,15 +955,25 @@ class PlayerViewModel @Inject constructor(
      */
     private fun watchRecovery() {
         recovery?.cancel()
+        showLinkCheck(null)
         val current = source ?: return
         // A ladder: every test moves the window of tiers, no new stream.
         if (current.ladder != null && !current.live) {
+            // A ladder of a file that fits the device (and is not played as it is) is one the link forced: it checks soon, too.
+            val toFile = current.fileFitsDevice && current.file?.bitrate != null && returns < MAX_RETURNS
             recovery = viewModelScope.launch {
+                var attempt = 0
                 while (isActive) {
-                    delay(RECOVERY_CHECK_MS)
+                    val wait = if (toFile) recoveryDelay(attempt++) else RECOVERY_CHECK_MS
+                    if (toFile) showLinkCheck(LinkCheck(SystemClock.elapsedRealtime() + wait))
+                    delay(wait)
                     val player = _state.value.player ?: return@launch
-                    if (settings.settings.value.playback.maxBitrate != MaxBitrate.Auto) return@launch
+                    if (settings.settings.value.playback.maxBitrate != MaxBitrate.Auto) {
+                        showLinkCheck(null)
+                        return@launch
+                    }
                     if (!player.isPlaying) continue
+                    if (toFile) showLinkCheck(LinkCheck(0, running = true))
                     tiers?.let { checkLink(it, current) }
                 }
             }
@@ -978,16 +994,23 @@ class PlayerViewModel @Inject constructor(
             return
         }
         recovery = viewModelScope.launch {
+            var attempt = 0
             while (isActive) {
-                delay(RECOVERY_CHECK_MS)
+                val wait = if (reduced) recoveryDelay(attempt++) else RECOVERY_CHECK_MS
+                if (reduced) showLinkCheck(LinkCheck(SystemClock.elapsedRealtime() + wait))
+                delay(wait)
                 val player = _state.value.player ?: return@launch
-                if (settings.settings.value.playback.maxBitrate != MaxBitrate.Auto) return@launch
+                if (settings.settings.value.playback.maxBitrate != MaxBitrate.Auto) {
+                    showLinkCheck(null)
+                    return@launch
+                }
                 val ahead = player.bufferedPosition - player.currentPosition
                 if (!player.isPlaying || handoverActive ||
                     ahead < if (reduced) HandoverPlanner.RETURN_MIN_BUFFER_MS else RECOVERY_BUFFER_MS
                 ) {
                     continue
                 }
+                if (reduced) showLinkCheck(LinkCheck(0, running = true))
                 val budget = playback.probeBudget() ?: continue
                 Log.i(
                     TAG,
@@ -997,12 +1020,11 @@ class PlayerViewModel @Inject constructor(
                 )
                 if (!reduced) {
                     // The measurement before the start is old by now: a link that carries less than the file is no news at a stall.
-                    if (StreamBudget.exceeds(streamBitrate, budget) &&
-                        lowerQuality(HandoverTrigger.Link, linkBps = budget) &&
-                        qualitySteps >= MAX_QUALITY_STEPS
-                    ) {
-                        return@launch
-                    }
+                    // And it competes with the stream's own download: a weak result must be confirmed before the stream is lowered.
+                    val weak = StreamBudget.exceeds(streamBitrate, budget) &&
+                        confirmWeakLink(current, streamBitrate, budget)
+                    val lowered = weak && lowerQuality(HandoverTrigger.Link, linkBps = budget)
+                    if (lowered && qualitySteps >= MAX_QUALITY_STEPS) return@launch
                 } else if (StreamBudget.returnsTo(wanted, budget)) {
                     val plan = HandoverPlanner.back(ahead, currentPositionMs(), titleDuration())
                     if (plan is HandoverPlan.At) {
@@ -1019,6 +1041,7 @@ class PlayerViewModel @Inject constructor(
                             lowering = false,
                             reason = switchReason(null, linkBps = budget),
                         )
+                        showLinkCheck(null)
                         return@launch
                     }
                     Log.i(TAG, "Back to the file would have to wait: ${ahead / 1000} s buffered")
@@ -1026,6 +1049,52 @@ class PlayerViewModel @Inject constructor(
             }
         }
     }
+
+    /** How long a reduced stream waits for its [attempt]th (from 0) check of the link: soon at first, then less often. */
+    private fun recoveryDelay(attempt: Int): Long = when (attempt) {
+        0 -> RECOVERY_FIRST_MS
+        1 -> RECOVERY_SECOND_MS
+        else -> RECOVERY_CHECK_MS
+    }
+
+    /** Tells the info sheet when the link is tested next ([check], null for no test planned). */
+    private fun showLinkCheck(check: LinkCheck?) {
+        _state.update { if (it.linkCheck == check) it else it.copy(linkCheck = check) }
+    }
+
+    /**
+     * A test measured [first], less than the playing stream of [streamBitrate] needs. Tests again after [CONFIRM_DELAY_MS] and
+     * asks Media3's own estimate; true only when the link really does not carry the stream (see
+     * [StreamBudget.weakLinkConfirmed]). False also when the situation changed meanwhile.
+     */
+    @OptIn(UnstableApi::class)
+    private suspend fun confirmWeakLink(
+        current: PlaybackSource,
+        streamBitrate: Int,
+        first: Int,
+    ): Boolean {
+        delay(CONFIRM_DELAY_MS)
+        val second = if (playsStill(current)) playback.probeBudget() else null
+        val player = _state.value.player
+        if (player == null || !playsStill(current)) return false
+        val estimate = DefaultBandwidthMeter.getSingletonInstance(context).bitrateEstimate
+        val confirmed = StreamBudget.weakLinkConfirmed(streamBitrate, first, second, estimate)
+        if (!confirmed) {
+            val ahead = (player.bufferedPosition - player.currentPosition) / 1000
+            val again = second?.let { ", then ${StreamBudget.describe(it)}" }.orEmpty()
+            val known = if (estimate > 0) StreamBudget.describe(estimate) else "unknown"
+            Log.i(
+                TAG,
+                "The test showed ${StreamBudget.describe(first)}$again, but the stream keeps up " +
+                    "(estimate $known, $ahead s buffered): staying",
+            )
+        }
+        return confirmed
+    }
+
+    /** [current] still plays, with no hand over under way. */
+    private fun playsStill(current: PlaybackSource): Boolean =
+        source === current && _state.value.player?.isPlaying == true && !handoverActive
 
     /** The length of the title, whatever stream plays. */
     private fun titleDuration(): Long = time.duration(_state.value.player?.duration?.coerceAtLeast(0) ?: 0)
@@ -1420,7 +1489,7 @@ class PlayerViewModel @Inject constructor(
         qualitySteps++
         stalls.clear()
         trend.clear()
-        playback.lowerBudget(streamBitrate)
+        playback.lowerBudget(streamBitrate, cause = trigger.logCause())
         if (plan is HandoverPlan.At) {
             beginHandover(plan, trigger, lowering = true, reason = switchReason(trigger, linkBps, streamBitrate))
             return true
@@ -1429,6 +1498,14 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch { _events.send(UiEvent.Toast(R.string.player_lower_quality)) }
         reopen(audio = _state.value.audioIndex, subtitle = _state.value.subtitleIndex)
         return true
+    }
+
+    /** What the log says set off the step down, null for a stall. */
+    private fun HandoverTrigger.logCause(): String? = when (this) {
+        HandoverTrigger.Stalls -> null
+        HandoverTrigger.Link -> "link test"
+        HandoverTrigger.Throughput -> "throughput"
+        HandoverTrigger.Draining -> "buffer draining"
     }
 
     /** A stream that shows no picture within [timeoutMs] is more than the link carries, too. */
@@ -1747,9 +1824,23 @@ class PlayerViewModel @Inject constructor(
         /** After a start or a seek the throughput is left alone this long: the player loads its first seconds in a burst. */
         const val THROUGHPUT_SETTLE_MS = 10_000L
 
-        /** A reduced stream checks the link this often, and only with this much buffer ahead. */
+        /** A stream that plays as it is checks the link this often, and only with this much buffer ahead. */
         const val RECOVERY_CHECK_MS = 120_000L
         const val RECOVERY_BUFFER_MS = 20_000L
+
+        /**
+         * After a step down the link is likely fine again soon (a weak moment on Wi-Fi): the first check of a reduced stream
+         * comes this soon, the next one after [RECOVERY_SECOND_MS], then every [RECOVERY_CHECK_MS]. A check that finds too
+         * little buffer costs nothing, it just tries again at the next tick.
+         */
+        const val RECOVERY_FIRST_MS = 20_000L
+        const val RECOVERY_SECOND_MS = 40_000L
+
+        /**
+         * A test that finds the link too weak for a playing stream is repeated after this long: it competes with the stream's
+         * own download, so one result alone does not lower the quality (see [StreamBudget.weakLinkConfirmed]).
+         */
+        const val CONFIRM_DELAY_MS = 10_000L
         const val MAX_RETURNS = 2
 
         /** Smaller streams one title may move to: 70 %, 49 %, 34 % of the first. */

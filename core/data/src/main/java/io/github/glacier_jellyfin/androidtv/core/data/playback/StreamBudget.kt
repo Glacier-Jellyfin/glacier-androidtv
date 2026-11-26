@@ -204,6 +204,24 @@ object StreamBudget {
     /** True when a stream of [bitrate] is more than the [budget] carries. Unknown values never exceed. */
     fun exceeds(bitrate: Int?, budget: Int?): Boolean = bitrate != null && budget != null && bitrate > budget
 
+    /**
+     * Whether a test that found the link too slow for a playing stream of [streamBitrate] is to be believed. The test competes
+     * with the stream's own download, so one weak result says little: it counts when the [first] and a [second] test, a moment
+     * later, both say the stream does not fit, and the player's own [estimateBps] (Media3's bandwidth meter, null or 0 when it
+     * has none) does not carry the stream with the usual headroom either. A stream that keeps up is left alone; a real
+     * bottleneck shows in the buffer and the throughput anyway.
+     */
+    fun weakLinkConfirmed(
+        streamBitrate: Int,
+        first: Int,
+        second: Int?,
+        estimateBps: Long?,
+    ): Boolean {
+        if (!exceeds(streamBitrate, first) || !exceeds(streamBitrate, second)) return false
+        val estimate = estimateBps?.takeIf { it > 0 } ?: return true
+        return exceeds(streamBitrate, of(estimate))
+    }
+
     /** The budget after a stream of [streamBitrate] stalled; never above the [current] one. */
     fun afterStall(streamBitrate: Int, current: Int?): Int = minOf(
         current ?: Int.MAX_VALUE,

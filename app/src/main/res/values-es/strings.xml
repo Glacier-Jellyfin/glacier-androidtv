@@ -546,6 +546,8 @@
     <string name="player_info_switch">Cambio</string>
     <string name="player_info_switch_in">%1$s → %2$s en %3$d s</string>
     <string name="player_info_switch_waiting">%1$s → %2$s · esperando a %2$s</string>
+    <string name="player_info_link_check_in">Próxima comprobación de la conexión en %1$d s</string>
+    <string name="player_info_link_checking">Comprobando la conexión …</string>
     <string name="player_info_reason_link">Conexión demasiado lenta</string>
     <string name="player_info_reason_link_numbers">Conexión demasiado lenta (%1$s de %2$s Mbit/s)</string>
     <string name="player_info_reason_draining">El búfer se vacía</string>

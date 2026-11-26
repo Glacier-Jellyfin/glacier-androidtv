@@ -40,6 +40,8 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - Browsing photos shows the name and date of the next one at once and a blurred preview with a loader until the photo is sharp. The next photos load ahead, so browsing waits less. A photo that fails to load can be tried again with OK (#43)
 - The photo viewer shows its keys as key caps in the bottom corner when it opens, and Up shows them again (#43)
 - Videos in a photo folder carry a play sign, and clips shorter than a minute show their length in seconds (#43)
+- After playback dropped to a smaller stream, it returns to the full quality much sooner: about 40 seconds instead of several minutes, with less waiting before the switch
+- The info panel shows when the next connection check runs while a smaller stream plays
 
 ### Fixed
 - Photos and videos show the time they were taken in the TV's time zone. It was off by the time difference to UTC before (#43)
@@ -47,6 +49,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - Rotated home videos show upright on TVs that ignored the rotation (#43)
 - Live TV recordings no longer show up among movies and shows. They stay under Live TV > Recordings and search still finds them
 - YouTube trailers no longer stay on the loading screen or fail while they already play
+- Playback no longer drops to a smaller stream because of one slow connection test while it keeps up. The test shares the connection with the video, so it is repeated and checked against the player's own speed first
 
 ## [0.10.1] - 2026-11-18
 

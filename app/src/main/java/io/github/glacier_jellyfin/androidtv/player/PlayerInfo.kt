@@ -1,5 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.player
 
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
@@ -368,6 +369,7 @@ private fun TechnicalTab(state: PlayerUiState, stats: StreamStats?) {
         staticFallback = false,
         switch = state.switch,
         stats = stats,
+        linkCheck = state.linkCheck,
     )
 }
 
@@ -392,6 +394,7 @@ internal fun TechnicalCards(
     staticFallback: Boolean,
     switch: StreamSwitch?,
     stats: StreamStats?,
+    linkCheck: LinkCheck? = null,
 ) {
     val context = LocalContext.current
     val display = remember(context) { displayInfo(context) }
@@ -417,7 +420,7 @@ internal fun TechnicalCards(
             if (showSubtitles) SubtitleCard(subtitle, Modifier.weight(1f).fillMaxHeight())
             DisplayCard(file?.video?.frameRate, stats, display, Modifier.weight(1f).fillMaxHeight())
         }
-        BufferRow(stats, switch)
+        BufferRow(stats, switch, linkCheck)
     }
 }
 
@@ -570,10 +573,15 @@ private val BufferLabelWidth = 120.dp
 
 /**
  * How much of the stream waits on this device, and how fast it comes in. While a hand over to another stream is pending
- * ([switch]) the bar shows both streams' share and lines tell of the change; without one the row stays compact.
+ * ([switch]) the bar shows both streams' share and lines tell of the change; without one the row stays compact, plus a line
+ * for the next test of the link ([linkCheck]) while a lowered stream waits to go back.
  */
 @Composable
-internal fun BufferRow(stats: StreamStats?, switch: StreamSwitch? = null) {
+internal fun BufferRow(
+    stats: StreamStats?,
+    switch: StreamSwitch? = null,
+    linkCheck: LinkCheck? = null,
+) {
     val handOver = stats?.handOver.takeIf { switch != null }
     val slots = switch != null
     val labelModifier = if (slots) Modifier.width(BufferLabelWidth) else Modifier
@@ -677,6 +685,27 @@ internal fun BufferRow(stats: StreamStats?, switch: StreamSwitch? = null) {
                         )
                     }
                 }
+            }
+            if (switch == null && linkCheck != null) {
+                // Counts down on its own clock: the stats tick once a second, but equal stats do not recompose.
+                val now by produceState(SystemClock.elapsedRealtime()) {
+                    while (isActive) {
+                        value = SystemClock.elapsedRealtime()
+                        delay(1_000)
+                    }
+                }
+                val seconds = ((linkCheck.atMs - now + 999) / 1000).coerceAtLeast(0).toInt()
+                Text(
+                    if (linkCheck.running || seconds == 0) {
+                        stringResource(R.string.player_info_link_checking)
+                    } else {
+                        stringResource(R.string.player_info_link_check_in, seconds)
+                    },
+                    style = GlacierText.body(16),
+                    color = OsdSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }

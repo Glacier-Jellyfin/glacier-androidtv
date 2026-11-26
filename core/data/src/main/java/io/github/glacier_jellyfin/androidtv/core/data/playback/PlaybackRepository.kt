@@ -648,17 +648,19 @@ class PlaybackRepository @Inject constructor(
     }
 
     /**
-     * A stream of [streamBitrate] stalled: streams may use less from now on, so the next one is
-     * held to it. Returns the new budget.
+     * A stream of [streamBitrate] was too much for the link: streams may use less from now on, so the next one is
+     * held to it. [cause] is what set it off for the log, e.g. "link test"; null for a real stall.
+     * Returns the new budget.
      */
-    fun lowerBudget(streamBitrate: Int): Int {
+    fun lowerBudget(streamBitrate: Int, cause: String? = null): Int {
         val value = StreamBudget.afterStall(streamBitrate, currentBudget())
         keepBudget(value, STALL_VALID_MS, afterStall = true)
+        val what = if (cause == null) "Playback stalled" else "Lowered"
         Log.w(
             TAG,
-            "Playback stalled at ${StreamBudget.describe(
-                streamBitrate,
-            )}, streams may use ${StreamBudget.describe(value)}",
+            "$what at ${StreamBudget.describe(streamBitrate)}" +
+                (cause?.let { " ($it)" } ?: "") +
+                ", streams may use ${StreamBudget.describe(value)}",
         )
         return value
     }

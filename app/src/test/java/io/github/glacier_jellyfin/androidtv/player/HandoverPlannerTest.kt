@@ -72,18 +72,21 @@ class HandoverPlannerTest {
     @Test
     fun `the way back needs thirty seconds of buffer`() {
         assertEquals(HandoverPlan.Wait, HandoverPlanner.back(29_999, 0, 7_200_000))
-        assertEquals(HandoverPlan.At(25_000, 25_000), HandoverPlanner.back(30_000, 0, 7_200_000))
+        assertEquals(HandoverPlan.At(15_000, 15_000), HandoverPlanner.back(30_000, 0, 7_200_000))
     }
 
     @Test
-    fun `the way back stays within the buffer and the maximum lead`() {
-        assertEquals(HandoverPlan.At(55_000, 45_000), HandoverPlanner.back(50_000, 10_000, 7_200_000))
-        assertEquals(HandoverPlan.At(100_000, 90_000), HandoverPlanner.back(300_000, 10_000, 7_200_000))
+    fun `the way back uses the short lead whatever is buffered`() {
+        assertEquals(HandoverPlan.At(25_000, 15_000), HandoverPlanner.back(50_000, 10_000, 7_200_000))
+        assertEquals(HandoverPlan.At(25_000, 15_000), HandoverPlanner.back(300_000, 10_000, 7_200_000))
     }
 
     @Test
     fun `the way back waits near the end`() {
         assertEquals(HandoverPlan.Wait, HandoverPlanner.back(60_000, 7_180_000, 7_200_000))
+        // 15 s of lead from 7_170 s lands within the tail of 20 s.
+        assertEquals(HandoverPlan.Wait, HandoverPlanner.back(60_000, 7_170_000, 7_200_000))
+        assertTrue(HandoverPlanner.back(60_000, 7_160_000, 7_200_000) is HandoverPlan.At)
     }
 
     private fun backToFile(

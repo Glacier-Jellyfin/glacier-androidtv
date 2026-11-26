@@ -527,6 +527,8 @@
     <string name="player_info_switch">Wechsel</string>
     <string name="player_info_switch_in">%1$s → %2$s in %3$d s</string>
     <string name="player_info_switch_waiting">%1$s → %2$s · wartet auf %2$s</string>
+    <string name="player_info_link_check_in">Nächste Prüfung der Leitung in %1$d s</string>
+    <string name="player_info_link_checking">Leitung wird geprüft …</string>
     <string name="player_info_reason_link">Leitung zu langsam</string>
     <string name="player_info_reason_link_numbers">Leitung zu langsam (%1$s von %2$s Mbit/s)</string>
     <string name="player_info_reason_draining">Puffer leert sich</string>
