@@ -86,7 +86,6 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryScope
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
 import io.github.glacier_jellyfin.androidtv.core.data.media.ListGroup
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
-import io.github.glacier_jellyfin.androidtv.core.data.media.NameOrder
 import io.github.glacier_jellyfin.androidtv.core.data.media.railLetter
 import io.github.glacier_jellyfin.androidtv.core.data.settings.MusicVideoView
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
@@ -1136,12 +1135,12 @@ internal fun firstRowHome(gridState: LazyGridState, firstCard: Int = HEADER_ITEM
 }
 
 /**
- * Filed as the library sorts it: by its artist or album when listed under them, else by its name.
- * A song's sort name starts with its disc and track numbers, so songs go by their title.
+ * Filed as the library sorts it: by its artist or album when listed under them, else by the name
+ * the list sorts by (its title less a leading article, or a sort name set by hand).
  */
 private fun letterOf(item: MediaItem): Char? = when (val group = item.group) {
     is ListGroup.Name -> railLetter(group.name)
-    null -> railLetter(if (item.kind == ItemKind.Song) item.title else NameOrder.title(item.title, item.sortName))
+    null -> railLetter(item.sortTitle ?: item.title)
     else -> null
 }
 

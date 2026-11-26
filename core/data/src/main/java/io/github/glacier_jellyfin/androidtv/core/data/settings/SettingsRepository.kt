@@ -47,7 +47,9 @@ object SettingsSerializer : Serializer<SettingsState> {
         val text = input.readBytes().decodeToString()
         if (text.isBlank()) return defaultValue
         return try {
-            json.decodeFromString(SettingsState.serializer(), text)
+            json.decodeFromString(SettingsState.serializer(), text).let { state ->
+                state.copy(profiles = state.profiles.mapValues { it.value.migrated() })
+            }
         } catch (e: SerializationException) {
             throw CorruptionException("Cannot parse settings", e)
         }
@@ -112,7 +114,8 @@ class SettingsRepository @Inject constructor(
         val session = sessions.session.value ?: return
         val key = profileKey(session.server.id, session.user.userId)
         store.updateData { state ->
-            state.copy(profiles = state.profiles + (key to transform(state.profiles[key] ?: ProfileSettings())))
+            val next = transform(state.profiles[key] ?: ProfileSettings()).migrated()
+            state.copy(profiles = state.profiles + (key to next))
         }
     }
 

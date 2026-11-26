@@ -7,6 +7,7 @@ import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.media.Articles
 import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderContent
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderMedia
@@ -128,13 +129,16 @@ class LibraryViewModel @Inject constructor(
     /** The title that had the focus then, for the grid to go back to. */
     val restoredFocus: String? = remembered?.focusId
 
+    private val appearance = settings.settings.value.appearance
+
     private val _state = MutableStateFlow(
         LibraryState(
             query = LibraryQuery(
                 kind = kind,
                 libraryId = route.libraryId?.let(UUID::fromString),
                 genreId = route.genreId?.let(UUID::fromString),
-                groupCollections = settings.settings.value.appearance.groupCollections,
+                groupCollections = appearance.groupCollections,
+                articles = Articles.requested(appearance.ignoreArticles),
                 scope = routeScope ?: remembered?.scope ?: LibraryQuery.defaultScope(kind),
             ),
             title = route.title,

@@ -48,7 +48,10 @@ data class ProfileSettings(
     val folders: FolderSettings = FolderSettings(),
     /** How the music videos tab lists them; null until picked, when their metadata decides. */
     val musicVideoView: MusicVideoView? = null,
-)
+) {
+    /** These settings with the stored values of earlier versions brought up to date. */
+    fun migrated(): ProfileSettings = copy(appearance = appearance.migrated())
+}
 
 @Serializable
 enum class MusicVideoView {
@@ -191,9 +194,20 @@ data class AppearanceSettings(
     val reduceMotion: Boolean = false,
     /** Movies of a collection show up in the library as one collection card. */
     val groupCollections: Boolean = true,
+    /** A to Z files "The Matrix" under M; off sorts by the full title. */
+    val ignoreArticles: Boolean = true,
+    /** The article setting of earlier versions ("off", "auto" or a language code); only read, see [migrated]. */
+    @SerialName("titleArticles") val legacyTitleArticles: String? = null,
     /** A collection page lists its movies and shows in one row instead of one row each. */
     val collectionMoviesWithShows: Boolean = false,
-)
+) {
+    /** Turns the "off" that earlier versions stored in [legacyTitleArticles] into [ignoreArticles] = false. */
+    fun migrated(): AppearanceSettings = if (legacyTitleArticles == null) {
+        this
+    } else {
+        copy(ignoreArticles = ignoreArticles && legacyTitleArticles != "off", legacyTitleArticles = null)
+    }
+}
 
 /**
  * The accents in spectrum order; the colours themselves live in the design system.

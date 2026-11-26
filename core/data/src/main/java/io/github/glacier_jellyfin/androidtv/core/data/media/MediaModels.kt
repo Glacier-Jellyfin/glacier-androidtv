@@ -25,8 +25,10 @@ data class MediaItem(
     val id: UUID,
     val kind: ItemKind,
     val title: String,
-    /** The server's sort name: lower case, leading articles removed. */
+    /** The server's sort name: lower case, some words removed. */
     val sortName: String?,
+    /** What a library list sorts and files this title under (see [NameOrder.sortTitle]); null outside library lists. */
+    val sortTitle: String? = null,
     val year: Int?,
     /** Last year a show aired; null while it runs or when unknown. */
     val endYear: Int? = null,

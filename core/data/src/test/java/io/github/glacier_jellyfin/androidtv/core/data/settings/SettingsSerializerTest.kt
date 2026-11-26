@@ -7,6 +7,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class SettingsSerializerTest {
@@ -68,6 +69,25 @@ class SettingsSerializerTest {
         val json = """{"profiles":{"s/u":{"home":{"spotlightSource":"Favorites"}}}}"""
         val home = SettingsSerializer.readFrom(ByteArrayInputStream(json.toByteArray())).profiles.getValue("s/u").home
         assertEquals(setOf(SpotlightSource.Favorites), home.spotlightSources)
+    }
+
+    @Test
+    fun `the off of the article language becomes the switch`() = runTest {
+        val json = """{"profiles":{"s/u":{"appearance":{"titleArticles":"off"}}}}"""
+        val appearance = SettingsSerializer.readFrom(ByteArrayInputStream(json.toByteArray()))
+            .profiles.getValue("s/u").appearance
+        assertEquals(false, appearance.ignoreArticles)
+        assertNull(appearance.legacyTitleArticles)
+        assertEquals(AppearanceSettings(), AppearanceSettings(legacyTitleArticles = "de").migrated())
+    }
+
+    @Test
+    fun `a stored article language is ignored`() = runTest {
+        val json = """{"profiles":{"s/u":{"appearance":{"titleArticles":"fr"}}}}"""
+        val appearance = SettingsSerializer.readFrom(ByteArrayInputStream(json.toByteArray()))
+            .profiles.getValue("s/u").appearance
+        assertEquals(true, appearance.ignoreArticles)
+        assertNull(appearance.legacyTitleArticles)
     }
 
     @Test

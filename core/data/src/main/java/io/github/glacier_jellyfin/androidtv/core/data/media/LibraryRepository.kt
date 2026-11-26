@@ -2,7 +2,9 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 
 import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.core.log.Log
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
@@ -54,6 +56,11 @@ data class LibraryQuery(
     val descending: Boolean = false,
     /** Design setting "Group movies into collections"; on by default. */
     val groupCollections: Boolean = true,
+    /**
+     * The language whose leading articles titles are sorted without: null for none, [Articles.AUTO] for
+     * the metadata language of the Jellyfin server (the repository resolves it), else a language code.
+     */
+    val articles: String? = null,
     /** The heart toggle: only what the profile marked as favorite, in every tab. */
     val favoritesOnly: Boolean = false,
     /** The "Unwatched" toggle of movies and shows. */
@@ -180,7 +187,8 @@ data class LoadProgress(
     val total: Int,
 ) {
     /** Whether this is the list [other] waits for. One list serves every sort. */
-    fun isFor(other: LibraryQuery): Boolean = query.unsorted == other.unsorted
+    fun isFor(other: LibraryQuery): Boolean =
+        query.unsorted.copy(articles = null) == other.unsorted.copy(articles = null)
 }
 
 private val LibraryQuery.unsorted: LibraryQuery get() = copy(sort = LibrarySort.Title, descending = false)
@@ -200,6 +208,7 @@ class LibraryRepository @Inject constructor(
     private val ageFilter: AgeFilter,
     private val store: NameIndexStore,
     private val recordingFolders: RecordingFolders,
+    private val metadataLanguage: MetadataLanguage,
 ) {
 
     private val _progress = MutableStateFlow<LoadProgress?>(null)
@@ -226,7 +235,10 @@ class LibraryRepository @Inject constructor(
             session,
             slice.map { it.id },
         )
-        val items = dtos.map(mapper::item).map { item -> groups?.get(item.id)?.let { item.copy(group = it) } ?: item }
+        val names = slice.associate { it.id to it.name }
+        val items = dtos.map(mapper::item).map { item ->
+            item.copy(sortTitle = names[item.id], group = groups?.get(item.id))
+        }
         LibraryPage(ageFilter.mark(items), list.size)
     }
 
@@ -275,20 +287,40 @@ class LibraryRepository @Inject constructor(
     private val LibraryQuery.listedWhole: Boolean
         get() = unwatchedGrouped || scope == LibraryScope.Artists || scope == LibraryScope.Genres
 
-    /** What a title is sorted and filed under (see [NameOrder.title]). A song's sort name starts with its disc and track ("0001 - 0003 - Title"). */
-    private fun nameOf(dto: BaseItemDto, query: LibraryQuery): String =
-        if (query.scope == LibraryScope.Songs) dto.name.orEmpty() else NameOrder.title(dto.name.orEmpty(), dto.sortName)
+    /**
+     * What a title is sorted and filed under (see [NameOrder.sortTitle]). A song's sort name starts
+     * with its disc and track ("0001 - 0003 - Title"), so songs keep their name. An album has no
+     * countries of its own: it takes the ones of its first album artist, from [artistPlaces].
+     */
+    private fun nameOf(
+        dto: BaseItemDto,
+        query: LibraryQuery,
+        artistPlaces: Map<UUID, List<String>>,
+    ): String = if (query.scope == LibraryScope.Songs) {
+        dto.name.orEmpty()
+    } else {
+        NameOrder.sortTitle(
+            dto.name.orEmpty(),
+            dto.sortName,
+            dto.originalTitle,
+            dto.productionLocations ?: dto.albumArtists?.firstOrNull()?.id?.let(artistPlaces::get),
+            query.articles,
+            // The server names collections in the metadata language, they have no original title.
+            inLibraryLanguage = dto.type == BaseItemKind.BOX_SET,
+        )
+    }
 
     /** [shared] keeps one copy of each artist and album: a big music library repeats them on every song. */
     private fun entryOf(
         dto: BaseItemDto,
         query: LibraryQuery,
         shared: MutableMap<String, String>? = null,
+        artistPlaces: Map<UUID, List<String>> = emptyMap(),
     ): IndexEntry {
         fun String.once() = shared?.getOrPut(this) { this } ?: this
         return IndexEntry(
             id = dto.id,
-            name = nameOf(dto, query),
+            name = nameOf(dto, query, artistPlaces),
             addedMonth = dto.dateCreated?.let { it.year * 12 + it.monthValue - 1 },
             year = dto.productionYear,
             premiereDay = dto.premiereDate?.toLocalDate()?.toEpochDay()?.toInt(),
@@ -325,9 +357,10 @@ class LibraryRepository @Inject constructor(
      */
     private suspend fun listing(
         session: Session,
-        query: LibraryQuery,
+        requested: LibraryQuery,
         fresh: Boolean = false,
     ): Listing {
+        val query = withArticleLanguage(session, requested)
         val whole = if (query.listedWhole) wholeList(session, query, fresh) else null
         val entries = whole?.entries ?: index(session, query, fresh)
         return listingLock.withLock {
@@ -339,6 +372,24 @@ class LibraryRepository @Inject constructor(
                     whole?.dtos,
                 ).also { listingCache = it }
         }
+    }
+
+    /**
+     * [query] with "automatic" articles ([Articles.AUTO]) turned into a table language, so the index
+     * key and the sort titles hold it and a changed server language means a fresh index. The language
+     * is the metadata language of the library (or of all libraries of the kind), else the server's,
+     * else the interface language (see [Articles.resolveAuto], [MetadataLanguage]).
+     */
+    private suspend fun withArticleLanguage(session: Session, query: LibraryQuery): LibraryQuery {
+        if (query.articles != Articles.AUTO) return query
+        val libraries = query.libraryId?.let(::listOf)
+            ?: runSuspendCatching { libraryIds(session, query.kind) }.getOrDefault(emptyList())
+        val language = Articles.resolveAuto(
+            metadataLanguage.of(session, libraries),
+            metadataLanguage.ofServer(session),
+            Locale.getDefault().language,
+        )
+        return query.copy(articles = language)
     }
 
     private class Cached<T>(
@@ -449,13 +500,49 @@ class LibraryRepository @Inject constructor(
         waitedFor: Boolean = true,
     ): List<IndexEntry> {
         val shared = HashMap<String, String>()
+        // One request per page of artists, never one per album. Kept as long as the names built from it.
+        val places = albumArtistPlaces(session, query)
         return fetchAll(
             session,
             query,
             light = true,
             waitedFor = waitedFor,
-        ) { page -> synchronized(shared) { page.map { entryOf(it, query, shared) } } }
+        ) { page -> synchronized(shared) { page.map { entryOf(it, query, shared, places) } } }
             .distinctBy { it.id }
+    }
+
+    /**
+     * The countries of every album artist of [query]'s library, by artist id, for sorting albums by the
+     * articles of their artist's language. Empty for anything but albums, and when articles are off.
+     * An album carries its artists' ids but not their countries. Fetched page by page like the index.
+     */
+    private suspend fun albumArtistPlaces(session: Session, query: LibraryQuery): Map<UUID, List<String>> {
+        if (query.articles == null || itemTypeFor(query) != BaseItemKind.MUSIC_ALBUM) return emptyMap()
+        return runSuspendCatching {
+            val userId = UUID.fromString(session.user.userId)
+
+            @Suppress("DEPRECATION")
+            suspend fun page(start: Int) = session.api.artistApi.getAlbumArtists(
+                userId = userId,
+                parentId = query.libraryId,
+                fields = listOf(ItemFields.PRODUCTION_LOCATIONS),
+                startIndex = start,
+                limit = WHOLE_PAGE,
+                enableImages = false,
+                enableUserData = false,
+            ).content
+            val first = page(0)
+            val total = first.totalRecordCount.coerceAtMost(MAX_WHOLE)
+            val permits = Semaphore(WHOLE_PARALLEL)
+            val rest = coroutineScope {
+                (WHOLE_PAGE until total step WHOLE_PAGE).map { start ->
+                    async { permits.withPermit { page(start).items } }
+                }.awaitAll()
+            }
+            (first.items + rest.flatten()).mapNotNull { artist ->
+                artist.productionLocations?.takeIf { it.isNotEmpty() }?.let { artist.id to it }
+            }.toMap()
+        }.getOrDefault(emptyMap())
     }
 
     /** Saves a new copy of an index for the next fresh look; the one in use stays as it is. */
@@ -689,7 +776,12 @@ class LibraryRepository @Inject constructor(
                 session.api.artistApi.getAlbumArtists(
                     userId = userId,
                     parentId = query.libraryId,
-                    fields = listOf(ItemFields.CHILD_COUNT, ItemFields.SORT_NAME, ItemFields.DATE_CREATED),
+                    fields = listOf(
+                        ItemFields.CHILD_COUNT,
+                        ItemFields.SORT_NAME,
+                        ItemFields.DATE_CREATED,
+                        ItemFields.PRODUCTION_LOCATIONS,
+                    ),
                     startIndex = start,
                     limit = limit,
                     isFavorite = favorite,
@@ -719,10 +811,7 @@ class LibraryRepository @Inject constructor(
                 // Filtered, the titles themselves count: a collection would hide which of its movies match.
                 collapseBoxSetItems = (grouped || (query.groupsCollections && !query.unwatchedOnly)).takeIf { it },
                 fields = if (light) {
-                    listOf(
-                        ItemFields.SORT_NAME,
-                        ItemFields.DATE_CREATED,
-                    )
+                    listOf(ItemFields.SORT_NAME, ItemFields.DATE_CREATED)
                 } else {
                     listOf(
                         ItemFields.CHILD_COUNT,
@@ -730,7 +819,7 @@ class LibraryRepository @Inject constructor(
                         ItemFields.SORT_NAME,
                         ItemFields.DATE_CREATED,
                     )
-                },
+                } + originFields(query),
                 enableImages = !light,
                 enableUserData = !light,
                 startIndex = start,
@@ -741,6 +830,14 @@ class LibraryRepository @Inject constructor(
             ).content
         }
     }
+
+    /** Where a title comes from tells the language of its name. Songs keep their name: no need on 70,000 of them. */
+    private fun originFields(query: LibraryQuery): List<ItemFields> =
+        if (query.scope == LibraryScope.Songs || query.articles == null) {
+            emptyList()
+        } else {
+            listOf(ItemFields.ORIGINAL_TITLE, ItemFields.PRODUCTION_LOCATIONS)
+        }
 
     private fun itemTypeFor(query: LibraryQuery): BaseItemKind = when (query.scope) {
         LibraryScope.Collections -> BaseItemKind.BOX_SET
@@ -791,7 +888,7 @@ class LibraryRepository @Inject constructor(
         const val MAX_WHOLE = 200_000
 
         /** Part of the index key: saved indexes of an older form are not read. */
-        const val INDEX_VERSION = 3
+        const val INDEX_VERSION = 4
 
         /** How long the libraries of a kind are trusted before the views are asked again. */
         const val LIBRARIES_FRESH_MS = 5 * 60_000L

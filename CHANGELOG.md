@@ -34,6 +34,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - The audio and subtitle choice during playback no longer adds "Applies now" below the title
 - Sorted by year, titles of the same year follow their release date instead of the alphabet
 - Moving up or down into a row now starts at its first card. After that the row remembers the card you left it on, also when you come back from a detail page
+- A to Z ignores articles like "The", "Der" or "La" in the language of each title. The language is taken from your Jellyfin server. Settings › Appearance › Ignore articles turns it off
 
 ### Fixed
 - The specials season lists its episodes in order instead of by title

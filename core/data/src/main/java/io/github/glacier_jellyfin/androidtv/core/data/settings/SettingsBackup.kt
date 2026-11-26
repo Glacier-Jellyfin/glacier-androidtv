@@ -42,7 +42,7 @@ internal fun decodeDeviceSettings(prefs: Map<String, String?>): List<DeviceSetti
     prefs.filterKeys { it.startsWith(KEY_PREFIX) }.values.mapNotNull { value ->
         value ?: return@mapNotNull null
         try {
-            json.decodeFromString(DeviceSettings.serializer(), value)
+            json.decodeFromString(DeviceSettings.serializer(), value).let { it.copy(settings = it.settings.migrated()) }
         } catch (e: IllegalArgumentException) {
             // SerializationException is one too.
             null

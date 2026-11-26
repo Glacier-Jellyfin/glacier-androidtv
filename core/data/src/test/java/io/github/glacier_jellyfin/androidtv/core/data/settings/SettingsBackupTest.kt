@@ -1,6 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.core.data.settings
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -60,6 +61,18 @@ class SettingsBackupTest {
             "tvhome" to "",
         ) + withDeviceSettings(emptyMap(), copy = tv)
         assertEquals(listOf(tv), decodeDeviceSettings(prefs))
+    }
+
+    @Test
+    fun `a copy with the old off of the article language loads with the switch off`() {
+        val prefs = mapOf(
+            "device.old" to
+                """{"deviceId":"old","deviceName":"TV","savedAt":3,""" +
+                """"settings":{"appearance":{"titleArticles":"off"}}}""",
+        )
+        val appearance = decodeDeviceSettings(prefs).single().settings.appearance
+        assertEquals(false, appearance.ignoreArticles)
+        assertNull(appearance.legacyTitleArticles)
     }
 
     @Test

@@ -929,6 +929,12 @@ private fun appearanceRows(
                     onToggle = { viewModel.updateAppearance { it.copy(groupCollections = !it.groupCollections) } },
                 ),
                 SettingRow.Toggle(
+                    stringResource(R.string.settings_ignore_articles),
+                    stringResource(R.string.settings_ignore_articles_sub),
+                    appearance.ignoreArticles,
+                    onToggle = { viewModel.updateAppearance { it.copy(ignoreArticles = !it.ignoreArticles) } },
+                ),
+                SettingRow.Toggle(
                     stringResource(R.string.settings_collection_together),
                     stringResource(R.string.settings_collection_together_sub),
                     appearance.collectionMoviesWithShows,

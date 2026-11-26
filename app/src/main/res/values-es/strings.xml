@@ -767,6 +767,8 @@
     <string name="settings_reduce_motion_sub">Foco sin zoom, solo borde y brillo · fondos quietos</string>
     <string name="settings_group_sets">Agrupar películas en colecciones</string>
     <string name="settings_group_sets_sub">Las películas que van juntas aparecen en la biblioteca como una tarjeta de colección en vez de una a una</string>
+    <string name="settings_ignore_articles">Ignorar artículos</string>
+    <string name="settings_ignore_articles_sub">Ordena «El Padrino» en la P. El idioma sigue a tu servidor Jellyfin.</string>
     <string name="settings_collection_together">Películas y series juntas en las colecciones</string>
     <string name="settings_collection_together_sub">Una colección muestra sus películas y series en una fila en vez de dos</string>
     <string name="settings_group_slideshow">Presentación</string>

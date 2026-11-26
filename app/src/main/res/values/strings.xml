@@ -752,6 +752,8 @@
     <string name="settings_reduce_motion_sub">Focus without scaling, border and sheen only · still backdrops</string>
     <string name="settings_group_sets">Group movies into collections</string>
     <string name="settings_group_sets_sub">Movies that belong together show up in the library as one collection card instead of one by one</string>
+    <string name="settings_ignore_articles">Ignore articles</string>
+    <string name="settings_ignore_articles_sub">Sorts \"The Matrix\" under M. The language follows your Jellyfin server.</string>
     <string name="settings_collection_together">Movies and shows together in collections</string>
     <string name="settings_collection_together_sub">A collection shows its movies and shows in one row instead of two</string>
     <string name="settings_group_slideshow">Slideshow</string>

@@ -26,7 +26,7 @@ kotlin {
 val productionSources = tasks.register<Sync>("productionSources") {
     val modules = layout.projectDirectory.dir("../core")
     from(modules.dir("data/src/main/java/io/github/glacier_jellyfin/androidtv/core/data/media")) {
-        include("Tracks.kt", "NameOrder.kt")
+        include("Tracks.kt", "NameOrder.kt", "Articles.kt", "OriginLanguage.kt")
         into("data")
     }
     from(modules.dir("player/src/main/java/io/github/glacier_jellyfin/androidtv/core/player")) {

@@ -4,7 +4,7 @@ import java.util.UUID
 
 /**
  * A title of a library list with what the sorts need: the name it is sorted under (see
- * [NameOrder.title]) and the values the other sorts and their groups go by.
+ * [NameOrder.sortTitle]) and the values the other sorts and their groups go by.
  */
 class IndexEntry(
     val id: UUID,

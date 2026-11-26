@@ -19,6 +19,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Die Tonspur- und Untertitelwahl während der Wiedergabe zeigt unter dem Titel kein „Gilt ab sofort“ mehr
 - Nach Jahr sortiert folgen Titel desselben Jahres ihrem Erscheinungsdatum statt dem Alphabet
 - Wer nach oben oder unten in eine Reihe wechselt, landet jetzt zuerst auf ihrer ersten Karte. Danach merkt sich die Reihe die Karte, auf der du sie verlassen hast, auch nach der Rückkehr von einer Detailseite
+- A bis Z ignoriert Artikel wie „The“, „Der“ oder „La“ in der Sprache des jeweiligen Titels. Die Sprache kommt von deinem Jellyfin-Server. Unter Einstellungen › Darstellung › Artikel ignorieren schaltest du es aus
 
 ### Behoben
 - Die Specials-Staffel zeigt ihre Folgen in der richtigen Reihenfolge statt nach Titel

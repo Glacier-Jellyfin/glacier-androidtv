@@ -1,6 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.fuzz
 
 import com.code_intelligence.jazzer.api.FuzzedDataProvider
+import io.github.glacier_jellyfin.androidtv.core.data.media.Articles
 import io.github.glacier_jellyfin.androidtv.core.data.media.NameOrder
 import kotlin.math.sign
 
@@ -21,8 +22,13 @@ object NameOrderFuzzer {
         val c = names.getOrElse(2) { "" }
 
         check(NameOrder.key(a) == NameOrder.key(a)) { "key(\"$a\") changes" }
-        NameOrder.title(a, b)
-        NameOrder.title(b, a)
+        val languages = Articles.languages + listOf(null, "", "xx")
+        val language = languages[(a.length + b.length) % languages.size]
+        val locations = c.split(',').takeIf { c.isNotEmpty() }
+        val first = NameOrder.sortTitle(a, b, c, locations, language)
+        check(first == NameOrder.sortTitle(a, b, c, locations, language)) { "sortTitle(\"$a\") changes" }
+        NameOrder.sortTitle(b, a, null, null, language)
+        NameOrder.sortTitle(c, null, a, listOf(b), language)
 
         check(NameOrder.compare(a, a) == 0) { "\"$a\" is not equal to itself" }
         val ab = NameOrder.compare(a, b).sign

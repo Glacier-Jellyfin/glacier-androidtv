@@ -20,6 +20,7 @@ only in English.
 - La elección de audio y subtítulos durante la reproducción ya no muestra «Se aplica ahora» bajo el título
 - Al ordenar por año, los títulos del mismo año siguen su fecha de estreno en lugar del orden alfabético
 - Al subir o bajar a una fila, ahora se empieza en su primera tarjeta. Después la fila recuerda la tarjeta en la que la dejaste, también al volver de una página de detalles
+- El orden de la A a la Z ignora artículos como «The», «Der» o «La» en el idioma de cada título. El idioma viene de tu servidor Jellyfin. En Ajustes › Apariencia › Ignorar artículos lo desactivas
 
 ### Correcciones
 - La temporada de especiales muestra sus episodios en orden y no por título

@@ -746,6 +746,8 @@
     <string name="settings_reduce_motion_sub">Fokus ohne Skalierung, nur Rand und Glanz · ruhende Hintergrundbilder</string>
     <string name="settings_group_sets">Filme in Sammlungen gruppieren</string>
     <string name="settings_group_sets_sub">Zusammengehörige Filme erscheinen in der Bibliothek als eine Sammlungskarte statt einzeln</string>
+    <string name="settings_ignore_articles">Artikel ignorieren</string>
+    <string name="settings_ignore_articles_sub">Sortiert „Der Pate“ unter P. Die Sprache folgt deinem Jellyfin-Server.</string>
     <string name="settings_collection_together">Filme und Serien in Sammlungen zusammen</string>
     <string name="settings_collection_together_sub">Eine Sammlung zeigt ihre Filme und Serien in einer Reihe statt in zwei</string>
     <string name="settings_group_slideshow">Diashow</string>
