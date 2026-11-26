@@ -116,9 +116,9 @@ object NameOrder : Comparator<String> {
         val target = loose(sortName)
         val plain = name.trim().split(Blanks).map(::loose)
         // Each word either stays, or goes when it is an article-like word.
-        var reach = setOf(0)
+        var reach: Set<Int> = setOf(0)
         for (word in plain) {
-            val next = HashSet<Int>()
+            val next = mutableSetOf<Int>()
             for (at in reach) {
                 if (target.startsWith(word, at)) next += at + word.length
                 if (word in RemovableWords) next += at

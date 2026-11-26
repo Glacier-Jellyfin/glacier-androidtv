@@ -28,6 +28,7 @@ import java.net.URI
 import java.net.URL
 import java.net.URLEncoder
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.minutes
@@ -420,7 +421,8 @@ class PlaybackRepository @Inject constructor(
     private suspend fun downloadBps(session: Session, blockBytes: Int): Double? {
         val started = System.nanoTime()
         val deadline = started + BandwidthProbe.TIMEOUT_MS * 1_000_000
-        var received = 0L
+        // AtomicLong because the counter is mutated inside the lambda below and read after it.
+        val received = AtomicLong()
         val failed = runSuspendCatching {
             val base = checkNotNull(session.api.baseUrl).trimEnd('/')
             val connection = (
@@ -439,7 +441,7 @@ class PlaybackRepository @Inject constructor(
                         currentCoroutineContext().ensureActive()
                         val n = input.read(buffer)
                         if (n < 0) break
-                        received += n
+                        received.addAndGet(n.toLong())
                         // A debug cap makes the test as slow as a stream would be.
                         delay(DebugThrottle.waitNs(n) / 1_000_000)
                     }
@@ -450,10 +452,10 @@ class PlaybackRepository @Inject constructor(
                 connection.disconnect()
             }
         }.onFailure {
-            if (received == 0L) Log.w(TAG, "Measuring the bandwidth failed", it)
-        }.isFailure && received == 0L
+            if (received.get() == 0L) Log.w(TAG, "Measuring the bandwidth failed", it)
+        }.isFailure && received.get() == 0L
         if (failed) return null
-        return BandwidthProbe.bitsPerSecond(received, System.nanoTime() - started)
+        return BandwidthProbe.bitsPerSecond(received.get(), System.nanoTime() - started)
     }
 
     /**
