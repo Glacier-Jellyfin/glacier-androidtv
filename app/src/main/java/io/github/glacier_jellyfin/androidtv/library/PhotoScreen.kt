@@ -1,8 +1,9 @@
 package io.github.glacier_jellyfin.androidtv.library
 
+import android.content.Context
+import android.graphics.Bitmap
 import android.text.format.DateFormat
 import androidx.activity.compose.BackHandler
-import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -25,7 +26,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -43,12 +43,15 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalLocale
@@ -56,21 +59,20 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.ui.compose.ContentFrame
-import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
+import coil3.BitmapImage
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.request.allowHardware
 import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderMedia
-import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaPhoto
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
@@ -91,7 +93,9 @@ import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 /**
  * A folder's photos and videos full screen, in the folder page's order. A video plays right here.
@@ -100,7 +104,6 @@ import kotlinx.coroutines.delay
  * position show for a moment after each change. A line along the bottom edge shows how far a
  * video has played or a photo's slideshow time.
  */
-@OptIn(UnstableApi::class) // ContentFrame
 @Composable
 fun PhotoScreen(
     onNavigate: (UiEvent.Navigate) -> Unit,
@@ -161,7 +164,7 @@ fun PhotoScreen(
         val loader = SingletonImageLoader.get(context)
         listOf(state.index + 1, state.index - 1)
             .mapNotNull { state.media.getOrNull(it) as? FolderMedia.Photo }.forEach {
-                loader.enqueue(ImageRequest.Builder(context).data(it.photo.fullUrl).build())
+                loader.enqueue(photoImageRequest(context, it.photo.fullUrl))
             }
     }
 
@@ -246,15 +249,7 @@ fun PhotoScreen(
 
                     is FolderMedia.Video -> {
                         val player = video.player.takeIf { _ -> video.id == it.id }
-                        // The frame shows until the stream has its first picture, then the video over it.
-                        VideoStill(it.item, playing = player != null)
-                        if (player != null) {
-                            ContentFrame(
-                                player = player,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Fit,
-                            )
-                        }
+                        GalleryVideo(it.item.thumbUrl, player)
                     }
                 }
             }
@@ -449,15 +444,33 @@ private fun SlideProgress(
 /** The whole photo, as large as the screen allows; a line when it does not load. */
 @Composable
 private fun PhotoImage(photo: MediaPhoto) {
-    var failed by remember(photo.id) { mutableStateOf(false) }
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    val context = LocalContext.current
+    val request = remember(context, photo.fullUrl) { photoImageRequest(context, photo.fullUrl) }
+    var failed by remember(request) { mutableStateOf(false) }
+    var bitmap by remember(request) { mutableStateOf<Bitmap?>(null) }
+    var backdrop by remember(request) { mutableStateOf<ImageBitmap?>(null) }
+    var viewport by remember { mutableStateOf(IntSize.Zero) }
+    val source = bitmap
+    val sample = source?.let { backdropSampleSize(it.width.toFloat() / it.height, viewport) }
+    LaunchedEffect(source, sample) {
+        backdrop = if (source != null && sample != null) {
+            withContext(Dispatchers.Default) {
+                Bitmap.createScaledBitmap(source, sample.width, sample.height, true).blurredFrame().asImageBitmap()
+            }
+        } else {
+            null
+        }
+    }
+    Box(Modifier.fillMaxSize().onSizeChanged { viewport = it }, contentAlignment = Alignment.Center) {
         if (failed) {
             Text(stringResource(R.string.photo_error), style = GlacierText.body(21), color = GlacierColors.Mist)
         } else {
+            backdrop?.takeIf { sample != null }?.let { BlurredMediaBackdrop(it) }
             AsyncImage(
-                model = photo.fullUrl,
+                model = request,
                 contentDescription = photo.name,
                 contentScale = ContentScale.Fit,
+                onSuccess = { bitmap = (it.result.image as? BitmapImage)?.bitmap },
                 onError = { failed = true },
                 modifier = Modifier.fillMaxSize(),
             )
@@ -465,38 +478,9 @@ private fun PhotoImage(photo: MediaPhoto) {
     }
 }
 
-/**
- * A video's frame until it plays, whole like a photo and like the video after it (a portrait video's frame
- * is not cropped to the screen); the play sign while its stream is not open yet.
- */
-@Composable
-private fun VideoStill(video: MediaItem, playing: Boolean) {
-    val accent = LocalAccent.current
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        AsyncImage(
-            model = video.thumbUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize(),
-        )
-        if (!playing) {
-            Box(
-                Modifier
-                    .size(96.dp)
-                    .clip(PillShape)
-                    .background(accent.main),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    GlacierIcons.Play,
-                    contentDescription = null,
-                    tint = GlacierColors.Void,
-                    modifier = Modifier.size(36.dp),
-                )
-            }
-        }
-    }
-}
+/** The small blurred sample can be made from the same decoded image as the sharp photo. */
+private fun photoImageRequest(context: Context, url: String) =
+    ImageRequest.Builder(context).data(url).allowHardware(false).build()
 
 /** Transitions: browsing by hand, the slideshow's slow blend, and a plain fade with "reduce motion". */
 private const val BROWSE_MS = 350

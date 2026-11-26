@@ -100,7 +100,7 @@ object CardSize {
  * times at once (the same cover down a music queue) until the first one is cached.
  */
 @Composable
-fun Artwork(url: String?, modifier: Modifier = Modifier) {
+fun Artwork(url: String?, modifier: Modifier = Modifier, contentScale: ContentScale = ContentScale.Crop) {
     val accent = LocalAccent.current
     Box(modifier.background(Brush.linearGradient(listOf(accent.deep.copy(alpha = 0.45f), GlacierColors.Deep)))) {
         if (url != null) {
@@ -117,7 +117,7 @@ fun Artwork(url: String?, modifier: Modifier = Modifier) {
                 AsyncImage(
                     model = url,
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                    contentScale = contentScale,
                     onError = { failed = true },
                     modifier = Modifier.fillMaxSize(),
                 )

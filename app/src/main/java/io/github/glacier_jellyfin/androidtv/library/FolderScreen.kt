@@ -756,7 +756,8 @@ private fun Strip(
 @Composable
 private fun Backdrop(media: FolderMedia?, video: InlineVideoState, inFront: Boolean, modifier: Modifier) {
     val scale = if (inFront) ContentScale.Fit else ContentScale.Crop
-    Box(modifier.background(GlacierColors.Void)) {
+    val background = if (inFront && media is FolderMedia.Video) Color.Transparent else GlacierColors.Void
+    Box(modifier.background(background)) {
         Crossfade(targetState = media, label = "preview") { shown ->
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 when (shown) {
@@ -768,31 +769,37 @@ private fun Backdrop(media: FolderMedia?, video: InlineVideoState, inFront: Bool
                     )
 
                     is FolderMedia.Video -> {
-                        val player = video.player.takeIf { video.id == shown.id }
-                        AsyncImage(
-                            model = shown.item.thumbUrl,
-                            contentDescription = shown.name,
-                            contentScale = scale,
-                            modifier = Modifier.fillMaxSize(),
-                        )
+                        val player = video.player.takeIf { inFront && video.id == shown.id }
+                        val poster: @Composable () -> Unit = {
+                            AsyncImage(
+                                model = shown.item.thumbUrl,
+                                contentDescription = shown.name,
+                                contentScale = scale,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
                         if (player != null) {
                             ContentFrame(
                                 player = player,
                                 modifier = Modifier.fillMaxSize(),
                                 surfaceType = SURFACE_TYPE_TEXTURE_VIEW,
                                 contentScale = scale,
+                                shutter = poster,
                             )
-                        } else if (inFront) {
-                            Box(
-                                Modifier.size(84.dp).clip(PillShape).background(LocalAccent.current.main),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    GlacierIcons.Play,
-                                    contentDescription = null,
-                                    tint = GlacierColors.Void,
-                                    modifier = Modifier.size(32.dp),
-                                )
+                        } else {
+                            poster()
+                            if (inFront) {
+                                Box(
+                                    Modifier.size(84.dp).clip(PillShape).background(LocalAccent.current.main),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        GlacierIcons.Play,
+                                        contentDescription = null,
+                                        tint = GlacierColors.Void,
+                                        modifier = Modifier.size(32.dp),
+                                    )
+                                }
                             }
                         }
                     }
