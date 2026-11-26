@@ -113,6 +113,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.imageApi
+import org.jellyfin.sdk.model.serializer.toUUIDOrNull
 
 /** Picks the first screen: "Who's watching?" (or the start profile) for the start server, otherwise setup. */
 @HiltViewModel
@@ -421,7 +422,10 @@ class MainActivity : ComponentActivity() {
         HomeLaunch.from(intent)?.let(startViewModel::open)
         // adb shell am start -n <package>/...MainActivity -a io.github.glacier_jellyfin.androidtv.PLAY_TITLE --es item <id> --el startms <ms>
         if (BuildConfig.DEBUG && intent.action == PLAY_ACTION) {
-            intent.getStringExtra("item")?.let { startViewModel.play(it, intent.getLongExtra("startms", 0)) }
+            // Ids come with or without dashes, as Jellyfin writes them; a broken one is dropped.
+            intent.getStringExtra("item")?.toUUIDOrNull()?.let {
+                startViewModel.play(it.toString(), intent.getLongExtra("startms", 0))
+            }
         }
     }
 
