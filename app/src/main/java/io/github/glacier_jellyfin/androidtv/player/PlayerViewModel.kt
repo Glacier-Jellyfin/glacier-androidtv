@@ -578,7 +578,6 @@ class PlayerViewModel @Inject constructor(
                     reuse = retry,
                 )
                 source = opened
-                recordTracks(opened.audioIndex, opened.subtitleIndex)
                 val request = streamRequest(opened, start).copy(snapStart = snapStart)
                 val playback = GlacierPlayer.create(context, request)
                 val player = playback.player
@@ -1229,7 +1228,6 @@ class PlayerViewModel @Inject constructor(
                 switch = null,
             )
         }
-        recordTracks(opened.audioIndex, opened.subtitleIndex)
         Log.i(
             TAG,
             "Handed over at ${handover.atMs / 1000} s to ${opened.method}, ${StreamBudget.describe(
@@ -1559,7 +1557,10 @@ class PlayerViewModel @Inject constructor(
         recordTracks(audio, subtitle)
     }
 
-    /** What plays now, for the show's next episode ("use the tracks of the last title"). */
+    /**
+     * The user's own pick, for the show's next episode ("use the tracks of the last title").
+     * Only picks are recorded, never what the server chose on its own when opening.
+     */
     private fun recordTracks(audio: Int?, subtitle: Int?) {
         val current = source ?: return
         val key = _state.value.details?.showKey() ?: return

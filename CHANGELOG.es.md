@@ -36,6 +36,7 @@ only in English.
 - Las grabaciones de TV en directo ya no aparecen entre las películas y series. Siguen en TV en directo > Grabaciones y la búsqueda las sigue encontrando
 - Los tráileres de YouTube ya no se quedan en la pantalla de carga ni fallan cuando ya se están reproduciendo
 - La reproducción ya no pasa a un flujo más pequeño por una sola prueba de conexión lenta mientras sigue al día. La prueba comparte la conexión con el vídeo, así que se repite y se contrasta antes con la velocidad del reproductor
+- Un episodio ya no empieza con subtítulos (o audio) que el servidor eligió para un episodio anterior, como subtítulos en japonés. El siguiente episodio solo adopta las pistas que elegiste tú
 
 ## [0.10.1] - 2026-11-18
 

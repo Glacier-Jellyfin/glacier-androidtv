@@ -50,6 +50,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - Live TV recordings no longer show up among movies and shows. They stay under Live TV > Recordings and search still finds them
 - YouTube trailers no longer stay on the loading screen or fail while they already play
 - Playback no longer drops to a smaller stream because of one slow connection test while it keeps up. The test shares the connection with the video, so it is repeated and checked against the player's own speed first
+- An episode no longer starts with subtitles (or audio) the server picked for an earlier episode, such as Japanese subtitles. The next episode only takes over tracks you picked yourself
 
 ## [0.10.1] - 2026-11-18
 
