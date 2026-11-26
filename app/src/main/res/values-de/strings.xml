@@ -230,6 +230,10 @@
     <string name="folder_empty">Dieser Ordner ist leer.</string>
     <string name="photo_position">%1$d / %2$d</string>
     <string name="photo_error">Dieses Foto konnte nicht geladen werden.</string>
+    <string name="photo_previous">Vorheriges</string>
+    <string name="photo_next">Nächstes</string>
+    <string name="photo_slideshow_start">Diashow starten</string>
+    <string name="photo_slideshow_stop">Diashow stoppen</string>
     <string name="scope_all">Alle</string>
     <string name="scope_collections">Sammlungen</string>
     <string name="scope_genres">Genres</string>

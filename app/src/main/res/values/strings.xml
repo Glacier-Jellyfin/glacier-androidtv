@@ -235,6 +235,10 @@
     <string name="folder_empty">This folder is empty.</string>
     <string name="photo_position">%1$d / %2$d</string>
     <string name="photo_error">This photo could not be loaded.</string>
+    <string name="photo_previous">Previous</string>
+    <string name="photo_next">Next</string>
+    <string name="photo_slideshow_start">Start slideshow</string>
+    <string name="photo_slideshow_stop">Stop slideshow</string>
     <string name="scope_all">All</string>
     <string name="scope_collections">Collections</string>
     <string name="scope_genres">Genres</string>

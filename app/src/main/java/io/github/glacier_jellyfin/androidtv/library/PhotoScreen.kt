@@ -1,6 +1,7 @@
 package io.github.glacier_jellyfin.androidtv.library
 
 import android.text.format.DateFormat
+import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -14,10 +15,12 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,10 +34,12 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -70,6 +75,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.MediaPhoto
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
+import io.github.glacier_jellyfin.androidtv.core.designsystem.LeftToRight
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
@@ -78,6 +84,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
 import io.github.glacier_jellyfin.androidtv.core.designsystem.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.core.designsystem.endKey
 import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
+import io.github.glacier_jellyfin.androidtv.player.ControlButton
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
@@ -87,10 +94,9 @@ import kotlinx.coroutines.delay
 
 /**
  * A folder's photos and videos full screen, in the folder page's order. A video plays right here.
- * Left and right browse; OK on a photo starts or stops a slideshow, which plays the videos it comes
- * to; OK on a video opens the full player where it is, and Back from there comes back here. Name,
- * date and position show for a moment after each change; a line along the bottom edge shows how far
- * a video has played, or a photo's time in the slideshow.
+ * Left and right browse. OK on a photo opens its controls, including the slideshow; OK on a video opens
+ * the full player where it is, and Back from there comes back here. Name, date and position show for a moment
+ * after each change; a line along the bottom edge shows how far a video has played or a photo's slideshow time.
  */
 @OptIn(UnstableApi::class) // ContentFrame
 @Composable
@@ -107,7 +113,18 @@ fun PhotoScreen(
     val reduceMotion = LocalReduceMotion.current
     val focus = remember { FocusRequester() }
     val direction = LocalLayoutDirection.current
-    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    val slideshowFocus = remember { FocusRequester() }
+    val current = state.current
+    val photo = current as? FolderMedia.Photo
+    var controlsOpen by remember { mutableStateOf(false) }
+    val controlsVisible = controlsOpen && photo != null
+    BackHandler(enabled = controlsVisible) { controlsOpen = false }
+    LaunchedEffect(photo == null) { if (photo == null) controlsOpen = false }
+    LaunchedEffect(controlsVisible) {
+        withFrameNanos { }
+        val target = if (controlsVisible) slideshowFocus else focus
+        runCatching { target.requestFocus() }
+    }
     // A slideshow or a video runs on its own: the TV must not dim or start its screensaver meanwhile.
     val view = LocalView.current
     val running = state.slideshow || video.player != null
@@ -141,19 +158,25 @@ fun PhotoScreen(
             .blockKeysWhile(state.loading && state.current == null)
             .onPreviewKeyEvent { event ->
                 // Without photos the keys belong to the retry button.
-                if (event.type != KeyEventType.KeyDown || state.media.isEmpty()) return@onPreviewKeyEvent false
+                if (current == null) return@onPreviewKeyEvent false
+                if (controlsVisible && event.key != Key.MediaPlayPause) return@onPreviewKeyEvent false
+                if (event.key in ConfirmKeys) {
+                    if (event.type == KeyEventType.KeyUp) {
+                        if (photo != null) {
+                            controlsOpen = true
+                        } else {
+                            viewModel.openVideoPlayer()
+                        }
+                        overlayKey++
+                    }
+                    return@onPreviewKeyEvent true
+                }
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (event.key) {
-                    direction.startKey -> viewModel.previous()
-
-                    direction.endKey -> viewModel.next()
-
-                    Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> viewModel.select()
-
+                    direction.startKey -> viewModel.browseBy(-1)
+                    direction.endKey -> viewModel.browseBy(1)
                     Key.MediaPlayPause -> viewModel.playPause()
-
-                    // Up and down only bring the name back.
                     Key.DirectionUp, Key.DirectionDown -> Unit
-
                     else -> return@onPreviewKeyEvent false
                 }
                 overlayKey++
@@ -161,7 +184,6 @@ fun PhotoScreen(
             }
             .focusable(),
     ) {
-        val current = state.current
         when {
             state.loading && current == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 SpinningDiamond(110)
@@ -222,7 +244,7 @@ fun PhotoScreen(
         }
 
         AnimatedVisibility(
-            visible = overlay && current != null,
+            visible = (overlay || controlsVisible) && current != null,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -242,12 +264,23 @@ fun PhotoScreen(
                     overflow = TextOverflow.Ellipsis,
                 )
                 longTakenText(current?.date)?.let { Text(it, style = GlacierText.body(21), color = GlacierColors.Mist) }
+                if (controlsVisible) {
+                    PhotoControls(
+                        state = state,
+                        slideshowFocus = slideshowFocus,
+                        onBrowse = viewModel::browseBy,
+                        onSlideshow = {
+                            if (!state.slideshow) controlsOpen = false
+                            viewModel.playPause()
+                        },
+                    )
+                }
             }
         }
 
         // Where in the folder this is, small in the top corner, shown and hidden with the name.
         AnimatedVisibility(
-            visible = overlay && state.media.size > 1,
+            visible = (overlay || controlsVisible) && state.media.size > 1,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.TopEnd).padding(top = 40.dp, end = PageEdge.dp),
@@ -280,8 +313,65 @@ fun PhotoScreen(
                     modifier = Modifier.align(Alignment.BottomStart),
                 )
         }
+
     }
 }
+
+@Composable
+private fun PhotoControls(
+    state: PhotoState,
+    slideshowFocus: FocusRequester,
+    onBrowse: (Int) -> Unit,
+    onSlideshow: () -> Unit,
+) {
+    Row(
+        Modifier
+            .padding(top = 8.dp)
+            .focusProperties { onExit = { cancelFocusChange() } }
+            .focusGroup(),
+        horizontalArrangement = Arrangement.spacedBy(18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        LeftToRight {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (state.index > 0) {
+                    ControlButton(
+                        GlacierIcons.SkipBack,
+                        stringResource(R.string.photo_previous),
+                        onClick = {
+                            if (state.index == 1) slideshowFocus.requestFocus()
+                            onBrowse(-1)
+                        },
+                    )
+                }
+                ControlButton(
+                    if (state.slideshow) GlacierIcons.Pause else GlacierIcons.Play,
+                    stringResource(
+                        if (state.slideshow) R.string.photo_slideshow_stop else R.string.photo_slideshow_start,
+                    ),
+                    onClick = onSlideshow,
+                    modifier = Modifier.focusRequester(slideshowFocus),
+                    big = true,
+                )
+                if (state.index < state.media.lastIndex) {
+                    ControlButton(
+                        GlacierIcons.SkipForward,
+                        stringResource(R.string.photo_next),
+                        onClick = {
+                            if (state.index == state.media.lastIndex - 1) slideshowFocus.requestFocus()
+                            onBrowse(1)
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+private val ConfirmKeys = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
 
 /** A thin line filling from left to right over [durationMs], from the start again for each new [key]. */
 @Composable

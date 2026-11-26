@@ -92,38 +92,37 @@ class PhotoViewModel @Inject constructor(
         }
     }
 
-    /** The next photo or video; during a slideshow a photo's time starts anew. */
-    fun next() {
-        if (step(1)) showCurrent()
+    /** Browse by one item; during a slideshow the new photo's time starts anew. */
+    fun browseBy(offset: Int) {
+        if (step(offset)) showCurrent()
     }
 
-    fun previous() {
-        if (step(-1)) showCurrent()
-    }
-
-    /** OK: on a video the full player takes over where it is; on a photo the slideshow starts or stops. */
-    fun select() {
-        val current = _state.value.current ?: return
-        if (current is FolderMedia.Video) {
-            val position = inline.positionMs
-            handedOver = current.id to position
-            inline.release()
-            viewModelScope.launch {
-                _events.send(
-                    UiEvent.Navigate(PlayerRoute(current.id.toString(), startMs = position)),
-                )
-            }
-        } else if (_state.value.slideshow) {
-            stopSlideshow()
-        } else {
-            _state.update { it.copy(slideshow = true) }
-            showCurrent()
+    /** The full player takes over an inline video at its current position. */
+    fun openVideoPlayer() {
+        val current = _state.value.current as? FolderMedia.Video ?: return
+        val position = inline.positionMs
+        handedOver = current.id to position
+        inline.release()
+        viewModelScope.launch {
+            _events.send(UiEvent.Navigate(PlayerRoute(current.id.toString(), startMs = position)))
         }
     }
 
     /** Play and pause: the video here, or the slideshow on a photo. */
     fun playPause() {
-        if (_state.value.current is FolderMedia.Video) inline.togglePlay() else select()
+        val state = _state.value
+        when (state.current) {
+            is FolderMedia.Video -> inline.togglePlay()
+
+            is FolderMedia.Photo -> if (state.slideshow) {
+                stopSlideshow()
+            } else {
+                _state.update { it.copy(slideshow = true) }
+                showCurrent()
+            }
+
+            null -> Unit
+        }
     }
 
     /** Back on screen from the full player: the slideshow goes on with the next one, or the video plays on here. */
