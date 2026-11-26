@@ -54,6 +54,11 @@ import org.robolectric.annotation.Config
 @RunWith(AndroidJUnit4::class)
 @Config(sdk = [34])
 class HandoverBufferTest {
+    private companion object {
+        /** How long a wait for the loader threads may take in real time; a loaded machine needs far more than the 10 s default. */
+        const val WAIT_LIMIT_MS = 120_000L
+    }
+
     private val opens = java.util.Collections.synchronizedList(mutableListOf<String>())
 
     /** The link: nothing arrives beyond this many bytes of the main load (the stream outruns the connection). */
@@ -250,12 +255,21 @@ class HandoverBufferTest {
     private fun loadingFromTheHandOverPoint() = opened("second").size >= 4
 
     /**
+     * Waits for a condition that the loader threads bring about, with a generous limit of real time: the threads read files and
+     * sleep, so on a busy machine they can need far longer than the 10 s that the test helper allows by default.
+     */
+    private fun awaitCondition(condition: () -> Boolean) {
+        TestPlayerRunHelper.advance(player)
+            .withTimeoutMs(WAIT_LIMIT_MS)
+            .untilBackgroundThreadCondition { condition() }
+    }
+
+    /**
      * Waits for the player to be ready, in the time of the threads that load (not of the test clock, which runs on while they
      * work and ends a wait for loading on a busy machine as a player that is stuck).
      */
     private fun awaitReady() {
-        TestPlayerRunHelper.advance(player)
-            .untilBackgroundThreadCondition { player.playbackState == Player.STATE_READY }
+        awaitCondition { player.playbackState == Player.STATE_READY }
     }
 
     /** Plays to 10 s and lets the link fill the buffer until about 35 s: more than the 25 s where the hand over is to be. */
@@ -264,7 +278,7 @@ class HandoverBufferTest {
         player.playWhenReady = true
         TestPlayerRunHelper.playUntilPosition(player, 0, 10_000)
         player.pause()
-        TestPlayerRunHelper.advance(player).untilBackgroundThreadCondition { player.bufferedPosition >= 35_000 }
+        awaitCondition { player.bufferedPosition >= 35_000 }
         assertEquals(Player.STATE_READY, player.playbackState)
     }
 
@@ -277,7 +291,7 @@ class HandoverBufferTest {
     /** Plays until the hand over has been completed (the app's callback has run). */
     private fun playUntilHandedOver() {
         player.play()
-        TestPlayerRunHelper.advance(player).untilBackgroundThreadCondition { playback.handOverId == null }
+        awaitCondition { playback.handOverId == null }
         TestPlayerRunHelper.runUntilPendingCommandsAreFullyHandled(player)
     }
 
@@ -290,7 +304,7 @@ class HandoverBufferTest {
         assertTrue(playback.handOver(25_000, request(second)))
         TestPlayerRunHelper.runUntilPendingCommandsAreFullyHandled(player)
         // The next stream loads ahead while the playing one is still loading.
-        TestPlayerRunHelper.advance(player).untilBackgroundThreadCondition { opened("second").isNotEmpty() }
+        awaitCondition { opened("second").isNotEmpty() }
 
         assertEquals("ready, not buffering", Player.STATE_READY, player.playbackState)
         assertEquals("the playing stream is not read again", filesBefore, opened("first"))
@@ -307,13 +321,12 @@ class HandoverBufferTest {
         playAndBuffer()
         val filesBefore = opened("first")
         assertTrue(playback.handOver(25_000, request(second)))
-        TestPlayerRunHelper.advance(player).untilBackgroundThreadCondition { loadingFromTheHandOverPoint() }
+        awaitCondition { loadingFromTheHandOverPoint() }
         val secondBefore = opened("second")
 
         // The preloaded file has 12 s: the move is not postponed.
         player.play()
-        TestPlayerRunHelper.advance(player)
-            .untilBackgroundThreadCondition { transitions.any { it.startsWith("handover-1") } }
+        awaitCondition { transitions.any { it.startsWith("handover-1") } }
         TestPlayerRunHelper.runUntilPendingCommandsAreFullyHandled(player)
 
         assertEquals("handover-1", player.currentMediaItem?.mediaId)
@@ -359,14 +372,14 @@ class HandoverBufferTest {
         player.playWhenReady = true
         TestPlayerRunHelper.playUntilPosition(player, 0, 10_000)
         player.pause()
-        TestPlayerRunHelper.advance(player).untilBackgroundThreadCondition { player.bufferedPosition >= 20_000 }
+        awaitCondition { player.bufferedPosition >= 20_000 }
         assertTrue(playback.handOver(20_000, request(second)))
         limit.set(400_000)
 
         // On to just before the hand over point: the playing stream would load all of the file in that time.
         player.play()
         TestPlayerRunHelper.playUntilPosition(player, 0, 19_000)
-        TestPlayerRunHelper.advance(player).untilBackgroundThreadCondition { loadingFromTheHandOverPoint() }
+        awaitCondition { loadingFromTheHandOverPoint() }
 
         // 30 s is where loading stops (the file is 4.2 KB per second, 127 KB); it checks every 16 KB, and the link would carry
         // all 380 KB.
@@ -383,7 +396,7 @@ class HandoverBufferTest {
         player.playWhenReady = true
         TestPlayerRunHelper.playUntilPosition(player, 0, 10_000)
         player.pause()
-        TestPlayerRunHelper.advance(player).untilBackgroundThreadCondition { player.bufferedPosition >= 20_000 }
+        awaitCondition { player.bufferedPosition >= 20_000 }
         settle()
         assertTrue("less than 27.5 s buffered, was ${player.bufferedPosition}", player.bufferedPosition < 27_500)
 
@@ -391,13 +404,12 @@ class HandoverBufferTest {
         holdSegments = true
         segmentHoldAt = 20_000
         assertTrue(playback.handOver(25_000, hlsRequest()))
-        TestPlayerRunHelper.advance(player).untilBackgroundThreadCondition { opened("seg4").isNotEmpty() }
+        awaitCondition { opened("seg4").isNotEmpty() }
         settle()
         assertEquals("the segment is being loaded", 1, opened("seg4").size)
 
         player.play()
-        TestPlayerRunHelper.advance(player)
-            .untilBackgroundThreadCondition { transitions.any { it.startsWith("handover-1") } }
+        awaitCondition { transitions.any { it.startsWith("handover-1") } }
         TestPlayerRunHelper.runUntilPendingCommandsAreFullyHandled(player)
         settle()
         holdSegments = false
@@ -415,7 +427,7 @@ class HandoverBufferTest {
     fun aPreloadThatIsDoneAtTheMoveIsUsedAsItIs() {
         playAndBuffer()
         assertTrue(playback.handOver(25_000, hlsRequest()))
-        TestPlayerRunHelper.advance(player).untilBackgroundThreadCondition { opened("seg6").isNotEmpty() }
+        awaitCondition { opened("seg6").isNotEmpty() }
         settle()
         val segmentsBefore = opened("seg")
 
@@ -446,7 +458,7 @@ class HandoverBufferTest {
         })
         playAndBuffer()
         assertTrue(playback.handOver(25_000, hlsRequest()))
-        TestPlayerRunHelper.advance(player).untilBackgroundThreadCondition { opened("seg6").isNotEmpty() }
+        awaitCondition { opened("seg6").isNotEmpty() }
         settle()
         // The end times are in time of the title (the clip starts at 25 s): three segments of 6 s are loaded, up to 42 s.
         val completed = synchronized(ends) { ends.toList() }
@@ -470,7 +482,7 @@ class HandoverBufferTest {
         holdSegments = true
         segmentHoldAt = 0
         assertTrue(playback.handOver(25_000, hlsRequest()))
-        TestPlayerRunHelper.advance(player).untilBackgroundThreadCondition { opened("seg4").isNotEmpty() }
+        awaitCondition { opened("seg4").isNotEmpty() }
 
         // Past the hand over point, still on the playing stream, and not stalled.
         player.play()
@@ -482,7 +494,7 @@ class HandoverBufferTest {
         // The segment arrives: at the next step the next stream has what it needs, and the move is made, to where the playing
         // stream is, without loading what the next stream already has.
         holdSegments = false
-        TestPlayerRunHelper.advance(player).untilBackgroundThreadCondition { opened("seg6").isNotEmpty() }
+        awaitCondition { opened("seg6").isNotEmpty() }
         settle()
         val segmentsBefore = opened("seg")
         playUntilHandedOver()
@@ -508,7 +520,7 @@ class HandoverBufferTest {
         holdSegments = true
         segmentHoldAt = 0
         assertTrue(playback.handOver(25_000, hlsRequest()))
-        TestPlayerRunHelper.advance(player).untilBackgroundThreadCondition { opened("seg4").isNotEmpty() }
+        awaitCondition { opened("seg4").isNotEmpty() }
 
         player.play()
         TestPlayerRunHelper.playUntilPosition(player, 0, 34_000)
