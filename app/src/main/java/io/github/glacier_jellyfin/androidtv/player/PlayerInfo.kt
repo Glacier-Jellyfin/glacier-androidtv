@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -24,14 +25,17 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -51,6 +55,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
@@ -92,6 +97,7 @@ import java.time.format.FormatStyle
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 /** Good news on the sheet: hardware decoding, direct play, a track passed on as it is. */
 internal val InfoOk = Color(0xFF8FD6B0)
@@ -162,11 +168,15 @@ internal fun InfoPanelFrame(
     tabs: List<String>,
     onDismiss: () -> Unit,
     growsWithContent: (tab: Int) -> Boolean = { false },
+    scrollContent: Boolean = false,
     content: @Composable (tab: Int) -> Unit,
 ) {
     val direction = LocalLayoutDirection.current
     BackHandler(onBack = onDismiss)
     val focus = remember { FocusRequester() }
+    val scroll = if (scrollContent) rememberScrollState() else null
+    val scope = rememberCoroutineScope()
+    val scrollStep = with(LocalDensity.current) { 144.dp.toPx() }
     var tab by remember { mutableIntStateOf(0) }
     val shape = RoundedCornerShape(GlacierShapes.RadiusLg)
     // Focus stays in the panel: Up/Down must not reach the OSD behind it, and with nowhere to go the first
@@ -191,7 +201,7 @@ internal fun InfoPanelFrame(
                 .focusRequester(focus)
                 .onKeyEvent { event ->
                     when (event.key) {
-                        Key.DirectionCenter, Key.Enter -> {
+                        Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
                             if (event.type == KeyEventType.KeyUp) onDismiss()
                             true
                         }
@@ -199,6 +209,15 @@ internal fun InfoPanelFrame(
                         Key.DirectionLeft, Key.DirectionRight -> {
                             if (event.type == KeyEventType.KeyDown) {
                                 tab = (tab + (direction.horizontalStep(event.key) ?: 0)).coerceIn(0, tabs.lastIndex)
+                            }
+                            true
+                        }
+
+                        Key.DirectionUp, Key.DirectionDown -> {
+                            if (scroll == null) return@onKeyEvent false
+                            if (event.type == KeyEventType.KeyDown) {
+                                val step = if (event.key == Key.DirectionUp) -scrollStep else scrollStep
+                                scope.launch { scroll.scrollBy(step) }
                             }
                             true
                         }
@@ -211,7 +230,12 @@ internal fun InfoPanelFrame(
             verticalArrangement = Arrangement.spacedBy(30.dp),
         ) {
             GlacierTabs(labels = tabs, selected = tab, modifier = Modifier.fillMaxWidth())
-            Box(Modifier.fillMaxWidth().then(if (grows) Modifier else Modifier.weight(1f))) { content(tab) }
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .then(if (grows) Modifier else Modifier.weight(1f))
+                    .then(if (scroll != null) Modifier.verticalScroll(scroll) else Modifier),
+            ) { content(tab) }
         }
     }
     LaunchedEffect(Unit) {
@@ -1051,8 +1075,12 @@ internal fun FactRow(
     value: String,
     labelWidth: Int = 150,
     mono: Boolean = false,
+    maxValueLines: Int = 1,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = if (maxValueLines == 1) Alignment.CenterVertically else Alignment.Top,
+    ) {
         Text(
             label,
             style = GlacierText.body(17),
@@ -1064,7 +1092,7 @@ internal fun FactRow(
             value,
             style = if (mono) GlacierText.mono(16) else GlacierText.body(17, FontWeight.Medium),
             color = if (mono) OsdSecondary else GlacierColors.Ice,
-            maxLines = 1,
+            maxLines = maxValueLines,
             overflow = TextOverflow.Ellipsis,
         )
     }

@@ -44,6 +44,29 @@ data class MediaPhoto(
     val fullUrl: String,
 )
 
+data class PhotoLocation(
+    val names: List<String> = emptyList(),
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+)
+
+data class PhotoDetails(
+    val path: String?,
+    val takenAt: LocalDateTime?,
+    val createdAt: LocalDateTime?,
+    val location: PhotoLocation,
+    val width: Int?,
+    val height: Int?,
+    val description: String?,
+    val camera: String?,
+    val focalLength: Double?,
+    val aperture: Double?,
+    val exposureTime: Double?,
+    val iso: Int?,
+) {
+    val fileName: String? get() = path?.substringAfterLast('/')?.substringAfterLast('\\')?.takeIf(String::isNotBlank)
+}
+
 /** A video or photo of a folder, with the time it was taken, else the file's date. */
 sealed interface FolderMedia : FolderEntry {
     val id: UUID
@@ -122,6 +145,27 @@ class FolderRepository @Inject constructor(
         media(session, children(session, folderId)).sortedFor(settings.settings.value.folders)
     }
 
+    suspend fun photoDetails(id: UUID): PhotoDetails = withContext(Dispatchers.IO) {
+        val session = checkNotNull(sessions.session.value) { "No profile is signed in" }
+        val dto = session.api.libraryApi.getItem(itemId = id, userId = session.userId).content
+        check(dto.id == id && dto.isPhoto) { "The item is not a photo" }
+        PhotoDetails(
+            path = dto.path?.takeIf(String::isNotBlank),
+            takenAt = dto.premiereDate,
+            createdAt = dto.dateCreated,
+            location = dto.photoLocation,
+            width = dto.width,
+            height = dto.height,
+            description = plainText(dto.overview),
+            camera = listOfNotNull(dto.cameraMake, dto.cameraModel)
+                .filter(String::isNotBlank).distinct().joinToString(" ").takeIf(String::isNotBlank),
+            focalLength = dto.focalLength,
+            aperture = dto.aperture,
+            exposureTime = dto.exposureTime,
+            iso = dto.isoSpeedRating,
+        )
+    }
+
     /** The videos of [folderId] in the order the folder page lists them, for playing one after another. */
     suspend fun videos(folderId: UUID): List<MediaItem> =
         media(folderId).filterIsInstance<FolderMedia.Video>().map { it.item }
@@ -195,6 +239,9 @@ class FolderRepository @Inject constructor(
 
     private val Session.userId: UUID get() = UUID.fromString(user.userId)
 }
+
+internal val BaseItemDto.photoLocation: PhotoLocation
+    get() = PhotoLocation(productionLocations.orEmpty().filter(String::isNotBlank), latitude, longitude)
 
 /**
  * [settings]' order: by date, undated last and same dates by name, or by name. [FolderSettings.descending]

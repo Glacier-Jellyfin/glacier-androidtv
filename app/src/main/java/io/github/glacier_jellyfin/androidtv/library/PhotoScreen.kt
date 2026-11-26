@@ -114,16 +114,22 @@ fun PhotoScreen(
     val focus = remember { FocusRequester() }
     val direction = LocalLayoutDirection.current
     val slideshowFocus = remember { FocusRequester() }
+    val infoFocus = remember { FocusRequester() }
     val current = state.current
     val photo = current as? FolderMedia.Photo
     var controlsOpen by remember { mutableStateOf(false) }
-    val controlsVisible = controlsOpen && photo != null
+    var infoOpen by remember { mutableStateOf(false) }
+    var controlsFocus by remember { mutableStateOf(slideshowFocus) }
+    val modalOpen = infoOpen
+    val controlsVisible = controlsOpen && photo != null && !modalOpen
     BackHandler(enabled = controlsVisible) { controlsOpen = false }
     LaunchedEffect(photo == null) { if (photo == null) controlsOpen = false }
-    LaunchedEffect(controlsVisible) {
-        withFrameNanos { }
-        val target = if (controlsVisible) slideshowFocus else focus
-        runCatching { target.requestFocus() }
+    LaunchedEffect(controlsVisible, modalOpen) {
+        if (!modalOpen) {
+            withFrameNanos { }
+            val target = if (controlsVisible) controlsFocus else focus
+            runCatching { target.requestFocus() }
+        }
     }
     // A slideshow or a video runs on its own: the TV must not dim or start its screensaver meanwhile.
     val view = LocalView.current
@@ -158,11 +164,12 @@ fun PhotoScreen(
             .blockKeysWhile(state.loading && state.current == null)
             .onPreviewKeyEvent { event ->
                 // Without photos the keys belong to the retry button.
-                if (current == null) return@onPreviewKeyEvent false
+                if (current == null || modalOpen) return@onPreviewKeyEvent false
                 if (controlsVisible && event.key != Key.MediaPlayPause) return@onPreviewKeyEvent false
                 if (event.key in ConfirmKeys) {
                     if (event.type == KeyEventType.KeyUp) {
                         if (photo != null) {
+                            controlsFocus = slideshowFocus
                             controlsOpen = true
                         } else {
                             viewModel.openVideoPlayer()
@@ -244,7 +251,7 @@ fun PhotoScreen(
         }
 
         AnimatedVisibility(
-            visible = (overlay || controlsVisible) && current != null,
+            visible = (overlay || controlsVisible) && current != null && !modalOpen,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -268,10 +275,16 @@ fun PhotoScreen(
                     PhotoControls(
                         state = state,
                         slideshowFocus = slideshowFocus,
+                        infoFocus = infoFocus,
                         onBrowse = viewModel::browseBy,
                         onSlideshow = {
                             if (!state.slideshow) controlsOpen = false
                             viewModel.playPause()
+                        },
+                        onInfo = {
+                            viewModel.stopSlideshow()
+                            controlsFocus = infoFocus
+                            infoOpen = true
                         },
                     )
                 }
@@ -280,7 +293,7 @@ fun PhotoScreen(
 
         // Where in the folder this is, small in the top corner, shown and hidden with the name.
         AnimatedVisibility(
-            visible = (overlay || controlsVisible) && state.media.size > 1,
+            visible = (overlay || controlsVisible) && state.media.size > 1 && !modalOpen,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.TopEnd).padding(top = 40.dp, end = PageEdge.dp),
@@ -314,6 +327,9 @@ fun PhotoScreen(
                 )
         }
 
+        if (infoOpen && photo != null) {
+            PhotoInfoPanel(photo, viewModel::photoDetails, onDismiss = { infoOpen = false })
+        }
     }
 }
 
@@ -321,8 +337,10 @@ fun PhotoScreen(
 private fun PhotoControls(
     state: PhotoState,
     slideshowFocus: FocusRequester,
+    infoFocus: FocusRequester,
     onBrowse: (Int) -> Unit,
     onSlideshow: () -> Unit,
+    onInfo: () -> Unit,
 ) {
     Row(
         Modifier
@@ -368,6 +386,12 @@ private fun PhotoControls(
                 }
             }
         }
+        ControlButton(
+            GlacierIcons.Info,
+            stringResource(R.string.player_info),
+            onClick = onInfo,
+            modifier = Modifier.focusRequester(infoFocus),
+        )
     }
 }
 
@@ -449,7 +473,7 @@ private const val FADE_MS = 300
 
 /** "Tuesday, 22 July 2025 · 08:00" in the app language: when a photo or video was taken, in full. */
 @Composable
-private fun longTakenText(date: LocalDateTime?): String? {
+internal fun longTakenText(date: LocalDateTime?): String? {
     date ?: return null
     val locale = LocalLocale.current.platformLocale
     val day = date.format(

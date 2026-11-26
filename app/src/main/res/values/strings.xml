@@ -239,6 +239,19 @@
     <string name="photo_next">Next</string>
     <string name="photo_slideshow_start">Start slideshow</string>
     <string name="photo_slideshow_stop">Stop slideshow</string>
+    <string name="photo_info">Photo</string>
+    <string name="photo_info_date">Date</string>
+    <string name="photo_info_taken_date">Date taken</string>
+    <string name="photo_info_created_date">Date created</string>
+    <string name="photo_info_location">Capture location</string>
+    <string name="photo_info_path">Server path</string>
+    <string name="photo_info_unavailable">Unavailable</string>
+    <string name="photo_info_file_name">File name</string>
+    <string name="photo_info_dimensions">Dimensions</string>
+    <string name="photo_info_pixels" translatable="false">%1$d × %2$d px</string>
+    <string name="photo_info_camera">Camera</string>
+    <string name="photo_info_exposure">Camera settings</string>
+    <string name="photo_info_error">Photo details could not be loaded.</string>
     <string name="scope_all">All</string>
     <string name="scope_collections">Collections</string>
     <string name="scope_genres">Genres</string>

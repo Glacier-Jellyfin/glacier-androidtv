@@ -125,6 +125,8 @@ class PhotoViewModel @Inject constructor(
         }
     }
 
+    suspend fun photoDetails(id: UUID) = repository.photoDetails(id)
+
     /** Back on screen from the full player: the slideshow goes on with the next one, or the video plays on here. */
     fun onResume() {
         val (id, position) = handedOver ?: return
@@ -183,7 +185,7 @@ class PhotoViewModel @Inject constructor(
         if (_state.value.slideshow) advance()
     }
 
-    private fun stopSlideshow() {
+    fun stopSlideshow() {
         slideshow?.cancel()
         slideshow = null
         _state.update { it.copy(slideshow = false) }
