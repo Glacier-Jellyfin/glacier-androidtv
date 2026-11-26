@@ -1163,7 +1163,11 @@
     <string name="diag_check_sub">Reproduce archivos de prueba cortos y anota qué formatos de imagen y sonido admite este dispositivo</string>
     <string name="diag_check_button">Comprobar</string>
     <string name="check_title">Comprobar la reproducción</string>
-    <string name="check_intro_body">Glacier reproduce %1$d archivos de prueba cortos para ver qué formatos de imagen y sonido admiten este dispositivo y tu televisor o equipo de sonido. El televisor puede cambiar de modo de imagen y el equipo de sonido puede mostrar otros formatos. Tus ajustes no cambian.</string>
+    <plurals name="check_intro_body">
+        <item quantity="one">Glacier reproduce %1$d archivo de prueba corto para ver qué formatos de imagen y sonido admiten este dispositivo y tu televisor o equipo de sonido. El televisor puede cambiar de modo de imagen y el equipo de sonido puede mostrar otros formatos. Tus ajustes no cambian.</item>
+        <item quantity="many">Glacier reproduce %1$d archivos de prueba cortos para ver qué formatos de imagen y sonido admiten este dispositivo y tu televisor o equipo de sonido. El televisor puede cambiar de modo de imagen y el equipo de sonido puede mostrar otros formatos. Tus ajustes no cambian.</item>
+        <item quantity="other">Glacier reproduce %1$d archivos de prueba cortos para ver qué formatos de imagen y sonido admiten este dispositivo y tu televisor o equipo de sonido. El televisor puede cambiar de modo de imagen y el equipo de sonido puede mostrar otros formatos. Tus ajustes no cambian.</item>
+    </plurals>
     <string name="check_running_body">Los archivos de prueba se reproducen uno tras otro. Tarda alrededor de un minuto.</string>
     <string name="check_progress">%1$d de %2$d</string>
     <string name="check_done_title">Reproducción comprobada</string>

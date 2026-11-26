@@ -1143,7 +1143,10 @@
     <string name="diag_check_sub">Plays short test files and notes which picture and sound formats this device handles</string>
     <string name="diag_check_button">Check</string>
     <string name="check_title">Check playback</string>
-    <string name="check_intro_body">Glacier plays %1$d short test files to see which picture and sound formats this device and your TV or sound system handle. The TV may switch picture modes and the sound system may show other formats. Your settings stay as they are.</string>
+    <plurals name="check_intro_body">
+        <item quantity="one">Glacier plays %1$d short test file to see which picture and sound formats this device and your TV or sound system handle. The TV may switch picture modes and the sound system may show other formats. Your settings stay as they are.</item>
+        <item quantity="other">Glacier plays %1$d short test files to see which picture and sound formats this device and your TV or sound system handle. The TV may switch picture modes and the sound system may show other formats. Your settings stay as they are.</item>
+    </plurals>
     <string name="check_running_body">The test files play one after another. This takes about a minute.</string>
     <string name="check_progress">%1$d of %2$d</string>
     <string name="check_done_title">Playback checked</string>

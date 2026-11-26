@@ -30,6 +30,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -96,7 +97,7 @@ fun PlaybackCheckScreen(viewModel: PlaybackCheckViewModel, onClose: () -> Unit) 
                         val body = when {
                             state.running -> stringResource(R.string.check_running_body)
                             state.done -> stringResource(R.string.check_done_body)
-                            else -> stringResource(R.string.check_intro_body, state.total)
+                            else -> pluralStringResource(R.plurals.check_intro_body, state.total, state.total)
                         }
                         Text(body, style = GlacierText.body(21), color = GlacierColors.Mist)
                     }

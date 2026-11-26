@@ -1137,7 +1137,10 @@
     <string name="diag_check_sub">Spielt kurze Testdateien ab und notiert, welche Bild- und Tonformate dieses Gerät schafft</string>
     <string name="diag_check_button">Prüfen</string>
     <string name="check_title">Wiedergabe prüfen</string>
-    <string name="check_intro_body">Glacier spielt %1$d kurze Testdateien ab, um zu sehen, welche Bild- und Tonformate dieses Gerät und dein Fernseher oder deine Anlage schaffen. Der Fernseher wechselt dabei vielleicht den Bildmodus, und die Anlage zeigt andere Formate an. Deine Einstellungen bleiben, wie sie sind.</string>
+    <plurals name="check_intro_body">
+        <item quantity="one">Glacier spielt %1$d kurze Testdatei ab, um zu sehen, welche Bild- und Tonformate dieses Gerät und dein Fernseher oder deine Anlage schaffen. Der Fernseher wechselt dabei vielleicht den Bildmodus, und die Anlage zeigt andere Formate an. Deine Einstellungen bleiben, wie sie sind.</item>
+        <item quantity="other">Glacier spielt %1$d kurze Testdateien ab, um zu sehen, welche Bild- und Tonformate dieses Gerät und dein Fernseher oder deine Anlage schaffen. Der Fernseher wechselt dabei vielleicht den Bildmodus, und die Anlage zeigt andere Formate an. Deine Einstellungen bleiben, wie sie sind.</item>
+    </plurals>
     <string name="check_running_body">Die Testdateien laufen nacheinander. Das dauert etwa eine Minute.</string>
     <string name="check_progress">%1$d von %2$d</string>
     <string name="check_done_title">Wiedergabe geprüft</string>
