@@ -96,8 +96,9 @@ import kotlinx.coroutines.delay
 /**
  * A folder's photos and videos full screen, in the folder page's order. A video plays right here.
  * Left and right browse. OK on a photo opens its controls, including the slideshow; OK on a video opens
- * the full player where it is, and Back from there comes back here. Name, date and position show for a moment
- * after each change; a line along the bottom edge shows how far a video has played or a photo's slideshow time.
+ * the full player where it is, and Back from there comes back here. The photo's location, the date and the
+ * position show for a moment after each change. A line along the bottom edge shows how far a
+ * video has played or a photo's slideshow time.
  */
 @OptIn(UnstableApi::class) // ContentFrame
 @Composable
@@ -119,6 +120,10 @@ fun PhotoScreen(
     val infoFocus = remember { FocusRequester() }
     val current = state.current
     val photo = current as? FolderMedia.Photo
+    val caption = photo?.let {
+        it.photo.location.names.joinToString(" · ").takeIf(String::isNotBlank)
+    }
+    val captionDate = longTakenText(state.captionDate)
     val deleteTarget = state.deleteTarget
     var controlsOpen by remember { mutableStateOf(false) }
     var infoOpen by remember { mutableStateOf(false) }
@@ -256,7 +261,7 @@ fun PhotoScreen(
         }
 
         AnimatedVisibility(
-            visible = (overlay || controlsVisible) && current != null && !modalOpen,
+            visible = !modalOpen && (controlsVisible || (overlay && (caption != null || captionDate != null))),
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -268,14 +273,16 @@ fun PhotoScreen(
                     .padding(start = PageEdge.dp, end = PageEdge.dp, top = 120.dp, bottom = 56.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text(
-                    current?.name.orEmpty(),
-                    style = GlacierText.display(34),
-                    color = GlacierColors.Ice,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                longTakenText(current?.date)?.let { Text(it, style = GlacierText.body(21), color = GlacierColors.Mist) }
+                caption?.let {
+                    Text(
+                        it,
+                        style = GlacierText.display(34),
+                        color = GlacierColors.Ice,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                captionDate?.let { Text(it, style = GlacierText.body(21), color = GlacierColors.Mist) }
                 if (controlsVisible) {
                     PhotoControls(
                         state = state,
@@ -301,7 +308,7 @@ fun PhotoScreen(
             }
         }
 
-        // Where in the folder this is, small in the top corner, shown and hidden with the name.
+        // Where in the folder this is, small in the top corner, shown and hidden with the caption.
         AnimatedVisibility(
             visible = (overlay || controlsVisible) && state.media.size > 1 && !modalOpen,
             enter = fadeIn(),

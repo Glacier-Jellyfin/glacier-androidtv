@@ -6,7 +6,11 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSort
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
+import java.net.HttpURLConnection
+import java.net.URL
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -43,6 +47,8 @@ data class MediaPhoto(
     val thumbUrl: String,
     val fullUrl: String,
     val canDelete: Boolean = false,
+    val takenAt: LocalDateTime? = null,
+    val location: PhotoLocation = PhotoLocation(),
 )
 
 data class PhotoLocation(
@@ -167,6 +173,26 @@ class FolderRepository @Inject constructor(
         )
     }
 
+    /** Jellyfin's original-file endpoint returns the file's modification time as an HTTP header. */
+    suspend fun photoModifiedAt(id: UUID): LocalDateTime? = withContext(Dispatchers.IO) {
+        val session = sessions.session.value ?: return@withContext null
+        val connection = URL(session.api.createUrl("/Items/$id/File")).openConnection() as HttpURLConnection
+        try {
+            connection.instanceFollowRedirects = false
+            connection.connectTimeout = PHOTO_DATE_TIMEOUT_MS
+            connection.readTimeout = PHOTO_DATE_TIMEOUT_MS
+            connection.setRequestProperty("Authorization", session.authorization())
+            connection.setRequestProperty("Range", "bytes=0-0")
+            val status = connection.responseCode
+            if (status != HttpURLConnection.HTTP_OK && status != HttpURLConnection.HTTP_PARTIAL) return@withContext null
+            connection.lastModified.takeIf { it > 0 }?.let {
+                LocalDateTime.ofInstant(Instant.ofEpochMilli(it), ZoneId.systemDefault())
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
     /** The videos of [folderId] in the order the folder page lists them, for playing one after another. */
     suspend fun videos(folderId: UUID): List<MediaItem> =
         media(folderId).filterIsInstance<FolderMedia.Video>().map { it.item }
@@ -220,7 +246,7 @@ class FolderRepository @Inject constructor(
         userId = session.userId,
         parentId = parentId,
         sortBy = listOf(ItemSortBy.SORT_NAME),
-        fields = listOf(ItemFields.DATE_CREATED, ItemFields.CAN_DELETE),
+        fields = listOf(ItemFields.DATE_CREATED, ItemFields.CAN_DELETE, ItemFields.PRODUCTION_LOCATIONS),
         enableUserData = true,
     ).content.items
 
@@ -239,6 +265,10 @@ class FolderRepository @Inject constructor(
     private val BaseItemDto.taken: LocalDateTime? get() = premiereDate ?: dateCreated
 
     private val Session.userId: UUID get() = UUID.fromString(user.userId)
+
+    private companion object {
+        const val PHOTO_DATE_TIMEOUT_MS = 2_500
+    }
 }
 
 internal val BaseItemDto.photoLocation: PhotoLocation

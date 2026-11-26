@@ -278,6 +278,8 @@ internal class MediaMapper(private val api: ApiClient) {
             thumbUrl = image(dto.id, ImageType.PRIMARY, tag, ImageWidth.THUMB),
             fullUrl = image(dto.id, ImageType.PRIMARY, tag, ImageWidth.BACKDROP),
             canDelete = dto.isDeletablePhoto,
+            takenAt = dto.premiereDate,
+            location = dto.photoLocation,
         )
     }
 

@@ -20,6 +20,7 @@ import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.navigation.PhotoRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import java.time.LocalDateTime
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -28,6 +29,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -45,8 +49,16 @@ data class PhotoState(
     val slideMs: Long = 5_000,
     val deleteTarget: MediaPhoto? = null,
     val deleting: Boolean = false,
+    val modifiedPhoto: Pair<UUID, LocalDateTime>? = null,
 ) {
     val current: FolderMedia? get() = media.getOrNull(index)
+
+    val captionDate: LocalDateTime?
+        get() {
+            val item = current as? FolderMedia.Photo ?: return current?.date
+            val modifiedAt = modifiedPhoto?.takeIf { it.first == item.id }?.second
+            return item.photo.takenAt ?: listOfNotNull(item.date, modifiedAt).minOrNull()
+        }
 
     /** Keep the next item selected, or go back one when the deleted photo was last. */
     internal fun afterPhotoDeleted(id: UUID): PhotoState {
@@ -89,6 +101,13 @@ class PhotoViewModel @Inject constructor(
 
     init {
         load()
+        viewModelScope.launch {
+            state.map { it.current as? FolderMedia.Photo }.distinctUntilChangedBy { it?.id }.collectLatest { item ->
+                if (item == null || item.photo.takenAt != null) return@collectLatest
+                val modifiedAt = runSuspendCatching { repository.photoModifiedAt(item.id) }.getOrNull()
+                if (modifiedAt != null) _state.update { it.copy(modifiedPhoto = item.id to modifiedAt) }
+            }
+        }
     }
 
     fun load() {
