@@ -158,6 +158,14 @@ class TrailerViewModel @Inject constructor(
     private var seekTarget: Long? = null
     private var seekStartedAt = 0L
 
+    /** The YouTube player's last state and position, for this trailer only (reset in [play]). */
+    private var lastYouTubeState: Int? = null
+    private var lastYouTubePosition = 0L
+
+    /** When YouTube last showed life (see [TrailerStart]); moves the load deadline. */
+    @Volatile
+    private var lastSignOfLife = 0L
+
     /** The profile's subtitle choice for trailers (see [PlaybackSettings.trailerSubtitles]). */
     var subtitlePreference: String = settings.settings.value.playback.trailerSubtitles
         private set
@@ -257,6 +265,8 @@ class TrailerViewModel @Inject constructor(
         countdown?.cancel()
         releasePlayer()
         seekTarget = null
+        lastYouTubeState = null
+        lastYouTubePosition = 0
         _progress.value = TrailerProgress(durationMs = _state.value.durationOf(index) ?: 0)
         _state.update {
             it.copy(
@@ -264,7 +274,7 @@ class TrailerViewModel @Inject constructor(
                 playWhenReady = true, countdown = null, subtitleTracks = emptyList(), subtitle = null, subtitlesOpen = false,
             )
         }
-        startLoadTimeout()
+        startLoadTimeout(isYouTube = trailer is YouTubeTrailer)
         when (trailer) {
             is LocalTrailer -> openLocal(trailer)
 
@@ -318,14 +328,24 @@ class TrailerViewModel @Inject constructor(
         }
     }
 
-    /** A trailer that shows nothing for this long counts as failed (a stuck WebView, an unreachable server). */
-    private fun startLoadTimeout() {
+    /**
+     * A trailer that shows nothing counts as failed (a stuck WebView, an unreachable server).
+     * YouTube's signs of life move the deadline, so it is checked again after each wait.
+     */
+    private fun startLoadTimeout(isYouTube: Boolean) {
         loadTimeout?.cancel()
+        val startedAt = System.currentTimeMillis()
+        lastSignOfLife = startedAt
         loadTimeout = viewModelScope.launch {
-            delay(LOAD_TIMEOUT_MS)
-            if (_state.value.loading) {
-                Log.w(TAG, "Trailer showed nothing for ${LOAD_TIMEOUT_MS / 1000} s, giving up")
-                fail()
+            while (_state.value.loading) {
+                val wait = TrailerStart.deadline(startedAt, lastSignOfLife, isYouTube) - System.currentTimeMillis()
+                if (wait <= 0) {
+                    val waited = (System.currentTimeMillis() - startedAt) / 1000
+                    Log.w(TAG, "Trailer showed nothing for $waited s, giving up")
+                    fail()
+                    return@launch
+                }
+                delay(wait)
             }
         }
     }
@@ -480,19 +500,50 @@ class TrailerViewModel @Inject constructor(
 
     override fun onYouTubeState(videoId: String, state: Int) {
         if (!isCurrent(videoId)) return
+        lastYouTubeState = state
+        applyYouTubeState(state)
+    }
+
+    override fun onYouTubeReady(videoId: String) {
+        if (isCurrent(videoId)) signOfLife()
+    }
+
+    /** Acts on a player state, from an event or a poll; the caller made sure it is new. */
+    private fun applyYouTubeState(state: Int) {
+        if (state in YT_ALIVE_STATES) signOfLife()
         when (state) {
             YT_PLAYING -> _state.update { it.copy(loading = false, playWhenReady = true) }
-            YT_PAUSED -> _state.update { it.copy(playWhenReady = false) }
+
+            // Not while loading: a paused report before the first frame says nothing about the user.
+            YT_PAUSED -> if (!_state.value.loading) _state.update { it.copy(playWhenReady = false) }
+
             YT_ENDED -> onEnded()
         }
+    }
+
+    private fun signOfLife() {
+        lastSignOfLife = System.currentTimeMillis()
     }
 
     override fun onYouTubeProgress(
         videoId: String,
         positionMs: Long,
         durationMs: Long,
+        state: Int,
     ) {
-        if (!isCurrent(videoId) || _state.value.loading) return
+        if (!isCurrent(videoId)) return
+        if (state != YOUTUBE_STATE_UNKNOWN && state != lastYouTubeState) {
+            lastYouTubeState = state
+            applyYouTubeState(state)
+            if (!isCurrent(videoId)) return
+        }
+        val previous = lastYouTubePosition
+        lastYouTubePosition = positionMs
+        if (_state.value.loading) {
+            // The PLAYING event can get lost: a moving position shows the trailer plays too.
+            if (!TrailerStart.started(previous, positionMs, state)) return
+            _state.update { it.copy(loading = false) }
+        }
         seekTarget?.let { target ->
             val settled = kotlin.math.abs(positionMs - target) < SEEK_TOLERANCE_MS
             if (!settled && System.currentTimeMillis() - seekStartedAt < SEEK_SETTLE_MS) return
@@ -536,7 +587,6 @@ class TrailerViewModel @Inject constructor(
     private companion object {
         const val TAG = "Trailer"
         const val TICK_MS = 500L
-        const val LOAD_TIMEOUT_MS = 20_000L
         const val COUNTDOWN_SECONDS = 8
         const val SEEK_SETTLE_MS = 2_000L
         const val SEEK_TOLERANCE_MS = 3_000L
@@ -545,6 +595,12 @@ class TrailerViewModel @Inject constructor(
         const val YT_ENDED = 0
         const val YT_PLAYING = 1
         const val YT_PAUSED = 2
+        const val YT_BUFFERING = 3
+        const val YT_CUED = 5
+        const val YT_UNSTARTED = -1
+
+        /** States that show the player is working on the video, not stuck. */
+        val YT_ALIVE_STATES = setOf(YT_UNSTARTED, YT_PLAYING, YT_BUFFERING, YT_CUED)
     }
 }
 

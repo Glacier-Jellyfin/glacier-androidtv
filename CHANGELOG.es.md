@@ -32,6 +32,7 @@ only in English.
 - La temporada de especiales muestra sus episodios en orden y no por título
 - Los vídeos caseros girados se ven derechos también en televisores que ignoraban el giro (#43)
 - Las grabaciones de TV en directo ya no aparecen entre las películas y series. Siguen en TV en directo > Grabaciones y la búsqueda las sigue encontrando
+- Los tráileres de YouTube ya no se quedan en la pantalla de carga ni fallan cuando ya se están reproduciendo
 
 ## [0.10.1] - 2026-11-18
 

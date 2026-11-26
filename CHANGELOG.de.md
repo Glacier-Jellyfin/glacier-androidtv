@@ -31,6 +31,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Die Specials-Staffel zeigt ihre Folgen in der richtigen Reihenfolge statt nach Titel
 - Gedrehte Heimvideos stehen jetzt auch auf Fernsehern aufrecht, die die Drehung ignorierten (#43)
 - Live-TV-Aufnahmen erscheinen nicht mehr unter Filmen und Serien. Sie bleiben unter Live-TV > Aufnahmen und die Suche findet sie weiterhin
+- YouTube-Trailer bleiben nicht mehr auf dem Ladebildschirm hängen und schlagen nicht mehr fehl, obwohl sie schon laufen
 
 ## [0.10.1] - 2026-11-18
 

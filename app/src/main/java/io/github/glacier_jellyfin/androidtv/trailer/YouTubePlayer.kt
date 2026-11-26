@@ -43,10 +43,20 @@ sealed interface YouTubeCommand {
 interface YouTubeListener {
     /** The IFrame API's player state: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued. */
     fun onYouTubeState(videoId: String, state: Int)
+
+    /** The IFrame API is ready: the player exists and starts loading the video. */
+    fun onYouTubeReady(videoId: String)
+
+    /**
+     * Polled twice a second. [state] is the IFrame API's player state as read now
+     * (-2 if the player could not tell), a second source next to [onYouTubeState]
+     * for WebViews that miss its events.
+     */
     fun onYouTubeProgress(
         videoId: String,
         positionMs: Long,
         durationMs: Long,
+        state: Int,
     )
 
     /** The video's subtitle languages and the one shown (null: off). */
@@ -59,6 +69,9 @@ interface YouTubeListener {
     /** The IFrame API's error code (101/150: embedding not allowed), or [YOUTUBE_NO_WEBVIEW]. */
     fun onYouTubeError(videoId: String, code: Int)
 }
+
+/** A polled state the page could not read (the player's methods are not there yet). */
+const val YOUTUBE_STATE_UNKNOWN = -2
 
 /** The device has no usable WebView. */
 const val YOUTUBE_NO_WEBVIEW = -1
@@ -156,8 +169,18 @@ private class Bridge(private val videoId: String, private val listener: YouTubeL
     }
 
     @JavascriptInterface
-    fun onProgress(positionMs: Double, durationMs: Double) {
-        main.post { listener.onYouTubeProgress(videoId, positionMs.toLong(), durationMs.toLong()) }
+    fun onReady() {
+        main.post { listener.onYouTubeReady(videoId) }
+    }
+
+    /** [state] is the polled player state, [YOUTUBE_STATE_UNKNOWN] if the page could not read it. */
+    @JavascriptInterface
+    fun onProgress(
+        positionMs: Double,
+        durationMs: Double,
+        state: Int,
+    ) {
+        main.post { listener.onYouTubeProgress(videoId, positionMs.toLong(), durationMs.toLong(), state) }
     }
 
     @JavascriptInterface
@@ -273,10 +296,14 @@ private fun page(videoId: String, subtitles: String) = """
         },
         events: {
           onReady: function (e) {
+            Glacier.onReady();
             e.target.playVideo();
             setInterval(function () {
-              syncSubtitles();
-              Glacier.onProgress(player.getCurrentTime() * 1000, (player.getDuration() || 0) * 1000);
+              // Some WebViews miss state events: the state is polled along with the position.
+              var ready = player && typeof player.getPlayerState === 'function' && typeof player.getCurrentTime === 'function';
+              if (!ready) { Glacier.onProgress(0, 0, $YOUTUBE_STATE_UNKNOWN); return; }
+              try { syncSubtitles(); } catch (err) {}
+              Glacier.onProgress(player.getCurrentTime() * 1000, (player.getDuration() || 0) * 1000, player.getPlayerState());
             }, 500);
           },
           onStateChange: function (e) {

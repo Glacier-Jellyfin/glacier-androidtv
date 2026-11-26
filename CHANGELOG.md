@@ -46,6 +46,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - The specials season lists its episodes in order instead of by title
 - Rotated home videos show upright on TVs that ignored the rotation (#43)
 - Live TV recordings no longer show up among movies and shows. They stay under Live TV > Recordings and search still finds them
+- YouTube trailers no longer stay on the loading screen or fail while they already play
 
 ## [0.10.1] - 2026-11-18
 
