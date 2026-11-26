@@ -37,7 +37,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - Sorted by year, titles of the same year follow their release date instead of the alphabet
 - Moving up or down into a row now starts at its first card. After that the row remembers the card you left it on, also when you come back from a detail page
 - A to Z ignores articles like "The", "Der" or "La" in the language of each title. The language is taken from your Jellyfin server. Settings › Appearance › Ignore articles turns it off
-- Browsing photos shows the name and date of the next one at once and a blurred preview with a loader until the photo is sharp. A photo that fails to load can be tried again with OK (#43)
+- Browsing photos shows the name and date of the next one at once and a blurred preview with a loader until the photo is sharp. The next photos load ahead, so browsing waits less. A photo that fails to load can be tried again with OK (#43)
 - The photo viewer shows its keys as key caps in the bottom corner when it opens, and Up shows them again (#43)
 - Videos in a photo folder carry a play sign, and clips shorter than a minute show their length in seconds (#43)
 

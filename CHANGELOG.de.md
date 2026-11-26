@@ -22,7 +22,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Nach Jahr sortiert folgen Titel desselben Jahres ihrem Erscheinungsdatum statt dem Alphabet
 - Wer nach oben oder unten in eine Reihe wechselt, landet jetzt zuerst auf ihrer ersten Karte. Danach merkt sich die Reihe die Karte, auf der du sie verlassen hast, auch nach der Rückkehr von einer Detailseite
 - A bis Z ignoriert Artikel wie „The“, „Der“ oder „La“ in der Sprache des jeweiligen Titels. Die Sprache kommt von deinem Jellyfin-Server. Unter Einstellungen › Darstellung › Artikel ignorieren schaltest du es aus
-- Beim Blättern erscheinen Name und Datum des nächsten Fotos sofort, dazu eine unscharfe Vorschau mit Ladeanzeige, bis das Foto scharf ist. Ein Foto, das nicht lädt, lässt sich mit OK erneut versuchen (#43)
+- Beim Blättern erscheinen Name und Datum des nächsten Fotos sofort, dazu eine unscharfe Vorschau mit Ladeanzeige, bis das Foto scharf ist. Die nächsten Fotos laden vorab, so wartet das Blättern seltener. Ein Foto, das nicht lädt, lässt sich mit OK erneut versuchen (#43)
 - Die Fotoansicht zeigt ihre Tasten beim Öffnen als Tastenkappen in der unteren Ecke, mit Oben erscheinen sie wieder (#43)
 - Videos in einem Fotoordner tragen ein Wiedergabezeichen, und Clips unter einer Minute zeigen ihre Länge in Sekunden (#43)
 

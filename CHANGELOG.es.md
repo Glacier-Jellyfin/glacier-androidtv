@@ -23,7 +23,7 @@ only in English.
 - Al ordenar por año, los títulos del mismo año siguen su fecha de estreno en lugar del orden alfabético
 - Al subir o bajar a una fila, ahora se empieza en su primera tarjeta. Después la fila recuerda la tarjeta en la que la dejaste, también al volver de una página de detalles
 - El orden de la A a la Z ignora artículos como «The», «Der» o «La» en el idioma de cada título. El idioma viene de tu servidor Jellyfin. En Ajustes › Apariencia › Ignorar artículos lo desactivas
-- Al pasar fotos, el nombre y la fecha de la siguiente aparecen al instante, con una vista previa desenfocada y un indicador de carga hasta que la foto está nítida. Una foto que no carga se puede reintentar con OK (#43)
+- Al pasar fotos, el nombre y la fecha de la siguiente aparecen al instante, con una vista previa desenfocada y un indicador de carga hasta que la foto está nítida. Las siguientes fotos se cargan por adelantado, así que pasar fotos hace esperar menos. Una foto que no carga se puede reintentar con OK (#43)
 - El visor de fotos muestra sus teclas como teclas dibujadas en la esquina inferior al abrirse, y con Arriba vuelven a aparecer (#43)
 - Los vídeos de una carpeta de fotos llevan el símbolo de reproducción, y los clips de menos de un minuto muestran su duración en segundos (#43)
 

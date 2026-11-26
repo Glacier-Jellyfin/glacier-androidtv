@@ -282,7 +282,16 @@ internal class MediaMapper(private val api: ApiClient) {
             name = dto.name.orEmpty(),
             thumbUrl = image(dto.id, ImageType.PRIMARY, tag, ImageWidth.THUMB),
             fullUrl = image(dto.id, ImageType.PRIMARY, tag, ImageWidth.BACKDROP),
+            blurHash = dto.imageBlurHashes?.get(ImageType.PRIMARY)?.get(tag),
+            aspectRatio = photoAspectRatio(dto),
         )
+    }
+
+    private fun photoAspectRatio(dto: BaseItemDto): Float? {
+        val width = dto.width ?: 0
+        val height = dto.height ?: 0
+        if (width > 0 && height > 0) return width.toFloat() / height
+        return dto.primaryImageAspectRatio?.toFloat()?.takeIf { it > 0f }
     }
 
     private fun image(

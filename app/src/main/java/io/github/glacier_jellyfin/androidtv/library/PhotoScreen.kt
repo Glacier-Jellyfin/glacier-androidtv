@@ -14,6 +14,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -44,6 +46,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -91,15 +95,19 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.blockKeysWhile
 import io.github.glacier_jellyfin.androidtv.core.designsystem.endKey
 import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
 import io.github.glacier_jellyfin.androidtv.core.log.Log
+import io.github.glacier_jellyfin.androidtv.ui.BlurHashCache
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.ui.blurHashComponents
+import io.github.glacier_jellyfin.androidtv.ui.blurHashSize
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * A folder's photos and videos full screen, in the folder page's order. A video plays right here.
@@ -110,7 +118,8 @@ import kotlinx.coroutines.launch
  * Back closes them first. Name, date and position show for a moment after each change and switch to the next
  * item at once; the keys show as key caps for a few seconds when the viewer opens and again on Up. A line along the
  * bottom edge shows how far a video has played, or a photo's time in the slideshow. Browsing to a photo that is not
- * loaded yet shows its small thumbnail blurred with a loader until the photo is sharp.
+ * loaded yet shows its BlurHash with a loader until the photo is sharp (its blurred thumbnail when it has none). The
+ * next photos in the browsing direction, and the one behind, load ahead.
  */
 @OptIn(UnstableApi::class) // ContentFrame
 @Composable
@@ -163,16 +172,22 @@ fun PhotoScreen(
         delay(HINTS_MS)
         hints = false
     }
-    // The neighbours load ahead, so browsing does not wait for them: the photo and its thumbnail.
+    // The neighbours load ahead, most in the browsing direction, so browsing does not wait for them: the photo, and
+    // its placeholder (decoded now, or the thumbnail when it has no usable BlurHash).
     LaunchedEffect(state.media, state.index) {
         val loader = SingletonImageLoader.get(context)
-        listOf(state.index + 1, state.index - 1)
-            .mapNotNull { state.media.getOrNull(it) as? FolderMedia.Photo }.forEach {
-                loader.enqueue(ImageRequest.Builder(context).data(it.photo.thumbUrl).build())
-                loader.enqueue(
-                    ImageRequest.Builder(context).data(it.photo.fullUrl).size(Size.ORIGINAL).build(),
-                )
+        val step = if (state.forward) 1 else -1
+        val indices = (1..PRELOAD_AHEAD).map { state.index + step * it } +
+            (1..PRELOAD_BEHIND).map { state.index - step * it }
+        indices.mapNotNull { state.media.getOrNull(it) as? FolderMedia.Photo }.forEach {
+            val photo = it.photo
+            loader.enqueue(ImageRequest.Builder(context).data(photo.fullUrl).size(Size.ORIGINAL).build())
+            if (!photo.hasPlaceholder()) {
+                loader.enqueue(ImageRequest.Builder(context).data(photo.thumbUrl).build())
+            } else {
+                withContext(Dispatchers.Default) { photo.placeholder() }
             }
+        }
     }
 
     Box(
@@ -417,11 +432,36 @@ private fun ViewerHints(video: Boolean, slideshow: Boolean) {
     }
 }
 
+/** Whether the photo has a BlurHash that decodes and a shape to draw it in; otherwise its thumbnail stands in. */
+private fun MediaPhoto.hasPlaceholder(): Boolean {
+    val hash = blurHash ?: return false
+    return aspectRatio != null && blurHashComponents(hash) != null
+}
+
+private fun MediaPhoto.placeholderSize(): Pair<Int, Int> = blurHashSize(aspectRatio ?: 1f)
+
+/** The decoded placeholder if it is in the cache already; cheap, safe on the main thread. */
+private fun MediaPhoto.cachedPlaceholder(): ImageBitmap? {
+    val hash = blurHash ?: return null
+    if (aspectRatio == null) return null
+    val (w, h) = placeholderSize()
+    return BlurHashCache.get(hash, w, h)
+}
+
+/** The placeholder, decoded now when it is not cached: call off the main thread. */
+private fun MediaPhoto.placeholder(): ImageBitmap? {
+    val hash = blurHash ?: return null
+    if (aspectRatio == null) return null
+    val (w, h) = placeholderSize()
+    return BlurHashCache.decode(hash, w, h)
+}
+
 /**
- * The whole photo, as large as the screen allows. Until it is sharp its thumbnail shows blurred with a loader (the
- * thumbnail is decoded tiny and drawn smoothed up, which blurs it on every Android version); when that is not there
- * either, [previous] stays dimmed. A photo that is in the memory cache comes without any of it. A line and a retry hint
- * show when it does not load.
+ * The whole photo, as large as the screen allows. Until it is sharp its BlurHash shows with a loader, tiny and drawn
+ * smoothed up over exactly the area the photo will fill. A photo without a usable BlurHash shows its thumbnail instead
+ * (decoded tiny and drawn smoothed up, which blurs it on every Android version); when neither is there, [previous]
+ * stays dimmed. A photo that is in the memory cache comes without any of it. A line and a retry hint show when it
+ * does not load.
  */
 @Composable
 private fun PhotoImage(
@@ -439,6 +479,14 @@ private fun PhotoImage(
     var loaded by remember(photo.id) { mutableStateOf(false) }
     var assumedCached by remember(photo.id) { mutableStateOf(cached) }
     var thumbnail by remember(photo.id) { mutableStateOf(false) }
+    // The placeholder is decoded off the main thread; a neighbour decoded ahead is in the cache already.
+    val hasPlaceholder = photo.hasPlaceholder()
+    var placeholder by remember(photo.id) { mutableStateOf(photo.cachedPlaceholder()) }
+    LaunchedEffect(photo.id) {
+        if (hasPlaceholder && placeholder == null) {
+            placeholder = withContext(Dispatchers.Default) { photo.placeholder() }
+        }
+    }
     var failed by remember(photo.id) { mutableStateOf(false) }
     LaunchedEffect(failed) { onFailed(failed) }
     DisposableEffect(photo.id) { onDispose { onFailed(false) } }
@@ -475,27 +523,41 @@ private fun PhotoImage(
         } else {
             // Under the sharp photo while it fades in.
             if (alpha < 1f) {
-                if (!thumbnail && previous != null && previous.id != photo.id) {
+                if (!hasPlaceholder) {
+                    if (!thumbnail && previous != null && previous.id != photo.id) {
+                        AsyncImage(
+                            model = previous.fullUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Fit,
+                            alpha = DIMMED_ALPHA,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                     AsyncImage(
-                        model = previous.fullUrl,
+                        model = ImageRequest.Builder(context)
+                            .data(photo.thumbUrl)
+                            .size(BLUR_PX, BLUR_PX)
+                            .memoryCacheKey("blur:${photo.thumbUrl}")
+                            .build(),
                         contentDescription = null,
                         contentScale = ContentScale.Fit,
-                        alpha = DIMMED_ALPHA,
+                        onSuccess = { thumbnail = true },
+                        onError = { dropCached(photo.thumbUrl, "blur:${photo.thumbUrl}") },
                         modifier = Modifier.fillMaxSize(),
                     )
+                } else {
+                    // Sized by the photo's shape, so it covers where the photo will be. The tiny bitmap's whole
+                    // pixels round its shape a little, so it is stretched to the box instead of fitted into it.
+                    placeholder?.let {
+                        Image(
+                            bitmap = it,
+                            contentDescription = null,
+                            contentScale = ContentScale.FillBounds,
+                            filterQuality = FilterQuality.Low,
+                            modifier = Modifier.aspectRatio(photo.aspectRatio ?: 1f),
+                        )
+                    }
                 }
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(photo.thumbUrl)
-                        .size(BLUR_PX, BLUR_PX)
-                        .memoryCacheKey("blur:${photo.thumbUrl}")
-                        .build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    onSuccess = { thumbnail = true },
-                    onError = { dropCached(photo.thumbUrl, "blur:${photo.thumbUrl}") },
-                    modifier = Modifier.fillMaxSize(),
-                )
             }
             if (!sharp) SpinningDiamond(LOADER_SIZE)
             AsyncImage(
@@ -578,8 +640,12 @@ internal fun longTakenText(date: LocalDateTime?): String? {
 
 private const val TAG = "Photos"
 
-/** The blurred thumbnail: decoded to this many pixels on its long side, then drawn up to the screen. */
+/** The blurred thumbnail of a photo without a BlurHash: decoded to this many pixels on its long side, then drawn up. */
 private const val BLUR_PX = 48
+
+/** How many photos ahead in the browsing direction, and behind it, load before they are asked for. */
+private const val PRELOAD_AHEAD = 3
+private const val PRELOAD_BEHIND = 1
 private const val CROSSFADE_MS = 250
 private val OverlayPillFill = Color(0xE60F1A24)
 private const val PILL_BORDER = 1.5f

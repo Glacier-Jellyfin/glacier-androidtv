@@ -41,12 +41,17 @@ data class MediaFolder(
     override val date: LocalDateTime? = null,
 ) : FolderEntry
 
-/** A photo: [thumbUrl] for its card, [fullUrl] screen-sized for the viewer. */
+/**
+ * A photo: [thumbUrl] for its card, [fullUrl] screen-sized for the viewer. [blurHash] is the server's tiny
+ * placeholder of the picture, [aspectRatio] its width over height; the viewer needs both to show the placeholder.
+ */
 data class MediaPhoto(
     val id: UUID,
     val name: String,
     val thumbUrl: String,
     val fullUrl: String,
+    val blurHash: String? = null,
+    val aspectRatio: Float? = null,
 )
 
 /** A video or photo of a folder, with the time it was taken, else the file's date. */
@@ -226,7 +231,8 @@ class FolderRepository @Inject constructor(
         userId = session.userId,
         parentId = parentId,
         sortBy = listOf(ItemSortBy.SORT_NAME),
-        fields = listOf(ItemFields.DATE_CREATED),
+        // The aspect ratio sizes a photo's BlurHash placeholder when the item has no width and height.
+        fields = listOf(ItemFields.DATE_CREATED, ItemFields.PRIMARY_IMAGE_ASPECT_RATIO),
         enableUserData = true,
     ).content.items
 
