@@ -84,6 +84,7 @@ class FolderRepository @Inject constructor(
     private val sessions: SessionManager,
     private val ageFilter: AgeFilter,
     private val settings: SettingsRepository,
+    private val recordingFolders: RecordingFolders,
 ) {
     /**
      * The folder [folderId]. Without one, the top: the libraries of [type] as folders,
@@ -167,9 +168,11 @@ class FolderRepository @Inject constructor(
         }
     }
 
-    private suspend fun libraries(session: Session, type: CollectionType) =
-        session.api.userViewApi.getUserViews(userId = session.userId).content.items
-            .filter { it.collectionType == type }
+    private suspend fun libraries(session: Session, type: CollectionType): List<BaseItemDto> {
+        val recordings = recordingFolders.of(session.api, session.userId)
+        return session.api.userViewApi.getUserViews(userId = session.userId).content.items
+            .filter { it.collectionType == type && it.id !in recordings }
+    }
 
     private suspend fun children(session: Session, parentId: UUID) = session.api.libraryApi.getItems(
         userId = session.userId,

@@ -214,6 +214,7 @@ private val NUMBER_PARTS = Regex("\\d+")
 class LiveTvRepository @Inject constructor(
     private val sessions: SessionManager,
     private val settings: SettingsRepository,
+    private val recordingFolders: RecordingFolders,
 ) {
 
     /** Which channels are radio, as this profile found out or chose, and their order; see [LiveTvSettings]. */
@@ -361,6 +362,7 @@ class LiveTvRepository @Inject constructor(
 
     suspend fun deleteRecording(id: UUID) = withContext(Dispatchers.IO) {
         requireSession().api.liveTvApi.deleteRecording(id)
+        recordingFolders.invalidate()
         Unit
     }
 

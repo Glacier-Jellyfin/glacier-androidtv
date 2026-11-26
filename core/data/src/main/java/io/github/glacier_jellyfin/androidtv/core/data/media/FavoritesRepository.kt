@@ -11,6 +11,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.libraryApi
+import org.jellyfin.sdk.api.client.extensions.userViewApi
+import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ItemFields
 import org.jellyfin.sdk.model.api.ItemSortBy
@@ -25,9 +27,13 @@ data class Favorites(
     val songs: List<MusicTrack> = emptyList(),
 )
 
-/** The favorites page: one query for titles, one for songs. */
+/** The favorites page: titles by library, music, and songs. */
 @Singleton
-class FavoritesRepository @Inject constructor(private val sessions: SessionManager, private val ageFilter: AgeFilter) {
+class FavoritesRepository @Inject constructor(
+    private val sessions: SessionManager,
+    private val ageFilter: AgeFilter,
+    private val recordingFolders: RecordingFolders,
+) {
     suspend fun load(): Favorites = withContext(Dispatchers.IO) {
         val session = checkNotNull(sessions.session.value) { "No profile is signed in" }
         val mapper = MediaMapper(session.api)
@@ -46,22 +52,45 @@ class FavoritesRepository @Inject constructor(private val sessions: SessionManag
         }
     }
 
-    private suspend fun titles(session: Session) = session.api.libraryApi.getItems(
-        userId = session.userId,
-        includeItemTypes = listOf(
-            BaseItemKind.MOVIE,
-            BaseItemKind.SERIES,
-            BaseItemKind.EPISODE,
-            BaseItemKind.MUSIC_ALBUM,
-            BaseItemKind.MUSIC_ARTIST,
-        ),
-        recursive = true,
-        isFavorite = true,
-        sortBy = listOf(ItemSortBy.SORT_NAME),
-        fields = listOf(ItemFields.OVERVIEW, ItemFields.GENRES, ItemFields.MEDIA_STREAMS),
-        enableUserData = true,
-        limit = TITLES,
-    ).content.items
+    /**
+     * Movies and shows are asked library by library, so the recordings stay out. Music
+     * is not in those libraries and is asked server wide.
+     */
+    private suspend fun titles(session: Session): List<BaseItemDto> = coroutineScope {
+        val recordings = recordingFolders.of(session.api, session.userId)
+        val views = session.api.userViewApi.getUserViews(userId = session.userId).content.items
+        val libraries = libraryKindsOf(views, setOf(LibraryKind.Movies, LibraryKind.Shows), recordings)
+        val music = async {
+            session.api.libraryApi.getItems(
+                userId = session.userId,
+                includeItemTypes = listOf(BaseItemKind.MUSIC_ALBUM, BaseItemKind.MUSIC_ARTIST),
+                recursive = true,
+                isFavorite = true,
+                sortBy = listOf(ItemSortBy.SORT_NAME),
+                fields = TITLE_FIELDS,
+                enableUserData = true,
+                limit = TITLES,
+            ).content.items
+        }
+        val results = perLibrary(libraries) { library ->
+            session.api.libraryApi.getItems(
+                userId = session.userId,
+                parentId = library.id,
+                includeItemTypes = if (library.kind == LibraryKind.Shows) {
+                    listOf(BaseItemKind.SERIES, BaseItemKind.EPISODE)
+                } else {
+                    listOf(library.itemType)
+                },
+                recursive = true,
+                isFavorite = true,
+                sortBy = listOf(ItemSortBy.SORT_NAME),
+                fields = TITLE_FIELDS,
+                enableUserData = true,
+                limit = TITLES,
+            ).content.items
+        }
+        mergeLimited(results, TITLES, bySortName) + music.await()
+    }
 
     private suspend fun songs(session: Session, mapper: MediaMapper): List<MusicTrack> =
         session.api.libraryApi.getItems(
@@ -80,5 +109,6 @@ class FavoritesRepository @Inject constructor(private val sessions: SessionManag
     private companion object {
         const val TITLES = 600
         const val SONGS = 200
+        val TITLE_FIELDS = listOf(ItemFields.OVERVIEW, ItemFields.GENRES, ItemFields.MEDIA_STREAMS)
     }
 }

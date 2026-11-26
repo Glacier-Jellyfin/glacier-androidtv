@@ -27,6 +27,7 @@ import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.extensions.artistApi
 import org.jellyfin.sdk.api.client.extensions.genreApi
 import org.jellyfin.sdk.api.client.extensions.libraryApi
+import org.jellyfin.sdk.api.client.extensions.userViewApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemDtoQueryResult
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -198,6 +199,7 @@ class LibraryRepository @Inject constructor(
     private val sessions: SessionManager,
     private val ageFilter: AgeFilter,
     private val store: NameIndexStore,
+    private val recordingFolders: RecordingFolders,
 ) {
 
     private val _progress = MutableStateFlow<LoadProgress?>(null)
@@ -409,7 +411,28 @@ class LibraryRepository @Inject constructor(
      */
     private suspend fun indexKey(session: Session, query: LibraryQuery): String {
         val ages = ageLimits(query)
-        return "$INDEX_VERSION|${session.server.id}|${session.user.userId}|${query.unsorted}|${ages?.maxOfficialRating}|${ages?.hasOfficialRating}"
+        // Adding or removing a library changes what the unscoped tab holds.
+        val libraries = if (query.mergesLibraries) libraryIds(session, query.kind).sorted().joinToString(",") else ""
+        val limits = "${ages?.maxOfficialRating}|${ages?.hasOfficialRating}"
+        return "$INDEX_VERSION|${session.server.id}|${session.user.userId}|${query.unsorted}|$limits|$libraries"
+    }
+
+    /** The last [libraryIds] per server, user and kind, and when they were found. */
+    private val librariesCache = HashMap<String, Pair<Long, List<UUID>>>()
+    private val librariesLock = Mutex()
+
+    /**
+     * The libraries of [kind] without the recording folders, kept for a few minutes: the
+     * movies and shows tabs ask each of them for its titles.
+     */
+    private suspend fun libraryIds(session: Session, kind: LibraryKind): List<UUID> = librariesLock.withLock {
+        val key = "${session.server.id}|${session.user.userId}|$kind"
+        val now = System.currentTimeMillis()
+        librariesCache[key]?.let { (at, ids) -> if (now - at < LIBRARIES_FRESH_MS) return@withLock ids }
+        val userId = UUID.fromString(session.user.userId)
+        val recordings = recordingFolders.of(session.api, userId)
+        val views = session.api.userViewApi.getUserViews(userId = userId).content.items
+        libraryIdsOf(views, kind, recordings).also { librariesCache[key] = now to it }
     }
 
     /** Music and playlists have no age ratings worth filtering on. */
@@ -479,7 +502,9 @@ class LibraryRepository @Inject constructor(
             val recent = System.currentTimeMillis() - cached.at < WHOLE_FRESH_MS
             if (cached.key == key && (!fresh || recent)) return@withLock cached.value
         }
-        var items = fetchAll(session, query, grouped = query.unwatchedGrouped) { it }.distinctBy { it.id }
+        var items = fetchAll(session, query, grouped = query.unwatchedGrouped) { it }
+            .let { if (query.mergesLibraries && query.scope == LibraryScope.Genres) mergeGenres(it) else it }
+            .distinctBy { it.id }
         if (query.unwatchedGrouped) items = items.filter { it.userData?.played != true }
         val whole = Whole(items.map { entryOf(it, query) }, items.associateBy { it.id })
         wholeCache = Cached(key, System.currentTimeMillis(), whole)
@@ -488,7 +513,9 @@ class LibraryRepository @Inject constructor(
 
     /**
      * Every title of [query], page by page, a few pages at once, each page made into [T] as it comes.
-     * When the grid [waitedFor] it, [progress] counts the titles that came.
+     * Across all libraries of a kind, each library is asked for its own titles (see [mergesLibraries])
+     * and the lists follow each other; [MAX_WHOLE] counts them all. When the grid [waitedFor] it,
+     * [progress] counts the titles that came, over all libraries.
      */
     private suspend fun <T> fetchAll(
         session: Session,
@@ -498,25 +525,36 @@ class LibraryRepository @Inject constructor(
         waitedFor: Boolean = true,
         convert: (List<BaseItemDto>) -> List<T>,
     ): List<T> {
-        val first = fetch(session, query, start = 0, limit = WHOLE_PAGE, light = light, grouped = grouped)
-        val total = first.totalRecordCount.coerceAtMost(MAX_WHOLE)
-        val counted = waitedFor && total > WHOLE_PAGE
-        val loaded = AtomicInteger(first.items.size)
-        if (counted) _progress.value = LoadProgress(query, loaded.get(), total)
+        val parents = query.parents { libraryIds(session, query.kind) }
+        // Asked without a library, the server would list the recordings too.
+        if (parents.isEmpty()) return emptyList()
         val permits = Semaphore(WHOLE_PARALLEL)
+        suspend fun page(parent: UUID?, start: Int) = permits.withPermit {
+            fetch(
+                session,
+                query,
+                start = start,
+                limit = WHOLE_PAGE,
+                light = light,
+                grouped = grouped,
+                libraryId = parent,
+            )
+        }
+        val firsts = coroutineScope { parents.map { async { page(it, 0) } }.awaitAll() }
+        var room = MAX_WHOLE
+        val totals = firsts.map { first ->
+            first.totalRecordCount.coerceAtMost(room).also { room -= it }
+        }
+        val total = totals.sum()
+        val counted = waitedFor && total > WHOLE_PAGE
+        val loaded = AtomicInteger(firsts.sumOf { it.items.size })
+        if (counted) _progress.value = LoadProgress(query, loaded.get().coerceAtMost(total), total)
         try {
             val rest = coroutineScope {
-                (WHOLE_PAGE until total step WHOLE_PAGE).map { start ->
-                    async {
-                        permits.withPermit {
-                            val page = fetch(
-                                session,
-                                query,
-                                start = start,
-                                limit = WHOLE_PAGE,
-                                light = light,
-                                grouped = grouped,
-                            ).items
+                parents.indices.map { library ->
+                    (WHOLE_PAGE until totals[library] step WHOLE_PAGE).map { start ->
+                        async {
+                            val page = page(parents[library], start).items
                             if (counted) {
                                 val now = loaded.addAndGet(page.size).coerceAtMost(total)
                                 // Pages finish in any order: the count only goes up.
@@ -531,9 +569,9 @@ class LibraryRepository @Inject constructor(
                             convert(page)
                         }
                     }
-                }.awaitAll()
+                }.map { pages -> pages.awaitAll() }
             }
-            return convert(first.items) + rest.flatten()
+            return firsts.indices.flatMap { convert(firsts[it].items) + rest[it].flatten() }
         } finally {
             if (counted) _progress.update { if (it?.query == query) null else it }
         }
@@ -614,6 +652,8 @@ class LibraryRepository @Inject constructor(
         light: Boolean = false,
         /** For [wholeList]: grouped into collections, without the played filter the server would not group with. */
         grouped: Boolean = false,
+        /** The library to ask; [fetchAll] passes each library of an unscoped movies or shows tab. */
+        libraryId: UUID? = query.libraryId,
     ): BaseItemDtoQueryResult {
         val userId = UUID.fromString(session.user.userId)
         // The app puts the titles in order itself (ListArrangement). This only keeps the pages apart.
@@ -633,7 +673,7 @@ class LibraryRepository @Inject constructor(
         return when (query.scope) {
             LibraryScope.Genres -> session.api.genreApi.getGenres(
                 userId = userId,
-                parentId = query.libraryId,
+                parentId = libraryId,
                 includeItemTypes = listOf(query.kind.itemType),
                 fields = listOf(ItemFields.ITEM_COUNTS, ItemFields.SORT_NAME),
                 startIndex = start,
@@ -666,7 +706,7 @@ class LibraryRepository @Inject constructor(
                 ) {
                     null
                 } else {
-                    query.libraryId
+                    libraryId
                 },
                 ids = only,
                 recursive = true,
@@ -751,7 +791,10 @@ class LibraryRepository @Inject constructor(
         const val MAX_WHOLE = 200_000
 
         /** Part of the index key: saved indexes of an older form are not read. */
-        const val INDEX_VERSION = 2
+        const val INDEX_VERSION = 3
+
+        /** How long the libraries of a kind are trusted before the views are asked again. */
+        const val LIBRARIES_FRESH_MS = 5 * 60_000L
     }
 
     private fun requireSession(): Session = checkNotNull(sessions.session.value) { "No profile is signed in" }

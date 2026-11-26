@@ -38,6 +38,7 @@ class HomeRepository @Inject constructor(
     private val sessions: SessionManager,
     private val ageFilter: AgeFilter,
     private val liveTvRepository: LiveTvRepository,
+    private val recordingFolders: RecordingFolders,
 ) {
 
     private val _kinds = MutableStateFlow(DefaultKinds)
@@ -69,10 +70,13 @@ class HomeRepository @Inject constructor(
         val mapper = MediaMapper(session.api)
         val userId = session.userId
 
-        val librariesAsync = async { libraries(session, mapper) }
+        val librariesAsync = async { libraries(session, mapper, recordingFolders.of(session.api, userId)) }
         val resumeAsync = async { resume(session) }
         val nextUpAsync = async { nextUp(session) }
-        val favoritesAsync = async { runSuspendCatching { favorites(session, mapper) }.getOrDefault(emptyList()) }
+        val favoritesAsync = async {
+            runSuspendCatching { favorites(session, mapper, librariesAsync.await().movieAndShow()) }
+                .getOrDefault(emptyList())
+        }
         val excludesAsync = async {
             session.api.userApi.getCurrentUser().content.configuration?.latestItemsExcludes.orEmpty().toSet()
         }
@@ -156,21 +160,32 @@ class HomeRepository @Inject constructor(
     /** Favorite movies and shows for their home row, newest first; the row follows a favorite set or removed elsewhere. */
     suspend fun favorites(): List<MediaItem> = withContext(Dispatchers.IO) {
         val session = requireSession()
-        favorites(session, MediaMapper(session.api))
+        val mapper = MediaMapper(session.api)
+        favorites(session, mapper, kindLibraries(session, setOf(LibraryKind.Movies, LibraryKind.Shows)))
     }
 
-    private suspend fun favorites(session: Session, mapper: MediaMapper): List<MediaItem> =
-        session.api.libraryApi.getItems(
-            userId = session.userId,
-            includeItemTypes = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
-            recursive = true,
-            isFavorite = true,
-            sortBy = listOf(ItemSortBy.DATE_CREATED),
-            sortOrder = listOf(SortOrder.DESCENDING),
-            fields = FIELDS,
-            enableUserData = true,
-            limit = FAVORITES,
-        ).content.items.map(mapper::item).let { ageFilter.screen(it) }
+    /** Asked library by library, so the recordings stay out. */
+    private suspend fun favorites(
+        session: Session,
+        mapper: MediaMapper,
+        libraries: List<KindLibrary>,
+    ): List<MediaItem> {
+        val results = perLibrary(libraries) { library ->
+            session.api.libraryApi.getItems(
+                userId = session.userId,
+                parentId = library.id,
+                includeItemTypes = listOf(library.itemType),
+                recursive = true,
+                isFavorite = true,
+                sortBy = listOf(ItemSortBy.DATE_CREATED),
+                sortOrder = listOf(SortOrder.DESCENDING),
+                fields = FIELDS,
+                enableUserData = true,
+                limit = FAVORITES,
+            ).content.items
+        }
+        return mergeLimited(results, FAVORITES, byDateCreatedDesc).map(mapper::item).let { ageFilter.screen(it) }
+    }
 
     private suspend fun favoriteSongs(session: Session, mapper: MediaMapper): List<MusicTrack> =
         session.api.libraryApi.getItems(
@@ -199,23 +214,15 @@ class HomeRepository @Inject constructor(
         val count = settings.spotlightCount.count
         val session = requireSession()
         val mapper = MediaMapper(session.api)
+        // One list of views for all sources and the fallback, without the recording folders.
+        val libraries = kindLibraries(session, settings.spotlightType.libraryKinds)
         suspend fun fromServer(
             sort: ItemSortBy,
             favorites: Boolean,
             unwatched: Boolean,
-        ): List<MediaItem> = session.api.libraryApi.getItems(
-            userId = session.userId,
-            recursive = true,
-            includeItemTypes = settings.spotlightType.itemTypes,
-            isFavorite = true.takeIf { favorites },
-            filters = listOfNotNull(ItemFilter.IS_UNPLAYED.takeIf { unwatched }),
-            imageTypes = listOf(ImageType.BACKDROP),
-            sortBy = listOf(sort),
-            sortOrder = listOf(SortOrder.DESCENDING),
-            fields = FIELDS,
-            enableUserData = true,
-            limit = count,
-        ).content.items.map(mapper::item).let { ageFilter.screen(it) }
+        ): List<MediaItem> = spotlightTitles(session, libraries, sort, favorites, unwatched, count)
+            .map(mapper::item)
+            .let { ageFilter.screen(it) }
         val unwatched = settings.spotlightUnwatched
         val started = if (SpotlightSource.ContinueWatching in sources) {
             continueWatching.filter { it.backdropUrl != null && settings.spotlightType.matches(it.kind) }
@@ -234,6 +241,38 @@ class HomeRepository @Inject constructor(
             .ifEmpty { fromServer(ItemSortBy.DATE_CREATED, false, false).take(count) }
     }
 
+    /** The titles of a spotlight source, asked of each library and merged. */
+    private suspend fun spotlightTitles(
+        session: Session,
+        libraries: List<KindLibrary>,
+        sort: ItemSortBy,
+        favorites: Boolean,
+        unwatched: Boolean,
+        count: Int,
+    ): List<BaseItemDto> {
+        val results = perLibrary(libraries) { library ->
+            session.api.libraryApi.getItems(
+                userId = session.userId,
+                parentId = library.id,
+                recursive = true,
+                includeItemTypes = listOf(library.itemType),
+                isFavorite = true.takeIf { favorites },
+                filters = listOfNotNull(ItemFilter.IS_UNPLAYED.takeIf { unwatched }),
+                imageTypes = listOf(ImageType.BACKDROP),
+                sortBy = listOf(sort),
+                sortOrder = listOf(SortOrder.DESCENDING),
+                fields = FIELDS,
+                enableUserData = true,
+                limit = count,
+            ).content.items
+        }
+        return if (sort == ItemSortBy.RANDOM) {
+            mergeShuffled(results, count, Random.Default)
+        } else {
+            mergeLimited(results, count, byDateCreatedDesc)
+        }
+    }
+
     suspend fun setFavorite(itemId: UUID, favorite: Boolean) {
         val api = requireSession().api.userDataApi
         withContext(Dispatchers.IO) {
@@ -241,8 +280,13 @@ class HomeRepository @Inject constructor(
         }
     }
 
-    private suspend fun libraries(session: Session, mapper: MediaMapper): List<Library> = coroutineScope {
+    private suspend fun libraries(
+        session: Session,
+        mapper: MediaMapper,
+        recordingFolders: Set<UUID>,
+    ): List<Library> = coroutineScope {
         val views = session.api.userViewApi.getUserViews(userId = session.userId).content.items
+            .filterNot { it.id in recordingFolders }
         _liveTv.value = views.any { it.collectionType == CollectionType.LIVETV }
         views
             .mapNotNull { view -> view.collectionType.toLibraryKind()?.let { view to it } }
@@ -327,16 +371,20 @@ class HomeRepository @Inject constructor(
         }.distinctBy { it.id }
     }
 
+    /** The movie and show libraries of [kinds], without the recording folders. */
+    private suspend fun kindLibraries(session: Session, kinds: Set<LibraryKind>): List<KindLibrary> {
+        val recordings = recordingFolders.of(session.api, session.userId)
+        val views = session.api.userViewApi.getUserViews(userId = session.userId).content.items
+        return libraryKindsOf(views, kinds, recordings)
+    }
+
+    private fun List<Library>.movieAndShow(): List<KindLibrary> = mapNotNull {
+        if (it.kind == LibraryKind.Movies || it.kind == LibraryKind.Shows) KindLibrary(it.id, it.kind) else null
+    }
+
     private fun requireSession(): Session = checkNotNull(sessions.session.value) { "No profile is signed in" }
 
     private val Session.userId: UUID get() = UUID.fromString(user.userId)
-
-    private val SpotlightType.itemTypes: List<BaseItemKind>
-        get() = when (this) {
-            SpotlightType.All -> listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES)
-            SpotlightType.Movies -> listOf(BaseItemKind.MOVIE)
-            SpotlightType.Shows -> listOf(BaseItemKind.SERIES)
-        }
 
     private fun SpotlightType.matches(kind: ItemKind): Boolean = when (this) {
         SpotlightType.All -> kind == ItemKind.Movie || kind == ItemKind.Series || kind == ItemKind.Episode

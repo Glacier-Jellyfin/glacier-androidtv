@@ -60,6 +60,7 @@ data class HomeScreenContent(
 class HomeScreenRepository @Inject constructor(
     private val jellyfin: Jellyfin,
     private val accounts: AccountRepository,
+    private val recordingFolders: RecordingFolders,
 ) {
     /** Null when no profile on this device is signed in. */
     suspend fun load(): HomeScreenContent? = withContext(Dispatchers.IO) {
@@ -73,8 +74,8 @@ class HomeScreenRepository @Inject constructor(
         coroutineScope {
             val resume = async { resume(api, userId) }
             val nextUp = async { nextUp(api, userId) }
-            val added = async { recentlyAdded(api, userId) }
-            val releases = async { recentReleases(api, userId) }
+            val added = async { recentlyAdded(api, userId, recordingFolders.of(api, userId)) }
+            val releases = async { recentReleases(api, userId, recordingFolders.of(api, userId)) }
             val started = resume.await()
             val startedIds = started.mapTo(HashSet()) { it.id }
             val continueWatching = mergeContinueWatching(started, nextUp.await())
@@ -144,10 +145,14 @@ class HomeScreenRepository @Inject constructor(
      * Movies and shows of every movie and show library the user did not leave out
      * of "latest" on the server; a show counts from its newest episode.
      */
-    private suspend fun recentlyAdded(api: ApiClient, userId: UUID): List<BaseItemDto> = coroutineScope {
+    private suspend fun recentlyAdded(
+        api: ApiClient,
+        userId: UUID,
+        recordingFolders: Set<UUID>,
+    ): List<BaseItemDto> = coroutineScope {
         val excludes = api.userApi.getCurrentUser().content.configuration?.latestItemsExcludes.orEmpty().toSet()
         val libraries = api.userViewApi.getUserViews(userId = userId).content.items
-            .filter { it.id !in excludes }
+            .filter { it.id !in excludes && it.id !in recordingFolders }
             .mapNotNull { view ->
                 when (view.collectionType) {
                     CollectionType.MOVIES -> Triple(view.id, BaseItemKind.MOVIE, ItemSortBy.DATE_CREATED)
@@ -176,18 +181,32 @@ class HomeScreenRepository @Inject constructor(
             .take(LIMIT)
     }
 
-    private suspend fun recentReleases(api: ApiClient, userId: UUID): List<BaseItemDto> = api.libraryApi.getItems(
-        userId = userId,
-        recursive = true,
-        includeItemTypes = listOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
+    /** Asked library by library, so the recordings stay out. */
+    private suspend fun recentReleases(
+        api: ApiClient,
+        userId: UUID,
+        recordingFolders: Set<UUID>,
+    ): List<BaseItemDto> {
+        val views = api.userViewApi.getUserViews(userId = userId).content.items
+        val libraries = libraryKindsOf(views, setOf(LibraryKind.Movies, LibraryKind.Shows), recordingFolders)
         // Announced titles carry future dates.
-        maxPremiereDate = LocalDateTime.now(ZoneOffset.UTC),
-        sortBy = listOf(ItemSortBy.PREMIERE_DATE),
-        sortOrder = listOf(SortOrder.DESCENDING),
-        fields = FIELDS,
-        enableUserData = true,
-        limit = LIMIT,
-    ).content.items
+        val now = LocalDateTime.now(ZoneOffset.UTC)
+        val results = perLibrary(libraries) { library ->
+            api.libraryApi.getItems(
+                userId = userId,
+                parentId = library.id,
+                recursive = true,
+                includeItemTypes = listOf(library.itemType),
+                maxPremiereDate = now,
+                sortBy = listOf(ItemSortBy.PREMIERE_DATE),
+                sortOrder = listOf(SortOrder.DESCENDING),
+                fields = FIELDS,
+                enableUserData = true,
+                limit = LIMIT,
+            ).content.items
+        }
+        return mergeLimited(results, LIMIT, byPremiereDateDesc)
+    }
 
     private companion object {
         const val LIMIT = 20
