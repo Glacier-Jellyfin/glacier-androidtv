@@ -8,6 +8,7 @@ import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderContent
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderMedia
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderRepository
@@ -30,6 +31,7 @@ import io.github.glacier_jellyfin.androidtv.navigation.navEvent
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -85,6 +87,7 @@ class FolderViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     @param:ApplicationContext context: Context,
     private val repository: FolderRepository,
+    details: DetailRepository,
     private val sessions: SessionManager,
     private val settings: SettingsRepository,
     playback: PlaybackRepository,
@@ -120,11 +123,21 @@ class FolderViewModel @Inject constructor(
     /** The gallery's preview: the focused video plays in it. */
     private val preview = InlineVideo(context, playback, viewModelScope)
     val previewVideo: StateFlow<InlineVideoState> = preview.state
+    private var refreshJob: Job? = null
 
     init {
         load()
         // Progress after watching: reload quietly.
         viewModelScope.launch { playback.stopped.collect { refresh() } }
+        viewModelScope.launch {
+            details.photoDeleted.collect { id ->
+                val content = _state.value.content ?: return@collect
+                if (content.media.any { it.id == id }) {
+                    _state.update { it.copy(content = content.copy(media = content.media.filterNot { it.id == id })) }
+                    refresh()
+                }
+            }
+        }
     }
 
     fun load() {
@@ -141,7 +154,8 @@ class FolderViewModel @Inject constructor(
 
     /** In the background: what is on screen stays if it fails. */
     private fun refresh() {
-        viewModelScope.launch {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
             runSuspendCatching { repository.load(folderId) }
                 .onSuccess { content -> _state.update { it.copy(content = content) } }
                 .onFailure { Log.w(TAG, "Refreshing the folder failed", it) }

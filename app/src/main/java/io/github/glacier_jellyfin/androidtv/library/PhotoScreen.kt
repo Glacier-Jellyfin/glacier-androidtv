@@ -86,6 +86,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.endKey
 import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
 import io.github.glacier_jellyfin.androidtv.player.ControlButton
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
+import io.github.glacier_jellyfin.androidtv.ui.DeleteMediaDialog
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import java.time.LocalDateTime
@@ -102,6 +103,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun PhotoScreen(
     onNavigate: (UiEvent.Navigate) -> Unit,
+    onBack: () -> Unit,
     viewModel: PhotoViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -117,10 +119,11 @@ fun PhotoScreen(
     val infoFocus = remember { FocusRequester() }
     val current = state.current
     val photo = current as? FolderMedia.Photo
+    val deleteTarget = state.deleteTarget
     var controlsOpen by remember { mutableStateOf(false) }
     var infoOpen by remember { mutableStateOf(false) }
     var controlsFocus by remember { mutableStateOf(slideshowFocus) }
-    val modalOpen = infoOpen
+    val modalOpen = deleteTarget != null || infoOpen
     val controlsVisible = controlsOpen && photo != null && !modalOpen
     BackHandler(enabled = controlsVisible) { controlsOpen = false }
     LaunchedEffect(photo == null) { if (photo == null) controlsOpen = false }
@@ -131,6 +134,8 @@ fun PhotoScreen(
             runCatching { target.requestFocus() }
         }
     }
+    val empty = !state.loading && !state.failed && state.media.isEmpty()
+    LaunchedEffect(empty) { if (empty) onBack() }
     // A slideshow or a video runs on its own: the TV must not dim or start its screensaver meanwhile.
     val view = LocalView.current
     val running = state.slideshow || video.player != null
@@ -274,6 +279,7 @@ fun PhotoScreen(
                 if (controlsVisible) {
                     PhotoControls(
                         state = state,
+                        canDelete = photo.photo.canDelete,
                         slideshowFocus = slideshowFocus,
                         infoFocus = infoFocus,
                         onBrowse = viewModel::browseBy,
@@ -285,6 +291,10 @@ fun PhotoScreen(
                             viewModel.stopSlideshow()
                             controlsFocus = infoFocus
                             infoOpen = true
+                        },
+                        onDelete = {
+                            controlsFocus = slideshowFocus
+                            viewModel.openDelete()
                         },
                     )
                 }
@@ -330,17 +340,28 @@ fun PhotoScreen(
         if (infoOpen && photo != null) {
             PhotoInfoPanel(photo, viewModel::photoDetails, onDismiss = { infoOpen = false })
         }
+        if (deleteTarget != null) {
+            DeleteMediaDialog(
+                title = stringResource(R.string.photo_delete_title),
+                message = stringResource(R.string.photo_delete_body, deleteTarget.name),
+                deleting = state.deleting,
+                onConfirm = viewModel::deletePhoto,
+                onDismiss = viewModel::closeDelete,
+            )
+        }
     }
 }
 
 @Composable
 private fun PhotoControls(
     state: PhotoState,
+    canDelete: Boolean,
     slideshowFocus: FocusRequester,
     infoFocus: FocusRequester,
     onBrowse: (Int) -> Unit,
     onSlideshow: () -> Unit,
     onInfo: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     Row(
         Modifier
@@ -392,6 +413,9 @@ private fun PhotoControls(
             onClick = onInfo,
             modifier = Modifier.focusRequester(infoFocus),
         )
+        if (canDelete) {
+            ControlButton(GlacierIcons.Trash, stringResource(R.string.player_delete), onClick = onDelete)
+        }
     }
 }
 

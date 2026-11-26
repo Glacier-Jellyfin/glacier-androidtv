@@ -42,6 +42,7 @@ data class ItemDetails(
     val studios: List<String> = emptyList(),
     /** The title's files when it has several, in the server's order; empty for a single file. */
     val versions: List<MediaVersion> = emptyList(),
+    val canDelete: Boolean = false,
 )
 
 data class EpisodeNeighbours(val previous: MediaItem?, val next: MediaItem?)

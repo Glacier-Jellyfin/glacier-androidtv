@@ -4,6 +4,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.Session
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferencesRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleMode
+import java.net.HttpURLConnection.HTTP_NO_CONTENT
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -50,6 +51,9 @@ class DetailRepository @Inject constructor(
     /** A title the user added to or removed from the favorites: lists of favorites are stale. */
     val favoriteChanged: SharedFlow<UUID> = _favoriteChanged.asSharedFlow()
 
+    private val _photoDeleted = MutableSharedFlow<UUID>()
+    val photoDeleted: SharedFlow<UUID> = _photoDeleted.asSharedFlow()
+
     suspend fun details(id: UUID): ItemDetails = withContext(Dispatchers.IO) {
         val session = requireSession()
         val dto = session.api.libraryApi.getItem(itemId = id, userId = session.userId).content
@@ -81,8 +85,27 @@ class DetailRepository @Inject constructor(
                 .distinct(),
             studios = dto.studios.orEmpty().mapNotNull { it.name?.takeIf(String::isNotBlank) },
             versions = versions(session, dto),
+            canDelete = dto.isDeletableVideo(),
         )
     }
+
+    suspend fun deleteVideo(id: UUID) = deleteMedia(id) { it.isDeletableVideo() }
+
+    suspend fun deletePhoto(id: UUID) {
+        deleteMedia(id) { it.isDeletablePhoto }
+        _photoDeleted.emit(id)
+    }
+
+    private suspend fun deleteMedia(id: UUID, canDelete: (BaseItemDto) -> Boolean) = withContext(Dispatchers.IO) {
+        val session = requireSession()
+        val item = session.api.libraryApi.getItem(itemId = id, userId = session.userId).content
+        check(item.id == id && canDelete(item)) { "This item cannot be deleted" }
+        val response = session.api.libraryApi.deleteItem(itemId = id)
+        check(response.status == HTTP_NO_CONTENT) { "Deleting the item returned HTTP ${response.status}" }
+    }
+
+    private fun BaseItemDto.isDeletableVideo(): Boolean =
+        canDelete == true && mediaType == MediaType.VIDEO && isFolder != true
 
     /** Each file of a title with several, with its own tracks and seek previews. */
     private fun versions(session: Session, dto: BaseItemDto): List<MediaVersion> {

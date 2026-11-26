@@ -66,6 +66,7 @@ import io.github.glacier_jellyfin.androidtv.diagnostics.Diagnostics
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogServer
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogShare
 import io.github.glacier_jellyfin.androidtv.music.MusicController
+import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import java.io.IOException
@@ -120,6 +121,8 @@ data class PlayerUiState(
     val chaptersOpen: Boolean = false,
     /** The info sheet: overview and what is playing. */
     val infoOpen: Boolean = false,
+    val deleteOpen: Boolean = false,
+    val deleting: Boolean = false,
     /** Decoders Media3 picked, for the info sheet ("c2.android.hevc.decoder", "ffmpegLib"). */
     val videoDecoder: String? = null,
     val audioDecoder: String? = null,
@@ -750,6 +753,7 @@ class PlayerViewModel @Inject constructor(
 
     private fun onEnded() {
         val state = _state.value
+        if (closing || state.deleteOpen) return
         val next = state.next
         if (next != null && !state.upNextDismissed && policy.upNextAtMs(
                 state.segments,
@@ -764,6 +768,7 @@ class PlayerViewModel @Inject constructor(
 
     /** Stops this title and plays [item] from its resume point, with the tracks chosen for it (or the server's). */
     private fun switchTo(item: MediaItem, watched: Boolean = false) {
+        if (closing || _state.value.deleteOpen) return
         source?.let { playback.reportStopped(it, currentPositionMs(), watched = watched) }
         source = null
         itemId = item.id
@@ -807,6 +812,48 @@ class PlayerViewModel @Inject constructor(
     fun openInfo() = _state.update { it.copy(infoOpen = true, chaptersOpen = false, trackPanel = null) }
 
     fun closeInfo() = _state.update { it.copy(infoOpen = false) }
+
+    fun openDelete() {
+        val state = _state.value
+        if (closing || state.deleteOpen || state.details?.canDelete != true) return
+        _state.update { it.copy(deleteOpen = true) }
+        pause()
+    }
+
+    fun closeDelete() {
+        val state = _state.value
+        if (state.deleting) return
+        _state.update { it.copy(deleteOpen = false) }
+        if (state.player?.playbackState == Player.STATE_ENDED) onEnded()
+    }
+
+    fun deleteVideo() {
+        val state = _state.value
+        val target = state.details?.takeIf { it.canDelete }?.item ?: return
+        if (closing || target.id != itemId) return
+        if (!state.deleteOpen || state.deleting) return
+        _state.update { it.copy(deleting = true) }
+
+        viewModelScope.launch {
+            try {
+                details.deleteVideo(target.id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Deleting the video failed", e)
+                _state.update { it.copy(deleteOpen = false, deleting = false) }
+                _events.send(UiEvent.Toast(R.string.player_delete_failed))
+                return@launch
+            }
+
+            closing = true
+            source?.let { playback.reportStopped(it, currentPositionMs()) }
+            source = null
+            releasePlayer()
+            _events.send(UiEvent.Toast(R.string.player_deleted, listOf(target.title)))
+            _events.send(UiEvent.Navigate(HomeRoute, clearBackStack = true))
+        }
+    }
 
     /** The server's transcoder for what plays now; null for direct play or when the server does not say. */
     suspend fun transcodeStatus(): TranscodeStatus? =
@@ -1559,7 +1606,9 @@ class PlayerViewModel @Inject constructor(
     fun seekBy(deltaMs: Long) = seekTo(currentPositionMs() + deltaMs)
 
     /** "Stop" and Back: report where playback ended, then close. */
-    fun stop() = finish()
+    fun stop() {
+        if (!_state.value.deleting) finish()
+    }
 
     /** Once: Back can arrive twice, as a key and as the system's back callback; each would close a screen. */
     private fun finish() {

@@ -277,6 +277,7 @@ internal class MediaMapper(private val api: ApiClient) {
             name = dto.name.orEmpty(),
             thumbUrl = image(dto.id, ImageType.PRIMARY, tag, ImageWidth.THUMB),
             fullUrl = image(dto.id, ImageType.PRIMARY, tag, ImageWidth.BACKDROP),
+            canDelete = dto.isDeletablePhoto,
         )
     }
 

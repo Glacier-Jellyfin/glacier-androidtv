@@ -252,6 +252,10 @@
     <string name="photo_info_camera">Camera</string>
     <string name="photo_info_exposure">Camera settings</string>
     <string name="photo_info_error">Photo details could not be loaded.</string>
+    <string name="photo_delete_title">Delete photo?</string>
+    <string name="photo_delete_body">Jellyfin will permanently delete “%1$s” from the server.</string>
+    <string name="photo_deleted">“%1$s” was deleted.</string>
+    <string name="photo_delete_failed">The photo could not be deleted.</string>
     <string name="scope_all">All</string>
     <string name="scope_collections">Collections</string>
     <string name="scope_genres">Genres</string>
@@ -494,6 +498,12 @@
     <string name="player_subtitles">Subtitles</string>
     <string name="player_chapters">Chapters</string>
     <string name="player_info">Info</string>
+    <string name="player_delete">Delete</string>
+    <string name="player_delete_title">Delete video?</string>
+    <string name="player_delete_body">Jellyfin will permanently delete “%1$s” and its associated files from the server.</string>
+    <string name="player_deleting">Deleting…</string>
+    <string name="player_deleted">“%1$s” was deleted.</string>
+    <string name="player_delete_failed">The video could not be deleted.</string>
     <string name="player_info_video">Video</string>
     <string name="player_info_movie">Movie</string>
     <string name="player_info_episode">Episode</string>

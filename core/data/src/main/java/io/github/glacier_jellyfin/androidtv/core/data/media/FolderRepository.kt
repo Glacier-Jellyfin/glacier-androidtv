@@ -42,6 +42,7 @@ data class MediaPhoto(
     val name: String,
     val thumbUrl: String,
     val fullUrl: String,
+    val canDelete: Boolean = false,
 )
 
 data class PhotoLocation(
@@ -219,7 +220,7 @@ class FolderRepository @Inject constructor(
         userId = session.userId,
         parentId = parentId,
         sortBy = listOf(ItemSortBy.SORT_NAME),
-        fields = listOf(ItemFields.DATE_CREATED),
+        fields = listOf(ItemFields.DATE_CREATED, ItemFields.CAN_DELETE),
         enableUserData = true,
     ).content.items
 
@@ -242,6 +243,9 @@ class FolderRepository @Inject constructor(
 
 internal val BaseItemDto.photoLocation: PhotoLocation
     get() = PhotoLocation(productionLocations.orEmpty().filter(String::isNotBlank), latitude, longitude)
+
+internal val BaseItemDto.isDeletablePhoto: Boolean
+    get() = canDelete == true && type == BaseItemKind.PHOTO && isFolder != true
 
 /**
  * [settings]' order: by date, undated last and same dates by name, or by name. [FolderSettings.descending]

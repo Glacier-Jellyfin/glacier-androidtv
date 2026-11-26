@@ -131,13 +131,13 @@ fun GlacierNavHost(
             )
         }
         composable<FolderRoute> { FolderScreen(onNavigate = navigate) }
-        composable<PhotoRoute> { PhotoScreen(onNavigate = navigate) }
+        composable<PhotoRoute> { PhotoScreen(onNavigate = navigate, onBack = back) }
         composable<DetailRoute> { DetailScreen(onNavigate = navigate, onBack = back) }
         composable<PersonRoute> { PersonScreen(onNavigate = navigate) }
 
         // Later development steps; placeholders keep the navigation testable.
         composable<TrailerRoute> { TrailerScreen(onNavigate = navigate, onBack = back) }
-        composable<PlayerRoute> { PlayerScreen(onBack = back) }
+        composable<PlayerRoute> { PlayerScreen(onBack = back, onNavigate = navigate) }
         composable<MusicRoute> { MusicPlayerScreen(onBack = back) }
         composable<SearchRoute> { SearchScreen(onNavigate = navigate) }
         composable<SeerrRoute> { SeerrScreen(onNavigate = navigate) }

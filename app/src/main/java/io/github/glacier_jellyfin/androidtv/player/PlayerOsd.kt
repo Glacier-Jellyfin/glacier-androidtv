@@ -200,6 +200,14 @@ fun PlayerOsd(
                         onClick = { onOpen(OsdButton.Info) },
                         modifier = Modifier.focusRequester(buttonFocus.getValue(OsdButton.Info)),
                     )
+                    if (state.details?.canDelete == true) {
+                        ControlButton(
+                            GlacierIcons.Trash,
+                            stringResource(R.string.player_delete),
+                            onClick = { onOpen(OsdButton.Delete) },
+                            modifier = Modifier.focusRequester(buttonFocus.getValue(OsdButton.Delete)),
+                        )
+                    }
                 }
                 Spacer(Modifier.weight(1f))
                 if (progress.durationMs > 0) {
@@ -403,7 +411,7 @@ private fun Timeline(
 }
 
 /** OSD buttons that open an overlay; the overlay hands focus back to them when it closes. */
-enum class OsdButton { Audio, Subtitles, Chapters, Info }
+enum class OsdButton { Audio, Subtitles, Chapters, Info, Delete }
 
 private fun chapterAt(chapters: List<Chapter>, positionMs: Long): Chapter? = chapters.lastOrNull {
     it.startMs <= positionMs
