@@ -10,7 +10,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderContent
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderMedia
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.PhotoDetails
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
+import io.github.glacier_jellyfin.androidtv.core.data.playback.TranscodeStatus
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.core.log.Log
@@ -44,6 +46,15 @@ data class PhotoState(
     val current: FolderMedia? get() = media.getOrNull(index)
 }
 
+/** The details panel of one photo or video: [details] once loaded, [failed] when they could not be. */
+data class PhotoInfoState(
+    val item: FolderMedia,
+    val details: PhotoDetails? = null,
+    val failed: Boolean = false,
+) {
+    val loading: Boolean get() = details == null && !failed
+}
+
 @HiltViewModel
 class PhotoViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -60,6 +71,11 @@ class PhotoViewModel @Inject constructor(
     /** The current video, playing right here. */
     private val inline = InlineVideo(context, playback, viewModelScope, onEnded = ::onVideoEnded)
     val video: StateFlow<InlineVideoState> = inline.state
+
+    /** The open details panel, null while it is closed; it stays with the item it was opened for. */
+    private val _info = MutableStateFlow<PhotoInfoState?>(null)
+    val info: StateFlow<PhotoInfoState?> = _info.asStateFlow()
+    private var infoJob: Job? = null
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
@@ -101,10 +117,16 @@ class PhotoViewModel @Inject constructor(
         if (step(-1)) showCurrent()
     }
 
-    /** OK: on a video the full player takes over where it is; on a photo the slideshow starts or stops. */
+    /**
+     * OK: during a slideshow it stops it and stays here (a video pauses); otherwise on a video the full player takes
+     * over where it is, and on a photo the slideshow starts.
+     */
     fun select() {
         val current = _state.value.current ?: return
-        if (current is FolderMedia.Video) {
+        if (_state.value.slideshow) {
+            stopSlideshow()
+            if (current is FolderMedia.Video) inline.pause()
+        } else if (current is FolderMedia.Video) {
             val position = inline.positionMs
             handedOver = current.id to position
             inline.release()
@@ -113,12 +135,34 @@ class PhotoViewModel @Inject constructor(
                     UiEvent.Navigate(PlayerRoute(current.id.toString(), startMs = position)),
                 )
             }
-        } else if (_state.value.slideshow) {
-            stopSlideshow()
         } else {
             _state.update { it.copy(slideshow = true) }
             showCurrent()
         }
+    }
+
+    /** Opens the details of the current item and ends a slideshow; the server is asked only now. */
+    fun openDetails() {
+        val item = _state.value.current ?: return
+        stopSlideshow()
+        _info.value = PhotoInfoState(item)
+        infoJob?.cancel()
+        infoJob = viewModelScope.launch {
+            runSuspendCatching { repository.photoDetails(item.id) }
+                .onSuccess { details -> _info.update { it?.copy(details = details) } }
+                .onFailure { error ->
+                    Log.w(TAG, "Loading the details of ${item.id} failed", error)
+                    _info.update { it?.copy(failed = true) }
+                }
+        }
+    }
+
+    /** The transcoder's state for the video playing here, for the details; null when it does not transcode. */
+    suspend fun transcodeStatus(): TranscodeStatus? = inline.transcodeStatus()
+
+    fun closeDetails() {
+        infoJob?.cancel()
+        _info.value = null
     }
 
     /** Play and pause: the video here, or the slideshow on a photo. */

@@ -11,6 +11,7 @@ only in English.
 ### Novedades
 - Una fila de Grabaciones en la pantalla de inicio y las grabaciones como fuente opcional del destacado
 - Una fila de Grabaciones en la página de favoritos
+- Detalles de fotos y vídeos en el visor de fotos. Con Abajo o la tecla Info, la primera pestaña muestra cuándo y dónde se tomó y su carpeta, y la pestaña Técnico la cámara, la exposición y el archivo. Un vídeo muestra las mismas pestañas Técnico y Servidor que el reproductor (#43)
 
 ### Mejoras
 - La línea sobre un título ahora es una ruta. Sus niveles abren la biblioteca, la serie, la temporada o una carpeta superior
@@ -21,8 +22,12 @@ only in English.
 - Al ordenar por año, los títulos del mismo año siguen su fecha de estreno en lugar del orden alfabético
 - Al subir o bajar a una fila, ahora se empieza en su primera tarjeta. Después la fila recuerda la tarjeta en la que la dejaste, también al volver de una página de detalles
 - El orden de la A a la Z ignora artículos como «The», «Der» o «La» en el idioma de cada título. El idioma viene de tu servidor Jellyfin. En Ajustes › Apariencia › Ignorar artículos lo desactivas
+- Al pasar fotos, el nombre y la fecha de la siguiente aparecen al instante, con una vista previa desenfocada y un indicador de carga hasta que la foto está nítida. Una foto que no carga se puede reintentar con OK (#43)
+- El visor de fotos muestra sus teclas como teclas dibujadas en la esquina inferior al abrirse, y con Arriba vuelven a aparecer (#43)
+- Los vídeos de una carpeta de fotos llevan el símbolo de reproducción, y los clips de menos de un minuto muestran su duración en segundos (#43)
 
 ### Correcciones
+- Las fotos y los vídeos muestran la hora en que se tomaron en la zona horaria del televisor. Antes se desviaba por la diferencia con UTC (#43)
 - La temporada de especiales muestra sus episodios en orden y no por título
 - Los vídeos caseros girados se ven derechos también en televisores que ignoraban el giro (#43)
 - Las grabaciones de TV en directo ya no aparecen entre las películas y series. Siguen en TV en directo > Grabaciones y la búsqueda las sigue encontrando

@@ -372,54 +372,82 @@ fun PinWheel(
             Slot(digits[4], Modifier.align(AbsoluteAlignment.CenterLeft).absolutePadding(left = 8.dp))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(48.dp), verticalAlignment = Alignment.CenterVertically) {
-            @Composable
-            fun Hint(
-                icon: ImageVector,
-                key: String,
-                label: String,
-            ) = Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (keyIcons) {
-                    Box(
-                        Modifier.size(34.dp).clip(CircleShape).border(2.dp, GlacierColors.GlassBorder2, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            icon,
-                            contentDescription = null,
-                            tint = GlacierColors.Mist,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                } else {
-                    val round = key.length <= 2
-                    val shape = if (round) CircleShape else RoundedCornerShape(GlacierShapes.RadiusSm)
-                    Box(
-                        Modifier
-                            .then(if (round) Modifier.size(40.dp) else Modifier.height(34.dp))
-                            .clip(shape)
-                            .background(GlacierColors.GlassFill)
-                            .border(2.dp, GlacierColors.GlassBorder2, shape)
-                            .padding(horizontal = if (round) 0.dp else 12.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            key,
-                            style = GlacierText.body(16, FontWeight.SemiBold),
-                            color = GlacierColors.Ice,
-                            maxLines = 1,
-                        )
-                    }
-                }
-                Text(label, style = GlacierText.body(19, FontWeight.SemiBold), color = GlacierColors.Ice)
-            }
-            Hint(GlacierIcons.Rewind, deleteKey, deleteHint)
-            Hint(GlacierIcons.Menu, switchKey, switchHint(if (block == 0) "5–9" else "0–4"))
+            KeyHint(GlacierIcons.Rewind, deleteKey, deleteHint, keyIcons)
+            KeyHint(GlacierIcons.Menu, switchKey, switchHint(if (block == 0) "5–9" else "0–4"), keyIcons)
         }
     }
 }
+
+/**
+ * A key and what it does: a round [icon] cap for the Fire TV remotes ([keyIcons]), else a cap with the [key]'s text,
+ * round for one or two characters, followed by the [label].
+ */
+@Composable
+fun KeyHint(
+    icon: ImageVector,
+    key: String,
+    label: String,
+    keyIcons: Boolean = false,
+) = KeyHint(label) { if (keyIcons) KeyCapIcon(icon) else KeyCap(key) }
+
+/** A key and what it does: the [cap] (see [KeyCap], [KeyCapIcon]) followed by the [label]. */
+@Composable
+fun KeyHint(
+    label: String,
+    modifier: Modifier = Modifier,
+    cap: @Composable () -> Unit,
+) = Row(
+    modifier,
+    horizontalArrangement = Arrangement.spacedBy(10.dp),
+    verticalAlignment = Alignment.CenterVertically,
+) {
+    cap()
+    Text(label, style = GlacierText.body(19, FontWeight.SemiBold), color = GlacierColors.Ice)
+}
+
+/**
+ * A key cap with the key's [text]: a circle for one or two characters, else a rounded pill. [strong] draws a brighter
+ * outline and fill, for caps over a picture (black bars and bright photos alike).
+ */
+@Composable
+fun KeyCap(text: String, strong: Boolean = false) {
+    val round = text.length <= 2
+    val shape = if (round) CircleShape else RoundedCornerShape(GlacierShapes.RadiusSm)
+    Box(
+        Modifier
+            .then(if (round) Modifier.size(40.dp) else Modifier.height(34.dp))
+            .clip(shape)
+            .background(if (strong) StrongCapFill else GlacierColors.GlassFill)
+            .border(2.dp, if (strong) StrongCapBorder else GlacierColors.GlassBorder2, shape)
+            .padding(horizontal = if (round) 0.dp else 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, style = GlacierText.body(16, FontWeight.SemiBold), color = GlacierColors.Ice, maxLines = 1)
+    }
+}
+
+/** A round key cap with an [icon] on it, like the Fire TV remote's keys; [strong] as in [KeyCap]. */
+@Composable
+fun KeyCapIcon(icon: ImageVector, strong: Boolean = false) {
+    Box(
+        Modifier
+            .size(34.dp)
+            .clip(CircleShape)
+            .then(if (strong) Modifier.background(StrongCapFill) else Modifier)
+            .border(2.dp, if (strong) StrongCapBorder else GlacierColors.GlassBorder2, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = if (strong) GlacierColors.Ice else GlacierColors.Mist,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
+
+private val StrongCapFill = GlacierColors.Ice.copy(alpha = 0.18f)
+private val StrongCapBorder = GlacierColors.Ice.copy(alpha = 0.6f)
 
 /** Key in the design's filled-pill style (`pill()`): glass at rest, accent fill when focused. */
 @Composable

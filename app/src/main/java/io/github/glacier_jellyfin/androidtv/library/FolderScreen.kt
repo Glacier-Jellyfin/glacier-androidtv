@@ -134,6 +134,7 @@ import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
 import io.github.glacier_jellyfin.androidtv.ui.LocalCardSizes
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import io.github.glacier_jellyfin.androidtv.ui.VideoBadge
 import io.github.glacier_jellyfin.androidtv.ui.runtimeText
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -577,6 +578,7 @@ private fun LazyGridScope.mediaCards(
                         modifier = modifier,
                         locked = item.item.showsLock(),
                         imageHeight = cardHeight(),
+                        videoBadge = true,
                     )
 
                     is FolderMedia.Photo -> PhotoCard(item, onClick = { onOpen(item) }, modifier = modifier)
@@ -821,7 +823,7 @@ private fun Backdrop(media: FolderMedia?, video: InlineVideoState, inFront: Bool
 /** The picture in front: its name, date and length above the row. */
 @Composable
 private fun Caption(media: FolderMedia, modifier: Modifier) {
-    val length = (media as? FolderMedia.Video)?.item?.runtimeMinutes?.takeIf { it > 0 }?.let { runtimeText(it) }
+    val length = (media as? FolderMedia.Video)?.item?.let { runtimeText(it) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             media.name,
@@ -944,11 +946,10 @@ private val MediaKind.label: Int
 @Composable
 private fun videoLine(video: MediaItem): String {
     val left = video.remainingMinutes
-    val length = video.runtimeMinutes?.takeIf { it > 0 }
+    val length = runtimeText(video)
     return when {
         left != null && video.progress != null -> stringResource(R.string.minutes_left, left)
-        length != null -> runtimeText(length)
-        else -> ""
+        else -> length.orEmpty()
     }
 }
 
@@ -1082,30 +1083,7 @@ private fun GalleryTile(
         ) {
             Artwork(url, Modifier.fillMaxSize())
             if (media is FolderMedia.Video) {
-                Row(
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(8.dp)
-                        .clip(PillShape)
-                        .background(Color(0xB305090F))
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Icon(
-                        GlacierIcons.Play,
-                        contentDescription = null,
-                        tint = GlacierColors.Ice,
-                        modifier = Modifier.size(12.dp),
-                    )
-                    media.item.runtimeMinutes?.takeIf { it > 0 }?.let {
-                        Text(
-                            runtimeText(it),
-                            style = GlacierText.body(14),
-                            color = GlacierColors.Ice,
-                        )
-                    }
-                }
+                VideoBadge(Modifier.align(Alignment.BottomEnd).padding(8.dp), runtimeText(media.item))
             }
         }
     }

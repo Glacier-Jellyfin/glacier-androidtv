@@ -14,7 +14,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
-import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.source.LoadEventInfo
 import androidx.media3.exoplayer.source.MediaLoadData
 import androidx.navigation.toRoute
@@ -304,36 +303,11 @@ class PlayerViewModel @Inject constructor(
 
     private val handoverActive: Boolean get() = handoverJob?.isActive == true || queued != null || awaitingStart
 
-    @OptIn(UnstableApi::class)
-    private val decoders = object : AnalyticsListener {
-        @OptIn(UnstableApi::class)
-        override fun onVideoDecoderInitialized(
-            eventTime: AnalyticsListener.EventTime,
-            decoderName: String,
-            initializedTimestampMs: Long,
-            initializationDurationMs: Long,
-        ) {
-            _state.update { it.copy(videoDecoder = decoderName) }
-        }
-
-        @OptIn(UnstableApi::class)
-        override fun onAudioDecoderInitialized(
-            eventTime: AnalyticsListener.EventTime,
-            decoderName: String,
-            initializedTimestampMs: Long,
-            initializationDurationMs: Long,
-        ) {
-            _state.update { it.copy(audioDecoder = decoderName) }
-        }
-
-        @OptIn(UnstableApi::class)
-        override fun onAudioTrackInitialized(
-            eventTime: AnalyticsListener.EventTime,
-            audioTrackConfig: AudioSink.AudioTrackConfig,
-        ) {
-            _state.update { it.copy(audioOutput = audioOutput(audioTrackConfig)) }
-        }
-    }
+    private val decoders = DecoderListener(
+        onVideoDecoder = { name -> _state.update { it.copy(videoDecoder = name) } },
+        onAudioDecoder = { name -> _state.update { it.copy(audioDecoder = name) } },
+        onAudioOutput = { output -> _state.update { it.copy(audioOutput = output) } },
+    )
 
     /** Media segments of a ladder: tells when a tier has taken over, and when loading falls behind playing. */
     @OptIn(UnstableApi::class)

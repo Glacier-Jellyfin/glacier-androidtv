@@ -1,11 +1,19 @@
 package io.github.glacier_jellyfin.androidtv.library
 
 import android.content.Context
+import androidx.annotation.OptIn
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
+import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
+import io.github.glacier_jellyfin.androidtv.core.data.playback.TranscodeStatus
 import io.github.glacier_jellyfin.androidtv.core.log.Log
+import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayback
 import io.github.glacier_jellyfin.androidtv.core.player.GlacierPlayer
 import io.github.glacier_jellyfin.androidtv.core.player.StreamRequest
+import io.github.glacier_jellyfin.androidtv.player.DecoderInfo
+import io.github.glacier_jellyfin.androidtv.player.DecoderListener
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -18,11 +26,18 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-/** What [InlineVideo] plays: [player] once the stream of [id] is open, and how far it has come, 0 to 1. */
+/**
+ * What [InlineVideo] plays: [player] once the stream of [id] is open, and how far it has come, 0 to 1. For the info
+ * panel: the server's [source] of the stream (how it is delivered, the file) as soon as it is known, the [playback] the
+ * live values are read from, and the [decoders] Media3 picked.
+ */
 data class InlineVideoState(
     val id: UUID? = null,
-    val player: Player? = null,
+    val player: ExoPlayer? = null,
     val progress: Float = 0f,
+    val source: PlaybackSource? = null,
+    val playback: GlacierPlayback? = null,
+    val decoders: DecoderInfo = DecoderInfo(),
 )
 
 /**
@@ -31,6 +46,7 @@ data class InlineVideoState(
  * plays to its end, also when it cannot be opened. Nothing is reported to the server: the full
  * player does that once OK hands the video over.
  */
+@OptIn(UnstableApi::class)
 class InlineVideo(
     private val context: Context,
     private val playback: PlaybackRepository,
@@ -48,6 +64,15 @@ class InlineVideo(
             if (playbackState == Player.STATE_ENDED) onEnded()
         }
     }
+
+    private val decoders = DecoderListener(
+        onVideoDecoder = { name -> _state.update { it.copy(decoders = it.decoders.copy(video = name)) } },
+        onAudioDecoder = { name -> _state.update { it.copy(decoders = it.decoders.copy(audio = name)) } },
+        onAudioOutput = { output -> _state.update { it.copy(decoders = it.decoders.copy(output = output)) } },
+    )
+
+    /** The transcoder's state for the stream, for the info panel; null when it is not transcoding or not known. */
+    suspend fun transcodeStatus(): TranscodeStatus? = _state.value.source?.let { playback.transcodeStatus(it) }
 
     /** Where it plays now, for the full player to go on from there; 0 before it plays. */
     val positionMs: Long get() = _state.value.player?.currentPosition ?: 0
@@ -68,7 +93,8 @@ class InlineVideo(
             try {
                 delay(delayMs)
                 val source = playback.open(id, startMs = startMs, audioIndex = null, subtitleIndex = null)
-                val player = GlacierPlayer.create(
+                _state.update { it.copy(source = source) }
+                val created = GlacierPlayer.create(
                     context,
                     StreamRequest(
                         url = source.url,
@@ -77,10 +103,12 @@ class InlineVideo(
                         startPositionMs = startMs,
                         videoRotation = source.file?.video?.rotation,
                     ),
-                ).player
+                )
+                val player = created.player
                 player.addListener(listener)
+                player.addAnalyticsListener(decoders)
                 player.playWhenReady = true
-                _state.update { it.copy(player = player, progress = 0f) }
+                _state.update { it.copy(player = player, playback = created, progress = 0f) }
                 ticker = scope.launch {
                     while (isActive) {
                         val duration = player.duration.takeIf { it > 0 }

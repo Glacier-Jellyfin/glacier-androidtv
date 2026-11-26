@@ -204,6 +204,22 @@ data class SourceAudio(
     val bitrate: Int?,
 )
 
+/** The video stream as the server describes it. */
+fun MediaStream.toSourceVideo() = SourceVideo(
+    codec = codec,
+    profile = profile,
+    width = width,
+    height = height,
+    bitDepth = bitDepth,
+    frameRate = realFrameRate ?: averageFrameRate,
+    rangeType = videoRangeType.serialName,
+    dolbyVisionProfile = dvProfile,
+    rotation = rotation,
+)
+
+/** The audio stream as the server describes it. */
+fun MediaStream.toSourceAudio() = SourceAudio(index, codec, profile, channels, sampleRate, bitRate)
+
 /** What the server's transcoder is doing for this device right now. */
 data class TranscodeStatus(
     /** Frames per second the transcoder produces. */
@@ -1134,22 +1150,9 @@ class PlaybackRepository @Inject constructor(
                     }?.let {
                         if (source.transcodingSubProtocol == MediaStreamProtocol.HLS) "HLS · $it" else it
                     },
-                    video = streams.firstOrNull { it.type == MediaStreamType.VIDEO }?.let {
-                        SourceVideo(
-                            codec = it.codec,
-                            profile = it.profile,
-                            width = it.width,
-                            height = it.height,
-                            bitDepth = it.bitDepth,
-                            frameRate = it.realFrameRate ?: it.averageFrameRate,
-                            rangeType = it.videoRangeType.serialName,
-                            dolbyVisionProfile = it.dvProfile,
-                            rotation = it.rotation,
-                        )
-                    },
-                    audio = streams.filter { it.type == MediaStreamType.AUDIO && !it.isExternal }.map {
-                        SourceAudio(it.index, it.codec, it.profile, it.channels, it.sampleRate, it.bitRate)
-                    },
+                    video = streams.firstOrNull { it.type == MediaStreamType.VIDEO }?.toSourceVideo(),
+                    audio = streams.filter { it.type == MediaStreamType.AUDIO && !it.isExternal }
+                        .map { it.toSourceAudio() },
                     transcodeReasons = reasons?.split(',')?.filter { it.isNotBlank() }.orEmpty(),
                 ),
             )

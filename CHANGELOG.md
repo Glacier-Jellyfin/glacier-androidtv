@@ -25,6 +25,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 ### New
 - A Recordings row on the home screen and recordings as an optional spotlight source
 - A Recordings row on the favorites page
+- Photo and video details in the photo viewer. Press Down or the Info key: the first tab shows when and where it was taken and its folder, the Technical tab the camera, exposure and file. A video shows the same Technical and Server tabs as the player (#43)
 
 ### Improved
 - The line above a title is now a breadcrumb. Its levels open the library, the show, the season or a parent folder
@@ -35,8 +36,12 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - Sorted by year, titles of the same year follow their release date instead of the alphabet
 - Moving up or down into a row now starts at its first card. After that the row remembers the card you left it on, also when you come back from a detail page
 - A to Z ignores articles like "The", "Der" or "La" in the language of each title. The language is taken from your Jellyfin server. Settings › Appearance › Ignore articles turns it off
+- Browsing photos shows the name and date of the next one at once and a blurred preview with a loader until the photo is sharp. A photo that fails to load can be tried again with OK (#43)
+- The photo viewer shows its keys as key caps in the bottom corner when it opens, and Up shows them again (#43)
+- Videos in a photo folder carry a play sign, and clips shorter than a minute show their length in seconds (#43)
 
 ### Fixed
+- Photos and videos show the time they were taken in the TV's time zone. It was off by the time difference to UTC before (#43)
 - The specials season lists its episodes in order instead of by title
 - Rotated home videos show upright on TVs that ignored the rotation (#43)
 - Live TV recordings no longer show up among movies and shows. They stay under Live TV > Recordings and search still finds them

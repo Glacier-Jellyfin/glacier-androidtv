@@ -10,6 +10,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 ### Neu
 - Eine Reihe Aufnahmen auf der Startseite und Aufnahmen als wählbare Quelle für das Spotlight
 - Eine Reihe Aufnahmen auf der Favoritenseite
+- Foto- und Videodetails in der Fotoansicht. Mit Unten oder der Info-Taste zeigt der erste Reiter, wann und wo es entstand und in welchem Ordner es liegt, der Reiter Technik die Kamera, die Belichtung und die Datei. Ein Video zeigt dieselben Reiter Technik und Server wie der Player (#43)
 
 ### Verbessert
 - Die Zeile über einem Titel ist jetzt ein Pfad. Seine Ebenen öffnen die Bibliothek, die Serie, die Staffel oder einen übergeordneten Ordner
@@ -20,8 +21,12 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Nach Jahr sortiert folgen Titel desselben Jahres ihrem Erscheinungsdatum statt dem Alphabet
 - Wer nach oben oder unten in eine Reihe wechselt, landet jetzt zuerst auf ihrer ersten Karte. Danach merkt sich die Reihe die Karte, auf der du sie verlassen hast, auch nach der Rückkehr von einer Detailseite
 - A bis Z ignoriert Artikel wie „The“, „Der“ oder „La“ in der Sprache des jeweiligen Titels. Die Sprache kommt von deinem Jellyfin-Server. Unter Einstellungen › Darstellung › Artikel ignorieren schaltest du es aus
+- Beim Blättern erscheinen Name und Datum des nächsten Fotos sofort, dazu eine unscharfe Vorschau mit Ladeanzeige, bis das Foto scharf ist. Ein Foto, das nicht lädt, lässt sich mit OK erneut versuchen (#43)
+- Die Fotoansicht zeigt ihre Tasten beim Öffnen als Tastenkappen in der unteren Ecke, mit Oben erscheinen sie wieder (#43)
+- Videos in einem Fotoordner tragen ein Wiedergabezeichen, und Clips unter einer Minute zeigen ihre Länge in Sekunden (#43)
 
 ### Behoben
+- Fotos und Videos zeigen die Aufnahmezeit in der Zeitzone des Fernsehers. Vorher lag sie um den Abstand zu UTC daneben (#43)
 - Die Specials-Staffel zeigt ihre Folgen in der richtigen Reihenfolge statt nach Titel
 - Gedrehte Heimvideos stehen jetzt auch auf Fernsehern aufrecht, die die Drehung ignorierten (#43)
 - Live-TV-Aufnahmen erscheinen nicht mehr unter Filmen und Serien. Sie bleiben unter Live-TV > Aufnahmen und die Suche findet sie weiterhin

@@ -12,6 +12,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import io.github.glacier_jellyfin.androidtv.core.data.media.channelLayout
@@ -55,6 +56,36 @@ internal fun ExoPlayer.streamStats(
     maxBufferSeconds = maxBufferMs?.let { it / 1000 }?.takeIf { it > 0 } ?: DEFAULT_MAX_BUFFER_SECONDS,
     handOver = playback?.handOverProgress()?.toStats(currentPosition, bufferedPosition),
 )
+
+/**
+ * Tells the info sheet which decoders Media3 picked ("c2.android.hevc.decoder", "ffmpegLib") and what reaches the audio
+ * output: the player's and the photo viewer's video both use it.
+ */
+@OptIn(UnstableApi::class)
+internal class DecoderListener(
+    private val onVideoDecoder: (String) -> Unit,
+    private val onAudioDecoder: (String) -> Unit,
+    private val onAudioOutput: (AudioOutput) -> Unit,
+) : AnalyticsListener {
+    override fun onVideoDecoderInitialized(
+        eventTime: AnalyticsListener.EventTime,
+        decoderName: String,
+        initializedTimestampMs: Long,
+        initializationDurationMs: Long,
+    ) = onVideoDecoder(decoderName)
+
+    override fun onAudioDecoderInitialized(
+        eventTime: AnalyticsListener.EventTime,
+        decoderName: String,
+        initializedTimestampMs: Long,
+        initializationDurationMs: Long,
+    ) = onAudioDecoder(decoderName)
+
+    override fun onAudioTrackInitialized(
+        eventTime: AnalyticsListener.EventTime,
+        audioTrackConfig: AudioSink.AudioTrackConfig,
+    ) = onAudioOutput(audioOutput(audioTrackConfig))
+}
 
 /** "HEVC · 3840×2160". */
 @OptIn(UnstableApi::class)
@@ -266,6 +297,16 @@ internal fun sourceAudioText(audio: SourceAudio): String {
     }
     return listOfNotNull(codec, channelLayout(audio.channels)).joinToString(" ")
 }
+
+/** "48 kHz · 640 kbit/s" from what the server knows of an audio stream. */
+internal fun sourceAudioDetails(audio: SourceAudio): String = listOfNotNull(
+    audio.sampleRate?.takeIf { it > 0 }?.let { kiloHertzText(it) },
+    audio.bitrate?.let(::bitrateText),
+).joinToString(" · ")
+
+/** "48 kHz", "44.1 kHz". */
+internal fun kiloHertzText(hertz: Int): String =
+    String.format(Locale.ROOT, "%.1f", hertz / 1000.0).removeSuffix(".0") + " kHz"
 
 /** The server's codec names ("hevc", "eac3", "pcm_s24le") as people know them. */
 internal fun serverCodecText(codec: String?): String? = when (val c = codec?.lowercase()) {

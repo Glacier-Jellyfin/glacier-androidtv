@@ -17,6 +17,43 @@ fun runtimeText(minutes: Int): String = if (minutes >= 60) {
     stringResource(R.string.runtime_minutes, minutes)
 }
 
+/** A length split into the unit it is shown in. */
+sealed interface RuntimeParts {
+    data class Seconds(val seconds: Int) : RuntimeParts
+    data class Minutes(val minutes: Int) : RuntimeParts
+    data class Hours(val hours: Int, val minutes: Int) : RuntimeParts
+}
+
+/** Seconds below a minute, else whole minutes (rounded down) or hours and minutes; null for 0 or unknown. */
+fun runtimeParts(ms: Long?): RuntimeParts? {
+    if (ms == null || ms < MS_PER_SECOND) return null
+    if (ms < MS_PER_MINUTE) return RuntimeParts.Seconds((ms / MS_PER_SECOND).toInt())
+    val minutes = (ms / MS_PER_MINUTE).toInt()
+    return if (minutes >= MINUTES_PER_HOUR) {
+        RuntimeParts.Hours(minutes / MINUTES_PER_HOUR, minutes % MINUTES_PER_HOUR)
+    } else {
+        RuntimeParts.Minutes(minutes)
+    }
+}
+
+/** "3 s" below a minute, else like [runtimeText]; null when the length is 0 or unknown. */
+@Composable
+fun runtimeText(ms: Long?): String? = when (val parts = runtimeParts(ms)) {
+    is RuntimeParts.Seconds -> stringResource(R.string.runtime_seconds, parts.seconds)
+    is RuntimeParts.Minutes -> stringResource(R.string.runtime_minutes, parts.minutes)
+    is RuntimeParts.Hours -> stringResource(R.string.runtime_hours, parts.hours, parts.minutes)
+    null -> null
+}
+
+/** The length of an item, from its exact milliseconds, else from its whole minutes. */
+@Composable
+fun runtimeText(item: MediaItem): String? =
+    runtimeText(item.runtimeMs ?: item.runtimeMinutes?.let { it * MS_PER_MINUTE })
+
+private const val MS_PER_SECOND = 1_000L
+private const val MS_PER_MINUTE = 60_000L
+private const val MINUTES_PER_HOUR = 60
+
 /**
  * Age ratings as the design shows them ("12+"). German ratings arrive in
  * several spellings ("FSK-12", "DE-12", "12"); anything else is shown as the

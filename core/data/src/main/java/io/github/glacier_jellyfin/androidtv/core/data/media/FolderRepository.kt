@@ -6,6 +6,8 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSort
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
+import java.net.HttpURLConnection
+import java.net.URL
 import java.time.LocalDateTime
 import java.util.UUID
 import javax.inject.Inject
@@ -81,6 +83,12 @@ data class FolderContent(
     val isEmpty: Boolean get() = folders.isEmpty() && media.isEmpty()
 }
 
+private const val SIZE_TIMEOUT_MS = 5_000
+
+/** The total of a Content-Range header ("bytes 0-0/365513" is 365513); null when it is unknown ("*") or malformed. */
+internal fun totalOfContentRange(header: String?): Long? =
+    header?.substringAfterLast('/', "")?.trim()?.toLongOrNull()?.takeIf { it > 0 }
+
 /** Home video libraries, and music video libraries in their folder view, browsed by their folders on the server's disk. */
 @Singleton
 class FolderRepository @Inject constructor(
@@ -125,6 +133,43 @@ class FolderRepository @Inject constructor(
         val session = checkNotNull(sessions.session.value) { "No profile is signed in" }
         media(session, children(session, folderId)).sortedFor(settings.settings.value.folders)
     }
+
+    /**
+     * The file and camera details of the photo or video [id], fetched when the viewer's details open. A photo has no
+     * media source, so its file size comes from the download's Content-Length when the server does not give it.
+     */
+    suspend fun photoDetails(id: UUID): PhotoDetails = withContext(Dispatchers.IO) {
+        val session = checkNotNull(sessions.session.value) { "No profile is signed in" }
+        val details = photoDetails(session.api.libraryApi.getItem(itemId = id, userId = session.userId).content)
+        if (details.sizeBytes != null) {
+            details
+        } else {
+            details.copy(sizeBytes = downloadSize(session.api.libraryApi.getDownloadUrl(id), session.authorization()))
+        }
+    }
+
+    /**
+     * The size of the file behind [url]: a GET for the first byte (the server answers HEAD with 405) says the total in
+     * Content-Range. A server without range support answers 200 and its Content-Length is the size; the body is
+     * never read. Null when the server does not say or fails.
+     */
+    private fun downloadSize(url: String, authorization: String): Long? = runCatching {
+        val connection = URL(url).openConnection() as HttpURLConnection
+        try {
+            connection.requestMethod = "GET"
+            connection.connectTimeout = SIZE_TIMEOUT_MS
+            connection.readTimeout = SIZE_TIMEOUT_MS
+            connection.setRequestProperty("Authorization", authorization)
+            connection.setRequestProperty("Range", "bytes=0-0")
+            when (connection.responseCode) {
+                HttpURLConnection.HTTP_PARTIAL -> totalOfContentRange(connection.getHeaderField("Content-Range"))
+                HttpURLConnection.HTTP_OK -> connection.contentLengthLong.takeIf { it > 0 }
+                else -> null
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }.getOrNull()
 
     /** The videos of [folderId] in the order the folder page lists them, for playing one after another. */
     suspend fun videos(folderId: UUID): List<MediaItem> =
@@ -195,9 +240,9 @@ class FolderRepository @Inject constructor(
 
     /**
      * Jellyfin keeps the time a photo or video was taken as its premiere date; the file's (or folder's) date otherwise.
-     * The SDK hands both over in the TV's own time already.
+     * The server stores them in UTC, so they are turned into the TV's own time.
      */
-    private val BaseItemDto.taken: LocalDateTime? get() = premiereDate ?: dateCreated
+    private val BaseItemDto.taken: LocalDateTime? get() = (premiereDate ?: dateCreated)?.utcToLocal()
 
     private val Session.userId: UUID get() = UUID.fromString(user.userId)
 }
