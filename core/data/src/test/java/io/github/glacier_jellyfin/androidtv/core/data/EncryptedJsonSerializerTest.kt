@@ -27,6 +27,7 @@ class EncryptedJsonSerializerTest {
         servers = listOf(StoredServer("s1", "Home", "http://home:8096", "12.1.0", lastUsedAt = 1)),
         users = listOf(StoredUser("s1", "u1", "Anna", null, accessToken = "secret-token", lastUsedAt = 1)),
         lastServerId = "s1",
+        bigDataCloudKey = "fixture-geocoding-key",
     )
 
     @Test
@@ -34,6 +35,7 @@ class EncryptedJsonSerializerTest {
         val out = ByteArrayOutputStream()
         serializer.writeTo(state, out)
         assertFalse(out.toByteArray().decodeToString().contains("secret-token"))
+        assertFalse(out.toByteArray().decodeToString().contains("fixture-geocoding-key"))
         assertEquals(state, serializer.readFrom(ByteArrayInputStream(out.toByteArray())))
     }
 

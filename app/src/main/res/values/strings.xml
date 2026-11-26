@@ -244,6 +244,7 @@
     <string name="photo_info_taken_date">Date taken</string>
     <string name="photo_info_created_date">Date created</string>
     <string name="photo_info_location">Capture location</string>
+    <string name="photo_openstreetmap_attribution" translatable="false">© OpenStreetMap contributors</string>
     <string name="photo_info_path">Server path</string>
     <string name="photo_info_unavailable">Unavailable</string>
     <string name="photo_info_file_name">File name</string>
@@ -754,6 +755,26 @@
     <string name="settings_cat_playback">Playback</string>
     <string name="settings_cat_audio">Audio</string>
     <string name="settings_cat_subtitles">Subtitles</string>
+    <string name="settings_cat_photos">Photos</string>
+    <string name="settings_photo_lookup_order">Location provider order</string>
+    <string name="settings_photo_custom_url">Custom service</string>
+    <string name="settings_photo_custom_url_sub">Enter the base address of your Nominatim or Photon server.</string>
+    <string name="settings_photo_configure">Configure</string>
+    <string name="settings_photo_android">Android Geocoder</string>
+    <string name="settings_photo_android_sub">Uses your TV’s geocoder, which may look up coordinates online.</string>
+    <string name="settings_photo_nominatim">OpenStreetMap Nominatim</string>
+    <string name="settings_photo_nominatim_sub">Looks up where individually opened photos were taken using the public OpenStreetMap service.</string>
+    <string name="settings_photo_bigdatacloud">BigDataCloud</string>
+    <string name="settings_photo_bigdatacloud_sub">Looks up photo coordinates online using an API key from your BigDataCloud account.</string>
+    <string name="settings_photo_bigdatacloud_key">API key</string>
+    <string name="settings_photo_key_saved">Key saved</string>
+    <string name="settings_photo_key_hint">Your key is encrypted on this TV.</string>
+    <string name="settings_photo_key_invalid">Enter the API key without spaces.</string>
+    <string name="settings_photo_remove_key">Remove key</string>
+    <string name="settings_photo_base_url">Base URL</string>
+    <string name="settings_photo_empty_url">Leave this field empty to disable this service.</string>
+    <string name="settings_photo_invalid_url">Enter an HTTP or HTTPS base URL without credentials, query or fragment.</string>
+    <string name="settings_photo_save">Save</string>
     <string name="settings_cat_account">Account</string>
     <string name="settings_cat_appearance">Appearance</string>
     <string name="settings_cat_home">Home</string>

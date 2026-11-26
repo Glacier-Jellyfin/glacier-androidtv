@@ -13,6 +13,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.FolderContent
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderMedia
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaPhoto
+import io.github.glacier_jellyfin.androidtv.core.data.media.PhotoLocation
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
@@ -21,6 +22,7 @@ import io.github.glacier_jellyfin.androidtv.navigation.PhotoRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import java.time.LocalDateTime
+import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -30,6 +32,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -50,8 +54,10 @@ data class PhotoState(
     val deleteTarget: MediaPhoto? = null,
     val deleting: Boolean = false,
     val modifiedPhoto: Pair<UUID, LocalDateTime>? = null,
+    val resolvedPhoto: Pair<UUID, PhotoPlace>? = null,
 ) {
     val current: FolderMedia? get() = media.getOrNull(index)
+    val photoPlace: PhotoPlace? get() = resolvedPhoto?.takeIf { it.first == current?.id }?.second
 
     val captionDate: LocalDateTime?
         get() {
@@ -80,12 +86,14 @@ class PhotoViewModel @Inject constructor(
     private val repository: FolderRepository,
     private val details: DetailRepository,
     private val settings: SettingsRepository,
+    private val geocoder: PhotoGeocoder,
     playback: PlaybackRepository,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<PhotoRoute>()
 
     private val _state = MutableStateFlow(PhotoState())
     val state: StateFlow<PhotoState> = _state.asStateFlow()
+    private val detailedLocation = MutableStateFlow<Pair<UUID, PhotoLocation>?>(null)
 
     /** The current video, playing right here. */
     private val inline = InlineVideo(context, playback, viewModelScope, onEnded = ::onVideoEnded)
@@ -107,6 +115,33 @@ class PhotoViewModel @Inject constructor(
                 val modifiedAt = runSuspendCatching { repository.photoModifiedAt(item.id) }.getOrNull()
                 if (modifiedAt != null) _state.update { it.copy(modifiedPhoto = item.id to modifiedAt) }
             }
+        }
+        viewModelScope.launch {
+            val photos = state.map { (it.current as? FolderMedia.Photo)?.photo to it.slideshow }.distinctUntilChanged()
+            val locations = combine(photos, detailedLocation) { (photo, slideshow), detail ->
+                photo?.let {
+                    val listed = it.location
+                    val fromDetails = detail?.takeIf { entry -> entry.first == it.id }?.second
+                    val location = if (listed.names.isEmpty() && listed.coordinates == null) {
+                        fromDetails ?: listed
+                    } else {
+                        listed
+                    }
+                    Triple(it.id, location, !slideshow)
+                }
+            }.distinctUntilChanged()
+            combine(locations, settings.photoGeocoding) { location, options -> location to options }
+                .collectLatest { (location, options) ->
+                    _state.update { it.copy(resolvedPhoto = null) }
+                    val (id, source, interactive) = location ?: return@collectLatest
+                    val place = geocoder.resolve(
+                        source,
+                        options,
+                        Locale.getDefault(),
+                        interactive,
+                    ) ?: return@collectLatest
+                    _state.update { if (it.current?.id == id) it.copy(resolvedPhoto = id to place) else it }
+                }
         }
     }
 
@@ -163,7 +198,9 @@ class PhotoViewModel @Inject constructor(
         }
     }
 
-    suspend fun photoDetails(id: UUID) = repository.photoDetails(id)
+    suspend fun photoDetails(id: UUID) = repository.photoDetails(id).also { details ->
+        if (state.value.current?.id == id) detailedLocation.value = id to details.location
+    }
 
     fun openDelete() {
         val state = _state.value

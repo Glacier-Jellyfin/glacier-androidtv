@@ -26,6 +26,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.Language
 import io.github.glacier_jellyfin.androidtv.core.data.settings.NavigationSettings
+import io.github.glacier_jellyfin.androidtv.core.data.settings.PhotoGeocodingSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.PlaybackSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ProfileSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.ServerPreferences
@@ -74,6 +75,7 @@ enum class SettingsCategory(val label: Int) {
     Playback(R.string.settings_cat_playback),
     Audio(R.string.settings_cat_audio),
     Subtitles(R.string.settings_cat_subtitles),
+    Photos(R.string.settings_cat_photos),
     Account(R.string.settings_cat_account),
     System(R.string.settings_cat_system),
 }
@@ -84,6 +86,8 @@ enum class LanguageTarget { Audio, Subtitles, Ui }
 data class SettingsUiState(
     val category: SettingsCategory = SettingsCategory.Appearance,
     val profile: ProfileSettings = ProfileSettings(),
+    val photoGeocoding: PhotoGeocodingSettings? = null,
+    val hasBigDataCloudKey: Boolean = false,
     /** Null while loading or when the server cannot be reached ([serverFailed]). */
     val server: ServerPreferences? = null,
     val serverFailed: Boolean = false,
@@ -183,6 +187,12 @@ class SettingsViewModel @Inject constructor(
     init {
         viewModelScope.launch { settings.settings.collect { profile -> _state.update { it.copy(profile = profile) } } }
         viewModelScope.launch {
+            settings.photoGeocoding.collect { options -> _state.update { it.copy(photoGeocoding = options) } }
+        }
+        viewModelScope.launch {
+            accounts.hasBigDataCloudKey.collect { saved -> _state.update { it.copy(hasBigDataCloudKey = saved) } }
+        }
+        viewModelScope.launch {
             serverPreferences.preferences.collect { server ->
                 if (server != null) {
                     _state.update {
@@ -252,6 +262,17 @@ class SettingsViewModel @Inject constructor(
 
     fun updatePlayback(transform: (PlaybackSettings) -> PlaybackSettings) {
         viewModelScope.launch { settings.updatePlayback(transform) }
+    }
+
+    fun updatePhotoGeocoding(transform: (PhotoGeocodingSettings) -> PhotoGeocodingSettings) {
+        viewModelScope.launch { settings.updatePhotoGeocoding(transform) }
+    }
+
+    fun setBigDataCloudKey(key: String?) {
+        viewModelScope.launch {
+            accounts.setBigDataCloudKey(key)
+            if (key == null) settings.updatePhotoGeocoding { it.copy(bigDataCloudEnabled = false) }
+        }
     }
 
     fun updateAppearance(transform: (AppearanceSettings) -> AppearanceSettings) {

@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 /**
  * Everything Glacier remembers about servers and profiles on this device.
  * Persisted encrypted (see [EncryptedJsonSerializer]) because it holds
- * access tokens and PIN hashes.
+ * access tokens, PIN hashes and service credentials.
  */
 @Serializable
 data class AccountState(
@@ -14,6 +14,7 @@ data class AccountState(
     val lastServerId: String? = null,
     /** Which profile opens by itself when the app starts (Settings › System). */
     val startProfile: StartProfile = StartProfile(),
+    internal val bigDataCloudKey: String? = null,
 )
 
 @Serializable

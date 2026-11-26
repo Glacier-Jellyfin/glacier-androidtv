@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -153,6 +154,8 @@ private sealed interface SettingRow {
         val onToggle: () -> Unit,
         override val enabled: Boolean = true,
         val focus: FocusRequester? = null,
+        val toggleEnabled: Boolean = enabled,
+        val configuration: ToggleConfiguration? = null,
     ) : SettingRow
 
     data class Choice(
@@ -258,6 +261,12 @@ private sealed interface SettingRow {
 }
 
 private data class SettingGroup(val title: String, val rows: List<SettingRow>)
+
+private data class ToggleConfiguration(
+    val label: String,
+    val focus: FocusRequester,
+    val onClick: () -> Unit,
+)
 
 @Composable
 fun SettingsScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
@@ -415,7 +424,13 @@ fun SettingsScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SettingsVi
                             runCatching { categoryFocus.getValue(state.category).requestFocus() }
                         }
                         true
-                    },
+                    }
+                    .focusProperties {
+                        onExit = {
+                            if (requestedFocusDirection == FocusDirection.Down) cancelFocusChange()
+                        }
+                    }
+                    .focusGroup(),
             ) {
                 if (state.category == SettingsCategory.Subtitles) {
                     SubtitlePreview(state.profile.subtitleStyle, state.previewImage)
@@ -567,6 +582,26 @@ fun SettingsScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SettingsVi
                 )
             }
 
+            ListDialog.PhotoCustom -> state.photoGeocoding?.let { options ->
+                PhotoServiceDialog(
+                    options = options,
+                    onSave = { protocol, address ->
+                        viewModel.updatePhotoGeocoding { it.copy(customProtocol = protocol, customUrl = address) }
+                        openList = null
+                    },
+                    onDismiss = { openList = null },
+                )
+            }
+
+            ListDialog.PhotoBigDataCloud -> BigDataCloudKeyDialog(
+                hasKey = state.hasBigDataCloudKey,
+                onSave = { key ->
+                    viewModel.setBigDataCloudKey(key)
+                    openList = null
+                },
+                onDismiss = { openList = null },
+            )
+
             null -> Unit
         }
 
@@ -675,12 +710,17 @@ fun SettingsScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SettingsVi
 private fun SettingCard(row: SettingRow) {
     when (row) {
         is SettingRow.Toggle -> OptionCard(row.label, row.sub, row.enabled, trailing = {
-            ToggleSwitch(
-                row.checked,
-                row.onToggle,
-                row.focus?.let { Modifier.focusRequester(it) } ?: Modifier,
-                row.enabled,
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                row.configuration?.let { button ->
+                    ValueButton(button.label, button.onClick, Modifier.focusRequester(button.focus))
+                }
+                ToggleSwitch(
+                    row.checked,
+                    row.onToggle,
+                    row.focus?.let { Modifier.focusRequester(it) } ?: Modifier,
+                    row.toggleEnabled,
+                )
+            }
         })
 
         is SettingRow.Choice -> OptionCard(
@@ -792,6 +832,8 @@ private fun rows(
 
     SettingsCategory.Playback -> playbackRows(state, viewModel)
 
+    SettingsCategory.Photos -> photoRows(state, viewModel, listFocus, onOpenList)
+
     SettingsCategory.Audio -> audioRows(state, viewModel, languageFocus)
 
     SettingsCategory.Subtitles -> subtitleRows(state, viewModel, languageFocus)
@@ -799,6 +841,87 @@ private fun rows(
     SettingsCategory.Account -> accountRows(state, viewModel, languageFocus, pinOrigins)
 
     SettingsCategory.System -> systemRows(state, viewModel)
+}
+
+@Composable
+private fun photoRows(
+    state: SettingsUiState,
+    viewModel: SettingsViewModel,
+    listFocus: Map<ListDialog, FocusRequester>,
+    onOpenList: (ListDialog) -> Unit,
+): List<SettingGroup> {
+    val options = state.photoGeocoding ?: return emptyList()
+    val customConfigured = options.customUrl.isNotBlank()
+    val customDescription = if (customConfigured) {
+        "${options.customProtocol.name} · ${options.customUrl}"
+    } else {
+        stringResource(R.string.settings_photo_custom_url_sub)
+    }
+    val cloud = ListDialog.PhotoBigDataCloud
+    val custom = ListDialog.PhotoCustom
+    return listOfNotNull(
+        SettingGroup(
+            stringResource(R.string.settings_group_slideshow),
+            listOf(
+                SettingRow.Choice(
+                    stringResource(R.string.settings_slide_time),
+                    stringResource(R.string.settings_slide_time_sub),
+                    FolderSettings.SlideSeconds.map { stringResource(R.string.settings_slide_seconds, it) },
+                    FolderSettings.SlideSeconds.indexOf(state.profile.folders.slideSeconds).coerceAtLeast(0),
+                    onSelect = { i ->
+                        viewModel.updateFolders { it.copy(slideSeconds = FolderSettings.SlideSeconds[i]) }
+                    },
+                ),
+            ),
+        ).takeIf { LibraryKind.HomeVideos in LocalLibraryKinds.current },
+        SettingGroup(
+            stringResource(R.string.settings_photo_lookup_order),
+            listOf(
+                SettingRow.Toggle(
+                    label = stringResource(R.string.settings_photo_custom_url),
+                    sub = customDescription,
+                    checked = customConfigured && options.customEnabled,
+                    onToggle = {
+                        viewModel.updatePhotoGeocoding { it.copy(customEnabled = !it.customEnabled) }
+                    },
+                    toggleEnabled = customConfigured,
+                    configuration = ToggleConfiguration(
+                        stringResource(R.string.settings_photo_configure),
+                        listFocus.getValue(custom),
+                    ) { onOpenList(custom) },
+                ),
+                SettingRow.Toggle(
+                    label = stringResource(R.string.settings_photo_android),
+                    sub = stringResource(R.string.settings_photo_android_sub),
+                    checked = options.androidEnabled,
+                    onToggle = {
+                        viewModel.updatePhotoGeocoding { it.copy(androidEnabled = !it.androidEnabled) }
+                    },
+                ),
+                SettingRow.Toggle(
+                    label = stringResource(R.string.settings_photo_nominatim),
+                    sub = stringResource(R.string.settings_photo_nominatim_sub),
+                    checked = options.nominatimEnabled,
+                    onToggle = {
+                        viewModel.updatePhotoGeocoding { it.copy(nominatimEnabled = !it.nominatimEnabled) }
+                    },
+                ),
+                SettingRow.Toggle(
+                    label = stringResource(R.string.settings_photo_bigdatacloud),
+                    sub = stringResource(R.string.settings_photo_bigdatacloud_sub),
+                    checked = state.hasBigDataCloudKey && options.bigDataCloudEnabled,
+                    onToggle = {
+                        viewModel.updatePhotoGeocoding { it.copy(bigDataCloudEnabled = !it.bigDataCloudEnabled) }
+                    },
+                    toggleEnabled = state.hasBigDataCloudKey,
+                    configuration = ToggleConfiguration(
+                        stringResource(R.string.settings_photo_bigdatacloud_key),
+                        listFocus.getValue(cloud),
+                    ) { onOpenList(cloud) },
+                ),
+            ),
+        ),
+    )
 }
 
 @Composable
@@ -1252,26 +1375,6 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
             ),
         ),
         SettingGroup(stringResource(R.string.settings_group_segments), segments),
-    ) + listOfNotNull(
-        // Only with a home video library, whose photos have slideshows.
-        SettingGroup(
-            stringResource(R.string.settings_group_slideshow),
-            listOf(
-                SettingRow.Choice(
-                    stringResource(R.string.settings_slide_time),
-                    stringResource(R.string.settings_slide_time_sub),
-                    FolderSettings.SlideSeconds.map { stringResource(R.string.settings_slide_seconds, it) },
-                    FolderSettings.SlideSeconds.indexOf(state.profile.folders.slideSeconds).coerceAtLeast(0),
-                    onSelect = { i ->
-                        viewModel.updateFolders {
-                            it.copy(
-                                slideSeconds = FolderSettings.SlideSeconds[i],
-                            )
-                        }
-                    },
-                ),
-            ),
-        ).takeIf { LibraryKind.HomeVideos in LocalLibraryKinds.current },
     )
 }
 
@@ -1770,7 +1873,12 @@ private class PinOrigins {
 }
 
 /** The lists Settings opens in a dialog from a pill on their row. */
-private enum class ListDialog { LibraryCards, FavoriteRows }
+private enum class ListDialog {
+    LibraryCards,
+    FavoriteRows,
+    PhotoCustom,
+    PhotoBigDataCloud,
+}
 
 /** Name and explanation of each home row in Settings › Home. */
 private val rowTexts = mapOf(

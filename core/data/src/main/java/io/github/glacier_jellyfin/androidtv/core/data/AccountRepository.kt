@@ -8,12 +8,22 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 @Singleton
 class AccountRepository @Inject constructor(private val store: DataStore<AccountState>) {
     val state: Flow<AccountState> = store.data
+
+    val hasBigDataCloudKey: Flow<Boolean> = state.map { it.bigDataCloudKey != null }.distinctUntilChanged()
+
+    suspend fun bigDataCloudKey(): String? = current().bigDataCloudKey
+
+    suspend fun setBigDataCloudKey(key: String?) {
+        store.updateData { it.copy(bigDataCloudKey = key) }
+    }
 
     suspend fun current(): AccountState = store.data.first()
 

@@ -121,7 +121,7 @@ fun PhotoScreen(
     val current = state.current
     val photo = current as? FolderMedia.Photo
     val caption = photo?.let {
-        it.photo.location.names.joinToString(" · ").takeIf(String::isNotBlank)
+        it.photo.location.names.joinToString(" · ").takeIf(String::isNotBlank) ?: state.photoPlace?.name
     }
     val captionDate = longTakenText(state.captionDate)
     val deleteTarget = state.deleteTarget
@@ -283,6 +283,7 @@ fun PhotoScreen(
                     )
                 }
                 captionDate?.let { Text(it, style = GlacierText.body(21), color = GlacierColors.Mist) }
+                if (caption != null && state.photoPlace?.fromOpenStreetMap == true) OpenStreetMapAttribution()
                 if (controlsVisible) {
                     PhotoControls(
                         state = state,
@@ -345,7 +346,7 @@ fun PhotoScreen(
         }
 
         if (infoOpen && photo != null) {
-            PhotoInfoPanel(photo, viewModel::photoDetails, onDismiss = { infoOpen = false })
+            PhotoInfoPanel(photo, state.photoPlace, viewModel::photoDetails, onDismiss = { infoOpen = false })
         }
         if (deleteTarget != null) {
             DeleteMediaDialog(
