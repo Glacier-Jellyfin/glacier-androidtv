@@ -1,0 +1,169 @@
+name: Geodata
+
+# Builds the offline place-name packs of the photo viewer from GeoNames and
+# publishes them as a release such as geodata-2026-11. Started by hand (Actions ›
+# Geodata › Run workflow) from main, then waits for approval in the environment
+# "geodata". The release never becomes "Latest". See docs/RELEASING.md
+# ("Refreshing the place names data").
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag such as geodata-2026-11; empty for geodata-<current year-month UTC>
+        type: string
+        required: false
+        default: ''
+
+permissions: {}
+
+# One refresh at a time, and a started build is never cut off half way.
+concurrency:
+  group: geodata
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: geodata
+    timeout-minutes: 120
+    permissions:
+      # Creates the tag and the release.
+      contents: write
+      # Build provenance for the packs (gh attestation verify).
+      id-token: write
+      attestations: write
+    steps:
+      # Before the download of the dump: a wrong ref or tag fails within seconds.
+      - name: Check ref and tag
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Run this workflow from main, not from $GITHUB_REF"
+            exit 1
+          fi
+          tag="${INPUT_TAG:-geodata-$(date -u +%Y-%m)}"
+          if [[ ! "$tag" =~ ^geodata-[0-9]{4}-(0[1-9]|1[0-2])(\.[0-9]+)?$ ]]; then
+            echo "::error::Tag '$tag' must look like geodata-2026-11 or geodata-2026-11.1"
+            exit 1
+          fi
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" > /dev/null 2>&1; then
+            echo "::error::Tag $tag already exists"
+            exit 1
+          fi
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "::error::Release $tag already exists"
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The script needs only the standard library, so the python3 of the runner image will do.
+      - name: Build the packs
+        run: |
+          python3 --version
+          python3 -I scripts/geodata/build-places.py --work "$RUNNER_TEMP/geonames" --out "$RUNNER_TEMP/geodata"
+          ls -l "$RUNNER_TEMP/geodata"
+          # Nothing else may reach the release, and the manifest must match the files.
+          python3 -I - "$RUNNER_TEMP/geodata" <<'PY'
+          import hashlib, json, os, sys
+
+          out = sys.argv[1]
+          packs = ["places-15000.bin.gz", "places-5000.bin.gz", "places-1000.bin.gz",
+                   "places-500.bin.gz", "places-all.bin.gz"]
+          expected = sorted(packs + ["manifest.json"])
+          found = sorted(os.listdir(out))
+          if found != expected:
+              sys.exit(f"::error::Expected {expected} but found {found}")
+          with open(os.path.join(out, "manifest.json"), encoding="utf-8") as f:
+              manifest = json.load(f)
+          listed = {p["file"]: p["sha256"] for p in manifest["packs"]}
+          if sorted(listed) != sorted(packs):
+              sys.exit(f"::error::manifest.json lists {sorted(listed)}")
+          for name in packs:
+              with open(os.path.join(out, name), "rb") as f:
+                  actual = hashlib.sha256(f.read()).hexdigest()
+              if actual != listed[name]:
+                  sys.exit(f"::error::SHA-256 of {name} differs from manifest.json")
+              print(f"{name} {actual}")
+          PY
+
+      # manifest.json is attested too: pin-release.py takes the hashes of all packs from it.
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            ${{ runner.temp }}/geodata/places-15000.bin.gz
+            ${{ runner.temp }}/geodata/places-5000.bin.gz
+            ${{ runner.temp }}/geodata/places-1000.bin.gz
+            ${{ runner.temp }}/geodata/places-500.bin.gz
+            ${{ runner.temp }}/geodata/places-all.bin.gz
+            ${{ runner.temp }}/geodata/manifest.json
+
+      - name: Write release notes
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          python3 -I - <<'PY'
+          import json, os
+
+          temp = os.environ["RUNNER_TEMP"]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          server = os.environ["GITHUB_SERVER_URL"]
+          sha = os.environ["GITHUB_SHA"]
+          run_id = os.environ["GITHUB_RUN_ID"]
+          with open(os.path.join(temp, "geodata", "manifest.json"), encoding="utf-8") as f:
+              manifest = json.load(f)
+
+          lines = [
+              "# Offline place names for the photo viewer of Glacier",
+              "",
+              f"GeoNames data of {manifest['dataDate']}.",
+              "",
+              f"Built by scripts/geodata/build-places.py at commit [{sha[:7]}]({server}/{repo}/commit/{sha}) "
+              f"in run [{run_id}]({server}/{repo}/actions/runs/{run_id}).",
+              "",
+              "| Level | File | Entries | Size | SHA-256 |",
+              "| --- | --- | ---: | ---: | --- |",
+          ]
+          for p in manifest["packs"]:
+              lines.append(f"| {p['level']} | {p['file']} | {p['entries']:,} | {p['gzSize']:,} bytes | `{p['sha256']}` |")
+          lines += [
+              "",
+              f"Verify: `gh attestation verify <file> --repo {repo} "
+              f"--signer-workflow {repo}/.github/workflows/geodata.yml`",
+              "",
+              "This release holds data, not an app version. "
+              "The app pins these files by checksum (core/data/.../geodata/GeoPacks.kt).",
+              "",
+              "Data: [GeoNames](https://www.geonames.org), licensed under "
+              "[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). "
+              "The packs are a subset of the GeoNames dump, converted to Glacier's binary format.",
+          ]
+          with open(os.path.join(temp, "notes.md"), "w", encoding="utf-8", newline="\n") as f:
+              f.write("\n".join(lines) + "\n")
+          PY
+
+      # Never "Latest", so releases/latest/download and the self-updater keep serving the app.
+      # Not a pre-release either: the Beta channel would look at it.
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          cd "$RUNNER_TEMP/geodata"
+          gh release create "$TAG" \
+            places-15000.bin.gz \
+            places-5000.bin.gz \
+            places-1000.bin.gz \
+            places-500.bin.gz \
+            places-all.bin.gz \
+            manifest.json \
+            --target "$GITHUB_SHA" \
+            --title "Place names $TAG" \
+            --notes-file "$RUNNER_TEMP/notes.md" \
+            --latest=false

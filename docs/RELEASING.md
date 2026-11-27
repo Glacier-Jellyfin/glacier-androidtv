@@ -102,6 +102,48 @@ adb shell "run-as $pkg mkdir -p files/updtest && run-as $pkg cp /data/local/tmp/
    a release takes longer than a CI run) and attaches a build provenance
    attestation to the APK (see `SECURITY.md`).
 
+### Refreshing the place names data
+
+The place names come from a fixed GeoNames snapshot. The app never updates
+it on its own. Refresh it about once a year, before a minor release.
+GeoNames changes daily, so the app pins exactly what the `Geodata` workflow
+published. Never pin a local build.
+
+One-time setup: before the first run, create the environment `geodata` in
+Settings › Environments, with a required reviewer and the deployment branch
+`main` only (like `stores`). Otherwise GitHub creates it unprotected on first
+use.
+
+1. Open Actions › Geodata › Run workflow on `main`. Leave the tag empty for
+   `geodata-<YYYY-MM>`, or give `geodata-YYYY-MM.2` for a second one in the
+   same month. Approve the run in the environment `geodata`. The job downloads
+   GeoNames, builds the packs, attests the five `places-<level>.bin.gz` files
+   and `manifest.json`, and creates the release. The release is never
+   Latest and no pre-release. The self-updater ignores it, because its tag is
+   no app version. The job fails if the tag exists already.
+2. Pin it locally:
+   `python3 -I scripts/geodata/pin-release.py <tag>`. The script verifies the
+   attestation with `gh`, checks the checksums and sizes, then updates
+   `GeoPacks.kt` and the bundled asset
+   `app/src/main/assets/geodata/places-15000.pack`.
+3. Run `./gradlew :core:data:testDebugUnitTest`. Commit both files together
+   (for example `chore(geodata): pin geodata-2026-11`) and ship them with the
+   next app release.
+
+After the app update every device sees the changed checksum. A chosen finer
+pack is fetched again. The bundled pack is unpacked again. The old file is
+deleted. Add a changelog line only when the data changed noticeably.
+
+#### Local build (development only)
+
+To try the format or the app with fresh packs, build them by hand. The first
+run downloads the GeoNames files into the cache folder:
+`python3 -I scripts/geodata/build-places.py --work ~/.cache/glacier-geodata --out build/geodata --assets`.
+It writes the packs and `manifest.json` to `build/geodata`, copies the bundled
+pack to `app/src/main/assets/geodata/places-15000.pack` and prints Kotlin lines
+for `GeoPacks.kt`. The output differs from every release, because GeoNames
+changes daily. Never pin or commit a local build.
+
 ### Raising the minimum server version
 
 When a release needs a newer Jellyfin version (see

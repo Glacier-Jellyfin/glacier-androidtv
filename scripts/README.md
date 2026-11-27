@@ -46,6 +46,7 @@ workflow, so both run as part of a release.
 | Script | What it does | Run by |
 |---|---|---|
 | `build-places.py` | Builds the offline place packs (`places-<level>.bin.gz`, populated places of GeoNames with region names in English, German and Spanish) and prints the Kotlin lines for the app's table of pinned packs; `--stats` also writes the size statistics. | The `Geodata` workflow; by hand only for development (downloads about 600 MB from GeoNames into a cache folder) |
+| `pin-release.py` | Pins the app to a release of the `Geodata` workflow: verifies its attestation and checksums, then rewrites `GeoPacks.kt` and the bundled asset `places-15000.pack`. | By hand after the `Geodata` workflow (needs `gh` for the attestation check) |
 
 ## website
 
