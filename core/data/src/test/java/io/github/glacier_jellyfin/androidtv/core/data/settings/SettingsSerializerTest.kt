@@ -7,6 +7,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
 
@@ -62,6 +63,15 @@ class SettingsSerializerTest {
         val profile = SettingsSerializer.readFrom(ByteArrayInputStream(json.toByteArray())).profiles.getValue("s/u")
         assertEquals(AppearanceSettings(), profile.appearance)
         assertEquals(HomeSettings(), profile.home)
+    }
+
+    @Test
+    fun `the blurred background is off for folders stored without it`() = runTest {
+        val json = """{"profiles":{"s/u":{"folders":{"slideSeconds":10}}}}"""
+        val folders = SettingsSerializer.readFrom(ByteArrayInputStream(json.toByteArray()))
+            .profiles.getValue("s/u").folders
+        assertEquals(10, folders.slideSeconds)
+        assertFalse(folders.blurredBackground)
     }
 
     @Test

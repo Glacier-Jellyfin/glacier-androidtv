@@ -1285,6 +1285,12 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
                         }
                     },
                 ),
+                SettingRow.Toggle(
+                    stringResource(R.string.settings_blurred_background),
+                    stringResource(R.string.settings_blurred_background_sub),
+                    state.profile.folders.blurredBackground,
+                    onToggle = { viewModel.updateFolders { it.copy(blurredBackground = !it.blurredBackground) } },
+                ),
             ),
         ).takeIf { LibraryKind.HomeVideos in LocalLibraryKinds.current },
     )

@@ -778,7 +778,9 @@
     <string name="settings_ignore_articles_sub">Sorts \"The Matrix\" under M. The language follows your Jellyfin server.</string>
     <string name="settings_collection_together">Movies and shows together in collections</string>
     <string name="settings_collection_together_sub">A collection shows its movies and shows in one row instead of two</string>
-    <string name="settings_group_slideshow">Slideshow</string>
+    <string name="settings_group_slideshow">Photos and home videos</string>
+    <string name="settings_blurred_background">Blurred background</string>
+    <string name="settings_blurred_background_sub">Fills the black bars around photos and portrait videos with a blurred copy</string>
     <string name="settings_slide_time">Time per photo</string>
     <string name="settings_slide_time_sub">How long a slideshow in photos &amp; videos shows each photo. Videos play to their end</string>
     <string name="settings_slide_seconds">%1$d s</string>

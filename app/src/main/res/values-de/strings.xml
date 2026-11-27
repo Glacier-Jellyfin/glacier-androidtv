@@ -772,7 +772,9 @@
     <string name="settings_ignore_articles_sub">Sortiert „Der Pate“ unter P. Die Sprache folgt deinem Jellyfin-Server.</string>
     <string name="settings_collection_together">Filme und Serien in Sammlungen zusammen</string>
     <string name="settings_collection_together_sub">Eine Sammlung zeigt ihre Filme und Serien in einer Reihe statt in zwei</string>
-    <string name="settings_group_slideshow">Diashow</string>
+    <string name="settings_group_slideshow">Fotos und Heimvideos</string>
+    <string name="settings_blurred_background">Unscharfer Hintergrund</string>
+    <string name="settings_blurred_background_sub">Füllt die schwarzen Ränder um Fotos und Hochkant-Videos mit einer unscharfen Kopie</string>
     <string name="settings_slide_time">Anzeigedauer pro Foto</string>
     <string name="settings_slide_time_sub">Wie lange eine Diashow in Fotos &amp; Videos jedes Foto zeigt. Videos laufen bis zu ihrem Ende</string>
     <string name="settings_slide_seconds">%1$d s</string>

@@ -52,6 +52,8 @@ class InlineVideo(
     private val playback: PlaybackRepository,
     private val scope: CoroutineScope,
     private val onEnded: () -> Unit = {},
+    /** Whether a portrait video gets a blurred background (Settings), read when a video opens. */
+    private val blurredBackground: () -> Boolean = { false },
 ) {
     private val _state = MutableStateFlow(InlineVideoState())
     val state: StateFlow<InlineVideoState> = _state.asStateFlow()
@@ -102,6 +104,9 @@ class InlineVideo(
                         headers = source.headers,
                         startPositionMs = startMs,
                         videoRotation = source.file?.video?.rotation,
+                        videoWidth = source.file?.video?.width,
+                        videoHeight = source.file?.video?.height,
+                        blurredBackground = wantsBlurredBackdrop(source.file?.video, blurredBackground()),
                     ),
                 )
                 val player = created.player

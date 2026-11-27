@@ -11,7 +11,7 @@ only in English.
 ### Novedades
 - Una fila de Grabaciones en la pantalla de inicio y las grabaciones como fuente opcional del destacado
 - Una fila de Grabaciones en la página de favoritos
-- Detalles de fotos y vídeos en el visor de fotos. Con Abajo o la tecla Info, la primera pestaña muestra cuándo y dónde se tomó y su carpeta, y la pestaña Técnico la cámara, la exposición y el archivo. Un vídeo muestra las mismas pestañas Técnico y Servidor que el reproductor (#43)
+- Detalles de fotos y vídeos en el visor de fotos. Con Abajo o la tecla Info, la primera pestaña muestra cuándo y dónde se tomó y su carpeta, y la pestaña Técnico la cámara, la exposición y el archivo. Un vídeo muestra las mismas pestañas Técnico y Servidor que el reproductor (#43). Un ajuste rellena las barras negras alrededor de las fotos y los vídeos verticales con una copia desenfocada
 - Las páginas de detalles de películas y series con varias imágenes de fondo las muestran una tras otra
 
 ### Mejoras

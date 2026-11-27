@@ -4,6 +4,7 @@ import android.text.format.DateFormat
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -119,7 +120,9 @@ import kotlinx.coroutines.withContext
  * item at once; the keys show as key caps for a few seconds when the viewer opens and again on Up. A line along the
  * bottom edge shows how far a video has played, or a photo's time in the slideshow. Browsing to a photo that is not
  * loaded yet shows its BlurHash with a loader until the photo is sharp (its blurred thumbnail when it has none). The
- * next photos in the browsing direction, and the one behind, load ahead.
+ * next photos in the browsing direction, and the one behind, load ahead. With "Blurred
+ * background" on (Settings) a photo has a blurred, dimmed copy of itself behind it instead of black bars; a portrait
+ * video gets that from the player, which blurs the same decode into the frame.
  */
 @OptIn(UnstableApi::class) // ContentFrame
 @Composable
@@ -130,6 +133,7 @@ fun PhotoScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val video by viewModel.video.collectAsStateWithLifecycle()
     val info by viewModel.info.collectAsStateWithLifecycle()
+    val blurred by viewModel.blurredBackground.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
     // Back from the full player the slideshow goes on; leaving, nothing plays on behind.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onResume() }
@@ -232,6 +236,14 @@ fun PhotoScreen(
             .focusable(),
     ) {
         val current = state.current
+        // Behind a photo: a blurred copy of it in place of the black bars. A portrait video brings its own with its frame.
+        if (blurred) {
+            Crossfade(
+                targetState = (current as? FolderMedia.Photo)?.photo?.fullUrl,
+                animationSpec = tween(if (reduceMotion) FADE_MS else BROWSE_MS),
+                label = "backdrop",
+            ) { url -> if (url != null) BlurredPhotoBackdrop(url) }
+        }
         when {
             state.loading && current == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 SpinningDiamond(110)

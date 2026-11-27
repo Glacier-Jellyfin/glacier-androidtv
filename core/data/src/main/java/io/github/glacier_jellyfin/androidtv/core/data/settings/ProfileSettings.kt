@@ -75,6 +75,8 @@ data class FolderSettings(
     val slideSeconds: Int = 5,
     /** The shape of video and photo cards (Settings › Appearance); previews show the whole picture anyway. */
     val aspect: FolderAspect = FolderAspect.Wide,
+    /** Fills the black bars around photos and portrait videos with a blurred, dimmed copy of the picture. */
+    val blurredBackground: Boolean = false,
 ) {
     companion object {
         /** The times Settings offers. */

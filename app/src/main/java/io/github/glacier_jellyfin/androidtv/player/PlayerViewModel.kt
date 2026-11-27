@@ -66,6 +66,7 @@ import io.github.glacier_jellyfin.androidtv.detail.TrackKind
 import io.github.glacier_jellyfin.androidtv.diagnostics.Diagnostics
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogServer
 import io.github.glacier_jellyfin.androidtv.diagnostics.LogShare
+import io.github.glacier_jellyfin.androidtv.library.wantsBlurredBackdrop
 import io.github.glacier_jellyfin.androidtv.music.MusicController
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
@@ -635,6 +636,9 @@ class PlayerViewModel @Inject constructor(
         patient = opened.isHls && !opened.live,
         title = true,
         videoRotation = opened.file?.video?.rotation,
+        videoWidth = opened.file?.video?.width,
+        videoHeight = opened.file?.video?.height,
+        blurredBackground = wantsBlurredBackdrop(opened.file?.video, settings.current().folders.blurredBackground),
         // The tier the link carries; Media3 takes the one this estimate allows.
         startBitrate = opened.streamBitrate?.let { it * 110L / 100 }?.toInt(),
         subtitles = opened.subtitles

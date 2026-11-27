@@ -25,7 +25,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 ### New
 - A Recordings row on the home screen and recordings as an optional spotlight source
 - A Recordings row on the favorites page
-- Photo and video details in the photo viewer. Press Down or the Info key: the first tab shows when and where it was taken and its folder, the Technical tab the camera, exposure and file. A video shows the same Technical and Server tabs as the player (#43)
+- Photo and video details in the photo viewer. Press Down or the Info key: the first tab shows when and where it was taken and its folder, the Technical tab the camera, exposure and file. A video shows the same Technical and Server tabs as the player (#43). A setting fills the black bars around photos and portrait videos with a blurred copy
 - Detail pages of movies and shows with several background images show them one after another
 
 ### Improved

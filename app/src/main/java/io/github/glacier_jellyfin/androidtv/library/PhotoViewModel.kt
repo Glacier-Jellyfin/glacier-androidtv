@@ -25,9 +25,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -69,8 +72,19 @@ class PhotoViewModel @Inject constructor(
     val state: StateFlow<PhotoState> = _state.asStateFlow()
 
     /** The current video, playing right here. */
-    private val inline = InlineVideo(context, playback, viewModelScope, onEnded = ::onVideoEnded)
+    private val inline = InlineVideo(
+        context,
+        playback,
+        viewModelScope,
+        onEnded = ::onVideoEnded,
+        blurredBackground = { settings.settings.value.folders.blurredBackground },
+    )
     val video: StateFlow<InlineVideoState> = inline.state
+
+    /** Whether photos and portrait videos get a blurred backdrop (Settings). */
+    val blurredBackground: StateFlow<Boolean> = settings.settings
+        .map { it.folders.blurredBackground }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, settings.settings.value.folders.blurredBackground)
 
     /** The open details panel, null while it is closed; it stays with the item it was opened for. */
     private val _info = MutableStateFlow<PhotoInfoState?>(null)

@@ -793,7 +793,9 @@
     <string name="settings_ignore_articles_sub">Ordena «El Padrino» en la P. El idioma sigue a tu servidor Jellyfin.</string>
     <string name="settings_collection_together">Películas y series juntas en las colecciones</string>
     <string name="settings_collection_together_sub">Una colección muestra sus películas y series en una fila en vez de dos</string>
-    <string name="settings_group_slideshow">Presentación</string>
+    <string name="settings_group_slideshow">Fotos y vídeos caseros</string>
+    <string name="settings_blurred_background">Fondo desenfocado</string>
+    <string name="settings_blurred_background_sub">Rellena las barras negras alrededor de las fotos y los vídeos verticales con una copia desenfocada</string>
     <string name="settings_slide_time">Tiempo por foto</string>
     <string name="settings_slide_time_sub">Cuánto tiempo muestra cada foto una presentación en Fotos y videos. Los videos se reproducen hasta el final</string>
     <string name="settings_slide_seconds">%1$d s</string>
