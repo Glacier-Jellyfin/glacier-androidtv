@@ -13,6 +13,7 @@ import coil3.SingletonImageLoader
 import coil3.svg.SvgDecoder
 import dagger.hilt.android.HiltAndroidApp
 import io.github.glacier_jellyfin.androidtv.channels.HomeChannelsSync
+import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.log.DebugOptions
 import io.github.glacier_jellyfin.androidtv.core.log.DebugThrottle
 import io.github.glacier_jellyfin.androidtv.core.log.Log
@@ -28,9 +29,17 @@ class GlacierApplication :
     @Inject
     lateinit var homeChannels: HomeChannelsSync
 
-    /** Coil's defaults plus SVG, for the language flags. */
+    @Inject
+    lateinit var sessionManager: SessionManager
+
+    /** Coil's defaults plus SVG, for the language flags, and frames grabbed from videos without a picture. */
     override fun newImageLoader(context: PlatformContext): ImageLoader = ImageLoader.Builder(context)
-        .components { add(SvgDecoder.Factory()) }
+        .components {
+            add(SvgDecoder.Factory())
+            add(VideoFrameMapper())
+            add(VideoFrameKeyer())
+            add(VideoFrameFetcher.Factory { sessionManager.session.value?.authorization() })
+        }
         .build()
 
     override fun onCreate() {

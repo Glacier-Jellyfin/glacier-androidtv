@@ -42,6 +42,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - Videos in a photo folder carry a play sign, and clips shorter than a minute show their length in seconds (#43)
 - After playback dropped to a smaller stream, it returns to the full quality much sooner: about 40 seconds instead of several minutes, with less waiting before the switch
 - The info panel shows when the next connection check runs while a smaller stream plays
+- Home videos without a picture on the server show a frame of the video in the grid, the gallery and the viewer. Portrait videos and phone videos recorded upright appear the right way up
 
 ### Fixed
 - Photos and videos show the time they were taken in the TV's time zone. It was off by the time difference to UTC before (#43)

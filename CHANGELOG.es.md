@@ -28,6 +28,7 @@ only in English.
 - Los vídeos de una carpeta de fotos llevan el símbolo de reproducción, y los clips de menos de un minuto muestran su duración en segundos (#43)
 - Tras pasar a un flujo más pequeño, la reproducción vuelve mucho antes a la calidad completa: en unos 40 segundos en lugar de varios minutos, con menos espera antes del cambio
 - El panel de información muestra cuándo se hace la próxima comprobación de la conexión mientras se reproduce un flujo más pequeño
+- Los vídeos caseros sin imagen en el servidor muestran un fotograma del vídeo en la cuadrícula, la galería y el visor. Los vídeos verticales y los grabados en vertical con el móvil aparecen en la orientación correcta
 
 ### Correcciones
 - Las fotos y los vídeos muestran la hora en que se tomaron en la zona horaria del televisor. Antes se desviaba por la diferencia con UTC (#43)

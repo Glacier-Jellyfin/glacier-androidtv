@@ -19,6 +19,7 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeScreenContent
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeScreenTitle
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
+import io.github.glacier_jellyfin.androidtv.core.data.media.VideoFrames
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.settings.UiLocale
 
@@ -173,7 +174,8 @@ internal class HomeChannels(context: Context) {
         item.year?.let { setReleaseDate(it.toString()) }
         title.durationMs?.let { setDurationMillis(it.toInt()) }
         if (item.resumePositionMs > 0) setLastPlaybackPositionMillis(item.resumePositionMs.toInt())
-        val wideImage = item.thumbUrl ?: item.backdropUrl
+        // The launcher loads plain URLs only: a frame grabbed on the device is no picture for it.
+        val wideImage = item.thumbUrl?.takeUnless { VideoFrames.isFrame(it) } ?: item.backdropUrl
         val poster = item.posterUrl
         if (wide && wideImage != null || poster == null) {
             wideImage?.let { setPosterArtUri(it.toUri()) }

@@ -3,6 +3,7 @@ package io.github.glacier_jellyfin.androidtv.core.data.media
 import java.util.UUID
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.imageApi
+import org.jellyfin.sdk.api.client.extensions.videoApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.CollectionType
@@ -212,6 +213,11 @@ internal class MediaMapper(private val api: ApiClient) {
     }
 
     private fun thumb(dto: BaseItemDto): String? {
+        // A home video without a picture of its own shows a frame of itself, grabbed on the device.
+        if (VideoFrames.needsFrame(dto.type, dto.imageTags?.get(ImageType.PRIMARY))) {
+            val stream = api.videoApi.getVideoStreamUrl(itemId = dto.id, static = true)
+            return VideoFrames.encode(stream, VideoFrames.positionMs(dto.runTimeTicks?.let { it / TICKS_PER_MS }))
+        }
         // An episode's primary image is its own 16:9 still: more specific than any series art.
         // A home video's is a frame of the video itself.
         if (dto.type == BaseItemKind.EPISODE || dto.type == BaseItemKind.VIDEO) {

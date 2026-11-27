@@ -27,6 +27,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 - Videos in einem Fotoordner tragen ein Wiedergabezeichen, und Clips unter einer Minute zeigen ihre Länge in Sekunden (#43)
 - Nach einem Wechsel auf einen kleineren Stream kehrt die Wiedergabe viel früher zur vollen Qualität zurück: nach etwa 40 Sekunden statt nach mehreren Minuten, mit weniger Wartezeit vor dem Wechsel
 - Das Infofenster zeigt, wann die nächste Prüfung der Leitung läuft, solange ein kleinerer Stream spielt
+- Heimvideos ohne Bild auf dem Server zeigen im Raster, in der Galerie und in der Fotoansicht ein Standbild aus dem Video. Hochkant-Videos und hochkant gefilmte Handyvideos stehen dabei richtig herum
 
 ### Behoben
 - Fotos und Videos zeigen die Aufnahmezeit in der Zeitzone des Fernsehers. Vorher lag sie um den Abstand zu UTC daneben (#43)
