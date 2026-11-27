@@ -156,7 +156,7 @@ jobs:
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
           cd "$RUNNER_TEMP/geodata"
-          gh release create "$TAG" \
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
             places-15000.bin.gz \
             places-5000.bin.gz \
             places-1000.bin.gz \
