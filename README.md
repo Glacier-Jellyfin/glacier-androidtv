@@ -114,10 +114,11 @@ New TV? The settings come along.
 ## The small print
 
 - Search also finds titles missing from your library and requests them
-  through Seerr (needs the Jellyfin Enhanced plugin on the server)
+  through Seerr (needs the Jellyfin Enhanced plugin on the server,
+  [setup](docs/JELLYFIN-ENHANCED.md))
 - A home row and an Activity page show what others on the server watched
   and favorited (needs Jellyfin Enhanced 12.3 or newer with the Activity Feed
-  switched on)
+  switched on, [setup](docs/JELLYFIN-ENHANCED.md))
 - Multiple servers and profiles, server discovery and Quick Connect. A start
   profile can open by itself
 - Parental controls with age limits and PINs for profiles, titles and
