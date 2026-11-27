@@ -22,6 +22,7 @@ android {
 dependencies {
     implementation(project(":core:log"))
     api(project(":core:jellyfin"))
+    implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.datastore)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)

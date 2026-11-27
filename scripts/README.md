@@ -41,6 +41,12 @@ workflow, so both run as part of a release.
 | `make-readme-badges.py` | Writes the README's wordmark and buttons as SVG files in `docs/badges/`, in light and dark. | By hand |
 | `make-social-preview.py` | Writes the website's social preview image (`website/assets/social-preview.png`) from the home screen still (`website/assets/screenshots/home.jpg`). | By hand |
 
+## geodata
+
+| Script | What it does | Run by |
+|---|---|---|
+| `build-places.py` | Builds the offline place packs (`places-<level>.bin.gz`, populated places of GeoNames with region names in English, German and Spanish) and prints the Kotlin lines for the app's table of pinned packs; `--stats` also writes the size statistics. | The `Geodata` workflow; by hand only for development (downloads about 600 MB from GeoNames into a cache folder) |
+
 ## website
 
 | Script | What it does | Run by |

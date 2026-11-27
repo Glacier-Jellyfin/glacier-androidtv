@@ -52,6 +52,10 @@ data class MediaPhoto(
     val fullUrl: String,
     val blurHash: String? = null,
     val aspectRatio: Float? = null,
+    /** Where it was taken (EXIF GPS), in degrees north; null when the photo has no position. */
+    val latitude: Double? = null,
+    /** In degrees east. */
+    val longitude: Double? = null,
 )
 
 /** A video or photo of a folder, with the time it was taken, else the file's date. */

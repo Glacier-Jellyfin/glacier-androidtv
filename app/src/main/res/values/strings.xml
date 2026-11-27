@@ -1309,4 +1309,29 @@
         <item quantity="one">%1$s, %2$s and %3$d other are watching</item>
         <item quantity="other">%1$s, %2$s and %3$d others are watching</item>
     </plurals>
+    <string name="place_names_title">Place names</string>
+    <string name="place_names_off">Off</string>
+    <string name="place_names_level">Places from %1$s inhabitants</string>
+    <string name="place_names_all">All places</string>
+    <string name="place_names_value_from">From %1$s</string>
+    <string name="place_names_builtin">built in</string>
+    <string name="place_names_size">%1$s MB</string>
+    <string name="place_names_dialog_body">Choose how many places the TV knows. Data: GeoNames, CC BY 4.0</string>
+    <string name="place_names_expl_off">No place names.</string>
+    <string name="place_names_expl_bundled">Cities and towns, capitals and district seats. Works offline, built into the app.</string>
+    <string name="place_names_expl_finer">Also smaller places. Downloaded once from GitHub (%1$s on the device).</string>
+    <string name="place_names_expl_all">Every village and hamlet. Large download, %1$s on the device.</string>
+    <string name="place_names_sub_off">Shows where a photo was taken. Glacier looks up the photo\'s coordinates in a list of places. Data: GeoNames, CC BY 4.0</string>
+    <string name="place_names_sub_builtin">Glacier looks up each photo\'s coordinates in the built-in list of places and shows the nearest town. Data: GeoNames, CC BY 4.0</string>
+    <string name="place_names_sub_preparing">Preparing the places. This takes a moment.</string>
+    <string name="place_names_sub_downloading">Downloading…</string>
+    <string name="place_names_sub_ready">Glacier looks up each photo\'s coordinates in the downloaded list of places (%1$s). Data: GeoNames, CC BY 4.0</string>
+    <string name="place_names_fail_network">No connection.</string>
+    <string name="place_names_fail_checksum">The file is damaged.</string>
+    <string name="place_names_fail_storage">Not enough storage space.</string>
+    <string name="place_names_fail_other">Something went wrong.</string>
+    <string name="place_names_sub_failed">%1$s It will try again.</string>
+    <string name="place_names_sub_failed_fallback">%1$s It will try again. Meanwhile the built-in places are used.</string>
+    <string name="photo_info_place">Place</string>
+    <string name="settings_about_places_sub">Place names for photos work offline with this data</string>
 </resources>

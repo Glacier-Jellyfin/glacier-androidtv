@@ -8,6 +8,8 @@ import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.core.data.geodata.GeoDataManager
+import io.github.glacier_jellyfin.androidtv.core.data.geodata.PlaceFormatter
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderContent
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderMedia
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderRepository
@@ -20,6 +22,7 @@ import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.navigation.PhotoRoute
 import io.github.glacier_jellyfin.androidtv.navigation.PlayerRoute
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
+import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -29,6 +32,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -74,6 +79,7 @@ class PhotoViewModel @Inject constructor(
     private val settings: SettingsRepository,
     playback: PlaybackRepository,
     private val memory: BrowseMemory,
+    private val geoData: GeoDataManager,
 ) : ViewModel() {
     private val route = savedStateHandle.toRoute<PhotoRoute>()
 
@@ -108,8 +114,58 @@ class PhotoViewModel @Inject constructor(
     /** OK on a video handed it to the full player at this position; back here it goes on from there. */
     private var handedOver: Pair<UUID, Long>? = null
 
+    /**
+     * The formatted place of each photo or video looked up so far, by id; an empty text means "no place there". An id
+     * that is missing is not known yet, and nothing is shown for it, so paging never flickers.
+     */
+    private val _places = MutableStateFlow<Map<UUID, String>>(emptyMap())
+    val places: StateFlow<Map<UUID, String>> = _places.asStateFlow()
+
+    /** Counts the changes of the setting or its files; a lookup that began before the last one is dropped. */
+    private var placesGeneration = 0
+    private val placeLookups = mutableSetOf<UUID>()
+
     init {
         load()
+        viewModelScope.launch { geoData.ensure() }
+        viewModelScope.launch {
+            // Another level, or the pack of the level becoming ready, can change every place.
+            geoData.level.combine(geoData.state, ::Pair)
+                .distinctUntilChanged()
+                .collect {
+                    placesGeneration++
+                    placeLookups.clear()
+                    _places.value = emptyMap()
+                    resolveCurrentPlace()
+                    _info.value?.let { i -> resolvePlace(i.item.id, i.details?.latitude, i.details?.longitude) }
+                }
+        }
+    }
+
+    /** Looks up where the photo [id] was taken once, off the main thread; [places] gets the result. */
+    private fun resolvePlace(
+        id: UUID?,
+        latitude: Double?,
+        longitude: Double?,
+    ) {
+        if (id == null || latitude == null || longitude == null) return
+        if (id in _places.value || !placeLookups.add(id)) return
+        val generation = placesGeneration
+        viewModelScope.launch {
+            val text = runSuspendCatching { geoData.lookup(latitude, longitude) }
+                .getOrNull()
+                ?.let { PlaceFormatter.format(it, Locale.getDefault()) }
+                .orEmpty()
+            if (generation == placesGeneration) {
+                placeLookups.remove(id)
+                _places.update { it + (id to text) }
+            }
+        }
+    }
+
+    private fun resolveCurrentPlace() {
+        val photo = (_state.value.current as? FolderMedia.Photo)?.photo ?: return
+        resolvePlace(photo.id, photo.latitude, photo.longitude)
     }
 
     fun load() {
@@ -226,7 +282,10 @@ class PhotoViewModel @Inject constructor(
         infoJob?.cancel()
         infoJob = viewModelScope.launch {
             runSuspendCatching { repository.photoDetails(item.id) }
-                .onSuccess { details -> _info.update { it?.copy(details = details) } }
+                .onSuccess { details ->
+                    _info.update { it?.copy(details = details) }
+                    resolvePlace(item.id, details.latitude, details.longitude)
+                }
                 .onFailure { error ->
                     Log.w(TAG, "Loading the details of ${item.id} failed", error)
                     _info.update { it?.copy(failed = true) }
@@ -277,6 +336,7 @@ class PhotoViewModel @Inject constructor(
         slideshow?.cancel()
         // The folder's grid focuses this item's card when it is shown again.
         _state.value.current?.let { memory.photoViewed(UUID.fromString(route.folderId), it.id) }
+        resolveCurrentPlace()
         when (val current = _state.value.current) {
             is FolderMedia.Video -> inline.open(current.id)
 

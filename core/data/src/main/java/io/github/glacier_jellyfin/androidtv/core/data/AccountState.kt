@@ -14,6 +14,8 @@ data class AccountState(
     val lastServerId: String? = null,
     /** Which profile opens by itself when the app starts (Settings › System). */
     val startProfile: StartProfile = StartProfile(),
+    /** Device-wide "Place names" setting: minimum inhabitants of the pack in use (0: all places), null while off. */
+    val placeNamesLevel: Int? = 15_000,
 )
 
 @Serializable

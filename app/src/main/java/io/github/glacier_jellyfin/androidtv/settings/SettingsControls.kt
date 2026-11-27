@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -72,6 +73,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
@@ -697,7 +699,7 @@ internal fun InfoCard(
     }
 }
 
-/** Below the update card while it downloads: the progress, the version and the size so far. */
+/** Below a card while it downloads (update, place names): the progress, a text at the start and one at the end. */
 @Composable
 internal fun UpdateProgress(
     progress: Float,
@@ -709,14 +711,12 @@ internal fun UpdateProgress(
         Box(Modifier.fillMaxWidth().height(8.dp).clip(PillShape).background(GlacierColors.GlassFill2)) {
             Box(Modifier.fillMaxWidth(progress).fillMaxHeight().clip(PillShape).background(accent))
         }
+        // Numbers such as "8 %" keep their order in a right-to-left layout; the row still mirrors.
+        val numbers = GlacierText.mono(16).copy(textDirection = TextDirection.ContentOrLtr)
         Row(Modifier.fillMaxWidth()) {
-            Text(
-                progressStart,
-                style = GlacierText.mono(16),
-                color = GlacierColors.Mist,
-                modifier = Modifier.weight(1f),
-            )
-            Text(progressEnd, style = GlacierText.mono(16), color = GlacierColors.Mist)
+            Text(progressStart, style = numbers, color = GlacierColors.Mist)
+            Spacer(Modifier.weight(1f))
+            Text(progressEnd, style = numbers, color = GlacierColors.Mist)
         }
     }
 }
@@ -789,15 +789,18 @@ internal fun LanguagePicker(
 }
 
 @Composable
-private fun LanguageRow(
+internal fun LanguageRow(
     entry: LanguageEntry,
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier,
+    /** Called when the row takes focus. */
+    onFocused: () -> Unit = {},
 ) {
     val accent = LocalAccent.current.main
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    LaunchedEffect(focused) { if (focused) onFocused() }
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     val foreground = when {
         focused -> GlacierColors.Void

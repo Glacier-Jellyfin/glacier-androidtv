@@ -42,7 +42,7 @@
 
   <main class="wrap legal">
         <h1>Política de privacidad</h1>
-        <p class="updated">Última actualización: 11 de noviembre de 2026</p>
+        <p class="updated">Última actualización: 27 de noviembre de 2026</p>
 
         <p><strong>En resumen:</strong> Glacier no recoge datos para sí. No hay cuenta, ni analítica, ni publicidad, ni seguimiento. Glacier habla con los servidores Jellyfin que añades y, para algunas funciones, con los servicios que se nombran abajo.</p>
 
@@ -55,6 +55,7 @@
           <li>Las direcciones de tus servidores Jellyfin, tus nombres de usuario y los tokens de acceso que emiten los servidores. Tu contraseña solo se envía a tu servidor para iniciar sesión y no se guarda.</li>
           <li>Tus ajustes, incluidos los PIN de los perfiles y los límites de edad del control parental.</li>
           <li>Un registro de la app para informar de errores. Antes de enviarlo o descargarlo se eliminan las direcciones de servidor, los nombres, las contraseñas y los tokens de acceso.</li>
+          <li>Nombres de lugares para fotos. Glacier incluye un paquete de lugares desde 15.000 habitantes, más capitales y sedes de estados o distritos, creado con datos de <a href="https://www.geonames.org/">GeoNames</a> (licencia CC BY 4.0). Con “Nombres de lugares” activado, que es el valor por defecto, Glacier busca el lugar de una foto en la tele a partir de las coordenadas GPS de la foto. Para ello no hace falta conexión. Las coordenadas nunca salen del dispositivo. Los niveles más finos son descargas opcionales, ver abajo. Si cambias el nivel o desactivas el ajuste, se borran los paquetes descargados.</li>
         </ul>
 
         <h2>Tu servidor Jellyfin</h2>
@@ -63,6 +64,7 @@
         <h2>Otros servicios</h2>
         <ul>
           <li><strong>GitHub</strong>, solo en la versión de GitHub: Glacier consulta <code>api.github.com</code> al iniciarse para buscar una versión nueva y descarga las actualizaciones desde GitHub. Puedes desactivar la búsqueda en los ajustes. GitHub ve tu dirección IP. Consulta la <a href="https://docs.github.com/es/site-policy/privacy-policies/github-general-privacy-statement">declaración de privacidad de GitHub</a>.</li>
+          <li><strong>GitHub, nombres de lugares</strong>, en todas las versiones, también en Google Play y Amazon, y solo si eliges un nivel más fino en Ajustes › Reproducción › Nombres de lugares (5.000, 1.000 o 500 habitantes o todos los lugares). El nivel por defecto no necesita descarga. Para un nivel más fino, Glacier descarga su paquete de lugares una vez como archivo desde <code>github.com</code> (GitHub lo entrega desde sus servidores de descarga), comprueba su suma de verificación y lo guarda en el dispositivo. Después los lugares se buscan sin conexión. Las coordenadas GPS de tus fotos nunca se envían a GitHub ni a nadie más. La única solicitud es la descarga simple del archivo, así que GitHub ve tu dirección IP y el archivo pedido, como en cualquier descarga. Consulta la <a href="https://docs.github.com/es/site-policy/privacy-policies/github-general-privacy-statement">declaración de privacidad de GitHub</a>.</li>
           <li><strong>YouTube</strong>: Cuando un título tiene un tráiler de YouTube, su imagen de vista previa se carga desde YouTube y el tráiler se reproduce en el reproductor integrado de YouTube. Google recibe tu dirección IP e información sobre la reproducción. Consulta la <a href="https://policies.google.com/privacy?hl=es">política de privacidad de Google</a>.</li>
           <li><strong>The Movie Database (TMDB)</strong>: Si tu servidor tiene el plugin Jellyfin Enhanced con Seerr, la búsqueda también muestra títulos que faltan en tu biblioteca. Sus carteles se cargan desde <code>image.tmdb.org</code>, que ve tu dirección IP. Consulta la <a href="https://www.themoviedb.org/privacy-policy">política de privacidad de TMDB</a>.</li>
           <li><strong>Tiendas de apps</strong>: Si instalaste Glacier desde Google Play o Amazon Appstore, la tienda lo instala y lo actualiza según su propia política de privacidad.</li>

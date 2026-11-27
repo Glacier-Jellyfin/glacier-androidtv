@@ -46,6 +46,8 @@ import io.github.glacier_jellyfin.androidtv.channels.HomeLaunches
 import io.github.glacier_jellyfin.androidtv.core.data.AccountRepository
 import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.geodata.GeoDataDebug
+import io.github.glacier_jellyfin.androidtv.core.data.geodata.GeoDataManager
 import io.github.glacier_jellyfin.androidtv.core.data.media.ActivityRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
@@ -270,6 +272,12 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var launches: HomeLaunches
 
+    @Inject
+    lateinit var geoData: GeoDataManager
+
+    @Inject
+    lateinit var geoDataDebug: GeoDataDebug
+
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(UiLocale.wrap(newBase))
     }
@@ -438,6 +446,12 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         HomeLaunch.from(intent)?.let(startViewModel::open)
         // adb shell am start -n <package>/...MainActivity -a io.github.glacier_jellyfin.androidtv.PLAY_TITLE --es item <id> --el startms <ms>
+        // adb shell am start -n <package>/...MainActivity -a io.github.glacier_jellyfin.androidtv.GEODATA_BASE_URL --es url http://10.0.2.2:8765/
+        // An empty url clears it; see GeoDataDebug.
+        if (BuildConfig.DEBUG && intent.action == GEODATA_ACTION) {
+            geoDataDebug.baseUrl = intent.getStringExtra("url")
+            geoData.start()
+        }
         if (BuildConfig.DEBUG && intent.action == PLAY_ACTION) {
             // Ids come with or without dashes, as Jellyfin writes them; a broken one is dropped.
             intent.getStringExtra("item")?.toUUIDOrNull()?.let {
@@ -482,6 +496,7 @@ class MainActivity : ComponentActivity() {
         var processAlive = false
 
         const val PLAY_ACTION = "io.github.glacier_jellyfin.androidtv.PLAY_TITLE"
+        const val GEODATA_ACTION = "io.github.glacier_jellyfin.androidtv.GEODATA_BASE_URL"
     }
 }
 

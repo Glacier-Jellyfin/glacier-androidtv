@@ -14,6 +14,7 @@ import coil3.svg.SvgDecoder
 import dagger.hilt.android.HiltAndroidApp
 import io.github.glacier_jellyfin.androidtv.channels.HomeChannelsSync
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.geodata.GeoDataManager
 import io.github.glacier_jellyfin.androidtv.core.log.DebugOptions
 import io.github.glacier_jellyfin.androidtv.core.log.DebugThrottle
 import io.github.glacier_jellyfin.androidtv.core.log.Log
@@ -31,6 +32,9 @@ class GlacierApplication :
 
     @Inject
     lateinit var sessionManager: SessionManager
+
+    @Inject
+    lateinit var geoData: GeoDataManager
 
     /** Coil's defaults plus SVG, for the language flags, and frames grabbed from videos without a picture. */
     override fun newImageLoader(context: PlatformContext): ImageLoader = ImageLoader.Builder(context)
@@ -52,7 +56,10 @@ class GlacierApplication :
             "Started ${BuildConfig.VERSION_NAME} (${BuildConfig.BUILD_TYPE}) on ${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE}",
         )
         // The playback check's own process only plays its samples.
-        if (!PlaybackCheckActivity.isCheckProcess(getProcessName())) homeChannels.start()
+        if (!PlaybackCheckActivity.isCheckProcess(getProcessName())) {
+            homeChannels.start()
+            geoData.start()
+        }
         if (BuildConfig.DEBUG) registerThrottle()
     }
 

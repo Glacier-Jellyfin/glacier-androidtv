@@ -146,6 +146,7 @@ fun PhotoScreen(
     val video by viewModel.video.collectAsStateWithLifecycle()
     val info by viewModel.info.collectAsStateWithLifecycle()
     val blurred by viewModel.blurredBackground.collectAsStateWithLifecycle()
+    val places by viewModel.places.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
     // The last photo or video was deleted: nothing is left to show.
     LaunchedEffect(state.closed) { if (state.closed) onBack() }
@@ -378,6 +379,16 @@ fun PhotoScreen(
                     overflow = TextOverflow.Ellipsis,
                 )
                 longTakenText(item?.date)?.let { Text(it, style = GlacierText.body(21), color = GlacierColors.Mist) }
+                // Nothing until the place is known, so paging does not flicker; nothing at all when there is none.
+                item?.let { places[it.id] }?.takeIf { it.isNotEmpty() }?.let {
+                    Text(
+                        it,
+                        style = GlacierText.body(21),
+                        color = GlacierColors.Mist,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
 
@@ -439,7 +450,15 @@ fun PhotoScreen(
 
         current?.let { PhotoMenuHost(it, state.menu, viewModel) }
 
-        info?.let { PhotoInfoPanel(it, video, viewModel::transcodeStatus, onDismiss = viewModel::closeDetails) }
+        info?.let {
+            PhotoInfoPanel(
+                it,
+                video,
+                place = places[it.item.id],
+                viewModel::transcodeStatus,
+                onDismiss = viewModel::closeDetails,
+            )
+        }
     }
 }
 

@@ -63,3 +63,10 @@ path = "core/player/src/test/resources/dolby-vision/*.hevc"
 precedence = "override"
 SPDX-FileCopyrightText = ["Glacier contributors", "quietvoid"]
 SPDX-License-Identifier = "GPL-3.0-or-later AND MIT"
+
+# Place packs built from GeoNames data (scripts/geodata/build-places.py).
+[[annotations]]
+path = "app/src/main/assets/geodata/**"
+precedence = "override"
+SPDX-FileCopyrightText = "GeoNames (geonames.org)"
+SPDX-License-Identifier = "CC-BY-4.0"

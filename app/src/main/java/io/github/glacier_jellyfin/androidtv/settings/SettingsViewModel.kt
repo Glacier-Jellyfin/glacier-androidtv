@@ -13,6 +13,9 @@ import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.StartMode
 import io.github.glacier_jellyfin.androidtv.core.data.StartProfile
 import io.github.glacier_jellyfin.androidtv.core.data.StoredUser
+import io.github.glacier_jellyfin.androidtv.core.data.geodata.GeoDataManager
+import io.github.glacier_jellyfin.androidtv.core.data.geodata.GeoDataState
+import io.github.glacier_jellyfin.androidtv.core.data.geodata.GeoPacks
 import io.github.glacier_jellyfin.androidtv.core.data.media.ActivityRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.ActivityUser
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
@@ -134,6 +137,9 @@ data class SettingsUiState(
     val activityAvailable: Boolean = false,
     /** The people of the feed except this profile, newest first. */
     val activityPeople: List<ActivityUser> = emptyList(),
+    /** The chosen place names level (minimum inhabitants, 0 all places), null while off. */
+    val placeLevel: Int? = GeoPacks.BUNDLED_LEVEL,
+    val placeState: GeoDataState = GeoDataState.Off,
 ) {
     val hasOwnCopy: Boolean get() = copies.any { it.deviceId == thisDeviceId }
 }
@@ -171,6 +177,7 @@ class SettingsViewModel @Inject constructor(
     private val activity: ActivityRepository,
     val updates: UpdateManager,
     val whatsNew: WhatsNew,
+    private val geoData: GeoDataManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -243,6 +250,8 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { updates.showPrompt.collect { on -> _state.update { it.copy(updatePrompt = on) } } }
         viewModelScope.launch { whatsNew.enabled.collect { on -> _state.update { it.copy(whatsNew = on) } } }
         viewModelScope.launch { loadServerSummary() }
+        viewModelScope.launch { geoData.level.collect { level -> _state.update { it.copy(placeLevel = level) } } }
+        viewModelScope.launch { geoData.state.collect { s -> _state.update { it.copy(placeState = s) } } }
         viewModelScope.launch {
             accounts.state.collect { accountState ->
                 val serverId = sessions.session.value?.server?.id
@@ -267,6 +276,11 @@ class SettingsViewModel @Inject constructor(
             }
         }
         _state.update { it.copy(diagnostics = it.diagnostics.copy(verboseUntil = Log.verboseUntil())) }
+    }
+
+    /** Chooses the place names level (null: off); a finer pack than the built-in one is downloaded. */
+    fun setPlaceNames(level: Int?) {
+        viewModelScope.launch { geoData.setLevel(level) }
     }
 
     fun selectCategory(category: SettingsCategory) = _state.update { it.copy(category = category) }

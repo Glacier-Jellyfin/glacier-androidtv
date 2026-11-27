@@ -42,6 +42,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -62,6 +63,8 @@ import io.github.glacier_jellyfin.androidtv.R
 import io.github.glacier_jellyfin.androidtv.core.data.AgeLimit
 import io.github.glacier_jellyfin.androidtv.core.data.Protection
 import io.github.glacier_jellyfin.androidtv.core.data.StartMode
+import io.github.glacier_jellyfin.androidtv.core.data.geodata.GeoFailure
+import io.github.glacier_jellyfin.androidtv.core.data.geodata.GeoPacks
 import io.github.glacier_jellyfin.androidtv.core.data.media.Languages
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.mergeActivityPeople
@@ -136,6 +139,7 @@ import io.github.glacier_jellyfin.androidtv.update.message
 import io.github.glacier_jellyfin.androidtv.update.openStorePage
 import io.github.glacier_jellyfin.androidtv.update.publishedDate
 import java.text.DateFormat
+import java.text.NumberFormat
 import java.util.Date
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
@@ -196,6 +200,10 @@ private sealed interface SettingRow {
         val onClick: () -> Unit,
         override val enabled: Boolean = true,
         val focus: FocusRequester? = null,
+        /** 0..1 while a download runs: a bar below the card, like the update's. */
+        val progress: Float? = null,
+        val progressStart: String = "",
+        val progressEnd: String = "",
     ) : SettingRow
 
     /** A home row: switched on and off, and moved up and down after OK on its move button. */
@@ -592,6 +600,18 @@ fun SettingsScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SettingsVi
                 onDismiss = { openList = null },
             )
 
+            ListDialog.PlaceNames -> PlaceNamesPicker(
+                title = stringResource(R.string.place_names_title),
+                body = stringResource(R.string.place_names_dialog_body),
+                options = placeNamesOptions(),
+                selected = state.placeLevel,
+                onPick = { level ->
+                    viewModel.setPlaceNames(level)
+                    openList = null
+                },
+                onDismiss = { openList = null },
+            )
+
             null -> Unit
         }
 
@@ -752,6 +772,7 @@ private fun SettingCard(row: SettingRow) {
                     modifier = row.focus?.let { Modifier.focusRequester(it) } ?: Modifier,
                 )
             },
+            below = row.progress?.let { progress -> { UpdateProgress(progress, row.progressStart, row.progressEnd) } },
         )
 
         is SettingRow.Info -> InfoCard(row.label, row.sub, row.value)
@@ -821,7 +842,11 @@ private fun rows(
         listFocus.getValue(ListDialog.ActivityPeople),
     ) { onOpenList(ListDialog.ActivityPeople) }
 
-    SettingsCategory.Playback -> playbackRows(state, viewModel)
+    SettingsCategory.Playback -> playbackRows(
+        state,
+        viewModel,
+        listFocus.getValue(ListDialog.PlaceNames),
+    ) { onOpenList(ListDialog.PlaceNames) }
 
     SettingsCategory.Audio -> audioRows(state, viewModel, languageFocus)
 
@@ -1187,7 +1212,12 @@ private fun activityRows(
 }
 
 @Composable
-private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): List<SettingGroup> {
+private fun playbackRows(
+    state: SettingsUiState,
+    viewModel: SettingsViewModel,
+    placeNamesFocus: FocusRequester,
+    onPlaceNames: () -> Unit,
+): List<SettingGroup> {
     val playback = state.profile.playback
     val context = LocalContext.current
     val platform = remember(context) { TvPlatform.of(context) }
@@ -1372,6 +1402,7 @@ private fun playbackRows(state: SettingsUiState, viewModel: SettingsViewModel): 
                     state.profile.folders.blurredBackground,
                     onToggle = { viewModel.updateFolders { it.copy(blurredBackground = !it.blurredBackground) } },
                 ),
+                placeNamesRow(state, placeNamesFocus, onPlaceNames),
             ),
         ).takeIf { LibraryKind.HomeVideos in LocalLibraryKinds.current },
     )
@@ -1872,7 +1903,7 @@ private class PinOrigins {
 }
 
 /** The lists Settings opens in a dialog from a pill on their row. */
-private enum class ListDialog { LibraryCards, FavoriteRows, ActivityPeople }
+private enum class ListDialog { LibraryCards, FavoriteRows, ActivityPeople, PlaceNames }
 
 /** Name and explanation of each home row in Settings › Home. */
 private val rowTexts = mapOf(
@@ -2002,6 +2033,11 @@ private fun systemRows(state: SettingsUiState, viewModel: SettingsViewModel): Li
                     stringResource(R.string.settings_ffmpeg),
                     stringResource(R.string.settings_ffmpeg_sub),
                     state.ffmpegVersion ?: stringResource(R.string.settings_ffmpeg_missing),
+                ),
+                info(
+                    stringResource(R.string.place_names_title),
+                    stringResource(R.string.settings_about_places_sub),
+                    GEONAMES_CREDIT,
                 ),
             ),
         ),
@@ -2327,6 +2363,102 @@ private fun deviceSummary(context: Context): DeviceSummary {
 private fun hostOf(address: String): String = address.substringAfter("://").trimEnd('/')
 
 private const val SOURCE_URL = "github.com/Glacier-Jellyfin/glacier-androidtv"
+private const val GEONAMES_CREDIT = "GeoNames (geonames.org), CC BY 4.0"
 
 /** Whether the profile can pick this favorites row here: recordings need a server with Live TV. */
 private fun Choice.offered(hasLiveTv: Boolean): Boolean = hasLiveTv || id != FavoriteRow.Recordings.name
+
+/** The "Place names" row: the chosen level at the end, the state under the label; OK opens the list of levels. */
+@Composable
+private fun placeNamesRow(
+    state: SettingsUiState,
+    focus: FocusRequester,
+    onClick: () -> Unit,
+): SettingRow {
+    val locale = LocalConfiguration.current.locales[0]
+    val level = state.placeLevel
+    val value = when (level) {
+        null -> stringResource(R.string.place_names_off)
+        0 -> stringResource(R.string.place_names_all)
+        else -> stringResource(R.string.place_names_value_from, NumberFormat.getIntegerInstance(locale).format(level))
+    }
+    val status = placeNamesStatus(level, state.placeState)
+    val sub = when (status) {
+        PlaceNamesStatus.Off -> stringResource(R.string.place_names_sub_off)
+
+        PlaceNamesStatus.Builtin -> stringResource(R.string.place_names_sub_builtin)
+
+        PlaceNamesStatus.Preparing -> stringResource(R.string.place_names_sub_preparing)
+
+        is PlaceNamesStatus.Downloading -> stringResource(R.string.place_names_sub_downloading)
+
+        is PlaceNamesStatus.Ready -> stringResource(
+            R.string.place_names_sub_ready,
+            stringResource(R.string.place_names_size, megabytesNumber(status.bytesOnDisk, locale)),
+        )
+
+        is PlaceNamesStatus.Failed -> stringResource(
+            if (status.usingFallback) R.string.place_names_sub_failed_fallback else R.string.place_names_sub_failed,
+            stringResource(
+                when (status.reason) {
+                    GeoFailure.Network -> R.string.place_names_fail_network
+                    GeoFailure.Checksum -> R.string.place_names_fail_checksum
+                    GeoFailure.Storage -> R.string.place_names_fail_storage
+                    GeoFailure.Other -> R.string.place_names_fail_other
+                },
+            ),
+        )
+    }
+    val downloading = status as? PlaceNamesStatus.Downloading
+    val fraction = downloading?.fraction
+    return SettingRow.Value(
+        stringResource(R.string.place_names_title),
+        sub,
+        value,
+        onClick = onClick,
+        focus = focus,
+        progress = fraction,
+        progressStart = downloading?.takeIf { fraction != null }
+            ?.let { stringResource(R.string.update_percent, it.percent) }.orEmpty(),
+        progressEnd = downloading?.takeIf { fraction != null }?.let {
+            stringResource(
+                R.string.place_names_size,
+                stringResource(
+                    R.string.update_bar_size,
+                    progressMegabytes(it.bytes, locale),
+                    progressMegabytes(it.total, locale),
+                ),
+            )
+        }.orEmpty(),
+    )
+}
+
+/** The levels of the place names list with their sizes: "built in" for the bundled pack, else the download size. */
+@Composable
+private fun placeNamesOptions(): List<PlaceNamesOption> {
+    val locale = LocalConfiguration.current.locales[0]
+    val integers = NumberFormat.getIntegerInstance(locale)
+    return placeNamesChoices().map { level ->
+        val pack = level?.let(GeoPacks::forLevel)
+        val raw = pack?.let { stringResource(R.string.place_names_size, megabytesNumber(it.rawSize, locale)) }.orEmpty()
+        PlaceNamesOption(
+            level = level,
+            name = when (level) {
+                null -> stringResource(R.string.place_names_off)
+                0 -> stringResource(R.string.place_names_all)
+                else -> stringResource(R.string.place_names_level, integers.format(level))
+            },
+            hint = when {
+                pack == null -> ""
+                level == GeoPacks.BUNDLED_LEVEL -> stringResource(R.string.place_names_builtin)
+                else -> stringResource(R.string.place_names_size, megabytesNumber(pack.size, locale))
+            },
+            explanation = when (level) {
+                null -> stringResource(R.string.place_names_expl_off)
+                GeoPacks.BUNDLED_LEVEL -> stringResource(R.string.place_names_expl_bundled)
+                0 -> stringResource(R.string.place_names_expl_all, raw)
+                else -> stringResource(R.string.place_names_expl_finer, raw)
+            },
+        )
+    }
+}

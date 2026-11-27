@@ -28,6 +28,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 - A Recordings row on the favorites page
 - Photo and video details in the photo viewer. Press Down or the Info key: the first tab shows when and where it was taken and its folder, the Technical tab the camera, exposure and file. A video shows the same Technical and Server tabs as the player. Hold OK or press Menu for the options, which also delete a photo or video from the server after a confirmation when the server allows it. This also works by holding OK on a photo or video in the folder (#43). A setting fills the black bars around photos and portrait videos with a blurred copy
 - Detail pages of movies and shows with several background images show them one after another
+- Place names for photos. The photo viewer and the photo details show where a photo was taken, like "Munich, Bavaria, Germany". It is on by default and works offline. Finer levels can be downloaded once from GitHub in Settings › Playback › Place names
 
 ### Improved
 - The line above a title is now a breadcrumb. Its levels open the library, the show, the season or a parent folder

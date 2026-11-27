@@ -46,6 +46,22 @@ build without them still works, just without the extra codecs.
   home screen, playback and parental-control settings, and all PINs. There is
   no default PIN; it is set when a PIN feature is first enabled.
 
+- Stored on the device, for all profiles: the start profile and the "Place
+  names" level (in the encrypted account store).
+
+### Place names
+
+Photos with GPS coordinates show a place name from an offline GeoNames pack
+(`core:data`, package `geodata`). The pack of places from 15,000 inhabitants is
+in the APK (`assets/geodata/places-15000.pack`, the gzipped pack under another
+name, because the build would unpack a `.gz` asset) and is the default. A finer
+level (minimum inhabitants, or all places) is downloaded as `places-<level>.bin.gz`
+from a GitHub release of this repo. Either way the app checks the pinned SHA-256
+(table in `GeoPacks.kt`), unpacks the pack to `filesDir/geodata` and memory-maps
+it. Lookups are a nearest-neighbour search over a 1 degree grid, within 50 km.
+The format is described in the KDoc of `PlacePack`. `scripts/geodata` builds
+the packs.
+
 ### Parental controls
 
 Age ratings are enforced by the server (`maxOfficialRating` on library

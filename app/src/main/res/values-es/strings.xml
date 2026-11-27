@@ -1335,4 +1335,29 @@
         <item quantity="many">%1$s, %2$s y %3$d más lo están viendo</item>
         <item quantity="other">%1$s, %2$s y %3$d más lo están viendo</item>
     </plurals>
+    <string name="place_names_title">Nombres de lugares</string>
+    <string name="place_names_off">Desactivado</string>
+    <string name="place_names_level">Lugares desde %1$s habitantes</string>
+    <string name="place_names_all">Todos los lugares</string>
+    <string name="place_names_value_from">Desde %1$s</string>
+    <string name="place_names_builtin">integrado</string>
+    <string name="place_names_size">%1$s MB</string>
+    <string name="place_names_dialog_body">Elige cuántos lugares conoce el televisor. Datos: GeoNames, CC BY 4.0</string>
+    <string name="place_names_expl_off">Sin nombres de lugares.</string>
+    <string name="place_names_expl_bundled">Ciudades y pueblos, capitales y cabeceras de distrito. Funciona sin conexión, integrado en la app.</string>
+    <string name="place_names_expl_finer">También lugares más pequeños. Se descarga una vez de GitHub (%1$s en el dispositivo).</string>
+    <string name="place_names_expl_all">Cada pueblo y aldea. Descarga grande, %1$s en el dispositivo.</string>
+    <string name="place_names_sub_off">Muestra dónde se tomó una foto. Glacier busca las coordenadas de la foto en una lista de lugares. Datos: GeoNames, CC BY 4.0</string>
+    <string name="place_names_sub_builtin">Glacier busca las coordenadas de cada foto en la lista integrada y muestra el lugar más cercano. Datos: GeoNames, CC BY 4.0</string>
+    <string name="place_names_sub_preparing">Preparando los lugares. Esto tarda un momento.</string>
+    <string name="place_names_sub_downloading">Descargando…</string>
+    <string name="place_names_sub_ready">Glacier busca las coordenadas de cada foto en la lista de lugares descargada (%1$s). Datos: GeoNames, CC BY 4.0</string>
+    <string name="place_names_fail_network">Sin conexión.</string>
+    <string name="place_names_fail_checksum">El archivo está dañado.</string>
+    <string name="place_names_fail_storage">No hay espacio suficiente.</string>
+    <string name="place_names_fail_other">Algo salió mal.</string>
+    <string name="place_names_sub_failed">%1$s Se volverá a intentar.</string>
+    <string name="place_names_sub_failed_fallback">%1$s Se volverá a intentar. Mientras tanto se usan los lugares integrados.</string>
+    <string name="photo_info_place">Lugar</string>
+    <string name="settings_about_places_sub">Los nombres de lugares de las fotos usan estos datos sin internet</string>
 </resources>

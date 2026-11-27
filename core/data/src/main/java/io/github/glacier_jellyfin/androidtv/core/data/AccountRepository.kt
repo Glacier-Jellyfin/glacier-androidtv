@@ -94,6 +94,10 @@ class AccountRepository @Inject constructor(private val store: DataStore<Account
         store.updateData { it.copy(startProfile = startProfile) }
     }
 
+    suspend fun setPlaceNamesLevel(level: Int?) {
+        store.updateData { it.copy(placeNamesLevel = level) }
+    }
+
     /** [server] was set up again at the address of [oldId]; see [withServerReplaced]. */
     suspend fun replaceServer(
         oldId: String,

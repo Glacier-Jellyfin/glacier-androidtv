@@ -42,7 +42,7 @@
 
   <main class="wrap legal">
         <h1>Datenschutz</h1>
-        <p class="updated">Stand: 11. November 2026</p>
+        <p class="updated">Stand: 27. November 2026</p>
 
         <p><strong>Kurz gesagt:</strong> Glacier sammelt keine Daten für sich selbst. Es gibt kein Konto, keine Analyse, keine Werbung und kein Tracking. Glacier spricht mit den Jellyfin-Servern, die du hinzufügst, und für einige Funktionen mit den unten genannten Diensten.</p>
 
@@ -55,6 +55,7 @@
           <li>Die Adressen deiner Jellyfin-Server, deine Benutzernamen und die Zugangstoken, die die Server ausstellen. Dein Passwort geht nur zur Anmeldung an deinen Server und wird nicht gespeichert.</li>
           <li>Deine Einstellungen, auch die PINs und Altersgrenzen der Kindersicherung.</li>
           <li>Ein App-Protokoll für Fehlerberichte. Serveradressen, Namen, Passwörter und Zugangstoken werden entfernt, bevor es gesendet oder heruntergeladen wird.</li>
+          <li>Ortsnamen für Fotos. Glacier bringt ein Ortspaket ab 15.000 Einwohnern mit, dazu Hauptstädte sowie Landes- und Kreissitze, aus Daten von <a href="https://www.geonames.org/">GeoNames</a> (Lizenz CC BY 4.0). Ist „Ortsnamen“ eingeschaltet, was standardmäßig der Fall ist, ermittelt Glacier den Ort eines Fotos auf dem Fernseher aus den GPS-Koordinaten im Foto. Dafür ist keine Verbindung nötig. Die Koordinaten verlassen das Gerät nie. Feinere Stufen sind optionale Downloads, siehe unten. Wechselst du die Stufe oder schaltest die Einstellung aus, werden heruntergeladene Pakete gelöscht.</li>
         </ul>
 
         <h2>Dein Jellyfin-Server</h2>
@@ -63,6 +64,7 @@
         <h2>Andere Dienste</h2>
         <ul>
           <li><strong>GitHub</strong>, nur in der Version von GitHub: Glacier fragt beim Start bei <code>api.github.com</code> nach einer neuen Version und lädt Updates von GitHub. Die Prüfung lässt sich in den Einstellungen abschalten. GitHub sieht deine IP-Adresse. Siehe die <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement">Datenschutzerklärung von GitHub</a>.</li>
+          <li><strong>GitHub, Ortsnamen</strong>, in allen Versionen, auch bei Google Play und Amazon, und nur wenn du in Einstellungen › Wiedergabe › Ortsnamen eine feinere Stufe wählst (5.000, 1.000 oder 500 Einwohner oder alle Orte). Die Standardstufe braucht keinen Download. Für eine feinere Stufe lädt Glacier deren Ortspaket einmal als Datei von <code>github.com</code> (GitHub liefert sie von seinen Download-Servern aus), prüft seine Prüfsumme und speichert es auf dem Gerät. Orte werden danach offline nachgeschlagen. Die GPS-Koordinaten deiner Fotos werden nie an GitHub oder jemand anderen gesendet. Die einzige Anfrage ist der einfache Dateidownload, GitHub sieht also deine IP-Adresse und die angefragte Datei, wie bei jedem Download. Siehe die <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement">Datenschutzerklärung von GitHub</a>.</li>
           <li><strong>YouTube</strong>: Hat ein Titel einen YouTube-Trailer, lädt sein Vorschaubild von YouTube, und der Trailer läuft im eingebetteten Player von YouTube. Google erhält deine IP-Adresse und Angaben zur Wiedergabe. Siehe die <a href="https://policies.google.com/privacy?hl=de">Datenschutzerklärung von Google</a>.</li>
           <li><strong>The Movie Database (TMDB)</strong>: Hat dein Server das Plugin Jellyfin Enhanced mit Seerr, zeigt die Suche auch Titel, die in deiner Bibliothek fehlen. Deren Poster laden von <code>image.tmdb.org</code>, das deine IP-Adresse sieht. Siehe die <a href="https://www.themoviedb.org/privacy-policy">Datenschutzerklärung von TMDB</a>.</li>
           <li><strong>App-Stores</strong>: Hast du Glacier aus Google Play oder dem Amazon Appstore installiert, installiert und aktualisiert der Store die App nach seiner eigenen Datenschutzerklärung.</li>

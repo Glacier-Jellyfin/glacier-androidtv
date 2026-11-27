@@ -14,6 +14,7 @@ only in English.
 - Una fila de Grabaciones en la página de favoritos
 - Detalles de fotos y vídeos en el visor de fotos. Con Abajo o la tecla Info, la primera pestaña muestra cuándo y dónde se tomó y su carpeta, y la pestaña Técnico la cámara, la exposición y el archivo. Un vídeo muestra las mismas pestañas Técnico y Servidor que el reproductor. Mantén pulsado OK o pulsa Menú para abrir las opciones, que también eliminan una foto o un vídeo del servidor tras una confirmación cuando el servidor lo permite. También funciona manteniendo pulsado OK sobre una foto o un vídeo en la carpeta (#43). Un ajuste rellena las barras negras alrededor de las fotos y los vídeos verticales con una copia desenfocada
 - Las páginas de detalles de películas y series con varias imágenes de fondo las muestran una tras otra
+- Nombres de lugares para fotos. El visor de fotos y los detalles de la foto muestran dónde se tomó, por ejemplo “Múnich, Baviera, Alemania”. Está activado por defecto y funciona sin conexión. Los niveles más finos se pueden descargar una vez desde GitHub en Ajustes › Reproducción › Nombres de lugares
 
 ### Mejoras
 - La línea sobre un título ahora es una ruta. Sus niveles abren la biblioteca, la serie, la temporada o una carpeta superior

@@ -255,7 +255,7 @@
     <string name="photo_info_date">Aufgenommen</string>
     <string name="photo_info_folder">Ordner</string>
     <string name="photo_info_length">Länge</string>
-    <string name="photo_info_location">Ort</string>
+    <string name="photo_info_location">Koordinaten</string>
     <string name="photo_info_dimensions">Auflösung</string>
     <string name="photo_info_aperture">Blende</string>
     <string name="photo_info_shutter">Verschlusszeit</string>
@@ -1303,4 +1303,29 @@
         <item quantity="one">%1$s, %2$s und %3$d weitere schauen das</item>
         <item quantity="other">%1$s, %2$s und %3$d weitere schauen das</item>
     </plurals>
+    <string name="place_names_title">Ortsnamen</string>
+    <string name="place_names_off">Aus</string>
+    <string name="place_names_level">Orte ab %1$s Einwohnern</string>
+    <string name="place_names_all">Alle Orte</string>
+    <string name="place_names_value_from">Ab %1$s</string>
+    <string name="place_names_builtin">eingebaut</string>
+    <string name="place_names_size">%1$s MB</string>
+    <string name="place_names_dialog_body">Wähle, wie viele Orte der Fernseher kennt. Daten: GeoNames, CC BY 4.0</string>
+    <string name="place_names_expl_off">Keine Ortsnamen.</string>
+    <string name="place_names_expl_bundled">Städte und Gemeinden, Hauptstädte und Kreisstädte. Funktioniert offline, in der App eingebaut.</string>
+    <string name="place_names_expl_finer">Auch kleinere Orte. Einmal von GitHub geladen (%1$s auf dem Gerät).</string>
+    <string name="place_names_expl_all">Jedes Dorf und jeder Weiler. Großer Download, %1$s auf dem Gerät.</string>
+    <string name="place_names_sub_off">Zeigt, wo ein Foto aufgenommen wurde. Glacier sucht dafür die Koordinaten des Fotos in einer Ortsliste. Daten: GeoNames, CC BY 4.0</string>
+    <string name="place_names_sub_builtin">Glacier sucht die Koordinaten jedes Fotos in der eingebauten Ortsliste und zeigt den nächsten Ort. Daten: GeoNames, CC BY 4.0</string>
+    <string name="place_names_sub_preparing">Die Orte werden vorbereitet. Das dauert einen Moment.</string>
+    <string name="place_names_sub_downloading">Wird geladen…</string>
+    <string name="place_names_sub_ready">Glacier sucht die Koordinaten jedes Fotos in der geladenen Ortsliste (%1$s). Daten: GeoNames, CC BY 4.0</string>
+    <string name="place_names_fail_network">Keine Verbindung.</string>
+    <string name="place_names_fail_checksum">Die Datei ist beschädigt.</string>
+    <string name="place_names_fail_storage">Nicht genug Speicherplatz.</string>
+    <string name="place_names_fail_other">Etwas ist schiefgelaufen.</string>
+    <string name="place_names_sub_failed">%1$s Es wird erneut versucht.</string>
+    <string name="place_names_sub_failed_fallback">%1$s Es wird erneut versucht. Bis dahin werden die eingebauten Orte genutzt.</string>
+    <string name="photo_info_place">Ort</string>
+    <string name="settings_about_places_sub">Ortsnamen für Fotos nutzen diese Daten ohne Internet</string>
 </resources>

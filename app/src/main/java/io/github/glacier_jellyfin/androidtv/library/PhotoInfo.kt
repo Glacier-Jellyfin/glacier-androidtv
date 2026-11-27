@@ -75,6 +75,8 @@ private typealias Facts = List<Pair<String, String>>
 internal fun PhotoInfoPanel(
     info: PhotoInfoState,
     playing: InlineVideoState,
+    /** Where it was taken, as a name; null or empty while unknown or when there is none. */
+    place: String?,
     transcodeStatus: suspend () -> TranscodeStatus?,
     onDismiss: () -> Unit,
 ) {
@@ -104,7 +106,7 @@ internal fun PhotoInfoPanel(
             LaunchedEffect(tab) { scroll.scrollTo(0) }
             Column(Modifier.fillMaxSize().verticalScroll(scroll), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                 when {
-                    tab == TAB_CONTENT -> ContentTab(info)
+                    tab == TAB_CONTENT -> ContentTab(info, place)
                     !video -> TechnicalTab(info)
                     tab == TAB_TECHNICAL -> VideoTechnicalTab(info, live)
                     else -> VideoServerTab(info, live, transcodeStatus)
@@ -116,7 +118,7 @@ internal fun PhotoInfoPanel(
 
 /** What it is: the picture next to its name, when it was taken, where and in which folder. */
 @Composable
-private fun ContentTab(info: PhotoInfoState) {
+private fun ContentTab(info: PhotoInfoState, place: String?) {
     val item = info.item
     val details = info.details
     val video = item is FolderMedia.Video
@@ -128,6 +130,7 @@ private fun ContentTab(info: PhotoInfoState) {
         taken?.let { stringResource(R.string.photo_info_date) to it },
         folder?.let { stringResource(R.string.photo_info_folder) to it },
         length?.let { stringResource(R.string.photo_info_length) to it },
+        place?.takeIf { it.isNotEmpty() }?.let { stringResource(R.string.photo_info_place) to it },
         location?.let { stringResource(R.string.photo_info_location) to it },
     )
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
