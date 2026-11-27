@@ -19,7 +19,6 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.decoder.ffmpeg.FfmpegLibrary
-import androidx.media3.effect.GaussianBlurWithFrameOverlaid
 import androidx.media3.exoplayer.DecoderCounters
 import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -978,11 +977,9 @@ object GlacierPlayer {
             null
         }
         if (blur != null) {
-            // The effect makes its frame 1 / scaleSharp times as big as its input, blurs the input stretched over all of it
-            // and lays the sharp input over that, scaleSharp as big, in the middle. A frame 16:9 around a full height
-            // picture therefore takes scaleSharpX = picture aspect / (16/9) and scaleSharpY = 1: the video stays whole, as
-            // big as without the effect, and nothing else has to stretch the frame.
-            player.setVideoEffects(listOf(GaussianBlurWithFrameOverlaid(BACKDROP_SIGMA, blur / BACKDROP_ASPECT, 1f)))
+            // A 16:9 frame of the video's height: the video whole in the middle, over a dimmed, blurred copy of itself that
+            // is cropped to fill the frame (see BlurredBackdropEffect), all from the one decode.
+            player.setVideoEffects(listOf(BlurredBackdropEffect()))
             Log.i("Player", "Portrait video: blurred background from the same decode")
         } else if (VideoRotation.appliedByApp(request.videoRotation)) {
             player.setVideoEffects(emptyList())
@@ -1204,9 +1201,3 @@ class SteeredBandwidthMeter(private val real: BandwidthMeter) : BandwidthMeter b
         real.timeToFirstByteEstimateUs
     }
 }
-
-/** The shape of the frame a blurred background makes of a portrait video: the screen's. */
-private const val BACKDROP_ASPECT = 16f / 9f
-
-/** The blur of the background, in pixels of the stretched frame; soft enough to read as colour, not as a picture. */
-private const val BACKDROP_SIGMA = 30f
