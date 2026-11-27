@@ -182,7 +182,7 @@ fun GlacierNavHost(
             )
         }
         composable<FolderRoute> { FolderScreen(onNavigate = navigate) }
-        composable<PhotoRoute> { PhotoScreen(onNavigate = navigate) }
+        composable<PhotoRoute> { PhotoScreen(onNavigate = navigate, onBack = back) }
         composable<DetailRoute> { entry ->
             DetailScreen(
                 onNavigate = navigate,

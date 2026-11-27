@@ -59,6 +59,9 @@ class BrowseMemory internal constructor(sessionKeys: Flow<Any?>, dispatcher: Cor
 
     @Volatile private var folders = FolderMemory()
 
+    /** The folder and item the photo viewer showed last; taken by the folder when it is shown again. */
+    @Volatile private var viewed: Pair<UUID, UUID>? = null
+
     init {
         // Leaving the profile (also to come back to the same one) forgets everything.
         CoroutineScope(SupervisorJob() + dispatcher).launch {
@@ -113,7 +116,21 @@ class BrowseMemory internal constructor(sessionKeys: Flow<Any?>, dispatcher: Cor
         if (folders.path.lastOrNull()?.id == id) folders = folders.copy(focusId = entryId)
     }
 
+    /** The photo viewer shows [mediaId] of the folder [folderId]: Back lands on its card. */
+    fun photoViewed(folderId: UUID, mediaId: UUID) {
+        viewed = folderId to mediaId
+    }
+
+    /** The item the photo viewer showed last in the folder [folderId] (null: the top), once; null when none. */
+    @Synchronized
+    fun takeViewed(folderId: UUID?): UUID? {
+        val last = viewed?.takeIf { it.first == folderId } ?: return null
+        viewed = null
+        return last.second
+    }
+
     fun clear() {
+        viewed = null
         libraries.clear()
         liveTv = null
         folders = FolderMemory()

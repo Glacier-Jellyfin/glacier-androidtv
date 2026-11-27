@@ -70,9 +70,13 @@ data class FolderRoute(
     val focus: String? = null,
 )
 
-/** The photos of a home video folder ([folderId]) full screen, starting with [photoId]. */
+/** The photos of a home video folder ([folderId]) full screen, starting with [photoId]; [slideshow] starts it running. */
 @Serializable
-data class PhotoRoute(val folderId: String, val photoId: String)
+data class PhotoRoute(
+    val folderId: String,
+    val photoId: String,
+    val slideshow: Boolean = false,
+)
 
 /**
  * [themeArea] is the show of an episode opened from its show, known before the page loads (theme song).

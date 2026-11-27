@@ -202,8 +202,8 @@ fun ContinueCard(
                     .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xD905090F)))),
             )
             if (locked) LockBadge(Modifier.align(Alignment.TopStart))
-            // With options, the mark in the corner says that holding OK opens them.
-            if (onLongClick != null) {
+            // With options, the mark in the corner says that holding OK opens them; unfocused, a video keeps its badge.
+            if (onLongClick != null && (focused || !videoBadge)) {
                 HoldOkMark(
                     focused,
                     accent,

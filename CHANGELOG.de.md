@@ -10,7 +10,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 ### Neu
 - Eine Reihe Aufnahmen auf der Startseite und Aufnahmen als wählbare Quelle für das Spotlight
 - Eine Reihe Aufnahmen auf der Favoritenseite
-- Foto- und Videodetails in der Fotoansicht. Mit Unten oder der Info-Taste zeigt der erste Reiter, wann und wo es entstand und in welchem Ordner es liegt, der Reiter Technik die Kamera, die Belichtung und die Datei. Ein Video zeigt dieselben Reiter Technik und Server wie der Player (#43). Eine Einstellung füllt die schwarzen Ränder um Fotos und Hochkant-Videos mit einer unscharfen Kopie
+- Foto- und Videodetails in der Fotoansicht. Mit Unten oder der Info-Taste zeigt der erste Reiter, wann und wo es entstand und in welchem Ordner es liegt, der Reiter Technik die Kamera, die Belichtung und die Datei. Ein Video zeigt dieselben Reiter Technik und Server wie der Player. OK halten oder Menü drücken öffnet die Optionen, mit denen sich ein Foto oder Video nach einer Rückfrage vom Server löschen lässt, wenn der Server es erlaubt. Das geht auch, indem du in der Ordneransicht OK auf einem Foto oder Video hältst (#43). Eine Einstellung füllt die schwarzen Ränder um Fotos und Hochkant-Videos mit einer unscharfen Kopie
 - Detailseiten von Filmen und Serien mit mehreren Hintergrundbildern zeigen sie nacheinander
 
 ### Verbessert

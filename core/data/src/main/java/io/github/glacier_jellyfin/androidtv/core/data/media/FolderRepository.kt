@@ -58,17 +58,25 @@ data class MediaPhoto(
 sealed interface FolderMedia : FolderEntry {
     val id: UUID
 
+    /** The server lets this user delete it; only known where the viewer's list was loaded, else false. */
+    val canDelete: Boolean
+
     /** [added]: when it came to the library, for music videos sorted by that. */
     data class Video(
         val item: MediaItem,
         override val date: LocalDateTime?,
         val added: LocalDateTime? = null,
+        override val canDelete: Boolean = false,
     ) : FolderMedia {
         override val id: UUID get() = item.id
         override val name: String get() = item.title
     }
 
-    data class Photo(val photo: MediaPhoto, override val date: LocalDateTime?) : FolderMedia {
+    data class Photo(
+        val photo: MediaPhoto,
+        override val date: LocalDateTime?,
+        override val canDelete: Boolean = false,
+    ) : FolderMedia {
         override val id: UUID get() = photo.id
         override val name: String get() = photo.name
     }
@@ -104,11 +112,14 @@ class FolderRepository @Inject constructor(
 ) {
     /**
      * The folder [folderId]. Without one, the top: the libraries of [type] as folders,
-     * or the content of the only one right away.
+     * or the content of the only one right away. [withDelete] also asks whether this user may delete each
+     * photo and video ([FolderMedia.canDelete]), for the page that offers it.
      */
-    suspend fun load(folderId: UUID?, type: CollectionType = CollectionType.HOMEVIDEOS): FolderContent = withContext(
-        Dispatchers.IO,
-    ) {
+    suspend fun load(
+        folderId: UUID?,
+        type: CollectionType = CollectionType.HOMEVIDEOS,
+        withDelete: Boolean = false,
+    ): FolderContent = withContext(Dispatchers.IO) {
         val session = checkNotNull(sessions.session.value) { "No profile is signed in" }
         coroutineScope {
             val libraries = async { libraries(session, type) }
@@ -123,7 +134,7 @@ class FolderRepository @Inject constructor(
                 }
                 all.single().id
             }
-            val items = children(session, parent)
+            val items = children(session, parent, withDelete)
             FolderContent(
                 id = parent,
                 folders = items.filter { it.isFolder == true }.map { MediaFolder(it.id, it.name.orEmpty(), it.taken) },
@@ -136,7 +147,14 @@ class FolderRepository @Inject constructor(
     /** The videos and photos of [folderId] in the order the profile sorts folders by. */
     suspend fun media(folderId: UUID): List<FolderMedia> = withContext(Dispatchers.IO) {
         val session = checkNotNull(sessions.session.value) { "No profile is signed in" }
-        media(session, children(session, folderId)).sortedFor(settings.settings.value.folders)
+        media(session, children(session, folderId, withDelete = true)).sortedFor(settings.settings.value.folders)
+    }
+
+    /** Deletes the photo or video [id] from the server, for everyone; only for what the server allows this user. */
+    suspend fun delete(id: UUID) = withContext(Dispatchers.IO) {
+        val session = checkNotNull(sessions.session.value) { "No profile is signed in" }
+        session.api.libraryApi.deleteItem(itemId = id)
+        Unit
     }
 
     /**
@@ -214,8 +232,12 @@ class FolderRepository @Inject constructor(
         val screened = ageFilter.screen(videos.map(mapper::item)).associateBy { it.id }
         return items.mapNotNull { dto ->
             when {
-                dto.isVideo -> screened[dto.id]?.let { FolderMedia.Video(it, dto.taken, dto.dateCreated) }
-                dto.isPhoto -> mapper.photo(dto)?.let { FolderMedia.Photo(it, dto.taken) }
+                dto.isVideo -> screened[dto.id]?.let {
+                    FolderMedia.Video(it, dto.taken, dto.dateCreated, dto.canDelete == true)
+                }
+
+                dto.isPhoto -> mapper.photo(dto)?.let { FolderMedia.Photo(it, dto.taken, dto.canDelete == true) }
+
                 else -> null
             }
         }
@@ -227,12 +249,21 @@ class FolderRepository @Inject constructor(
             .filter { it.collectionType == type && it.id !in recordings }
     }
 
-    private suspend fun children(session: Session, parentId: UUID) = session.api.libraryApi.getItems(
+    /** [withDelete] also asks whether this user may delete each item, which the viewer and the folder page need. */
+    private suspend fun children(
+        session: Session,
+        parentId: UUID,
+        withDelete: Boolean = false,
+    ) = session.api.libraryApi.getItems(
         userId = session.userId,
         parentId = parentId,
         sortBy = listOf(ItemSortBy.SORT_NAME),
         // The aspect ratio sizes a photo's BlurHash placeholder when the item has no width and height.
-        fields = listOf(ItemFields.DATE_CREATED, ItemFields.PRIMARY_IMAGE_ASPECT_RATIO),
+        fields = listOfNotNull(
+            ItemFields.DATE_CREATED,
+            ItemFields.PRIMARY_IMAGE_ASPECT_RATIO,
+            ItemFields.CAN_DELETE.takeIf { withDelete },
+        ),
         enableUserData = true,
     ).content.items
 

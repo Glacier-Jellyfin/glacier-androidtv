@@ -6,6 +6,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -43,12 +44,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -84,11 +91,12 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.KeyCap
-import io.github.glacier_jellyfin.androidtv.core.designsystem.KeyCapIcon
 import io.github.glacier_jellyfin.androidtv.core.designsystem.KeyHint
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LeftToRight
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalReduceMotion
+import io.github.glacier_jellyfin.androidtv.core.designsystem.OptionRow
+import io.github.glacier_jellyfin.androidtv.core.designsystem.OptionsPanel
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillShape
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
@@ -98,6 +106,7 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.startKey
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.ui.BlurHashCache
 import io.github.glacier_jellyfin.androidtv.ui.CollectEvents
+import io.github.glacier_jellyfin.androidtv.ui.ConfirmDeleteDialog
 import io.github.glacier_jellyfin.androidtv.ui.PageEdge
 import io.github.glacier_jellyfin.androidtv.ui.UiEvent
 import io.github.glacier_jellyfin.androidtv.ui.blurHashComponents
@@ -116,7 +125,9 @@ import kotlinx.coroutines.withContext
  * during a slideshow stops it (a video then pauses here); OK on a video outside a slideshow opens the full
  * player where it is, and Back from there comes back here. Down and
  * the Info key open the details of the photo or video (file, camera, exposure) and end a slideshow;
- * Back closes them first. Name, date and position show for a moment after each change and switch to the next
+ * Back closes them first. Holding OK or the Menu key opens the options: slideshow or play, details and, when the
+ * server allows it, delete after a confirmation; a slideshow stops. A deleted item leaves at once and the viewer
+ * stays at the same place, and the screen goes back when none is left. Name, date and position show for a moment after each change and switch to the next
  * item at once; the keys show as key caps for a few seconds when the viewer opens and again on Up. A line along the
  * bottom edge shows how far a video has played, or a photo's time in the slideshow. Browsing to a photo that is not
  * loaded yet shows its BlurHash with a loader until the photo is sharp (its blurred thumbnail when it has none). The
@@ -128,6 +139,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun PhotoScreen(
     onNavigate: (UiEvent.Navigate) -> Unit,
+    onBack: () -> Unit,
     viewModel: PhotoViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -135,14 +147,16 @@ fun PhotoScreen(
     val info by viewModel.info.collectAsStateWithLifecycle()
     val blurred by viewModel.blurredBackground.collectAsStateWithLifecycle()
     CollectEvents(viewModel.events, onNavigate)
+    // The last photo or video was deleted: nothing is left to show.
+    LaunchedEffect(state.closed) { if (state.closed) onBack() }
     // Back from the full player the slideshow goes on; leaving, nothing plays on behind.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onResume() }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.onStop() }
     val reduceMotion = LocalReduceMotion.current
     val focus = remember { FocusRequester() }
     val direction = LocalLayoutDirection.current
-    // After the details close the viewer takes the keys back.
-    LaunchedEffect(info == null) { runCatching { focus.requestFocus() } }
+    // After the details or the options close the viewer takes the keys back.
+    LaunchedEffect(info == null, state.menu == null) { runCatching { focus.requestFocus() } }
     // A slideshow or a video runs on its own: the TV must not dim or start its screensaver meanwhile.
     val view = LocalView.current
     val running = state.slideshow || video.player != null
@@ -153,6 +167,8 @@ fun PhotoScreen(
     val context = LocalContext.current
     val item = state.current
     val shownIndex = state.index
+    // Holding OK opened the options: the release that follows must not also be an OK.
+    var heldOk by remember { mutableStateOf(false) }
     // The photo whose picture failed to load, so OK retries it; and the last photo that was sharp, which stays dimmed
     // behind a photo that has neither its thumbnail nor itself yet.
     var failedId by remember { mutableStateOf<UUID?>(null) }
@@ -203,23 +219,47 @@ fun PhotoScreen(
             .blockKeysWhile(state.loading && state.current == null)
             .onPreviewKeyEvent { event ->
                 // Without photos the keys belong to the retry button.
-                // While the details are open the keys belong to the panel.
-                if (info != null || event.type != KeyEventType.KeyDown || state.media.isEmpty()) {
-                    return@onPreviewKeyEvent false
+                // While the details or the options are open the keys belong to the panel.
+                if (info != null || state.menu != null || state.media.isEmpty()) return@onPreviewKeyEvent false
+                val isOk = event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter
+                if (isOk) {
+                    // Holding OK repeats the key: the first repeat opens the options, the release does nothing.
+                    // OK acts on the release, so a held key never starts the slideshow or the player.
+                    val native = event.nativeKeyEvent
+                    when (event.type) {
+                        KeyEventType.KeyDown -> {
+                            if (native.repeatCount == 0) heldOk = false
+                            if (native.repeatCount == 1) {
+                                heldOk = true
+                                viewModel.showMenu(PhotoMenu.Options)
+                            }
+                        }
+
+                        KeyEventType.KeyUp -> {
+                            if (!heldOk) {
+                                // On a photo that did not load OK tries again.
+                                if (failedId != null && failedId == state.current?.id) {
+                                    failedId = null
+                                    retry++
+                                } else {
+                                    viewModel.select()
+                                }
+                            }
+                            heldOk = false
+                        }
+                    }
+                    overlayKey++
+                    return@onPreviewKeyEvent true
                 }
+                if (event.key == Key.Menu) {
+                    if (event.type == KeyEventType.KeyUp) viewModel.showMenu(PhotoMenu.Options)
+                    return@onPreviewKeyEvent true
+                }
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when (event.key) {
                     direction.startKey -> viewModel.previous()
 
                     direction.endKey -> viewModel.next()
-
-                    Key.DirectionCenter, Key.Enter, Key.NumPadEnter ->
-                        // On a photo that did not load OK tries again.
-                        if (failedId != null && failedId == state.current?.id) {
-                            failedId = null
-                            retry++
-                        } else {
-                            viewModel.select()
-                        }
 
                     Key.MediaPlayPause -> viewModel.playPause()
 
@@ -318,7 +358,7 @@ fun PhotoScreen(
         }
 
         AnimatedVisibility(
-            visible = overlay && item != null && info == null,
+            visible = overlay && item != null && info == null && state.menu == null,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -341,19 +381,27 @@ fun PhotoScreen(
             }
         }
 
-        // The keys as key caps at the bottom end, apart from the name.
+        // The keys at the bottom end, apart from the name, over a soft dark fade along the bottom edge.
         AnimatedVisibility(
-            visible = hints && item != null && info == null,
+            visible = hints && item != null && info == null && state.menu == null,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = PageEdge.dp, bottom = 56.dp),
+            modifier = Modifier.align(Alignment.BottomEnd).fillMaxWidth(),
         ) {
-            ViewerHints(video = item is FolderMedia.Video, slideshow = state.slideshow)
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))))
+                    .padding(end = PageEdge.dp, top = 90.dp, bottom = 56.dp),
+                contentAlignment = Alignment.BottomEnd,
+            ) {
+                ViewerHints(video = item is FolderMedia.Video, slideshow = state.slideshow)
+            }
         }
 
         // Where in the folder this is, small in the top corner, shown and hidden with the name.
         AnimatedVisibility(
-            visible = overlay && state.media.size > 1 && info == null,
+            visible = overlay && state.media.size > 1 && info == null && state.menu == null,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.TopEnd).padding(top = 40.dp, end = PageEdge.dp),
@@ -389,6 +437,8 @@ fun PhotoScreen(
                 )
         }
 
+        current?.let { PhotoMenuHost(it, state.menu, viewModel) }
+
         info?.let { PhotoInfoPanel(it, video, viewModel::transcodeStatus, onDismiss = viewModel::closeDetails) }
     }
 }
@@ -417,29 +467,64 @@ private fun Modifier.overlayPill(): Modifier = this
     .background(GlacierColors.GlassFill2)
     .border(PILL_BORDER.dp, GlacierColors.Ice.copy(alpha = PILL_BORDER_ALPHA), PillShape)
 
-/** The keys of the viewer: browse, OK, details; in a slideshow only OK to pause it. */
+/**
+ * What [menu] has open over the viewer for [item]: its options in a panel, or the question before deleting it.
+ * Options: start the slideshow or play the video, the details, and delete when the server allows it.
+ */
 @Composable
-private fun ViewerHints(video: Boolean, slideshow: Boolean) {
-    Row(
-        Modifier
-            .overlayPill()
-            .padding(horizontal = 24.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(32.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (slideshow) {
-            KeyHint(stringResource(R.string.player_pause)) { KeyCap("OK", strong = true) }
-        } else {
-            KeyHint(stringResource(R.string.photo_hint_browse)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    KeyCapIcon(GlacierIcons.ChevronLeft, strong = true)
-                    KeyCapIcon(GlacierIcons.ChevronRight, strong = true)
+private fun PhotoMenuHost(
+    item: FolderMedia,
+    menu: PhotoMenu?,
+    viewModel: PhotoViewModel,
+) {
+    val video = item is FolderMedia.Video
+    when (menu) {
+        null -> Unit
+
+        PhotoMenu.ConfirmDelete -> ConfirmDeleteDialog(
+            title = stringResource(if (video) R.string.video_delete_title else R.string.photo_delete_title),
+            body = stringResource(R.string.photo_delete_body, item.name),
+            confirmLabel = stringResource(R.string.photo_delete),
+            onConfirm = viewModel::deleteCurrent,
+            onDismiss = { viewModel.showMenu(null) },
+        )
+
+        PhotoMenu.Options -> {
+            val first = remember { FocusRequester() }
+            OptionsPanel(
+                title = item.name,
+                subtitle = longTakenText(item.date),
+                onDismiss = { viewModel.showMenu(null) },
+                first = first,
+            ) {
+                OptionRow(
+                    stringResource(if (video) R.string.player_play else R.string.photo_slideshow_start),
+                    stringResource(if (video) R.string.photo_play_desc else R.string.photo_slideshow_desc),
+                    {
+                        viewModel.showMenu(null)
+                        viewModel.select()
+                    },
+                    Modifier.focusRequester(first),
+                    GlacierIcons.Play,
+                )
+                OptionRow(
+                    stringResource(R.string.photo_hint_details),
+                    stringResource(R.string.photo_details_desc),
+                    {
+                        viewModel.showMenu(null)
+                        viewModel.openDetails()
+                    },
+                    icon = GlacierIcons.Info,
+                )
+                if (item.canDelete) {
+                    OptionRow(
+                        stringResource(R.string.photo_delete),
+                        stringResource(if (video) R.string.video_delete_desc else R.string.photo_delete_desc),
+                        { viewModel.showMenu(PhotoMenu.ConfirmDelete) },
+                        icon = GlacierIcons.Trash,
+                    )
                 }
             }
-            KeyHint(
-                stringResource(if (video) R.string.player_play else R.string.photo_hint_slideshow),
-            ) { KeyCap("OK", strong = true) }
-            KeyHint(stringResource(R.string.photo_hint_details)) { KeyCapIcon(GlacierIcons.ChevronDown, strong = true) }
         }
     }
 }
@@ -467,6 +552,97 @@ private fun MediaPhoto.placeholder(): ImageBitmap? {
     val (w, h) = placeholderSize()
     return BlurHashCache.decode(hash, w, h)
 }
+
+/**
+ * The keys of the viewer as plain glyphs and labels, with no box behind them: browse, OK, details and the options
+ * (hold OK, or Menu); in a slideshow only OK to pause it. The options' ring fills once as the row appears (at once with
+ * "reduce motion"). The arrows are the physical keys and mirror with the layout like the browsing does.
+ */
+@Composable
+private fun ViewerHints(video: Boolean, slideshow: Boolean) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(HINT_GAP.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (slideshow) {
+            HintItem(stringResource(R.string.player_pause)) { OkGlyph() }
+        } else {
+            HintItem(stringResource(R.string.photo_hint_browse)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    HintIcon(GlacierIcons.ChevronLeft)
+                    HintIcon(GlacierIcons.ChevronRight)
+                }
+            }
+            HintItem(stringResource(if (video) R.string.player_play else R.string.photo_hint_slideshow)) { OkGlyph() }
+            HintItem(stringResource(R.string.photo_hint_details)) { HintIcon(GlacierIcons.ChevronDown) }
+            HintItem(stringResource(R.string.photo_hint_options)) { OptionsRing() }
+        }
+    }
+}
+
+/** A key's [glyph] and what it does; the soft shadow keeps the label readable on bright photos. */
+@Composable
+private fun HintItem(label: String, glyph: @Composable () -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        glyph()
+        Text(label, style = hintStyle(FontWeight.Medium, HINT_TEXT_SP), color = GlacierColors.Ice)
+    }
+}
+
+@Composable
+private fun HintIcon(icon: ImageVector) =
+    Icon(icon, contentDescription = null, tint = GlacierColors.Ice, modifier = Modifier.size(HINT_ICON.dp))
+
+/** The OK key as bold small text. */
+@Composable
+private fun OkGlyph() = Text("OK", style = hintStyle(FontWeight.Bold, HINT_OK_SP), color = GlacierColors.Ice)
+
+/** OK in a thin ring whose accent arc runs round once as it appears; the rest of the ring is a faint track. */
+@Composable
+private fun OptionsRing() {
+    val accent = LocalAccent.current.main
+    val reduceMotion = LocalReduceMotion.current
+    val sweep = remember { Animatable(if (reduceMotion) 1f else 0f) }
+    LaunchedEffect(reduceMotion) {
+        if (reduceMotion) sweep.snapTo(1f) else sweep.animateTo(1f, tween(RING_MS, easing = FastOutSlowInEasing))
+    }
+    Box(
+        Modifier
+            .size(RING_SIZE.dp)
+            .drawBehind {
+                val stroke = RING_STROKE.dp.toPx()
+                val inset = stroke / 2
+                val arc = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
+                val at = Offset(inset, inset)
+                drawArc(GlacierColors.Ice.copy(alpha = 0.28f), 0f, 360f, false, at, arc, style = Stroke(stroke))
+                drawArc(
+                    accent,
+                    startAngle = -90f,
+                    sweepAngle = 360f * sweep.value,
+                    useCenter = false,
+                    topLeft = at,
+                    size = arc,
+                    style = Stroke(stroke, cap = StrokeCap.Round),
+                )
+            },
+        contentAlignment = Alignment.Center,
+    ) { Text("OK", style = hintStyle(FontWeight.Bold, RING_OK_SP), color = GlacierColors.Ice) }
+}
+
+/** The hints' text: a soft dark shadow instead of a box behind it. */
+@Composable
+private fun hintStyle(weight: FontWeight, size: Int) = GlacierText.body(size, weight).copy(
+    shadow = Shadow(Color.Black.copy(alpha = 0.6f), Offset(0f, 2f), blurRadius = 8f),
+)
+
+private const val HINT_GAP = 34
+private const val HINT_TEXT_SP = 20
+private const val HINT_OK_SP = 17
+private const val RING_OK_SP = 13
+private const val HINT_ICON = 22
+private const val RING_SIZE = 34
+private const val RING_STROKE = 2
+private const val RING_MS = 900
 
 /**
  * The whole photo, as large as the screen allows. Until it is sharp its BlurHash shows with a loader, tiny and drawn

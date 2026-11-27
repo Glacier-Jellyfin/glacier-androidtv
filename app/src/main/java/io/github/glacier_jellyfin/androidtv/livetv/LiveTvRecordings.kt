@@ -1,7 +1,6 @@
 package io.github.glacier_jellyfin.androidtv.livetv
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,7 +40,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
@@ -58,14 +56,13 @@ import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierText
 import io.github.glacier_jellyfin.androidtv.core.designsystem.LocalAccent
-import io.github.glacier_jellyfin.androidtv.core.designsystem.ModalSheet
 import io.github.glacier_jellyfin.androidtv.core.designsystem.OptionRow
 import io.github.glacier_jellyfin.androidtv.core.designsystem.OptionsPanel
 import io.github.glacier_jellyfin.androidtv.core.designsystem.OptionsPanelScope
 import io.github.glacier_jellyfin.androidtv.core.designsystem.PillButton
 import io.github.glacier_jellyfin.androidtv.core.designsystem.SpinningDiamond
-import io.github.glacier_jellyfin.androidtv.core.designsystem.ignoreHeldOk
 import io.github.glacier_jellyfin.androidtv.ui.Artwork
+import io.github.glacier_jellyfin.androidtv.ui.ConfirmDeleteDialog
 import io.github.glacier_jellyfin.androidtv.ui.HoldOkMark
 
 private val RowShape = RoundedCornerShape(18.dp)
@@ -631,50 +628,13 @@ fun LiveTvSheetHost(
     if (sheet is LiveTvSheet.ConfirmDelete) {
         // A confirmation forces a decision, so it stays a dialog in the middle.
         val recording = sheet.recording
-        ModalSheet(onDismiss = viewModel::closeSheet, width = 680) {
-            Column(
-                Modifier
-                    .ignoreHeldOk()
-                    .focusProperties { onExit = { cancelFocusChange() } }
-                    .focusGroup(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(28.dp),
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        stringResource(R.string.livetv_delete_title),
-                        style = GlacierText.display(30),
-                        color = GlacierColors.Ice,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center,
-                    )
-                    Text(
-                        stringResource(R.string.livetv_delete_body, recording.title),
-                        style = GlacierText.body(17),
-                        color = GlacierColors.Mist,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    PillButton(
-                        stringResource(R.string.action_cancel),
-                        onClick = viewModel::closeSheet,
-                        modifier = Modifier.focusRequester(first),
-                    )
-                    PillButton(
-                        stringResource(R.string.livetv_delete),
-                        onClick = { viewModel.deleteRecording(recording) },
-                        primary = true,
-                        icon = GlacierIcons.Trash,
-                    )
-                }
-            }
-        }
-        FocusOnStart(first)
+        ConfirmDeleteDialog(
+            title = stringResource(R.string.livetv_delete_title),
+            body = stringResource(R.string.livetv_delete_body, recording.title),
+            confirmLabel = stringResource(R.string.livetv_delete),
+            onConfirm = { viewModel.deleteRecording(recording) },
+            onDismiss = viewModel::closeSheet,
+        )
         return
     }
     val title: String

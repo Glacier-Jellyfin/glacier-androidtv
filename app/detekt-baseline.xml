@@ -145,6 +145,7 @@
     <ID>TooManyFunctions:DetailViewModel.kt:DetailViewModel : ViewModel</ID>
     <ID>TooManyFunctions:FolderViewModel.kt:FolderViewModel : ViewModel</ID>
     <ID>TooManyFunctions:LibraryViewModel.kt:LibraryViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:PhotoViewModel.kt:PhotoViewModel : ViewModel</ID>
     <ID>TooManyFunctions:LiveTvComponents.kt:io.github.glacier_jellyfin.androidtv.livetv.LiveTvComponents.kt</ID>
     <ID>TooManyFunctions:LiveTvPlayerViewModel.kt:LiveTvPlayerViewModel : ViewModelRecordActions</ID>
     <ID>TooManyFunctions:LiveTvViewModel.kt:LiveTvViewModel : ViewModelRecordActions</ID>
