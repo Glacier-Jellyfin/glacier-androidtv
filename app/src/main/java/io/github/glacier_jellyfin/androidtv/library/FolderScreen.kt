@@ -93,6 +93,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.activity.watchedBy
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderContent
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderMedia
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
@@ -660,6 +661,7 @@ private fun LazyGridScope.mediaCards(
                         locked = item.item.showsLock(),
                         imageHeight = cardHeight(),
                         videoBadge = true,
+                        watchers = item.item.watchedBy(),
                     )
 
                     is FolderMedia.Photo -> PhotoCard(

@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.activity.watchedBy
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
@@ -419,6 +420,7 @@ private fun CollectionCard(item: MediaItem, viewModel: DetailViewModel) {
                 progress = item.progress,
                 onClick = { viewModel.openItem(item) },
                 locked = locked,
+                watchers = item.watchedBy(),
             )
         }
 
@@ -470,6 +472,7 @@ private fun CollectionCard(item: MediaItem, viewModel: DetailViewModel) {
                 watched = item.played && item.kind in WatchableInCollection,
                 count = item.unwatchedCount.takeIf { counted && !item.played },
                 locked = locked,
+                watchers = item.watchedBy(),
             )
         }
     }

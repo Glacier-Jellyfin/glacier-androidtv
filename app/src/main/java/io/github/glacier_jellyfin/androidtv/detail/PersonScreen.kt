@@ -51,6 +51,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.activity.watchedBy
 import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
 import io.github.glacier_jellyfin.androidtv.core.data.media.Credit
 import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
@@ -368,6 +369,7 @@ fun PersonScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: PersonViewMo
                                                 },
                                                 modifier = Modifier.restoring(credit.item.id.toString()),
                                                 locked = credit.item.showsLock(),
+                                                watchers = credit.item.watchedBy(),
                                             )
                                             KindPill(
                                                 if (credit.item.kind == ItemKind.Series) {

@@ -68,6 +68,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.activity.WatchedByLine
+import io.github.glacier_jellyfin.androidtv.activity.watchedBy
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
@@ -262,6 +264,7 @@ private fun MediaDetail(
     viewModel: DetailViewModel,
 ) {
     val item = details.item
+    val watchers by viewModel.watchedBy.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     val playFocus = remember { FocusRequester() }
     val crumbFocus = remember { FocusRequester() }
@@ -296,6 +299,7 @@ private fun MediaDetail(
                         )
                         Title(item.title, size = 84, maxWidth = 1180)
                         FactsRow(item, mediaFacts(details), tech = techLine(details))
+                        WatchedByLine(watchers.of(item), series = item.kind == ItemKind.Series)
                         item.overview?.let { Overview(it, maxWidth = 900) }
                         Row(
                             Modifier.padding(top = 10.dp)
@@ -382,6 +386,7 @@ private fun MediaDetail(
                                     onClick = { viewModel.openSimilar(similar) },
                                     watched = similar.played,
                                     locked = similar.showsLock(),
+                                    watchers = similar.watchedBy(),
                                 )
                             }
                         }
@@ -400,6 +405,7 @@ private fun EpisodeDetail(
     viewModel: DetailViewModel,
 ) {
     val episode = details.item
+    val watchers by viewModel.watchedBy.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     val playFocus = remember { FocusRequester() }
     val crumbFocus = remember { FocusRequester() }
@@ -444,6 +450,7 @@ private fun EpisodeDetail(
                                 tech = techLine(details),
                                 size = 19,
                             )
+                            WatchedByLine(watchers.of(episode), series = false)
                             episode.overview?.let { Overview(it, maxWidth = 760) }
                             val progress = episode.progress
                             val left = episode.remainingMinutes

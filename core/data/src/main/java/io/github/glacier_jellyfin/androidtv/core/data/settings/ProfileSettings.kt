@@ -48,6 +48,8 @@ data class ProfileSettings(
     val folders: FolderSettings = FolderSettings(),
     /** How the music videos tab lists them; null until picked, when their metadata decides. */
     val musicVideoView: MusicVideoView? = null,
+    /** Settings › Activity: what the activity of other users shows. */
+    val activity: ActivitySettings = ActivitySettings(),
 ) {
     /** These settings with the stored values of earlier versions brought up to date. */
     fun migrated(): ProfileSettings = copy(appearance = appearance.migrated())
@@ -335,6 +337,7 @@ private fun <T> List<T>.swapped(
 enum class HomeRow {
     ContinueWatching,
     Favorites,
+    Activity,
     Latest,
     RecentAlbums,
     FavoriteSongs,
@@ -609,3 +612,23 @@ data class LastTracks(
     /** Subtitles were switched off; [subtitle] is null then. */
     val subtitlesOff: Boolean = false,
 )
+
+/**
+ * Settings › Activity. [avatars] shows who watched a title on its card, [detail] on its detail page and in the player's
+ * info. [hiddenUsers] holds the excluded user ids, so people who join later show by default. [hiddenUserNames] keeps
+ * the name of each hidden person (id to name), so they can be listed and switched on again once they left the feed.
+ */
+@Serializable
+data class ActivitySettings(
+    val avatars: Boolean = true,
+    val detail: Boolean = true,
+    val hiddenUsers: Set<String> = emptySet(),
+    val hiddenUserNames: Map<String, String> = emptyMap(),
+) {
+    /** Hides the person [id] and remembers their [name]. */
+    fun hide(id: String, name: String) =
+        copy(hiddenUsers = hiddenUsers + id, hiddenUserNames = hiddenUserNames + (id to name))
+
+    /** Shows the person [id] again and forgets their name. */
+    fun show(id: String) = copy(hiddenUsers = hiddenUsers - id, hiddenUserNames = hiddenUserNames - id)
+}

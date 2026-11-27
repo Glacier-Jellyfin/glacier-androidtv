@@ -52,12 +52,14 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.activity.watchedBy
 import io.github.glacier_jellyfin.androidtv.core.data.media.CastMember
 import io.github.glacier_jellyfin.androidtv.core.data.media.Languages
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.Track
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackMark
 import io.github.glacier_jellyfin.androidtv.core.data.media.describeTrack
+import io.github.glacier_jellyfin.androidtv.core.designsystem.AvatarStack
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierCard
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
@@ -393,6 +395,7 @@ fun EpisodeCard(
     val accent = LocalAccent.current
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
     val sizes = LocalCardSizes.current
+    val watchers = episode.watchedBy()
     GlacierCard(onClick = onClick, modifier = modifier.width(sizes.episodeWidth.dp)) { focused ->
         Box(
             Modifier
@@ -431,26 +434,38 @@ fun EpisodeCard(
                     Modifier.align(Alignment.TopEnd).padding(end = 16.dp, top = 14.dp),
                 )
             }
-            when {
-                episode.played -> Box(
+            val progress = episode.progress.takeUnless { episode.played }
+            // The people who watched it share the bottom end corner: the check sits beside them, the bar below.
+            if (episode.played || watchers.isNotEmpty()) {
+                Row(
                     Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(16.dp)
-                        .size(34.dp)
-                        .clip(PillShape)
-                        .background(accent.main),
-                    contentAlignment = Alignment.Center,
+                        .padding(end = 16.dp, bottom = if (progress != null) 29.dp else 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        GlacierIcons.Check,
-                        contentDescription = null,
-                        tint = GlacierColors.Void,
-                        modifier = Modifier.size(18.dp),
-                    )
+                    if (episode.played) {
+                        Box(
+                            Modifier
+                                .size(34.dp)
+                                .clip(PillShape)
+                                .background(accent.main),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                GlacierIcons.Check,
+                                contentDescription = null,
+                                tint = GlacierColors.Void,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    }
+                    AvatarStack(watchers)
                 }
-
-                episode.progress != null -> ProgressBar(
-                    episode.progress ?: 0f,
+            }
+            if (progress != null) {
+                ProgressBar(
+                    progress,
                     track = Color(0x42E8F4F7),
                     modifier = Modifier
                         .align(Alignment.BottomCenter)

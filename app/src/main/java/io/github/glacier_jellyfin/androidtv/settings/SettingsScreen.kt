@@ -64,6 +64,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.Protection
 import io.github.glacier_jellyfin.androidtv.core.data.StartMode
 import io.github.glacier_jellyfin.androidtv.core.data.media.Languages
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
+import io.github.glacier_jellyfin.androidtv.core.data.media.mergeActivityPeople
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentAction
 import io.github.glacier_jellyfin.androidtv.core.data.playback.SegmentKind
 import io.github.glacier_jellyfin.androidtv.core.data.playback.UpNextMode
@@ -117,6 +118,7 @@ import io.github.glacier_jellyfin.androidtv.diagnostics.PlaybackCheckActivity
 import io.github.glacier_jellyfin.androidtv.favorites.title
 import io.github.glacier_jellyfin.androidtv.library.libraryTitle
 import io.github.glacier_jellyfin.androidtv.library.navTitle
+import io.github.glacier_jellyfin.androidtv.navigation.LocalActivity
 import io.github.glacier_jellyfin.androidtv.navigation.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.navigation.LocalLiveTv
 import io.github.glacier_jellyfin.androidtv.navigation.NavTarget
@@ -386,7 +388,10 @@ fun SettingsScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SettingsVi
             ) {
                 Text(stringResource(R.string.nav_settings), style = GlacierText.display(44), color = GlacierColors.Ice)
                 Spacer(Modifier.height(12.dp))
-                SettingsCategory.entries.forEach { category ->
+                val categories = SettingsCategory.entries.filter {
+                    it != SettingsCategory.Activity || state.activityAvailable
+                }
+                categories.forEach { category ->
                     CategoryPill(
                         label = stringResource(category.label),
                         active = category == state.category,
@@ -572,6 +577,20 @@ fun SettingsScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: SettingsVi
                     onDismiss = { openList = null },
                 )
             }
+
+            ListDialog.ActivityPeople -> ActivityPeopleDialog(
+                people = mergeActivityPeople(
+                    state.activityPeople,
+                    state.profile.activity.hiddenUsers,
+                    state.profile.activity.hiddenUserNames,
+                ),
+                hidden = state.profile.activity.hiddenUsers,
+                onToggle = { user ->
+                    val id = user.id.toString()
+                    viewModel.updateActivity { if (id in it.hiddenUsers) it.show(id) else it.hide(id, user.name) }
+                },
+                onDismiss = { openList = null },
+            )
 
             null -> Unit
         }
@@ -796,6 +815,12 @@ private fun rows(
         listFocus.getValue(ListDialog.LibraryCards),
     ) { onOpenList(ListDialog.LibraryCards) }
 
+    SettingsCategory.Activity -> activityRows(
+        state,
+        viewModel,
+        listFocus.getValue(ListDialog.ActivityPeople),
+    ) { onOpenList(ListDialog.ActivityPeople) }
+
     SettingsCategory.Playback -> playbackRows(state, viewModel)
 
     SettingsCategory.Audio -> audioRows(state, viewModel, languageFocus)
@@ -819,7 +844,7 @@ private fun appearanceRows(
     val appearance = state.profile.appearance
     val navigation = state.profile.navigation
     val kinds = LocalLibraryKinds.current
-    val navIds = navEntryIds(kinds, LocalLiveTv.current)
+    val navIds = navEntryIds(kinds, LocalLiveTv.current, LocalActivity.current)
     val favoriteIds = FavoriteRow.entries.map { it.name }
     // Recordings only on servers with Live TV, so they do not count either.
     val hasLiveTv = LocalLiveTv.current
@@ -840,6 +865,7 @@ private fun appearanceRows(
                     when (target) {
                         NavTarget.Home -> R.string.nav_home
                         NavTarget.Favorites -> R.string.nav_favorites
+                        NavTarget.Activity -> R.string.activity_title
                         NavTarget.LiveTv -> R.string.nav_live_tv
                         is NavTarget.Library -> target.kind.navTitle
                         else -> R.string.nav_home
@@ -850,6 +876,7 @@ private fun appearanceRows(
                         moving == id -> R.string.settings_entry_moving_sub
                         target == NavTarget.Home -> R.string.settings_nav_home_sub
                         target == NavTarget.Favorites -> R.string.settings_nav_favorites_sub
+                        target == NavTarget.Activity -> R.string.settings_nav_activity_sub
                         target == NavTarget.LiveTv -> R.string.settings_nav_live_tv_sub
                         else -> R.string.settings_nav_library_sub
                     },
@@ -987,6 +1014,7 @@ private fun homeRows(
         when (choice.row) {
             HomeRow.RecentAlbums, HomeRow.FavoriteSongs -> hasMusic
             HomeRow.LiveTvOnNow, HomeRow.LiveTvChannels, HomeRow.Recordings -> hasLiveTv
+            HomeRow.Activity -> state.activityAvailable
             else -> true
         }
     }
@@ -1101,6 +1129,59 @@ private fun homeRows(
                     configureFocus = libraryCardsFocus.takeIf { row == HomeRow.Libraries },
                 )
             },
+        ),
+    )
+}
+
+@Composable
+private fun activityRows(
+    state: SettingsUiState,
+    viewModel: SettingsViewModel,
+    peopleFocus: FocusRequester,
+    onPeople: () -> Unit,
+): List<SettingGroup> {
+    val activity = state.profile.activity
+    val people = mergeActivityPeople(state.activityPeople, activity.hiddenUsers, activity.hiddenUserNames)
+    val shown = people.count { it.id.toString() !in activity.hiddenUsers }
+    // "Everyone", "Nobody", or "2 of 3 people" once some are switched off.
+    val value = if (shown == people.size) {
+        stringResource(R.string.settings_activity_everyone)
+    } else if (shown == 0) {
+        stringResource(R.string.settings_activity_nobody)
+    } else {
+        pluralStringResource(R.plurals.settings_activity_some, people.size, shown, people.size)
+    }
+    return listOf(
+        SettingGroup(
+            stringResource(R.string.settings_cat_activity),
+            listOf(
+                SettingRow.Toggle(
+                    stringResource(R.string.settings_activity_avatars),
+                    stringResource(R.string.settings_activity_avatars_sub),
+                    activity.avatars,
+                    onToggle = { viewModel.updateActivity { it.copy(avatars = !it.avatars) } },
+                ),
+                SettingRow.Toggle(
+                    stringResource(R.string.settings_activity_detail),
+                    stringResource(R.string.settings_activity_detail_sub),
+                    activity.detail,
+                    onToggle = { viewModel.updateActivity { it.copy(detail = !it.detail) } },
+                ),
+                SettingRow.Value(
+                    stringResource(R.string.settings_activity_people),
+                    stringResource(
+                        if (people.isNotEmpty() && shown == 0) {
+                            R.string.settings_activity_all_hidden
+                        } else {
+                            R.string.settings_activity_people_sub
+                        },
+                    ),
+                    value,
+                    onClick = onPeople,
+                    enabled = people.isNotEmpty(),
+                    focus = peopleFocus,
+                ),
+            ),
         ),
     )
 }
@@ -1791,12 +1872,13 @@ private class PinOrigins {
 }
 
 /** The lists Settings opens in a dialog from a pill on their row. */
-private enum class ListDialog { LibraryCards, FavoriteRows }
+private enum class ListDialog { LibraryCards, FavoriteRows, ActivityPeople }
 
 /** Name and explanation of each home row in Settings › Home. */
 private val rowTexts = mapOf(
     HomeRow.ContinueWatching to (R.string.home_continue_watching to R.string.settings_row_continue_sub),
     HomeRow.Favorites to (R.string.home_favorites to R.string.settings_row_favorites_sub),
+    HomeRow.Activity to (R.string.home_activity to R.string.settings_row_activity_sub),
     HomeRow.Latest to (R.string.home_new_in to R.string.settings_row_latest_sub),
     HomeRow.RecentAlbums to (R.string.home_recent_albums to R.string.settings_row_recent_albums_sub),
     HomeRow.FavoriteSongs to (R.string.home_favorite_songs to R.string.settings_row_favorite_songs_sub),

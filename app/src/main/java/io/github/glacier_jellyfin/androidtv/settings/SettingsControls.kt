@@ -170,6 +170,8 @@ internal fun OptionCard(
     enabled: Boolean = true,
     trailing: (@Composable () -> Unit)? = null,
     below: (@Composable () -> Unit)? = null,
+    /** Makes the whole card the focusable, clickable element (OK triggers it); [trailing] then only shows state. */
+    onClick: (() -> Unit)? = null,
     /** Lifted to be moved: larger, tinted and outlined in the accent. */
     highlighted: Boolean = false,
     /** Steps back while another card is lifted. */
@@ -204,18 +206,33 @@ internal fun OptionCard(
             .fillMaxWidth()
             // Up/Down move card by card, also between a switch on the right and choices on the left.
             .focusGroup()
-            .then(if (enabled) Modifier else Modifier.focusable(interactionSource = interaction))
+            .then(
+                when {
+                    !enabled -> Modifier.focusable(interactionSource = interaction)
+
+                    onClick != null -> Modifier.clickable(
+                        interactionSource = interaction,
+                        indication = null,
+                        onClick = onClick,
+                    )
+
+                    else -> Modifier
+                },
+            )
             .clip(shape)
             .background(GlacierColors.GlassFill)
+            .then(if (focused && onClick != null) Modifier.background(accent.copy(alpha = 0.14f)) else Modifier)
             .then(if (highlighted) Modifier.background(accent.copy(alpha = 0.16f)) else Modifier)
             .border(
                 when {
                     highlighted -> 3.dp
+                    focused && onClick != null -> 3.dp
                     focused -> 2.dp
                     else -> 1.dp
                 },
                 when {
                     highlighted -> accent
+                    focused && onClick != null -> accent
                     focused -> accent.copy(alpha = 0.6f)
                     else -> GlacierColors.GlassBorder
                 },

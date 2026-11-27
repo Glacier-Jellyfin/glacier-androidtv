@@ -8,6 +8,7 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 ## [Unreleased]
 
 ### Neu
+- Eine Startseitenreihe und eine Aktivitätsseite zeigen, was andere auf dem Server gesehen und als Favorit markiert haben, mit einer Seite pro Person, die zeigt, was sie gerade schaut, gesehen und favorisiert hat; Avatare auf Karten sowie die Aktivität auf Detailseiten und in den Player-Infos zeigen, wer einen Titel gesehen hat (braucht Jellyfin Enhanced 12.3 oder neuer mit eingeschaltetem Activity Feed); die Aktivitätsseite ist ein Eintrag der Navigation und lässt sich in den Einstellungen ausblenden
 - Eine Reihe Aufnahmen auf der Startseite und Aufnahmen als wählbare Quelle für das Spotlight
 - Eine Reihe Aufnahmen auf der Favoritenseite
 - Foto- und Videodetails in der Fotoansicht. Mit Unten oder der Info-Taste zeigt der erste Reiter, wann und wo es entstand und in welchem Ordner es liegt, der Reiter Technik die Kamera, die Belichtung und die Datei. Ein Video zeigt dieselben Reiter Technik und Server wie der Player. OK halten oder Menü drücken öffnet die Optionen, mit denen sich ein Foto oder Video nach einer Rückfrage vom Server löschen lässt, wenn der Server es erlaubt. Das geht auch, indem du in der Ordneransicht OK auf einem Foto oder Video hältst (#43). Eine Einstellung füllt die schwarzen Ränder um Fotos und Hochkant-Videos mit einer unscharfen Kopie

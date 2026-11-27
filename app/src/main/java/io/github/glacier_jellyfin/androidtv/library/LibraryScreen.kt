@@ -78,6 +78,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.activity.watchedBy
 import io.github.glacier_jellyfin.androidtv.core.data.media.AlphabetLetters
 import io.github.glacier_jellyfin.androidtv.core.data.media.FolderMedia
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
@@ -507,6 +508,7 @@ fun LibraryScreen(
                                     onLongClick = { viewModel.videoOptions(media) },
                                     shape = CardShape.Wide,
                                     locked = media.showsLock(),
+                                    watchers = media.watchedBy(),
                                     modifier = entryFocus(
                                         media.id.toString(),
                                         first = folder.folders.isEmpty() && index == 0,
@@ -602,6 +604,7 @@ fun LibraryScreen(
                                         ItemKind.MusicVideo -> CardShape.Wide
                                         else -> CardShape.Poster
                                     },
+                                    watchers = item.watchedBy(),
                                     // Played means nothing for music: music videos carry no check.
                                     watched = item.played && item.kind in setOf(
                                         ItemKind.Movie,

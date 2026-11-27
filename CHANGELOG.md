@@ -23,6 +23,7 @@ collapsed block, and the app shows it when its language is German or Spanish.
 ## [Unreleased]
 
 ### New
+- A home row and an Activity page show what others on the server watched and favorited, with a page per person showing what they are watching, watched and favorited; avatars on cards and the activity on detail pages and in the player info show who watched a title (needs Jellyfin Enhanced 12.3 or newer with the Activity Feed switched on); the Activity page is an entry of the navigation and can be hidden in Settings
 - A Recordings row on the home screen and recordings as an optional spotlight source
 - A Recordings row on the favorites page
 - Photo and video details in the photo viewer. Press Down or the Info key: the first tab shows when and where it was taken and its folder, the Technical tab the camera, exposure and file. A video shows the same Technical and Server tabs as the player. Hold OK or press Menu for the options, which also delete a photo or video from the server after a confirmation when the server allows it. This also works by holding OK on a photo or video in the folder (#43). A setting fills the black bars around photos and portrait videos with a blurred copy

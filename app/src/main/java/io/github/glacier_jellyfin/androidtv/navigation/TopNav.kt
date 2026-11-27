@@ -92,6 +92,9 @@ val LocalLibraryKinds = staticCompositionLocalOf { listOf(LibraryKind.Movies, Li
 /** The server offers Live TV (HomeRepository.liveTv): the navigation gets its entry. */
 val LocalLiveTv = staticCompositionLocalOf { false }
 
+/** The server's activity feed answers (ActivityRepository.available): the navigation gets its entry. */
+val LocalActivity = staticCompositionLocalOf { false }
+
 /** The entries between search and settings as Settings › Appearance arranges them; null before they are known. */
 val LocalNavTargets = staticCompositionLocalOf<List<NavTarget>?> { null }
 
@@ -111,6 +114,9 @@ sealed interface NavTarget {
 
     /** Everything marked with the heart. */
     data object Favorites : NavTarget
+
+    /** What others on the server watch and favorite. */
+    data object Activity : NavTarget
     data object Settings : NavTarget
     data object Profile : NavTarget
 
@@ -467,6 +473,8 @@ private fun NavItem(
 
             NavTarget.Favorites -> NavLabel(stringResource(R.string.nav_favorites), foreground)
 
+            NavTarget.Activity -> NavLabel(stringResource(R.string.activity_title), foreground)
+
             NavTarget.LiveTv -> NavLabel(stringResource(R.string.nav_live_tv), foreground)
 
             is NavTarget.Library -> NavLabel(stringResource(target.kind.navTitle), foreground)
@@ -484,15 +492,20 @@ private fun NavLabel(text: String, color: Color) {
 /** Ids of the entries Settings › Appearance arranges, in their default order; Live TV only when the server has it. */
 
 /** Music videos are a tab of music; they have their own entry only on a server without music. */
-fun navEntryIds(kinds: List<LibraryKind>, liveTv: Boolean): List<String> = listOf(
+fun navEntryIds(
+    kinds: List<LibraryKind>,
+    liveTv: Boolean,
+    activity: Boolean,
+): List<String> = listOf(
     NAV_HOME,
 ) + kinds.filterNot { it == LibraryKind.MusicVideos && LibraryKind.Music in kinds }.map { it.name } + listOfNotNull(
     NAV_LIVE_TV.takeIf { liveTv },
-) + NAV_FAVORITES
+) + NAV_FAVORITES + listOfNotNull(NAV_ACTIVITY.takeIf { activity })
 
 fun navTargetOf(id: String): NavTarget? = when (id) {
     NAV_HOME -> NavTarget.Home
     NAV_FAVORITES -> NavTarget.Favorites
+    NAV_ACTIVITY -> NavTarget.Activity
     NAV_LIVE_TV -> NavTarget.LiveTv
     else -> LibraryKind.entries.firstOrNull { it.name == id }?.let(NavTarget::Library)
 }
@@ -502,9 +515,12 @@ fun navTargets(
     navigation: NavigationSettings,
     kinds: List<LibraryKind>,
     liveTv: Boolean,
-): List<NavTarget> =
-    navigation.entries.arranged(navEntryIds(kinds, liveTv)).filter { it.shown }.mapNotNull { navTargetOf(it.id) }
+    activity: Boolean,
+): List<NavTarget> = navigation.entries.arranged(navEntryIds(kinds, liveTv, activity))
+    .filter { it.shown }
+    .mapNotNull { navTargetOf(it.id) }
 
 const val NAV_HOME = "Home"
 const val NAV_FAVORITES = "Favorites"
 const val NAV_LIVE_TV = "LiveTv"
+const val NAV_ACTIVITY = "Activity"

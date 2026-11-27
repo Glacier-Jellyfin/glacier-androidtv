@@ -852,6 +852,7 @@
     <string name="settings_nav_home_sub">Destacados y tus filas</string>
     <string name="settings_nav_library_sub">Todas las bibliotecas de este tipo</string>
     <string name="settings_nav_favorites_sub">Todo lo que marcaste con el corazón</string>
+    <string name="settings_nav_activity_sub">Lo que otros en el servidor ven y marcan como favorito</string>
     <string name="settings_nav_live_tv_sub">Tus canales de TV y lo que se emite ahora</string>
     <string name="settings_entry_moving_sub">Arriba y Abajo mueven la entrada. OK o Atrás la sueltan.</string>
     <string name="settings_favorites_body">Elige qué filas muestra la página de Favoritos y en qué orden.</string>
@@ -1274,4 +1275,64 @@
     <string name="channel_continue_watching">Seguir viendo</string>
     <string name="channel_recently_added">Películas y series añadidas recientemente</string>
     <string name="channel_recent_releases">Películas y series nuevas</string>
+    <string name="home_activity">Lo que ven los demás</string>
+    <string name="activity_title">Actividad</string>
+    <string name="activity_yesterday">Ayer</string>
+    <string name="activity_watched">Visto</string>
+    <string name="activity_favorited">Marcado como favorito</string>
+    <string name="activity_people">Otros usuarios</string>
+    <string name="activity_watching_now">Viendo ahora</string>
+    <string name="activity_day_today">hoy</string>
+    <string name="activity_day_yesterday">ayer</string>
+    <string name="activity_last_active">Última actividad: %1$s</string>
+    <string name="activity_last_active_at">Última actividad %1$s, %2$s</string>
+    <plurals name="activity_count_watched">
+        <item quantity="one">%1$d visto</item>
+        <item quantity="many">%1$d vistos</item>
+        <item quantity="other">%1$d vistos</item>
+    </plurals>
+    <plurals name="activity_count_favorites">
+        <item quantity="one">%1$d favorito</item>
+        <item quantity="many">%1$d favoritos</item>
+        <item quantity="other">%1$d favoritos</item>
+    </plurals>
+    <string name="activity_empty">Aún no hay actividad.</string>
+    <string name="activity_empty_body">El administrador del servidor activa el Activity Feed en Jellyfin Enhanced. Los usuarios ocultos solo aparecen si \"Hide reviews from hidden users\" está desactivado. Los demás solo aparecen si el administrador deja que todos vean el feed completo.</string>
+    <string name="settings_cat_activity">Actividad</string>
+    <string name="settings_row_activity_sub">Lo que ven los demás en el servidor, con acceso a toda la actividad</string>
+    <string name="settings_activity_avatars">Avatares en las tarjetas</string>
+    <string name="settings_activity_avatars_sub">Muestra en la tarjeta quién vio un título</string>
+    <string name="settings_activity_people">Mostrar actividad de</string>
+    <string name="settings_activity_people_sub">Elige de quién ves la actividad</string>
+    <string name="settings_activity_people_body">Desactiva a las personas cuya actividad no quieres ver.</string>
+    <string name="settings_activity_person_on">Se muestra su actividad</string>
+    <string name="settings_activity_person_off">Actividad oculta</string>
+    <string name="settings_activity_nobody">Nadie</string>
+    <string name="settings_activity_all_hidden">Todos están ocultos: no aparecerá actividad de otros.</string>
+    <string name="settings_activity_everyone">Todos</string>
+    <plurals name="settings_activity_some">
+        <item quantity="one">%1$d de %2$d persona</item>
+        <item quantity="many">%1$d de %2$d personas</item>
+        <item quantity="other">%1$d de %2$d personas</item>
+    </plurals>
+    <string name="settings_activity_detail">Actividad en la página de detalles</string>
+    <string name="settings_activity_detail_sub">Muestra quién vio un título en su página y en la información del reproductor</string>
+    <string name="activity_favorite">Favorito</string>
+    <string name="activity_percent">%1$d %%</string>
+    <string name="activity_today_at">Hoy, %1$s</string>
+    <string name="activity_tab_hint">Muestra la última actividad de cada persona. De quién la muestra Glacier lo eliges en Ajustes › Actividad.</string>
+    <string name="activity_watched_by_one">Visto por %1$s</string>
+    <string name="activity_watched_by_two">Visto por %1$s y %2$s</string>
+    <plurals name="activity_watched_by_many">
+        <item quantity="one">Visto por %1$s, %2$s y %3$d más</item>
+        <item quantity="many">Visto por %1$s, %2$s y %3$d más</item>
+        <item quantity="other">Visto por %1$s, %2$s y %3$d más</item>
+    </plurals>
+    <string name="activity_watching_one">%1$s lo está viendo</string>
+    <string name="activity_watching_two">%1$s y %2$s lo están viendo</string>
+    <plurals name="activity_watching_many">
+        <item quantity="one">%1$s, %2$s y %3$d más lo están viendo</item>
+        <item quantity="many">%1$s, %2$s y %3$d más lo están viendo</item>
+        <item quantity="other">%1$s, %2$s y %3$d más lo están viendo</item>
+    </plurals>
 </resources>

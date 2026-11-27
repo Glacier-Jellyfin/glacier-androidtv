@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import io.github.glacier_jellyfin.androidtv.core.designsystem.AvatarPerson
+import io.github.glacier_jellyfin.androidtv.core.designsystem.AvatarStack
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierCard
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierColors
 import io.github.glacier_jellyfin.androidtv.core.designsystem.GlacierIcons
@@ -137,6 +139,9 @@ internal fun Modifier.artworkFill(): Modifier {
     return background(Brush.linearGradient(listOf(accent.deep.copy(alpha = 0.45f), GlacierColors.Deep)))
 }
 
+/** Space under the avatar stack of a card with a progress bar: the bar's inset, its height and a gap. */
+private const val PROGRESS_CLEARANCE = 33
+
 private const val ARTWORK_RETRIES = 1
 private const val ARTWORK_RETRY_DELAY_MS = 800L
 
@@ -178,6 +183,8 @@ fun ContinueCard(
     imageHeight: Int? = null,
     onLongClick: (() -> Unit)? = null,
     videoBadge: Boolean = false,
+    /** The people who watched it, as a stack in the bottom end corner above the progress bar. */
+    watchers: List<AvatarPerson> = emptyList(),
 ) {
     val accent = LocalAccent.current.main
     val shape = RoundedCornerShape(GlacierShapes.RadiusMd)
@@ -222,6 +229,14 @@ fun ContinueCard(
                         .align(Alignment.BottomCenter)
                         .padding(start = 16.dp, end = 16.dp, bottom = 20.dp)
                         .height(5.dp),
+                )
+            }
+            if (watchers.isNotEmpty()) {
+                AvatarStack(
+                    watchers,
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 12.dp, bottom = if (progress != null) PROGRESS_CLEARANCE.dp else 10.dp),
                 )
             }
             val playAlpha by animateFloatAsState(if (focused) 1f else 0f, label = "play")
@@ -277,6 +292,8 @@ fun PosterCard(
     locked: Boolean = false,
     /** Short status on the artwork's lower edge (Seerr titles: "Request", "Requested" …). */
     tag: String? = null,
+    /** The people who watched it, as a stack in the bottom end corner. */
+    watchers: List<AvatarPerson> = emptyList(),
 ) {
     val accent = LocalAccent.current.main
     val shape: Shape = RoundedCornerShape(if (square) GlacierShapes.RadiusMd else GlacierShapes.RadiusLg)
@@ -323,6 +340,9 @@ fun PosterCard(
                         maxLines = 1,
                     )
                 }
+            }
+            if (watchers.isNotEmpty()) {
+                AvatarStack(watchers, Modifier.align(Alignment.BottomEnd).padding(10.dp))
             }
             if (badge != null) {
                 Box(
@@ -441,6 +461,8 @@ fun GridCard(
     locked: Boolean = false,
     /** Holding OK or the menu key: the card's options. */
     onLongClick: (() -> Unit)? = null,
+    /** The people who watched it, as a stack in the bottom end corner. */
+    watchers: List<AvatarPerson> = emptyList(),
 ) {
     val accent = LocalAccent.current.main
     val outline: Shape = when (shape) {
@@ -487,6 +509,9 @@ fun GridCard(
                     ),
             )
             if (locked) LockBadge(Modifier.align(Alignment.TopStart))
+            if (watchers.isNotEmpty()) {
+                AvatarStack(watchers, Modifier.align(Alignment.BottomEnd).padding(10.dp))
+            }
             when {
                 // With options, the mark in the corner says that holding OK opens them.
                 onLongClick != null -> HoldOkMark(

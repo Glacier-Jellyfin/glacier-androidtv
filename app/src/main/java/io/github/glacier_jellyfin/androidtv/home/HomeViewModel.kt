@@ -4,9 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.activity.withoutHidden
 import io.github.glacier_jellyfin.androidtv.channels.HomeLaunches
 import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.media.ActivityEntry
+import io.github.glacier_jellyfin.androidtv.core.data.media.ActivityRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.ActivityTitle
 import io.github.glacier_jellyfin.androidtv.core.data.media.AgeFilter
 import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeContent
@@ -17,7 +21,9 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LiveChannel
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
 import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
+import io.github.glacier_jellyfin.androidtv.core.data.media.watchedByOthers
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.ActivitySettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.HomeSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SpotlightSource
@@ -48,6 +54,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.jellyfin.sdk.model.serializer.toUUIDOrNull
 
 data class HomeState(
     val loading: Boolean = true,
@@ -56,6 +63,9 @@ data class HomeState(
     val spotlight: List<MediaItem> = emptyList(),
     val userName: String = "",
     val settings: HomeSettings = HomeSettings(),
+    /** Cards of "What others are watching", already without the people Settings › Activity hides. */
+    val activity: List<ActivityTitle> = emptyList(),
+    val activityAvatars: Boolean = true,
 )
 
 @HiltViewModel
@@ -68,13 +78,20 @@ class HomeViewModel @Inject constructor(
     playback: PlaybackRepository,
     private val details: DetailRepository,
     private val music: MusicController,
+    private val activityFeed: ActivityRepository,
     launches: HomeLaunches,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
-        HomeState(userName = sessions.session.value?.user?.name.orEmpty(), settings = settings.settings.value.home),
+        HomeState(
+            userName = sessions.session.value?.user?.name.orEmpty(),
+            settings = settings.settings.value.home,
+            activityAvatars = settings.settings.value.activity.avatars,
+        ),
     )
     val state: StateFlow<HomeState> = _state.asStateFlow()
+
+    private var activityEntries: List<ActivityEntry>? = null
 
     private val _events = Channel<UiEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
@@ -87,10 +104,21 @@ class HomeViewModel @Inject constructor(
             viewModelScope.launch { _events.send(UiEvent.Navigate(DetailRoute(launch.itemId))) }
         }
         load()
+        loadActivity()
         // Back from the player: "continue watching" and progress bars follow what was just watched.
-        viewModelScope.launch { playback.stopped.collect { refresh() } }
+        viewModelScope.launch {
+            playback.stopped.collect {
+                refresh()
+                loadActivity(fresh = true)
+            }
+        }
         // Marked watched or unwatched on a detail page.
-        viewModelScope.launch { details.playedChanged.collect { refresh() } }
+        viewModelScope.launch {
+            details.playedChanged.collect {
+                refresh()
+                loadActivity(fresh = true)
+            }
+        }
         // Added to or removed from the favorites on a detail page.
         viewModelScope.launch { details.favoriteChanged.collect { refreshFavorites() } }
         // Settings › Home changed: only the spotlight follows.
@@ -101,6 +129,10 @@ class HomeViewModel @Inject constructor(
                 _state.value.content?.let { content -> updateSpotlight(content) }
             }
         }
+        // Settings › Activity changed: the row filters the feed it has anew.
+        viewModelScope.launch {
+            settings.settings.map { it.activity }.distinctUntilChanged().collect { applyActivity(it) }
+        }
         // "On now" follows the guide: once a programme on the rows is over, the channels load anew.
         viewModelScope.launch {
             while (true) {
@@ -109,6 +141,42 @@ class HomeViewModel @Inject constructor(
                 val now = System.currentTimeMillis()
                 if (channels.any { channel -> channel.now?.let { it.endMs <= now } == true }) refreshLive()
             }
+        }
+    }
+
+    /**
+     * The activity row, apart from the rest of home: it never delays or breaks it, and a feed that
+     * cannot be read just leaves the row out. [fresh] drops the cached feed, for after something was played.
+     */
+    private fun loadActivity(fresh: Boolean = false) {
+        viewModelScope.launch {
+            if (fresh) activityFeed.invalidate()
+            runSuspendCatching { activityFeed.feed() }
+                .onSuccess { entries ->
+                    activityEntries = entries
+                    applyActivity(settings.settings.value.activity)
+                }
+                .onFailure { Log.w(TAG, "Loading the activity failed", it) }
+        }
+    }
+
+    private fun applyActivity(activity: ActivitySettings) {
+        val self = sessions.session.value?.user?.userId?.toUUIDOrNull()
+        val titles = if (self == null) {
+            emptyList()
+        } else {
+            watchedByOthers(activityEntries.orEmpty().withoutHidden(activity.hiddenUsers, self), self)
+        }
+        _state.update { it.copy(activity = titles, activityAvatars = activity.avatars) }
+    }
+
+    /** An episode or movie opens its page, a home video plays, a show card opens the show. */
+    fun openActivity(title: ActivityTitle) {
+        val item = title.item
+        when {
+            title.seriesId != null -> navigate(DetailRoute(title.seriesId.toString()))
+            item.kind == ItemKind.Other -> play(item)
+            else -> openDetails(item)
         }
     }
 

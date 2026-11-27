@@ -39,13 +39,17 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.glacier_jellyfin.androidtv.activity.ActivityWatchers
+import io.github.glacier_jellyfin.androidtv.activity.LocalWatchers
 import io.github.glacier_jellyfin.androidtv.channels.HomeLaunch
 import io.github.glacier_jellyfin.androidtv.channels.HomeLaunches
 import io.github.glacier_jellyfin.androidtv.core.data.AccountRepository
 import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
 import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
+import io.github.glacier_jellyfin.androidtv.core.data.media.ActivityRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
+import io.github.glacier_jellyfin.androidtv.core.data.media.Watchers
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AppearanceSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.NavigationSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepository
@@ -76,6 +80,7 @@ import io.github.glacier_jellyfin.androidtv.music.NowPlayingSaver
 import io.github.glacier_jellyfin.androidtv.music.SAVER_IDLE_MS
 import io.github.glacier_jellyfin.androidtv.navigation.GlacierNavHost
 import io.github.glacier_jellyfin.androidtv.navigation.HomeRoute
+import io.github.glacier_jellyfin.androidtv.navigation.LocalActivity
 import io.github.glacier_jellyfin.androidtv.navigation.LocalLibraryKinds
 import io.github.glacier_jellyfin.androidtv.navigation.LocalLiveTv
 import io.github.glacier_jellyfin.androidtv.navigation.LocalNavTargets
@@ -130,7 +135,12 @@ class StartViewModel @Inject constructor(
     private val launches: HomeLaunches,
     private val diagnostics: Diagnostics,
     settingsSync: SettingsSync,
+    activityWatchers: ActivityWatchers,
+    activityRepository: ActivityRepository,
 ) : ViewModel() {
+    /** Who watched what, for the avatars on cards; empty while they are switched off. */
+    val watchers: StateFlow<Watchers> = activityWatchers.cards
+
     /** Where "Fotos & Videos" was left, for the way back into it. */
     fun folderMemory(): FolderMemory = browseMemory.folders()
 
@@ -139,6 +149,9 @@ class StartViewModel @Inject constructor(
 
     /** Whether the server offers Live TV, for every navigation bar. */
     val liveTv: StateFlow<Boolean> = home.liveTv
+
+    /** Whether the activity feed answers, for every navigation bar. */
+    val activityAvailable: StateFlow<Boolean> = activityRepository.available
 
     /** The signed-in profile's look; defaults on the setup and profile screens. */
     val appearance: StateFlow<AppearanceSettings> = settings.settings
@@ -285,7 +298,9 @@ class MainActivity : ComponentActivity() {
             val profileImage by startViewModel.profileImage.collectAsStateWithLifecycle()
             val libraryKinds by startViewModel.libraryKinds.collectAsStateWithLifecycle()
             val liveTv by startViewModel.liveTv.collectAsStateWithLifecycle()
+            val activity by startViewModel.activityAvailable.collectAsStateWithLifecycle()
             val navigation by startViewModel.navigation.collectAsStateWithLifecycle()
+            val watchers by startViewModel.watchers.collectAsStateWithLifecycle()
             val update by startViewModel.updates.state.collectAsStateWithLifecycle()
             GlacierTheme(accent = Accent.valueOf(appearance.accent.name), reduceMotion = appearance.reduceMotion) {
                 val toaster = remember { Toaster() }
@@ -297,7 +312,9 @@ class MainActivity : ComponentActivity() {
                     LocalProfileImage provides profileImage,
                     LocalLibraryKinds provides libraryKinds,
                     LocalLiveTv provides liveTv,
-                    LocalNavTargets provides navTargets(navigation, libraryKinds, liveTv),
+                    LocalActivity provides activity,
+                    LocalWatchers provides watchers,
+                    LocalNavTargets provides navTargets(navigation, libraryKinds, liveTv, activity),
                     LocalUpdatePending provides update.pending,
                     LocalMusicProgress provides startViewModel.music.progress,
                     LocalMusicController provides startViewModel.music,

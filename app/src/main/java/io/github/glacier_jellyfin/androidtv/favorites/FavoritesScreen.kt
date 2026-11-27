@@ -32,6 +32,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.activity.watchedBy
 import io.github.glacier_jellyfin.androidtv.core.data.media.Favorites
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.MediaItem
@@ -228,6 +229,7 @@ private fun FavoriteCard(
             onClick = onClick,
             modifier = modifier,
             locked = item.showsLock(),
+            watchers = item.watchedBy(),
         )
 
         ItemKind.Album, ItemKind.Artist -> PosterCard(
@@ -245,6 +247,7 @@ private fun FavoriteCard(
             title = item.title,
             badge = item.unwatchedCount,
             locked = item.showsLock(),
+            watchers = item.watchedBy(),
             onClick = onClick,
             modifier = modifier,
         )

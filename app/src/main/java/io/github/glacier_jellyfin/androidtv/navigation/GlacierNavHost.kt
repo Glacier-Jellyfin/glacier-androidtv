@@ -12,6 +12,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
+import io.github.glacier_jellyfin.androidtv.activity.ActivityPersonScreen
+import io.github.glacier_jellyfin.androidtv.activity.ActivityScreen
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.detail.DetailScreen
 import io.github.glacier_jellyfin.androidtv.detail.PersonScreen
@@ -43,6 +45,7 @@ private val SingleScreens = setOf(
     HomeRoute,
     SettingsRoute,
     FavoritesRoute,
+    ActivityRoute,
     LiveTvRoute,
 )
 
@@ -200,6 +203,8 @@ fun GlacierNavHost(
         composable<SeerrRoute> { SeerrScreen(onNavigate = navigate) }
         composable<SettingsRoute> { SettingsScreen(onNavigate = navigate) }
         composable<FavoritesRoute> { FavoritesScreen(onNavigate = navigate) }
+        composable<ActivityRoute> { ActivityScreen(onNavigate = navigate) }
+        composable<ActivityPersonRoute> { ActivityPersonScreen(onNavigate = navigate, onBack = back) }
         composable<LiveTvRoute> { LiveTvScreen(onNavigate = navigate) }
         composable<LiveTvPlayerRoute> { LiveTvPlayerScreen(onNavigate = navigate, onBack = back) }
     }

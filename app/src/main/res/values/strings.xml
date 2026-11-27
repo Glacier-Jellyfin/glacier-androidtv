@@ -837,6 +837,7 @@
     <string name="settings_nav_home_sub">Spotlight and your rows</string>
     <string name="settings_nav_library_sub">All libraries of this kind</string>
     <string name="settings_nav_favorites_sub">Everything you marked with the heart</string>
+    <string name="settings_nav_activity_sub">What others on the server watch and favorite</string>
     <string name="settings_nav_live_tv_sub">Your TV channels and what is on now</string>
     <string name="settings_entry_moving_sub">Up and Down move the entry. OK or Back puts it down.</string>
     <string name="settings_favorites_body">Pick which rows the Favorites page shows and in which order.</string>
@@ -1253,4 +1254,59 @@
     <string name="channel_continue_watching">Continue watching</string>
     <string name="channel_recently_added">Recently added movies &amp; shows</string>
     <string name="channel_recent_releases">New movies &amp; shows</string>
+    <string name="home_activity">What others are watching</string>
+    <string name="activity_title">Activity</string>
+    <string name="activity_yesterday">Yesterday</string>
+    <string name="activity_watched">Watched</string>
+    <string name="activity_favorited">Favorited</string>
+    <string name="activity_people">Other users</string>
+    <string name="activity_watching_now">Watching now</string>
+    <string name="activity_day_today">today</string>
+    <string name="activity_day_yesterday">yesterday</string>
+    <string name="activity_last_active">Last active: %1$s</string>
+    <string name="activity_last_active_at">Last active %1$s, %2$s</string>
+    <plurals name="activity_count_watched">
+        <item quantity="one">%1$d watched</item>
+        <item quantity="other">%1$d watched</item>
+    </plurals>
+    <plurals name="activity_count_favorites">
+        <item quantity="one">%1$d favorite</item>
+        <item quantity="other">%1$d favorites</item>
+    </plurals>
+    <string name="activity_empty">No activity yet.</string>
+    <string name="activity_empty_body">The server admin turns on the Activity Feed in Jellyfin Enhanced. Hidden users only appear when \"Hide reviews from hidden users\" is off. Others only appear when the admin lets everyone see the whole feed.</string>
+    <string name="settings_cat_activity">Activity</string>
+    <string name="settings_row_activity_sub">What others on the server watch, with a link to the full activity</string>
+    <string name="settings_activity_avatars">Avatars on cards</string>
+    <string name="settings_activity_avatars_sub">Shows who watched a title on its card</string>
+    <string name="settings_activity_people">Show activity from</string>
+    <string name="settings_activity_people_sub">Pick whose activity you see</string>
+    <string name="settings_activity_people_body">Switch off the people whose activity you do not want to see.</string>
+    <string name="settings_activity_person_on">Shows their activity</string>
+    <string name="settings_activity_person_off">Activity hidden</string>
+    <string name="settings_activity_nobody">Nobody</string>
+    <string name="settings_activity_all_hidden">Everyone is hidden: no activity from others will appear.</string>
+    <string name="settings_activity_everyone">Everyone</string>
+    <plurals name="settings_activity_some">
+        <item quantity="one">%1$d of %2$d person</item>
+        <item quantity="other">%1$d of %2$d people</item>
+    </plurals>
+    <string name="settings_activity_detail">Activity on the detail page</string>
+    <string name="settings_activity_detail_sub">Shows who watched a title on its page and in the player info</string>
+    <string name="activity_favorite">Favorite</string>
+    <string name="activity_percent">%1$d %%</string>
+    <string name="activity_today_at">Today, %1$s</string>
+    <string name="activity_tab_hint">Shows each person’s latest activity. Choose whose activity Glacier shows in Settings › Activity.</string>
+    <string name="activity_watched_by_one">Watched by %1$s</string>
+    <string name="activity_watched_by_two">Watched by %1$s and %2$s</string>
+    <plurals name="activity_watched_by_many">
+        <item quantity="one">Watched by %1$s, %2$s and %3$d other</item>
+        <item quantity="other">Watched by %1$s, %2$s and %3$d others</item>
+    </plurals>
+    <string name="activity_watching_one">%1$s is watching</string>
+    <string name="activity_watching_two">%1$s and %2$s are watching</string>
+    <plurals name="activity_watching_many">
+        <item quantity="one">%1$s, %2$s and %3$d other are watching</item>
+        <item quantity="other">%1$s, %2$s and %3$d others are watching</item>
+    </plurals>
 </resources>

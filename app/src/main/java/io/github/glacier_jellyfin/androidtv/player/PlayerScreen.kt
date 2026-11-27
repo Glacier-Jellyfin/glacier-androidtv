@@ -424,9 +424,12 @@ fun PlayerScreen(onBack: () -> Unit, viewModel: PlayerViewModel = hiltViewModel(
 
         state.trackPanel?.let { PlayerTrackPanel(state, it, viewModel) }
         if (state.infoOpen) {
+            val activity by viewModel.activity.collectAsStateWithLifecycle()
+            LaunchedEffect(Unit) { viewModel.refreshActivity() }
             InfoPanel(
                 state,
                 progress,
+                activity = activity,
                 transcodeStatus = viewModel::transcodeStatus,
                 onDismiss = viewModel::closeInfo,
             )

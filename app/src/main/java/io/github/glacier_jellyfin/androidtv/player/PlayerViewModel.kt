@@ -21,6 +21,9 @@ import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.activity.ActivityWatchers
+import io.github.glacier_jellyfin.androidtv.activity.PersonActivity
+import io.github.glacier_jellyfin.androidtv.activity.personActivities
 import io.github.glacier_jellyfin.androidtv.core.data.media.CastMember
 import io.github.glacier_jellyfin.androidtv.core.data.media.Chapter
 import io.github.glacier_jellyfin.androidtv.core.data.media.DetailRepository
@@ -85,9 +88,14 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -187,6 +195,7 @@ class PlayerViewModel @Inject constructor(
     private val musicPlayback: MusicController,
     private val versions: VersionChooser,
     private val diagnostics: Diagnostics,
+    private val activityWatchers: ActivityWatchers,
 ) : ViewModel() {
 
     private val route = savedStateHandle.toRoute<PlayerRoute>()
@@ -208,6 +217,14 @@ class PlayerViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(PlayerUiState())
     val state: StateFlow<PlayerUiState> = _state.asStateFlow()
+
+    /** What other people did with the playing title, for the info panel's tab "Activity"; empty when switched off. */
+    val activity: StateFlow<List<PersonActivity>> = combine(
+        _state.map { state -> state.details?.item?.takeIf { it.kind in ActivityKinds }?.id }.distinctUntilChanged(),
+        activityWatchers.entries,
+        settings.settings.map { it.activity.detail }.distinctUntilChanged(),
+    ) { id, entries, enabled -> if (enabled && id != null) personActivities(entries, id) else emptyList() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     private val _progress = MutableStateFlow(PlayerProgress())
     val progress: StateFlow<PlayerProgress> = _progress.asStateFlow()
@@ -787,6 +804,11 @@ class PlayerViewModel @Inject constructor(
     fun openChapters() = _state.update { it.copy(chaptersOpen = true, trackPanel = null) }
 
     fun closeChapters() = _state.update { it.copy(chaptersOpen = false) }
+
+    /** The info panel opened: reads the activity feed, which is cached for a moment, so that its tab is current. */
+    fun refreshActivity() {
+        if (settings.settings.value.activity.detail) viewModelScope.launch { activityWatchers.refresh() }
+    }
 
     fun openInfo() = _state.update { it.copy(infoOpen = true, chaptersOpen = false, trackPanel = null) }
 
@@ -1772,6 +1794,10 @@ class PlayerViewModel @Inject constructor(
     private companion object {
         const val TAG = "Player"
         const val TICK_MS = 500L
+        const val STOP_TIMEOUT_MS = 5_000L
+
+        /** Titles other people can have watched or favorited, as far as the feed knows them. */
+        val ActivityKinds = setOf(ItemKind.Movie, ItemKind.Episode, ItemKind.Other)
         const val REPORT_INTERVAL_MS = 10_000L
 
         /** Credits ending this close to the end count as running to the end. */

@@ -19,6 +19,7 @@ class HomeRowsTest {
             listOf(
                 "ContinueWatching",
                 "Favorites",
+                "Activity",
                 "Latest:movies",
                 "Latest:shows",
                 "RecentAlbums",
@@ -42,6 +43,7 @@ class HomeRowsTest {
                 "Libraries",
                 "Favorites",
                 "ContinueWatching",
+                "Activity",
                 "Latest:movies",
                 "Latest:shows",
                 "RecentAlbums",
@@ -62,6 +64,7 @@ class HomeRowsTest {
             listOf(
                 "ContinueWatching",
                 "Favorites",
+                "Activity",
                 "Latest:shows",
                 "Latest:movies",
                 "RecentAlbums",
@@ -87,6 +90,7 @@ class HomeRowsTest {
             listOf(
                 "ContinueWatching",
                 "Favorites",
+                "Activity",
                 "Latest:movies",
                 "Libraries",
                 "RecentAlbums",
@@ -109,6 +113,7 @@ class HomeRowsTest {
             listOf(
                 "ContinueWatching",
                 "Favorites",
+                "Activity",
                 "Latest:shows",
                 "Latest:movies",
                 "Latest:music",
@@ -160,5 +165,16 @@ class HomeRowsTest {
             listOf("Libraries", "ContinueWatching", "LiveTvOnNow", "LiveTvChannels"),
             rows.map { it.id }.take(4),
         )
+    }
+
+    @Test
+    fun `rows saved before the activity row existed get it after the favorites, shown`() = runTest {
+        val old = """{"profiles":{"s|u":{"home":{"rows":[
+            {"row":"Libraries"},{"row":"ContinueWatching"},{"row":"Favorites"}
+        ]}}}}"""
+        val home = SettingsSerializer.readFrom(ByteArrayInputStream(old.toByteArray())).profiles.values.single().home
+        val rows = home.homeRows(libraries)
+        assertEquals(listOf("Libraries", "ContinueWatching", "Favorites", "Activity"), rows.map { it.id }.take(4))
+        assertEquals(true, rows[3].shown)
     }
 }

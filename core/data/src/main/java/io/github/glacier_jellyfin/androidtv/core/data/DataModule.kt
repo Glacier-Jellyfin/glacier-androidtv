@@ -9,6 +9,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import io.github.glacier_jellyfin.androidtv.core.data.media.ActivitySource
+import io.github.glacier_jellyfin.androidtv.core.data.media.JellyfinEnhancedActivitySource
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsSerializer
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsState
 import java.io.File
@@ -33,4 +35,9 @@ object DataModule {
         corruptionHandler = ReplaceFileCorruptionHandler { SettingsState() },
         produceFile = { File(context.filesDir, "datastore/settings.json") },
     )
+
+    /** The activity feed comes from Jellyfin Enhanced. A companion plugin would be bound here instead. */
+    @Provides
+    @Singleton
+    fun provideActivitySource(source: JellyfinEnhancedActivitySource): ActivitySource = source
 }

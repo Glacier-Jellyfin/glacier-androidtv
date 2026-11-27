@@ -9,6 +9,7 @@ only in English.
 ## [Unreleased]
 
 ### Novedades
+- Una fila en la pantalla de inicio y una página de Actividad muestran lo que otros del servidor han visto y marcado como favorito, con una página por persona que muestra lo que está viendo, ha visto y ha marcado como favorito; los avatares en las tarjetas y la actividad en las páginas de detalles y en la información del reproductor muestran quién vio un título (requiere Jellyfin Enhanced 12.3 o posterior con el Activity Feed activado); la página de Actividad es una entrada de la navegación y se puede ocultar en Ajustes
 - Una fila de Grabaciones en la pantalla de inicio y las grabaciones como fuente opcional del destacado
 - Una fila de Grabaciones en la página de favoritos
 - Detalles de fotos y vídeos en el visor de fotos. Con Abajo o la tecla Info, la primera pestaña muestra cuándo y dónde se tomó y su carpeta, y la pestaña Técnico la cámara, la exposición y el archivo. Un vídeo muestra las mismas pestañas Técnico y Servidor que el reproductor. Mantén pulsado OK o pulsa Menú para abrir las opciones, que también eliminan una foto o un vídeo del servidor tras una confirmación cuando el servidor lo permite. También funciona manteniendo pulsado OK sobre una foto o un vídeo en la carpeta (#43). Un ajuste rellena las barras negras alrededor de las fotos y los vídeos verticales con una copia desenfocada

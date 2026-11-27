@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.activity.ActivityWatchers
 import io.github.glacier_jellyfin.androidtv.core.data.ParentalControl
 import io.github.glacier_jellyfin.androidtv.core.data.media.AgeFilter
 import io.github.glacier_jellyfin.androidtv.core.data.media.CastMember
@@ -21,6 +22,8 @@ import io.github.glacier_jellyfin.androidtv.core.data.media.MusicTrack
 import io.github.glacier_jellyfin.androidtv.core.data.media.Season
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelection
 import io.github.glacier_jellyfin.androidtv.core.data.media.TrackSelections
+import io.github.glacier_jellyfin.androidtv.core.data.media.Watchers
+import io.github.glacier_jellyfin.androidtv.core.data.media.buildWatchers
 import io.github.glacier_jellyfin.androidtv.core.data.media.forVersion
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackSource
@@ -53,9 +56,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -116,6 +124,7 @@ class DetailViewModel @Inject constructor(
     private val ageFilter: AgeFilter,
     private val musicPlayback: MusicController,
     private val versions: VersionChooser,
+    private val activityWatchers: ActivityWatchers,
 ) : ViewModel() {
 
     private var itemId: UUID = UUID.fromString(savedStateHandle.toRoute<DetailRoute>().itemId)
@@ -156,8 +165,16 @@ class DetailViewModel @Inject constructor(
         },
     )
 
+    /** Who of the other people watched what, for the line under the facts; empty when Settings › Activity switches it off. */
+    val watchedBy: StateFlow<Watchers> = combine(
+        activityWatchers.entries,
+        settings.settings.map { it.activity.detail }.distinctUntilChanged(),
+    ) { entries, enabled -> if (enabled) buildWatchers(entries, self = null) else Watchers.None }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), Watchers.None)
+
     init {
         load()
+        if (settings.settings.value.activity.detail) viewModelScope.launch { activityWatchers.refresh() }
         viewModelScope.launch { playback.stopped.collect(::refresh) }
         // Something else marked watched or not (a movie of this collection, an episode of this show):
         // the page follows. This page's own item it already shows as changed.
@@ -1032,6 +1049,7 @@ class DetailViewModel @Inject constructor(
 
     private companion object {
         const val TAG = "Detail"
+        const val STOP_TIMEOUT_MS = 5_000L
         val PLAYABLE_IN_COLLECTION = setOf(ItemKind.Movie, ItemKind.Series, ItemKind.Episode, ItemKind.MusicVideo)
     }
 }

@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.activity.PersonActivity
 import io.github.glacier_jellyfin.androidtv.core.data.media.CastMember
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemDetails
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
@@ -107,6 +108,9 @@ internal enum class Tone { Ok, Warn, Plain }
 private const val TAB_TITLE = 0
 private const val TAB_TECHNICAL = 1
 
+/** The fourth tab, after the server one; it exists only when others have activity on the title. */
+private const val TAB_ACTIVITY = 3
+
 /**
  * The OSD's info button: the title, what this device plays and what the server
  * sends. Left/Right switch tabs, OK or Back closes.
@@ -115,6 +119,7 @@ private const val TAB_TECHNICAL = 1
 fun InfoPanel(
     state: PlayerUiState,
     progress: PlayerProgress,
+    activity: List<PersonActivity>,
     transcodeStatus: suspend () -> TranscodeStatus?,
     onDismiss: () -> Unit,
 ) {
@@ -140,13 +145,14 @@ fun InfoPanel(
             ),
             stringResource(R.string.player_info_technical),
             stringResource(R.string.player_info_server),
-        ),
+        ) + listOfNotNull(stringResource(R.string.activity_title).takeIf { activity.isNotEmpty() }),
         onDismiss = onDismiss,
-        growsWithContent = { it == TAB_TECHNICAL },
+        growsWithContent = { it == TAB_TECHNICAL || it == TAB_ACTIVITY },
     ) { tab ->
         when (tab) {
             TAB_TITLE -> TitleTab(details, progress, details.cast.ifEmpty { state.seriesCast })
             TAB_TECHNICAL -> TechnicalTab(state, stats)
+            TAB_ACTIVITY -> ActivityTab(activity)
             else -> ServerTab(state, stats, transcodeStatus)
         }
     }

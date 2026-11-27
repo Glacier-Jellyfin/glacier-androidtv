@@ -50,6 +50,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Text
 import io.github.glacier_jellyfin.androidtv.R
+import io.github.glacier_jellyfin.androidtv.activity.ActivityCard
+import io.github.glacier_jellyfin.androidtv.activity.watchedBy
 import io.github.glacier_jellyfin.androidtv.core.data.media.ItemKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.Library
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
@@ -381,6 +383,7 @@ fun HomeScreen(
                                                         onClick = { viewModel.openContinueWatching(item) },
                                                         modifier = Modifier.remembered("continue-${item.id}"),
                                                         locked = item.showsLock(),
+                                                        watchers = item.watchedBy(),
                                                     )
                                                 }
                                             }
@@ -395,6 +398,21 @@ fun HomeScreen(
                                                         item,
                                                         onClick = { viewModel.openDetails(item) },
                                                         modifier = Modifier.remembered("favorites-${item.id}"),
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    HomeRow.Activity -> if (state.activity.isNotEmpty()) {
+                                        item(key = "activity") {
+                                            MediaRow(title = stringResource(R.string.home_activity)) {
+                                                items(state.activity, key = { it.key }) { title ->
+                                                    ActivityCard(
+                                                        title,
+                                                        avatars = state.activityAvatars,
+                                                        onClick = { viewModel.openActivity(title) },
+                                                        modifier = Modifier.remembered("activity-${title.key}"),
                                                     )
                                                 }
                                             }
@@ -625,6 +643,7 @@ private fun PosterFor(
             title = item.title,
             badge = item.unwatchedCount,
             locked = item.showsLock(),
+            watchers = item.watchedBy(),
             onClick = onClick,
             modifier = modifier,
         )

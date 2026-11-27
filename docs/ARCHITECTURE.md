@@ -13,7 +13,7 @@ app ──► core:designsystem
 
 | Module | Responsibility |
 |---|---|
-| `app` | Entry point, navigation, screens. Each feature is a package: `setup`, `profiles`, `parental` (PIN and age lock), `home`, `library`, `detail`, `search`, `seerr`, `player`, `trailer`, `music`, `channels`, `settings`, `diagnostics`, `update`. `navigation` holds the nav host and top bar; `ui` holds the few app-level building blocks that need app strings or data types (cards, toasts, media text formatting). |
+| `app` | Entry point, navigation, screens. Each feature is a package: `setup`, `profiles`, `parental` (PIN and age lock), `home`, `activity`, `library`, `detail`, `search`, `seerr`, `player`, `trailer`, `music`, `channels`, `settings`, `diagnostics`, `update`. `navigation` holds the nav host and top bar; `ui` holds the few app-level building blocks that need app strings or data types (cards, toasts, media text formatting). |
 | `core:designsystem` | Glacier tokens (colours, accents, shapes) and the Compose theme, plus the focus-aware components shared by all screens: action button, toggle chip, modal sheet, options panel, overlay card, marquee text, row and card scrolling, and key blocking. |
 | `core:jellyfin` | Server discovery, authentication, API access and the device profile sent to the server. |
 | `core:data` | Repositories, local settings, and syncing the preferences Jellyfin stores per user. |
@@ -64,6 +64,46 @@ normal Jellyfin token, and the plugin maps the Jellyfin user to the Seerr
 user. This also works for accounts signed in with Quick Connect, and no Seerr
 key is stored on the TV. The plugin API is not public, so the client ignores
 unknown fields and hides Seerr results quietly when anything fails.
+
+### Activity
+
+The home row "What others are watching" and the Activity page read the
+activity feed of the Jellyfin Enhanced server plugin
+(`/JellyfinEnhanced/activity`) with the normal Jellyfin token. It needs
+plugin version 12.3.0.0 or newer. The feed fails soft: a 404 means the Activity
+Feed is switched off, and any other failure just leaves the row and page out.
+Users the admin hid only show when "Hide reviews from hidden users" is off, and
+with "ActivityFeedOwnOnlyForNonAdmins" on, non-admins only see their own
+entries, so others do not appear. The entries carry item ids only: they are
+hydrated in one Items call and filtered by age locally. The result is cached for 30 seconds
+and asked for once for the home row and the page (up to 200 entries, the
+server maximum). The plugin keeps at most 500 entries for all users together and
+drops the oldest, so the page and a person's profile show recent activity only.
+
+`ActivityRepository` does not know the plugin: it asks an `ActivitySource`
+(bound in `DataModule`, today `JellyfinEnhancedActivitySource`, which holds the
+path, the DTOs and the 401/404 mapping) and keeps the availability memory, the
+cache, the hydration and the age filter. A companion plugin would replace only
+the source. The repository also publishes the last feed as `latest`.
+
+`ActivityWatchers` (app) turns that feed into `Watchers`: for each movie,
+episode and video the people who watched it, and for each show the people who
+watched any of its episodes, newest first. The profile itself, the people
+hidden in Settings › Activity and favorites are left out. MainActivity
+provides it as `LocalWatchers` (empty while "Avatars on cards" is off) and the
+base cards take a `watchers` list, which the item-aware call sites fill with
+`MediaItem.watchedBy()`. Music, photo and Live TV cards get none. The detail page
+shows a quiet line with the avatars and a sentence (`watchersSummary`), and
+the player's info panel gets a last tab "Activity" with one card per person
+(`personActivities`). Both follow the setting "Activity on the detail page".
+
+The Activity page is stacked rows like the Favorites page: "Watched" and
+"Favorited" with one 16:9 card per title (`watchedTitles`, `favoritedTitles`;
+episodes of a show fold into a show card when one person watched two or more)
+and "People", round portraits that open the person's page
+(`ActivityPersonRoute`). That page splits one person's entries into "Watching
+now", "Watched" and "Favorites" (`personProfile`) from the cached feed. The
+grouping lives in `core:data` (`ActivityGroups`) and is unit-tested.
 
 ### Server compatibility
 

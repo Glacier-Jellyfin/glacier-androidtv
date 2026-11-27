@@ -175,3 +175,11 @@ data class LiveTvPlayerRoute(
 
 @Serializable
 data object SettingsRoute
+
+/** What others on the server watched and favorited, opened from the home row. */
+@Serializable
+data object ActivityRoute
+
+/** What one person of the activity feed watched and favorited, opened from the People row. */
+@Serializable
+data class ActivityPersonRoute(val userId: String)

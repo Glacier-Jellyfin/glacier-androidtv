@@ -172,4 +172,26 @@ class SettingsSerializerTest {
         SettingsSerializer.writeTo(state, out)
         assertEquals(state, SettingsSerializer.readFrom(ByteArrayInputStream(out.toByteArray())))
     }
+
+    @Test
+    fun `activity settings written before hidden names existed get an empty map`() = runTest {
+        val json = """{"profiles":{"s/u":{"activity":{"avatars":false,"hiddenUsers":["a"]}}}}"""
+        val activity = SettingsSerializer.readFrom(ByteArrayInputStream(json.toByteArray()))
+            .profiles.getValue("s/u").activity
+        assertEquals(setOf("a"), activity.hiddenUsers)
+        assertEquals(emptyMap<String, String>(), activity.hiddenUserNames)
+        assertEquals(false, activity.avatars)
+    }
+
+    @Test
+    fun `hiding remembers the name and showing forgets it`() = runTest {
+        val hidden = ActivitySettings().hide("a", "Ann")
+        assertEquals(setOf("a"), hidden.hiddenUsers)
+        assertEquals(mapOf("a" to "Ann"), hidden.hiddenUserNames)
+        val out = ByteArrayOutputStream()
+        SettingsSerializer.writeTo(SettingsState(profiles = mapOf("s/u" to ProfileSettings(activity = hidden))), out)
+        val read = SettingsSerializer.readFrom(ByteArrayInputStream(out.toByteArray()))
+        assertEquals(hidden, read.profiles.getValue("s/u").activity)
+        assertEquals(ActivitySettings(), hidden.show("a"))
+    }
 }

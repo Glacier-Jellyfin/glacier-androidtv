@@ -24,6 +24,8 @@ fun SessionManager.navEvent(target: NavTarget, current: NavTarget?): UiEvent.Nav
 
         NavTarget.Favorites -> UiEvent.Navigate(FavoritesRoute)
 
+        NavTarget.Activity -> UiEvent.Navigate(ActivityRoute)
+
         NavTarget.NowPlaying -> UiEvent.Navigate(MusicRoute())
 
         NavTarget.LiveTv -> UiEvent.Navigate(LiveTvRoute)

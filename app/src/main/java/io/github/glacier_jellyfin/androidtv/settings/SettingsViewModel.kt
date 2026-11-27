@@ -13,13 +13,17 @@ import io.github.glacier_jellyfin.androidtv.core.data.SessionManager
 import io.github.glacier_jellyfin.androidtv.core.data.StartMode
 import io.github.glacier_jellyfin.androidtv.core.data.StartProfile
 import io.github.glacier_jellyfin.androidtv.core.data.StoredUser
+import io.github.glacier_jellyfin.androidtv.core.data.media.ActivityRepository
+import io.github.glacier_jellyfin.androidtv.core.data.media.ActivityUser
 import io.github.glacier_jellyfin.androidtv.core.data.media.HomeRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.Library
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryKind
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryQuery
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibraryRepository
 import io.github.glacier_jellyfin.androidtv.core.data.media.LibrarySort
+import io.github.glacier_jellyfin.androidtv.core.data.media.people
 import io.github.glacier_jellyfin.androidtv.core.data.playback.PlaybackRepository
+import io.github.glacier_jellyfin.androidtv.core.data.settings.ActivitySettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.AppearanceSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.DeviceSettings
 import io.github.glacier_jellyfin.androidtv.core.data.settings.FolderSettings
@@ -34,6 +38,7 @@ import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsRepositor
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SettingsSync
 import io.github.glacier_jellyfin.androidtv.core.data.settings.SubtitleStyle
 import io.github.glacier_jellyfin.androidtv.core.data.settings.UiLanguage
+import io.github.glacier_jellyfin.androidtv.core.jellyfin.runSuspendCatching
 import io.github.glacier_jellyfin.androidtv.core.log.Log
 import io.github.glacier_jellyfin.androidtv.core.player.FfmpegAudio
 import io.github.glacier_jellyfin.androidtv.core.player.PlaybackSetup
@@ -66,11 +71,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.sdk.api.client.exception.InvalidStatusException
 import org.jellyfin.sdk.api.client.extensions.systemApi
+import org.jellyfin.sdk.model.serializer.toUUIDOrNull
 
 /** Settings categories in the design's order. */
 enum class SettingsCategory(val label: Int) {
     Appearance(R.string.settings_cat_appearance),
     Home(R.string.settings_cat_home),
+    Activity(R.string.settings_cat_activity),
     Playback(R.string.settings_cat_playback),
     Audio(R.string.settings_cat_audio),
     Subtitles(R.string.settings_cat_subtitles),
@@ -123,6 +130,10 @@ data class SettingsUiState(
     val removeAsked: Boolean = false,
     /** The update dialog with the full release notes, opened from the update card. */
     val updateDialog: Boolean = false,
+    /** The activity feed is usable on this server; Settings › Activity and its home row show only then. */
+    val activityAvailable: Boolean = false,
+    /** The people of the feed except this profile, newest first. */
+    val activityPeople: List<ActivityUser> = emptyList(),
 ) {
     val hasOwnCopy: Boolean get() = copies.any { it.deviceId == thisDeviceId }
 }
@@ -157,6 +168,7 @@ class SettingsViewModel @Inject constructor(
     private val diagnostics: Diagnostics,
     private val playback: PlaybackRepository,
     private val sync: SettingsSync,
+    private val activity: ActivityRepository,
     val updates: UpdateManager,
     val whatsNew: WhatsNew,
 ) : ViewModel() {
@@ -201,6 +213,15 @@ class SettingsViewModel @Inject constructor(
             _state.update { it.copy(languages = languages) }
         }
         viewModelScope.launch { sync.copies.collect { copies -> _state.update { it.copy(copies = copies) } } }
+        viewModelScope.launch {
+            activity.available.collect { available -> _state.update { it.copy(activityAvailable = available) } }
+        }
+        // Asked once on opening, so whether the feed exists and who is in it are known.
+        viewModelScope.launch {
+            val self = sessions.session.value?.user?.userId?.toUUIDOrNull()
+            val entries = runSuspendCatching { activity.feed() }.getOrNull() ?: return@launch
+            _state.update { it.copy(activityPeople = people(entries).filter { user -> user.id != self }) }
+        }
         viewModelScope.launch { parental.lock.collect { lock -> _state.update { it.copy(lock = lock) } } }
         viewModelScope.launch {
             parental.settingsUnlocked.collect { unlocked ->
@@ -260,6 +281,10 @@ class SettingsViewModel @Inject constructor(
 
     fun updateHome(transform: (HomeSettings) -> HomeSettings) {
         viewModelScope.launch { settings.updateHome(transform) }
+    }
+
+    fun updateActivity(transform: (ActivitySettings) -> ActivitySettings) {
+        viewModelScope.launch { settings.updateActivity(transform) }
     }
 
     fun updateNavigation(transform: (NavigationSettings) -> NavigationSettings) {
