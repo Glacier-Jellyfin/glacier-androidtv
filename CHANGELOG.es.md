@@ -8,6 +8,8 @@ only in English.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-28
+
 ### Novedades
 - Una fila en la pantalla de inicio y una página de Actividad muestran lo que otros del servidor han visto y marcado como favorito, con una página por persona que muestra lo que está viendo, ha visto y ha marcado como favorito; los avatares en las tarjetas y la actividad en las páginas de detalles y en la información del reproductor muestran quién vio un título (requiere Jellyfin Enhanced 12.3 o posterior con el Activity Feed activado); la página de Actividad es una entrada de la navegación y se puede ocultar en Ajustes
 - Una fila de Grabaciones en la pantalla de inicio y las grabaciones como fuente opcional del destacado

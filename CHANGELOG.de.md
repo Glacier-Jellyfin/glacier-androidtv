@@ -7,6 +7,8 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-28
+
 ### Neu
 - Eine Startseitenreihe und eine Aktivitätsseite zeigen, was andere auf dem Server gesehen und als Favorit markiert haben, mit einer Seite pro Person, die zeigt, was sie gerade schaut, gesehen und favorisiert hat; Avatare auf Karten sowie die Aktivität auf Detailseiten und in den Player-Infos zeigen, wer einen Titel gesehen hat (braucht Jellyfin Enhanced 12.3 oder neuer mit eingeschaltetem Activity Feed); die Aktivitätsseite ist ein Eintrag der Navigation und lässt sich in den Einstellungen ausblenden
 - Eine Reihe Aufnahmen auf der Startseite und Aufnahmen als wählbare Quelle für das Spotlight

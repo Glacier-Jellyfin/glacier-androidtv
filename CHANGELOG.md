@@ -22,6 +22,8 @@ collapsed block, and the app shows it when its language is German or Spanish.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-28
+
 ### New
 - A home row and an Activity page show what others on the server watched and favorited, with a page per person showing what they are watching, watched and favorited; avatars on cards and the activity on detail pages and in the player info show who watched a title (needs Jellyfin Enhanced 12.3 or newer with the Activity Feed switched on); the Activity page is an entry of the navigation and can be hidden in Settings
 - A Recordings row on the home screen and recordings as an optional spotlight source
