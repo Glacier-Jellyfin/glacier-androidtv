@@ -7,6 +7,9 @@ these subsections in this order: `### Neu`, `### Verbessert`, `### Behoben`,
 
 ## [Unreleased]
 
+### Behoben
+- In einem weitergescrollten Foto- und Videoordner scheinen Pfad, Titel und Werkzeugleiste nicht mehr durch die Navigationsleiste
+
 ## [0.11.0] - 2026-11-28
 
 ### Neu

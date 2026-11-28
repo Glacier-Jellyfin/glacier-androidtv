@@ -22,6 +22,9 @@ collapsed block, and the app shows it when its language is German or Spanish.
 
 ## [Unreleased]
 
+### Fixed
+- In a scrolled photo and video folder, the breadcrumb, title and toolbar no longer show through the navigation bar
+
 ## [0.11.0] - 2026-11-28
 
 ### New

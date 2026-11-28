@@ -46,6 +46,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -58,6 +59,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
@@ -74,6 +76,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
@@ -294,10 +297,13 @@ fun FolderScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: FolderViewMo
                                         )
                                     }
                                 }
-                            Breadcrumb(levels, lowestFocus = crumbFocus, startEllipsis = true)
+                            Box(Modifier.fadeUnderNav()) {
+                                Breadcrumb(levels, lowestFocus = crumbFocus, startEllipsis = true)
+                            }
                         }
                         Text(
                             title,
+                            modifier = Modifier.fadeUnderNav(),
                             style = GlacierText.display(50),
                             color = GlacierColors.Ice,
                             maxLines = 1,
@@ -307,7 +313,7 @@ fun FolderScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: FolderViewMo
                 }
                 // Also over folders alone: the view and order chosen there hold for the folders below.
                 val toolbar: @Composable () -> Unit = {
-                    Box(Modifier.onFocusChanged { inToolbar = it.hasFocus }) {
+                    Box(Modifier.fadeUnderNav().onFocusChanged { inToolbar = it.hasFocus }) {
                         Toolbar(
                             settings = settings,
                             canFilter = content.canFilter,
@@ -392,6 +398,25 @@ fun FolderScreen(onNavigate: (UiEvent.Navigate) -> Unit, viewModel: FolderViewMo
 
         state.options?.let { MediaOptionsHost(it, viewModel) }
     }
+}
+
+/** Bottom edge of the navigation pill: its top padding (34) plus its height, measured on screen. */
+private const val NAV_BOTTOM_DP = 102f
+
+/** How far above its resting place (150 dp) a header element is fully visible; it fades out over this band. */
+private const val NAV_FADE_BAND_DP = 40f
+
+/**
+ * Fades a page header element out as it scrolls up to the navigation pill, so it is gone before it
+ * reaches the pill's bottom edge instead of showing beside and through it. Cards may pass under the bar;
+ * the header must not. The position is read in the layer, so scrolling redraws but does not recompose.
+ */
+private fun Modifier.fadeUnderNav(): Modifier = composed {
+    val top = remember { mutableFloatStateOf(Float.MAX_VALUE) }
+    val density = LocalDensity.current.density
+    this
+        .onGloballyPositioned { top.floatValue = it.positionInRoot().y }
+        .graphicsLayer { alpha = ((top.floatValue / density - NAV_BOTTOM_DP) / NAV_FADE_BAND_DP).coerceIn(0f, 1f) }
 }
 
 /**

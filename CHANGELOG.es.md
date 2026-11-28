@@ -8,6 +8,9 @@ only in English.
 
 ## [Unreleased]
 
+### Correcciones
+- En una carpeta de fotos y vídeos desplazada hacia abajo, la ruta, el título y la barra de herramientas ya no se ven a través de la barra de navegación
+
 ## [0.11.0] - 2026-11-28
 
 ### Novedades
